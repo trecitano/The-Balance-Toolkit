@@ -25,7 +25,6 @@ serde_json = "1"
 btleplug = "0.11"
 tokio = { version = "1.28", features = ["full"] }
 anyhow = "1.0"
-bluez-async = "0.8.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 dbus = "*"
@@ -35,10 +34,5 @@ bluez-async = "*"
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.57.0", features = [
   "Devices_Bluetooth",
-  "Devices_Bluetooth_GenericAttributeProfile",
-  "Devices_Bluetooth_Advertisement",
-  "Devices_Radios",
-  "Foundation_Collections",
-  "Foundation",
-  "Storage_Streams",
+  "Devices_Enumeration",
 ] }
