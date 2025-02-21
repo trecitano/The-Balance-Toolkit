@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use futures::future::join_all;
 
+use serde::{Deserialize, Serialize};
 #[cfg(target_os = "windows")]
 use windows::{
     Devices::Enumeration::DeviceInformation,
@@ -11,7 +12,8 @@ use windows::{
 #[cfg(target_os = "linux")]
 use bluez_async::BluetoothSession;
 
-#[derive(Debug)]
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BluetoothAdapterInfo {
     name: String,
     mac_address: String, // # u64 as upper hex string
