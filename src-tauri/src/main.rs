@@ -8,7 +8,6 @@ mod wii_pin_generator;
 
 #[tokio::main]
 async fn main() {
-    let wii_pin = wii_pin_generator::generate().await.unwrap();
-    println!("Pin is {}", wii_pin);
+    println!("Pins are {:?}", wii_pin_generator::get_all_bluetooth_adapters_info().await);
     //balance_toolkit_app_lib::run()
 }
