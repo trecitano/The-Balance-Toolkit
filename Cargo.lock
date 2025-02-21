@@ -263,6 +263,7 @@ dependencies = [
  "bluez-async",
  "btleplug",
  "dbus",
+ "futures",
  "serde",
  "serde_json",
  "tauri",

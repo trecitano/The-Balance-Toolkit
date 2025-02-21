@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use futures::future::join_all;
 
 #[cfg(target_os = "windows")]
 use windows::{
@@ -10,9 +11,15 @@ use windows::{
 #[cfg(target_os = "linux")]
 use bluez_async::BluetoothSession;
 
-pub async fn generate() -> Result<String> {
-    let bluetooth_address = bluetooth_mac_address_as_hex().await?;
-    address_to_wii_pin(bluetooth_address).await
+#[derive(Debug)]
+pub struct BluetoothAdapterInfo {
+    name: String,
+    mac_address: String, // # u64 as upper hex string
+    wii_board_pin: String
+}
+
+pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
+    bluetooth_mac_address_as_hex().await
 }
 
 #[cfg(target_os = "linux")]
@@ -27,7 +34,7 @@ async fn bluetooth_mac_address_as_hex() -> Result<String> {
 }
 
 #[cfg(target_os = "windows")]
-async fn bluetooth_mac_address_as_hex() -> Result<String> {
+async fn bluetooth_mac_address_as_hex() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
 
     // Get the selector string for Bluetooth adapters
     let selector = BluetoothAdapter::GetDeviceSelector()?;
@@ -36,34 +43,34 @@ async fn bluetooth_mac_address_as_hex() -> Result<String> {
     let devices = DeviceInformation::FindAllAsyncAqsFilter(&selector)?
         .await?;
 
-    if devices.Size()? == 0 {
-        println!("No Bluetooth adapters found.");
-        return Err(anyhow!("No bluetooth devices were found."));
-    }
-
-    // Iterate through all found devices
-    for device in devices {
-        // Get the device ID
+    // Create a vector of futures
+    let futures = devices
+        .into_iter()
+        .map(|device| async move {
+        // Get the device ID and name
         let id = device.Id()?;
+        let name = device.Name()?;
         
         // Create BluetoothAdapter instance
-        match BluetoothAdapter::FromIdAsync(&id)?.await {
-            Ok(adapter) => {
-                let mac_address = adapter.BluetoothAddress()?;
-                return Ok(format!("{:X}", mac_address))
-            },
-            Err(_) => {
-                println!("Failed to get adapter for device: {}", device.Name()?);
-            }
-        }
-    }
+        let adapter = BluetoothAdapter::FromIdAsync(&id)?.await?;
 
-    Err(anyhow!("Found bluetooth devices, but couldn't get the mac address."))
+        let mac_address = adapter.BluetoothAddress()?;
+        let hexa_mac_address = format!("{:X}", mac_address);
+
+        Ok(BluetoothAdapterInfo {
+            name: name.to_string(),
+            mac_address: hexa_mac_address.clone(),
+            wii_board_pin: address_to_wii_pin(hexa_mac_address)?,
+        })
+    });
+
+    // Wait for all futures to complete
+    Ok(join_all(futures).await)
 }
 
 
 // https://github.com/lshachar/WiiBalanceWalker/blob/f44c8d8fff96f6fef7b1ccf9336c09fc0a01dbcd/WiiBalanceWalker/FormBluetooth.cs#L143
-async fn address_to_wii_pin(bluetooth_mac_address: String) -> Result<String> {
+fn address_to_wii_pin(bluetooth_mac_address: String) -> Result<String> {
     if bluetooth_mac_address.len() != 12 {
         return Err(anyhow!(
             "Invalid Bluetooth Address: {}",
