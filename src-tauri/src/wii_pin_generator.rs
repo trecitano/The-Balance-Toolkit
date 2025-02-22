@@ -1,58 +1,56 @@
 use anyhow::{anyhow, Result};
-use futures::future::join_all;
 
+#[cfg(target_os = "windows")]
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 #[cfg(target_os = "windows")]
-use windows::{
-    Devices::Enumeration::DeviceInformation,
-    Devices::Bluetooth::BluetoothAdapter,
-};
-
+use windows::{Devices::Bluetooth::BluetoothAdapter, Devices::Enumeration::DeviceInformation};
 
 #[cfg(target_os = "linux")]
 use bluez_async::BluetoothSession;
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BluetoothAdapterInfo {
     name: String,
     mac_address: String, // # u64 as upper hex string
-    wii_board_pin: String
-}
-
-pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
-    bluetooth_mac_address_as_hex().await
+    wii_board_pin: String,
 }
 
 #[cfg(target_os = "linux")]
-async fn bluetooth_mac_address_as_hex() -> Result<String> {
-    let (_, session) = BluetoothSession::new().await;
+pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
+    let (_, session) = BluetoothSession::new().await?;
 
-    let adapters = session.get_adapters().await;
-    let first_adapter = adapters.first();
-    let addr = first_adapter.mac_address;
+    let adapters = session.get_adapters().await?;
 
-    addr.to_string().replace(":", "")
+    Ok(adapters
+        .into_iter()
+        .map(|adapter| {
+            let mac_address = adapter.mac_address.to_string().replace(":", "");
+            let wii_board_pin = address_to_wii_pin(mac_address.clone())?;
+
+            Ok(BluetoothAdapterInfo {
+                name: adapter.name,
+                mac_address,
+                wii_board_pin,
+            })
+        })
+        .collect())
 }
 
 #[cfg(target_os = "windows")]
-async fn bluetooth_mac_address_as_hex() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
-
+pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
     // Get the selector string for Bluetooth adapters
     let selector = BluetoothAdapter::GetDeviceSelector()?;
 
     // Find all Bluetooth devices
-    let devices = DeviceInformation::FindAllAsyncAqsFilter(&selector)?
-        .await?;
+    let devices = DeviceInformation::FindAllAsyncAqsFilter(&selector)?.await?;
 
     // Create a vector of futures
-    let futures = devices
-        .into_iter()
-        .map(|device| async move {
+    let futures = devices.into_iter().map(|device| async move {
         // Get the device ID and name
         let id = device.Id()?;
         let name = device.Name()?;
-        
+
         // Create BluetoothAdapter instance
         let adapter = BluetoothAdapter::FromIdAsync(&id)?.await?;
 
@@ -69,7 +67,6 @@ async fn bluetooth_mac_address_as_hex() -> Result<Vec<Result<BluetoothAdapterInf
     // Wait for all futures to complete
     Ok(join_all(futures).await)
 }
-
 
 // https://github.com/lshachar/WiiBalanceWalker/blob/f44c8d8fff96f6fef7b1ccf9336c09fc0a01dbcd/WiiBalanceWalker/FormBluetooth.cs#L143
 fn address_to_wii_pin(bluetooth_mac_address: String) -> Result<String> {
@@ -105,4 +102,64 @@ fn address_to_wii_pin(bluetooth_mac_address: String) -> Result<String> {
     }
 
     Ok(bluetooth_pin)
+}
+
+// -------------------------------------------------
+
+use btleplug::api::{Central, CharPropFlags, Manager as _, Peripheral, ScanFilter};
+use btleplug::platform::{Adapter, Manager};
+
+// Returns a tuple of Adapter ID to
+pub async fn all_adapter_bluetooth_connections() -> Result<()> {
+    // Then we use the cross platform library to fetch information about the connected peripherals
+    let manager = Manager::new().await?;
+    let adapter_list = manager.adapters().await?;
+
+    for adapter in adapter_list {
+        adapter_bluetooth_connections(adapter).await;
+    }
+
+    Ok(())
+}
+
+use btleplug::api::{Manager as _, Peripheral as _};
+use futures::stream::StreamExt; // This is the important import
+use std::error::Error;
+use tokio::time::Duration;
+
+pub async fn adapter_bluetooth_connections(adapter: Adapter) -> Result<()> {
+    let peripherals = adapter.peripherals().await?;
+
+    for peripheral in peripherals {
+        let properties = peripheral.properties().await?.unwrap();
+        println!("{:?}", properties);
+        println!("Connected: {}", peripheral.is_connected().await?);
+        if properties.local_name.unwrap().starts_with("Nintendo") {
+            println!("Found ninin!");
+            // Get all characteristics
+            let chars = peripheral.characteristics();
+            // Subscribe to all notifiable characteristics
+            println!("{:?}", chars);
+            for characteristic in chars.iter() {
+                //               if characteristic.properties.contains(CharPropFlags::NOTIFY) {
+                println!("Subscribing to characteristic {:?}", characteristic.uuid);
+                peripheral.subscribe(&characteristic).await?;
+                //             }
+            }
+
+            // Listen to notifications
+            println!("Subscribed! Listening for notifications...");
+            let mut notifications = peripheral.notifications().await?;
+
+            // Process notifications as they arrive
+            while let Some(notification) = notifications.next().await {
+                println!(
+                    "Notification: characteristic = {}, value = {:?}",
+                    2, notification.value
+                );
+            }
+        }
+    }
+
+    Ok(())
 }
