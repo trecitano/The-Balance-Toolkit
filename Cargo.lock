@@ -272,7 +272,6 @@ dependencies = [
  "tokio",
  "windows 0.60.0",
  "windows-future",
- "windows-result 0.2.0",
 ]
 
 [[package]]
