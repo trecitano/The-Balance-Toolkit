@@ -65,7 +65,6 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
     let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
     let default_adapter_id = default_adapter.DeviceId()?;
     for entry in adapter_list.iter_mut() {
-        // Use if let to handle the Ok case
         if let Ok(adapter) = entry {
             if adapter.id == default_adapter_id {
                 adapter.devices = device_list;
@@ -74,7 +73,6 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
         }
     }
 
-    // Wait for all futures to complete
     Ok(adapter_list)
 }
 
@@ -107,6 +105,7 @@ pub async fn scan_and_pair_nintendo() -> Result<()> {
                             if let Some(args) = args.as_ref() {
                                 println!("{:#?}", args);
                                 // When PIN is requested
+                                // TODO CHANGE THIS!
                                 let pin = "|©8ðyd"; // Your PIN
                                 args.AcceptWithPin(&windows::core::HSTRING::from(pin))?;
                             }

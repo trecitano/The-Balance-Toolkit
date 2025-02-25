@@ -3,10 +3,11 @@
 
 mod bluetooth;
 
+use std::thread::sleep;
 use crate::bluetooth::bluetooth_communication;
 use anyhow::Result;
 use anyhow::anyhow;
-use std::thread;
+use hidapi::HidDevice;
 
 #[tokio::main]
 async fn main() {
@@ -44,6 +45,42 @@ struct BalanceBoardCalibrationData {
     kilos_0: BalanceBoardSensorReading,
     kilos_17: BalanceBoardSensorReading,
     kilos_34: BalanceBoardSensorReading,
+}
+
+impl BalanceBoardCalibrationData {
+    fn from_memory_reading(buf: [u8; 32]) -> Result<BalanceBoardCalibrationData> {
+        // Ensure buf has the expected initial data
+        if buf[1] != 0x69 || buf[2] != 0 || buf[3] != 0 {
+            return Err(anyhow!("Received incorrect data from the board!"))
+        }
+
+        let kilos_0 = BalanceBoardSensorReading {
+            top_right:      i16::from_be_bytes([buf[4], buf[5]]),
+            bottom_right:   i16::from_be_bytes([buf[6], buf[7]]),
+            top_left:       i16::from_be_bytes([buf[8], buf[9]]),
+            bottom_left:    i16::from_be_bytes([buf[10], buf[11]])
+        };
+
+        let kilos_17 = BalanceBoardSensorReading {
+            top_right:      i16::from_be_bytes([buf[12], buf[13]]),
+            bottom_right:   i16::from_be_bytes([buf[14], buf[15]]),
+            top_left:       i16::from_be_bytes([buf[16], buf[17]]),
+            bottom_left:    i16::from_be_bytes([buf[18], buf[19]])
+        };
+
+        let kilos_34 = BalanceBoardSensorReading {
+            top_right:      i16::from_be_bytes([buf[20], buf[21]]),
+            bottom_right:   i16::from_be_bytes([buf[22], buf[23]]),
+            top_left:       i16::from_be_bytes([buf[24], buf[25]]),
+            bottom_left:    i16::from_be_bytes([buf[26], buf[27]])
+        };
+
+        Ok(BalanceBoardCalibrationData {
+            kilos_0,
+            kilos_17,
+            kilos_34
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -165,6 +202,10 @@ fn check_hid() -> Result<()> {
         .unwrap();
     let open = nintendo_device.open_device(&api).unwrap();
 
+    // First, let's read the calibration data.
+    let calibration_data = read_memory_data(&open)?;
+
+
     // Configure report: https://wiibrew.org/wiki/Wiimote#Data_Reporting
     // We can change the report by sending 2 bytes to report 0x12.
     // The first byte can be 0x00 or 0x04. (Decides how often we receive data)
@@ -172,16 +213,9 @@ fn check_hid() -> Result<()> {
     let ir: [u8; 3] = [0x12, 0x00, 0x32];
     open.write(&ir)?;
 
-    // https://wiibrew.org/wiki/Wiimote#Reading_and_Writing
-    // Example: (a2) 17 MM FF FF FF SS SS
-    // Read calibration data 0x04  a4  00  20
-    let ir2: [u8; 7] = [0x17, 0x04, 0xA4, 0x00, 0x20, 0x00, 0x20];
-    println!("Writing !");
-    open.write(&ir2)?;
-    //thread::sleep(tokio::time::Duration::from_millis(500));
-
     let mut buf = vec![0; 100];
     println!("Reading data from device ...\n");
+
 
     loop {
         let len = open.read(&mut buf)?;
@@ -213,19 +247,81 @@ fn check_hid() -> Result<()> {
             bottom_left,
         };
 
+
+        print!("{}: {} {}, {}, {}", b.total_weight(&calibration_data), b.top_left_weight(&calibration_data),
+               b.bottom_right_weight(&calibration_data),
+               b.top_left_weight(&calibration_data),
+               b.bottom_left_weight(&calibration_data));
+        println!();
         println!("{:?}", b);
         println!(); // Add a newline at the end
-        //      thread::sleep(tokio::time::Duration::from_millis(2000));
+        sleep(tokio::time::Duration::from_millis(1000));
     }
 
     Ok(())
 }
 
-fn read_memory_data(buf: &[u8]) -> BalanceBoardCalibrationData {
+fn read_memory_data(hid_device: &HidDevice) -> Result<BalanceBoardCalibrationData> {
     // https://wiibrew.org/wiki/Wiimote#Reading_and_Writing
     // Example: (a2) 17 MM FF FF FF SS SS
     // Read calibration data 0x04  a4  00  20
     let ir2: [u8; 7] = [0x17, 0x04, 0xA4, 0x00, 0x20, 0x00, 0x20];
     println!("Writing !");
-    open.write(&ir2)?;
+    hid_device.write(&ir2)?;
+
+    let mut buf = vec![0; 25];
+    let mut calibration_data_buf: [u8; 32] = [0; 32];
+    println!("Reading data from device ...\n");
+
+    let mut current_read = 0;
+
+    loop {
+        // (a1) 21 BB BB SE FF FF DD DD DD DD DD DD DD DD DD DD DD DD DD DD DD DD
+        // BB BB is the button state, so we ignore
+        // SE - S is the size of bytes to read (1 to 16), E is an error value (0 means its ok)
+        // FF FF is the offset of memory that has been read
+        // DD is data to read
+        let len = hid_device.read(&mut buf)?;
+
+        // Print each value as uppercase hexadecimal
+        for value in &buf[..len] {
+            print!("{:02X} ", value);
+        }
+        println!(); // Add a newline at the end
+
+        // We ignore everything that isn't what we want.
+        if buf[0] != 0x21 {
+            continue;
+        }
+
+        let size = (buf[3] >> 4) + 1;
+        let error_flag = buf[3] << 4;
+        let _offset = u16::from_be_bytes([buf[4], buf[5]]);
+
+        println!("Read {} bytes", size);
+
+        if size == 1 {
+            return Err(anyhow!("Trying to read 0 bytes from memory?"));
+        }
+        if error_flag != 0 {
+            return Err(anyhow!("Error while reading memory: {}", error_flag))
+        }
+
+        // TODO check this in a better way
+        if current_read <= 32 {
+            calibration_data_buf[current_read as usize .. (current_read + size) as usize].copy_from_slice(&buf[6..6 + (size as usize)]);
+        } else {
+            return Err(anyhow!("Trying to read more bytes than expected."));
+        }
+
+        current_read += size;
+
+        // if we've read it all, return the result
+        // THIS IS VERY HARDCODED!
+        if current_read >= 32 {
+            break;
+        }
+    }
+
+    BalanceBoardCalibrationData::from_memory_reading(calibration_data_buf)
 }
