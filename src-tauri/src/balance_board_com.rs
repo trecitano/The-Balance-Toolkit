@@ -13,7 +13,7 @@ impl BalanceBoardCalibrationData {
     fn from_memory_reading(buf: [u8; 32]) -> Result<BalanceBoardCalibrationData> {
         // Ensure buf has the expected initial data
         if buf[1] != 0x69 || buf[2] != 0 || buf[3] != 0 {
-            return Err(anyhow!("Received incorrect data from the board!"))
+            return Err(anyhow!("Received incorrect data from the board!"));
         }
 
         let kilos_0 = BalanceBoardSensorReading {
@@ -40,7 +40,7 @@ impl BalanceBoardCalibrationData {
         Ok(BalanceBoardCalibrationData {
             kilos_0,
             kilos_17,
-            kilos_34
+            kilos_34,
         })
     }
 }
@@ -179,7 +179,6 @@ pub fn check_hid() -> Result<()> {
     let mut buf = vec![0; 100];
     println!("Reading data from device ...\n");
 
-
     loop {
         let len = open.read(&mut buf)?;
         // Check if we have enough data
@@ -207,11 +206,14 @@ pub fn check_hid() -> Result<()> {
             bottom_left,
         };
 
-
-        print!("{}: {} {}, {}, {}", b.total_weight(&calibration_data), b.top_left_weight(&calibration_data),
-               b.bottom_right_weight(&calibration_data),
-               b.top_left_weight(&calibration_data),
-               b.bottom_left_weight(&calibration_data));
+        print!(
+            "{}: {} {}, {}, {}",
+            b.total_weight(&calibration_data),
+            b.top_left_weight(&calibration_data),
+            b.bottom_right_weight(&calibration_data),
+            b.top_left_weight(&calibration_data),
+            b.bottom_left_weight(&calibration_data)
+        );
         println!();
         println!("{:?}", b);
         println!(); // Add a newline at the end
@@ -264,12 +266,13 @@ fn read_memory_data(hid_device: &HidDevice) -> Result<BalanceBoardCalibrationDat
             return Err(anyhow!("Trying to read 0 bytes from memory?"));
         }
         if error_flag != 0 {
-            return Err(anyhow!("Error while reading memory: {}", error_flag))
+            return Err(anyhow!("Error while reading memory: {}", error_flag));
         }
 
         // TODO check this in a better way
         if current_read <= 32 {
-            calibration_data_buf[current_read as usize .. (current_read + size) as usize].copy_from_slice(&buf[6..6 + (size as usize)]);
+            calibration_data_buf[current_read as usize..(current_read + size) as usize]
+                .copy_from_slice(&buf[6..6 + (size as usize)]);
         } else {
             return Err(anyhow!("Trying to read more bytes than expected."));
         }

@@ -1,8 +1,6 @@
-use anyhow::{anyhow, Result};
-
+use anyhow::{Result, anyhow};
 
 use crate::bluetooth::windows_bluetooth_handler as handler;
-
 
 #[derive(Debug)]
 pub struct BluetoothAdapterInfo {
@@ -11,7 +9,7 @@ pub struct BluetoothAdapterInfo {
     pub mac_address: String, // # u64 as upper hex string
     pub wii_board_pin: String,
     pub is_active: bool,
-    pub devices: Vec<Result<BluetoothPeripheral>>
+    pub devices: Vec<Result<BluetoothPeripheral>>,
 }
 
 #[derive(Debug)]
@@ -59,7 +57,9 @@ pub fn mac_address_to_wii_pin(bluetooth_mac_address: String) -> Result<String> {
 }
 
 // Given a bluetooth detailed view, check if the nintendo board exists.
-pub fn find_nintendo_balance_board<'a>(bluetooth_view: &'a Vec<&'a BluetoothAdapterInfo>) -> Option<&'a BluetoothPeripheral> {
+pub fn find_nintendo_balance_board<'a>(
+    bluetooth_view: &'a Vec<&'a BluetoothAdapterInfo>,
+) -> Option<&'a BluetoothPeripheral> {
     for adapter in bluetooth_view {
         for device_result in &adapter.devices {
             if let Ok(device) = device_result {
