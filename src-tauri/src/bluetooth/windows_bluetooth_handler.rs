@@ -2,14 +2,21 @@ use anyhow::Result;
 
 use futures::future::join_all;
 
-use windows::{Devices::Bluetooth::BluetoothAdapter, Devices::Enumeration::DeviceInformation, Devices::Enumeration::DeviceWatcher};
 use windows::Devices::Bluetooth::{BluetoothConnectionStatus, BluetoothDevice};
-use windows::Devices::Enumeration::{DevicePairingKinds, DevicePairingRequestedEventArgs, DeviceWatcherStatus};
+use windows::Devices::Enumeration::{
+    DevicePairingKinds, DevicePairingRequestedEventArgs, DeviceWatcherStatus,
+};
 use windows::Foundation::TypedEventHandler;
+use windows::{
+    Devices::Bluetooth::BluetoothAdapter, Devices::Enumeration::DeviceInformation,
+    Devices::Enumeration::DeviceWatcher,
+};
 
-use tokio::time::{sleep, Duration, Instant};
+use crate::bluetooth::bluetooth_communication::{
+    BluetoothAdapterInfo, BluetoothPeripheral, NINTENDO_BOARD_ID, mac_address_to_wii_pin,
+};
 use futures::executor::block_on;
-use crate::bluetooth::bluetooth_communication::{mac_address_to_wii_pin, BluetoothAdapterInfo, BluetoothPeripheral, NINTENDO_BOARD_ID};
+use tokio::time::{Duration, Instant, sleep};
 
 // In Windows, we can only use a single bluetooth adapter. (This is an assumption).
 // Regardless of the assumption, it is extremely complicated to associate the adapters to the devices.
@@ -30,14 +37,13 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
         let mac_address = adapter.BluetoothAddress()?;
         let hexa_mac_address = format!("{:X}", mac_address);
 
-
         Ok(BluetoothAdapterInfo {
             id: adapter_id.to_string(),
             name: adapter_name.to_string(),
             mac_address: hexa_mac_address.clone(),
             wii_board_pin: mac_address_to_wii_pin(hexa_mac_address)?,
             is_active,
-            devices: vec![]
+            devices: vec![],
         })
     });
 
@@ -52,14 +58,12 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
             id: device.BluetoothDeviceId()?.Id()?.to_string(),
             name: device.Name()?.to_string(),
             bluetooth_address: device.BluetoothAddress()?.to_string(),
-            connection_status: device.ConnectionStatus()? == BluetoothConnectionStatus::Connected
+            connection_status: device.ConnectionStatus()? == BluetoothConnectionStatus::Connected,
         })
     });
 
-
     let mut adapter_list = join_all(adapter_futures).await;
     let device_list = join_all(device_futures).await;
-
 
     // Add the device list to the default adapter
     let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
@@ -85,7 +89,8 @@ pub async fn scan_and_pair_nintendo() -> Result<()> {
 
     // Create the event handler for device discovery
     let added = TypedEventHandler::new(
-        move |watcher: windows::core::Ref<DeviceWatcher>, info: windows::core::Ref<DeviceInformation>| {
+        move |watcher: windows::core::Ref<DeviceWatcher>,
+              info: windows::core::Ref<DeviceInformation>| {
             // Convert the `windows::core::Ref` to a usable reference
             let device_info: &DeviceInformation = info.unwrap();
             if let Ok(name) = device_info.Name() {
@@ -94,7 +99,9 @@ pub async fn scan_and_pair_nintendo() -> Result<()> {
                     println!("Found the balance! Stopping the watcher.");
                     &watcher.as_ref().unwrap().Stop();
 
-                    let device = block_on(async {BluetoothDevice::FromIdAsync(&device_info.Id()?)?.await })?;
+                    let device = block_on(async {
+                        BluetoothDevice::FromIdAsync(&device_info.Id()?)?.await
+                    })?;
 
                     // Create a pairing object
                     let pairing = device.DeviceInformation()?.Pairing()?.Custom()?;
@@ -110,19 +117,25 @@ pub async fn scan_and_pair_nintendo() -> Result<()> {
                                 args.AcceptWithPin(&windows::core::HSTRING::from(pin))?;
                             }
                             Ok(())
-                        }
+                        },
                     ))?;
 
                     //pairing.PairWithProtectionLevelAsync(BluetoothPairingProtectionLevel::Pin)?;
 
                     // Start pairing
-                    let pairing_result = block_on(async { pairing.PairAsync(DevicePairingKinds::ProvidePin)?.await })?;
+                    let pairing_result = block_on(async {
+                        pairing.PairAsync(DevicePairingKinds::ProvidePin)?.await
+                    })?;
 
-                    if pairing_result.Status()?.0 == 0 { // Paired
+                    if pairing_result.Status()?.0 == 0 {
+                        // Paired
                         println!("Successfully paired with the device!");
                         return Ok(());
                     } else {
-                        println!("Pairing failed with status: {:#?}", pairing_result.Status()?.0);
+                        println!(
+                            "Pairing failed with status: {:#?}",
+                            pairing_result.Status()?.0
+                        );
                         //return Err(anyhow!("Failed to pair with device"));
                         return Ok(());
                     }
@@ -132,12 +145,10 @@ pub async fn scan_and_pair_nintendo() -> Result<()> {
         },
     );
 
-    let enumeration =  TypedEventHandler::new(
-        move |_watcher, _| {
-            println!("Device discovery completed.");
-            Ok(())
-        },
-    );
+    let enumeration = TypedEventHandler::new(move |_watcher, _| {
+        println!("Device discovery completed.");
+        Ok(())
+    });
 
     watcher.Added(&added)?;
     watcher.EnumerationCompleted(&enumeration)?;
@@ -153,14 +164,15 @@ pub async fn scan_and_pair_nintendo() -> Result<()> {
         // Check if something has happened
         let watcher_status = watcher.Status()?;
 
-        if watcher_status == DeviceWatcherStatus::Stopped || watcher_status == DeviceWatcherStatus::Aborted {
+        if watcher_status == DeviceWatcherStatus::Stopped
+            || watcher_status == DeviceWatcherStatus::Aborted
+        {
             break;
         }
 
         println!("Waiting for 2 seconds...");
         sleep(interval).await; // Wait for 2 seconds
     }
-
 
     Ok(())
 }
