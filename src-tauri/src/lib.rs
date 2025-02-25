@@ -1,5 +1,3 @@
-mod commands;
-mod wii_pin_generator;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
