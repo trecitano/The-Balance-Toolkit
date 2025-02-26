@@ -28,8 +28,7 @@ futures = "0.3"
 hidapi = "2.6.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-dbus = "*"
-bluez-async = "*"
+bluer = { version = "0.17.3", features = ["full"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.60.0", features = [
@@ -38,3 +37,4 @@ windows = { version = "0.60.0", features = [
   "Foundation_Collections",
 ] }
 windows-future = "0.1.0"
+

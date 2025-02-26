@@ -160,8 +160,7 @@ pub fn check_hid() -> Result<()> {
 
     let nintendo_device = api
         .device_list()
-        .find(|device| device.product_string().unwrap() == "Nintendo RVL-CNT-01")
-        .unwrap();
+        .find(|device| device.product_string().unwrap() == "Nintendo RVL-CNT-01").ok_or(anyhow!("Device not found"))?;
     let open = nintendo_device.open_device(&api)?;
 
     // First, let's read the calibration data.
