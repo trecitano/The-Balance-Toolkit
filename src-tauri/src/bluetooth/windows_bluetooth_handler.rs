@@ -21,7 +21,6 @@ use tokio::time::{Duration, Instant, sleep};
 // In Windows, we can only use a single bluetooth adapter. (This is an assumption).
 // Regardless of the assumption, it is extremely complicated to associate the adapters to the devices.
 // As such, we assume that every connected device is directly connected to the default adapter.
-#[cfg(target_os = "windows")]
 pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
     // Get list of all Bluetooth Adapters
     let adapter_selector = BluetoothAdapter::GetDeviceSelector()?;
@@ -80,7 +79,6 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
     Ok(adapter_list)
 }
 
-#[cfg(target_os = "windows")]
 pub async fn scan_and_pair_nintendo() -> Result<()> {
     // Create a device selector for Bluetooth devices
     let selector = BluetoothDevice::GetDeviceSelectorFromPairingState(false)?;
