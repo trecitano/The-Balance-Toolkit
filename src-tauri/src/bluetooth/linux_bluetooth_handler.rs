@@ -1,17 +1,19 @@
 use anyhow::{anyhow, Result};
 
 use crate::bluetooth::bluetooth_communication::{
-    BluetoothAdapterInfo, BluetoothPeripheral, NINTENDO_BOARD_ID, better_mac_address_to_wii_pin,
+    BluetoothAdapterInfo, BluetoothPeripheral, better_mac_address_to_wii_pin,
 };
 use bluer::{Adapter, AdapterEvent, Address, DeviceEvent, DeviceProperty, DiscoveryFilter, DiscoveryTransport, Session};
 use futures::future::join_all;
 use futures::stream::StreamExt;
 use std::collections::HashMap;
+use std::ffi::CString;
 use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use bluer::agent::{Agent, ReqResult, RequestPinCode, RequestPinCodeFn};
+use tokio::task::JoinHandle;
 use tokio::time::sleep;
 
 pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
@@ -45,13 +47,15 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
                 let device = adapter.device(address)?;
                 let device_name: String = device.name().await?.unwrap_or_default();
                 let device_address = device.address().0;
+                let is_paired = device.is_paired().await?;
                 let is_connected = device.is_connected().await?;
 
                 devices.push(Ok(BluetoothPeripheral {
                     id: address.to_string(),
                     name: device_name,
                     bluetooth_address: device_address,
-                    connection_status: is_connected,
+                    is_paired,
+                    is_connected,
                 }));
             }
         }
@@ -72,70 +76,19 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
     Ok(adapter_list)
 }
 
-// In Linux with Bluer, we need to set up the agent that will handle the PIN.
+// The Linux Bluetooth stack (BlueZ) already has support for pairing and connecting to wiimotes
+// out of the box.
+//
+// This is accomplished by the autopair.c code, found in the drivers.
+// (link: https://github.com/bluez/bluez/blob/f4617c531abe2cd263ce3b9ba7ba77dc5859215c/plugins/autopair.c#L33-L105)
+//
+// Currently this is bugged https://github.com/bluez/bluez/issues/911 (versions 5.72 to 5.79)
+// but it has already been fixed in Master and should be fixed in 5.80.
 pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()> {
-    let mut bluetooth_pin = String::new();
-
-    // Process address in reverse pairs
-    for byte in adapter.wii_board_pin {
-        bluetooth_pin.push(byte as char);
-    }
-
-    let unchecked_pw = String::from_utf8_lossy(&adapter.wii_board_pin).to_string();
-
-
-    println!("Pin is {}", bluetooth_pin);
-
-    print!("Mac address:   ");
-    for byte in adapter.mac_address {
-        print!("{:02X} ", byte); // {:02X} formats as two-digit uppercase hex
-    }
-    println!();
-
-    print!("Hexa pin:      ");
-    for byte in adapter.wii_board_pin {
-        print!("{:02X} ", byte); // {:02X} formats as two-digit uppercase hex
-    }
-    println!();
-
-    print!("Hardcoded pin: ");
-    for byte in  "|©8ðyd".as_bytes() {
-        print!("{:02X} ", byte); // {:02X} formats as two-digit uppercase hex
-    }
-    println!();
-
-    print!("String pin:    ");
-    for byte in bluetooth_pin.as_bytes() {
-        print!("{:02X} ", byte); // {:02X} formats as two-digit uppercase hex
-    }
-    println!();
-
-    println!("Pin is {:?}", adapter.wii_board_pin);
-    println!("Pin unchecked is {:?}", unchecked_pw);
-    for byte in &adapter.wii_board_pin {
-        print!("{:02X} ", byte); // Print each byte in uppercase hexadecimal
-    }
-    println!(); // Add a newline at the end
-
-    // Convert to a single number (big-endian)
-    let big_endian_number = adapter.wii_board_pin.iter().fold(0u64, |acc, &byte| (acc << 8) | byte as u64);
-    println!("Big-endian number: {}", big_endian_number);
-
-    let c = "|©8ðyd";
-    // Set up a custom Bluetooth agent to handle the pairing
-    let agent = Agent {
-        request_pin_code: Some(Box::new(move |req| Box::pin({
-            let v = c.clone();
-            async move { Ok(v.into()) }
-        }))),
-        request_default: true,
-        ..Default::default()
-    };;
-
     let session = Session::new().await?;
-    let agent_handle = session.register_agent(agent).await?;
 
     println!("Using Bluetooth adapter: {}", adapter.name);
+    // TODO LINUX: WE ALREADY KNOW THE ADDRESS, THEN WE DON'T NEED TO ACTIVATE DISCOVER DEVICES?
 
     let adapter = session.adapter(&adapter.name)?;
 
@@ -160,9 +113,9 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
                 Ok(device) => {
                     // Get device name
                     if let Ok(Some(name)) = device.name().await {
-                        println!("Discovered device: {} ({})", name, addr);
+                        // println!("Discovered device: {} ({})", name, addr);
 
-                        if name == NINTENDO_BOARD_ID {
+                        if name == crate::NINTENDO_BOARD_ID {
                             println!("Found Nintendo balance board! Attempting to pair...");
 
                             // Stop discovery before pairing
@@ -172,54 +125,45 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
                             if let Ok(paired) = device.is_paired().await {
                                 if paired {
                                     println!("Device is already paired");
-                                    return Ok(());
+                           //         return Ok(());
                                 }
                             }
 
-                            // Pair with the device using the PIN
-                            println!("Initiating pairing with PIN...");
-
                             // Register for pairing events
                             let mut device_events = device.events().await?;
+
+                            // Process the device events (logging)
+                            let _handle = tokio::spawn(async move {
+                                println!("Lets potato time!");
+                                while let Some(event) = device_events.next().await {
+                                    match event {
+                                        DeviceEvent::PropertyChanged(DeviceProperty::Paired(paired)) => {
+                                            if paired {
+                                                println!("!!! Device successfully paired!");
+                                            }
+                                        }
+                                        DeviceEvent::PropertyChanged(prop) => {
+                                            println!("!!! Property changed: {:?}", prop);
+                                        }
+                                        _ => { println!("!!! {:?}", event); }
+                                    }
+                                }
+                            });
 
                             // Set the device to connectable and pairable
                             println!("Trusting device");
                             device.set_trusted(true).await?;
 
                             // Attempt to pair
-                            println!("Starting pairing...");
-                            let pair_fut = device.pair();
+                            if !device.is_paired().await? {
+                                println!("Starting pairing...");
+                                let pair_fut = device.pair();
 
-
-                            // Handle pairing events simultaneously
-                            tokio::select! {
-                                pair_result = pair_fut => {
-                                    match pair_result {
-                                        Ok(_) => println!("Pairing successful!"),
-                                        Err(e) => println!("Pairing failed: {}", e),
-                                    }
-                                }
-
-                                Some(device_event) = device_events.next() => {
-                                    match device_event {
-                                        DeviceEvent::PropertyChanged(DeviceProperty::Paired(paired)) => {
-                                            if paired {
-                                                println!("Device successfully paired!");
-                                                return Ok(());
-                                            }
-                                        }
-                                        DeviceEvent::PropertyChanged(prop) => {
-                                            println!("Property changed: {:?}", prop);
-                                        }
-                                        _ => { println!("{:?}", device_event); }
-                                    }
-                                }
-
-                                _ = sleep(Duration::from_secs(30)) => {
-                                    return Err(anyhow!("Pairing timed out"));
+                                match pair_fut.await {
+                                    Ok(_) => println!("Pairing successful!"),
+                                    Err(e) => println!("Pairing failed: {}", e),
                                 }
                             }
-
 
                             // Try to connect after pairing
                             if device.is_paired().await.unwrap_or(false) {
@@ -230,6 +174,8 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
                                     println!("Successfully connected to the device!");
                                 }
                                 return Ok(());
+                            } else {
+                                println!("The potato");
                             }
                         }
                     }
