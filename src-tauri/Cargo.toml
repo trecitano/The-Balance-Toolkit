@@ -22,13 +22,15 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1.28", features = ["full"] }
+tokio = { version = "1.28" }
 anyhow = "1.0"
 futures = "0.3"
 hidapi = "2.6.3"
+env_logger = "0.11"
+log = "0.4"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-bluer = { version = "0.17.3", features = ["full"] }
+bluer = { version = "0.17.3", features = ["bluetoothd"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.60.0", features = [

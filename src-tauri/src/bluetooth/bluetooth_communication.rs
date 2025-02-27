@@ -6,12 +6,15 @@ use crate::bluetooth::linux_bluetooth_handler as handler;
 #[cfg(target_os = "windows")]
 use crate::bluetooth::windows_bluetooth_handler as handler;
 
+#[derive(Debug)]
 enum BluetoothState {
+    BluetoothError(String),
     BluetoothIsOff,
     NoAdaptersActive,
-    BoardFoundButOff,
     BoardNotFound,
-    BoardFoundAndOn
+    BoardNotPaired,
+    BoardNotConnected,
+    BoardConnected
 }
 
 #[derive(Debug)]
@@ -29,39 +32,71 @@ pub struct BluetoothPeripheral {
     pub id: String,
     pub name: String,
     pub bluetooth_address: [u8; 6],
-    pub connection_status: bool,
+    pub is_paired: bool,
+    pub is_connected: bool,
 }
 
-pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
-
 pub async fn ensure_balance_board_is_connected() {
-    let all_bluetooth_view = handler::get_all_bluetooth_adapters_info()
-        .await
-        .unwrap();
+    loop {
+        let system_state = handler::get_all_bluetooth_adapters_info().await;
+        let enum_state = bluetooth_system_state(&system_state);
+        match bluetooth_system_state(&system_state) {
+            BluetoothState::BluetoothError(error) => {
+                println!("{}", error);
+            },
+            BluetoothState::BluetoothIsOff => {
+                println!("Please turn on the bluetooth.");
+            },
+            BluetoothState::NoAdaptersActive => {
+                println!("Please turn on one bluetooth adapter.");
+            }
+            BluetoothState::BoardConnected => {
+                return;
+            }
+            BluetoothState::BoardNotFound | BluetoothState::BoardNotPaired | BluetoothState::BoardNotConnected => {
+                println!("{:?}", enum_state);
+                let adapter: &BluetoothAdapterInfo = &system_state
+                    .as_ref() // Borrow the Result
+                    .unwrap() // Unwrap the outer Result
+                    .first() // Get the first element
+                    .unwrap() // Unwrap the Option
+                    .as_ref() // Borrow the inner Result
+                    .unwrap(); // Unwrap the inner Result
+
+                handler::scan_and_pair_nintendo(adapter).await.unwrap()
+            }
+        }
+
+        // If the current state failed, wait one second before trying again
+        tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+    }
+}
+
+fn bluetooth_system_state(state: &Result<Vec<Result<BluetoothAdapterInfo>>>) -> BluetoothState {
+    let all_bluetooth_view = match state {
+        Ok(view) => view,
+        Err(e) => {
+            eprintln!("Failed to get Bluetooth adapters info: {:?}", e);
+            return BluetoothState::BluetoothError(e.to_string());
+        }
+    };
     let bluetooth_view: Vec<&BluetoothAdapterInfo> = all_bluetooth_view
         .iter() // Borrow the original Vec
         .filter_map(|result| result.as_ref().ok())
         .collect();
 
-    println!("Bluetooth view: {:#?}", all_bluetooth_view);
-
-    let adapter: &BluetoothAdapterInfo = &bluetooth_view.first().unwrap();
-    // Process address in reverse pairs
-    let mut bluetooth_pin = String::new();
-    for byte in adapter.wii_board_pin {
-        bluetooth_pin.push(byte as char);
-    }
-
     let nintendo_board_opt = find_nintendo_balance_board(&bluetooth_view);
-    if let Some(nintendo_board) = nintendo_board_opt {
-        if nintendo_board.connection_status == false {
-            println!("Nintendo board is off. Please turn it on!");
+    match nintendo_board_opt {
+        Some(nintendo_board) => {
+            if !nintendo_board.is_paired {
+                BluetoothState::BoardNotPaired
+            } else if !nintendo_board.is_connected {
+                BluetoothState::BoardNotConnected
+            } else {
+                BluetoothState::BoardConnected
+            }
         }
-    } else {
-        println!("Nintendo is not paired. Please turn on the sync.");
-        handler::scan_and_pair_nintendo(bluetooth_view.first().unwrap())
-            .await
-            .unwrap()
+        None => BluetoothState::BoardNotFound
     }
 }
 
@@ -110,7 +145,7 @@ pub fn find_nintendo_balance_board<'a>(
     for adapter in bluetooth_view {
         for device_result in &adapter.devices {
             if let Ok(device) = device_result {
-                if device.name == NINTENDO_BOARD_ID {
+                if device.name == crate::NINTENDO_BOARD_ID {
                     return Some(device);
                 }
             }

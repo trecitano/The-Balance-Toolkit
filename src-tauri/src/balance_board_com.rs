@@ -149,6 +149,9 @@ impl BalanceBoardSensorReading {
     }
 }
 
+// Requirements:
+// Ensure the user can access the hid device.
+// Linux: https://github.com/libusb/hidapi/blob/master/udev/69-hid.rules
 pub fn check_hid() -> Result<()> {
     let api = hidapi::HidApi::new()?;
     // Print out information about all connected devices
@@ -160,7 +163,7 @@ pub fn check_hid() -> Result<()> {
 
     let nintendo_device = api
         .device_list()
-        .find(|device| device.product_string().unwrap() == "Nintendo RVL-CNT-01").ok_or(anyhow!("Device not found"))?;
+        .find(|device| device.product_string().unwrap() == "Nintendo RVL-WBC-01").ok_or(anyhow!("Device not found"))?;
     let open = nintendo_device.open_device(&api)?;
 
     // First, let's read the calibration data.
