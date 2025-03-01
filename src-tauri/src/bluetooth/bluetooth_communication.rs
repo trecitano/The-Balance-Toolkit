@@ -31,7 +31,7 @@ pub struct BluetoothAdapterInfo {
 pub struct BluetoothPeripheral {
     pub id: String,
     pub name: String,
-    pub bluetooth_address: [u8; 6],
+    pub mac_address: [u8; 6],
     pub is_paired: bool,
     pub is_connected: bool,
 }
@@ -39,6 +39,7 @@ pub struct BluetoothPeripheral {
 pub async fn ensure_balance_board_is_connected() {
     loop {
         let system_state = handler::get_all_bluetooth_adapters_info().await;
+        println!("{:#?}", system_state);
         let enum_state = bluetooth_system_state(&system_state);
         match bluetooth_system_state(&system_state) {
             BluetoothState::BluetoothError(error) => {
@@ -63,7 +64,7 @@ pub async fn ensure_balance_board_is_connected() {
                     .as_ref() // Borrow the inner Result
                     .unwrap(); // Unwrap the inner Result
 
-                handler::scan_and_pair_nintendo(adapter).await.unwrap()
+                handler::scan_and_pair_nintendo(&adapter).await.unwrap()
             }
         }
 
@@ -102,7 +103,7 @@ fn bluetooth_system_state(state: &Result<Vec<Result<BluetoothAdapterInfo>>>) -> 
 
 // https://wiibrew.org/wiki/Wiimote#Bluetooth_Pairing
 // The pin is the mac address with reversed pairs
-pub fn mac_address_to_wii_pin(bluetooth_mac_address: String) -> Result<String> {
+pub fn backup_mac_address_to_wii_pin(bluetooth_mac_address: String) -> Result<String> {
     if bluetooth_mac_address.len() != 12 {
         return Err(anyhow!(
             "Invalid Bluetooth Address: {}",
@@ -127,7 +128,7 @@ pub fn mac_address_to_wii_pin(bluetooth_mac_address: String) -> Result<String> {
 }
 
 
-pub fn better_mac_address_to_wii_pin(mac_address: [u8; 6]) -> [u8; 6] {
+pub fn mac_address_to_wii_pin(mac_address: [u8; 6]) -> [u8; 6] {
     let mut pin = [0u8; 6];
 
     // Reverse the MAC address bytes

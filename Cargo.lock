@@ -322,6 +322,8 @@ dependencies = [
  "tauri-plugin-opener",
  "tokio",
  "windows 0.60.0",
+ "windows-collections",
+ "windows-core 0.60.1",
  "windows-future",
 ]
 

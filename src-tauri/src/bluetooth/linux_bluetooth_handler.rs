@@ -15,6 +15,7 @@ use std::time::{Duration, Instant};
 use bluer::agent::{Agent, ReqResult, RequestPinCode, RequestPinCodeFn};
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
+use crate::NINTENDO_BOARD_ID;
 
 pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
     // Create a BlueZ session
@@ -53,7 +54,7 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
                 devices.push(Ok(BluetoothPeripheral {
                     id: address.to_string(),
                     name: device_name,
-                    bluetooth_address: device_address,
+                    mac_address: device_address,
                     is_paired,
                     is_connected,
                 }));
@@ -115,7 +116,7 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
                     if let Ok(Some(name)) = device.name().await {
                         // println!("Discovered device: {} ({})", name, addr);
 
-                        if name == crate::NINTENDO_BOARD_ID {
+                        if name == NINTENDO_BOARD_ID {
                             println!("Found Nintendo balance board! Attempting to pair...");
 
                             // Stop discovery before pairing
