@@ -1,8 +1,11 @@
+use std::thread;
 use std::time::Duration;
 use crate::HID_NINTENDO_BOARD_ID;
 use anyhow::Result;
 use anyhow::anyhow;
+use futures::executor::block_on;
 use hidapi::HidDevice;
+use lsl::Pushable;
 use tokio::time::sleep;
 use crate::balance_board_com::Event::BoardReading;
 use crate::balance_board_com::UserAction::Tare;
@@ -198,10 +201,11 @@ pub async fn connect() -> Result<()> {
     let ir: [u8; 3] = [0x12, 0x00, 0x34];
     open.write(&ir)?;
 
-    let (tx, mut rx) = tokio::sync::mpsc::channel(30);
-    let tx_input = tx.clone();
+    let (board_tx, mut processor_rx) = std::sync::mpsc::channel();
+    let board_tx_inputs = board_tx.clone();
+    let (processor_tx, mut lsl_rx) = std::sync::mpsc::channel();
 
-    tokio::spawn(async move {
+    thread::spawn(move || {
         println!("Reading data from device ...\n");
         loop {
             let mut buf = vec![0; 100];
@@ -226,33 +230,59 @@ pub async fn connect() -> Result<()> {
                 bottom_left,
             };
 
-            tx.send(Event::BoardReading(reading)).await?
+            board_tx.send(Event::BoardReading(reading))?
         }
         Ok(())
     });
 
-    tokio::spawn(async move {
+    thread::spawn(move || {
         let mut last_reading = BalanceBoardSensorReading { ..Default::default() };
         let mut tare = BalanceBoardSensorReading { ..Default::default() };
 
         // Start receiving messages
-        while let Some(event) = rx.recv().await {
+        while let Ok(event) = processor_rx.recv() {
             match event {
                 Event::UserAction(action) => {
                     tare = last_reading.clone();
                 }
                 Event::BoardReading(reading) => {
-                    println!("{:?}", reading);
                     let top_right = reading.top_right_weight(&calibration_data) - tare.top_right_weight(&calibration_data);
                     let bottom_right  = reading.bottom_right_weight(&calibration_data) - tare.bottom_right_weight(&calibration_data);
                     let top_left  = reading.top_left_weight(&calibration_data) - tare.top_left_weight(&calibration_data);
                     let bottom_left  = reading.bottom_left_weight(&calibration_data) - tare.bottom_left_weight(&calibration_data);
 
                     let total_weight = reading.total_weight(&calibration_data) - tare.total_weight(&calibration_data);
-                    println!("Total: {}. UR: {}, BR: {}, TL: {}, BL: {}", total_weight, top_right, bottom_right, top_left, bottom_left);
+                    println!("Good Total?: {}. UR: {}, BR: {}, TL: {}, BL: {}", total_weight, top_right, bottom_right, top_left, bottom_left);
                     last_reading = reading;
+                    let reading_after_tare = BalanceBoardSensorReading {
+                        top_right: last_reading.top_right - tare.top_right,
+                        bottom_right: last_reading.bottom_right - tare.bottom_right,
+                        top_left: last_reading.top_left - tare.top_left,
+                        bottom_left: last_reading.bottom_left - tare.bottom_left,
+                    };
+
+                    processor_tx.send([
+                        reading_after_tare.top_right_weight(&calibration_data),
+                        reading_after_tare.bottom_right_weight(&calibration_data),
+                        reading_after_tare.top_left_weight(&calibration_data),
+                        reading_after_tare.bottom_left_weight(&calibration_data),
+                    ]);
                 }
             }
+        }
+    });
+
+    thread::spawn(move || {
+        let info = lsl::StreamInfo::new(
+            "the-balance-toolkit", "EEG", 4, 100.0,
+            lsl::ChannelFormat::Float32, "myid234365").unwrap();
+        let outlet = lsl::StreamOutlet::new(&info, 0, 360).unwrap();
+
+        while let Ok([tr, br, tl, bl]) = lsl_rx.recv() {
+            let total_weight = tr+br+tl+bl;
+            println!("Total: {}. UR: {}, BR: {}, TL: {}, BL: {}", total_weight, tr, br, tl, bl);
+
+            outlet.push_sample(&vec![tr, br, tl, bl]).unwrap();
         }
     });
 
@@ -285,7 +315,7 @@ pub async fn connect() -> Result<()> {
 
         println!("You entered: {}", input);
 
-        tx_input.send(Event::UserAction(Tare)).await?;
+        board_tx_inputs.send(Event::UserAction(Tare));
     }
 
     Ok(())
