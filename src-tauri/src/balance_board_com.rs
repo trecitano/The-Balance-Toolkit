@@ -1,6 +1,20 @@
+use std::time::Duration;
+use crate::HID_NINTENDO_BOARD_ID;
 use anyhow::Result;
 use anyhow::anyhow;
 use hidapi::HidDevice;
+use tokio::time::sleep;
+use crate::balance_board_com::Event::BoardReading;
+use crate::balance_board_com::UserAction::Tare;
+
+enum UserAction {
+    Tare
+}
+
+enum Event {
+    BoardReading(BalanceBoardSensorReading),
+    UserAction(UserAction)
+}
 
 #[derive(Debug, Clone)]
 struct BalanceBoardCalibrationData {
@@ -17,24 +31,24 @@ impl BalanceBoardCalibrationData {
         }
 
         let kilos_0 = BalanceBoardSensorReading {
-            top_right:      i16::from_be_bytes([buf[4], buf[5]]),
-            bottom_right:   i16::from_be_bytes([buf[6], buf[7]]),
-            top_left:       i16::from_be_bytes([buf[8], buf[9]]),
-            bottom_left:    i16::from_be_bytes([buf[10], buf[11]])
+            top_right: i16::from_be_bytes([buf[4], buf[5]]),
+            bottom_right: i16::from_be_bytes([buf[6], buf[7]]),
+            top_left: i16::from_be_bytes([buf[8], buf[9]]),
+            bottom_left: i16::from_be_bytes([buf[10], buf[11]]),
         };
 
         let kilos_17 = BalanceBoardSensorReading {
-            top_right:      i16::from_be_bytes([buf[12], buf[13]]),
-            bottom_right:   i16::from_be_bytes([buf[14], buf[15]]),
-            top_left:       i16::from_be_bytes([buf[16], buf[17]]),
-            bottom_left:    i16::from_be_bytes([buf[18], buf[19]])
+            top_right: i16::from_be_bytes([buf[12], buf[13]]),
+            bottom_right: i16::from_be_bytes([buf[14], buf[15]]),
+            top_left: i16::from_be_bytes([buf[16], buf[17]]),
+            bottom_left: i16::from_be_bytes([buf[18], buf[19]]),
         };
 
         let kilos_34 = BalanceBoardSensorReading {
-            top_right:      i16::from_be_bytes([buf[20], buf[21]]),
-            bottom_right:   i16::from_be_bytes([buf[22], buf[23]]),
-            top_left:       i16::from_be_bytes([buf[24], buf[25]]),
-            bottom_left:    i16::from_be_bytes([buf[26], buf[27]])
+            top_right: i16::from_be_bytes([buf[20], buf[21]]),
+            bottom_right: i16::from_be_bytes([buf[22], buf[23]]),
+            top_left: i16::from_be_bytes([buf[24], buf[25]]),
+            bottom_left: i16::from_be_bytes([buf[26], buf[27]]),
         };
 
         Ok(BalanceBoardCalibrationData {
@@ -45,7 +59,7 @@ impl BalanceBoardCalibrationData {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct BalanceBoardSensorReading {
     top_right: i16,
     bottom_right: i16,
@@ -152,18 +166,24 @@ impl BalanceBoardSensorReading {
 // Requirements:
 // Ensure the user can access the hid device.
 // Linux: https://github.com/libusb/hidapi/blob/master/udev/69-hid.rules
-pub fn check_hid() -> Result<()> {
+pub async fn connect() -> Result<()> {
     let api = hidapi::HidApi::new()?;
     // Print out information about all connected devices
     for device in api.device_list() {
-        println!("{:?}", device);
-        println!("{:?}", device.manufacturer_string());
         println!("{:?}", device.product_string());
     }
 
     let nintendo_device = api
         .device_list()
-        .find(|device| device.product_string().unwrap() == "Nintendo RVL-WBC-01").ok_or(anyhow!("Device not found"))?;
+        .find(|device| {
+            if let Some(product_string) = device.product_string() {
+                product_string == crate::NINTENDO_BOARD_ID
+                    || product_string == HID_NINTENDO_BOARD_ID
+            } else {
+                false
+            }
+        })
+        .ok_or(anyhow!("Board not found"))?;
     let open = nintendo_device.open_device(&api)?;
 
     // First, let's read the calibration data.
@@ -178,48 +198,94 @@ pub fn check_hid() -> Result<()> {
     let ir: [u8; 3] = [0x12, 0x00, 0x34];
     open.write(&ir)?;
 
-    let mut buf = vec![0; 100];
-    println!("Reading data from device ...\n");
+    let (tx, mut rx) = tokio::sync::mpsc::channel(30);
+    let tx_input = tx.clone();
+
+    tokio::spawn(async move {
+        println!("Reading data from device ...\n");
+        loop {
+            let mut buf = vec![0; 100];
+            let len = open.read(&mut buf)?;
+            // Check if we have enough data
+            if len < 21 {
+                return Err(anyhow!("Data packet too small"));
+            }
+
+            // 32 BB BB EE EE EE EE EE EE EE EE
+            // BBBB is the core Buttons data
+            // The 8 EE bytes are from the Extension Controller currently connected to the Wii Remote.
+            let top_right = i16::from_be_bytes([buf[3], buf[4]]);
+            let bottom_right = i16::from_be_bytes([buf[5], buf[6]]);
+            let top_left = i16::from_be_bytes([buf[7], buf[8]]);
+            let bottom_left = i16::from_be_bytes([buf[9], buf[10]]);
+
+            let reading = BalanceBoardSensorReading {
+                top_right,
+                bottom_right,
+                top_left,
+                bottom_left,
+            };
+
+            tx.send(Event::BoardReading(reading)).await?
+        }
+        Ok(())
+    });
+
+    tokio::spawn(async move {
+        let mut last_reading = BalanceBoardSensorReading { ..Default::default() };
+        let mut tare = BalanceBoardSensorReading { ..Default::default() };
+
+        // Start receiving messages
+        while let Some(event) = rx.recv().await {
+            match event {
+                Event::UserAction(action) => {
+                    tare = last_reading.clone();
+                }
+                Event::BoardReading(reading) => {
+                    println!("{:?}", reading);
+                    let top_right = reading.top_right_weight(&calibration_data) - tare.top_right_weight(&calibration_data);
+                    let bottom_right  = reading.bottom_right_weight(&calibration_data) - tare.bottom_right_weight(&calibration_data);
+                    let top_left  = reading.top_left_weight(&calibration_data) - tare.top_left_weight(&calibration_data);
+                    let bottom_left  = reading.bottom_left_weight(&calibration_data) - tare.bottom_left_weight(&calibration_data);
+
+                    let total_weight = reading.total_weight(&calibration_data) - tare.total_weight(&calibration_data);
+                    println!("Total: {}. UR: {}, BR: {}, TL: {}, BL: {}", total_weight, top_right, bottom_right, top_left, bottom_left);
+                    last_reading = reading;
+                }
+            }
+        }
+    });
+
+    /*
+        while let Some(event) = rx.recv().await {
+            println!("Beep!");
+
+            match event {
+                Event::UserAction(action) => {
+
+                }
+                Event::BoardReading(reading) => {
+                    println!("{:?}", reading);
+                }
+            }
+        }
+        */
 
     loop {
-        let len = open.read(&mut buf)?;
-        // Check if we have enough data
-        if len < 21 {
-            return Err(anyhow!("Data packet too small"));
-        }
-        // Print each value as uppercase hexadecimal
-        for value in &buf[..len] {
-            print!("{:02X} ", value);
-        }
-        println!(); // Add a newline at the end
+        // Create a mutable String to store the input
+        let mut input = String::new();
+        println!("Please enter a command: (1)");
 
-        // 32 BB BB EE EE EE EE EE EE EE EE
-        // BBBB is the core Buttons data
-        // The 8 EE bytes are from the Extension Controller currently connected to the Wii Remote.
-        let top_right = i16::from_be_bytes([buf[3], buf[4]]);
-        let bottom_right = i16::from_be_bytes([buf[5], buf[6]]);
-        let top_left = i16::from_be_bytes([buf[7], buf[8]]);
-        let bottom_left = i16::from_be_bytes([buf[9], buf[10]]);
+        // Read input from the keyboard
+        std::io::stdin()
+            .read_line(&mut input)?;
 
-        let b = BalanceBoardSensorReading {
-            top_right,
-            bottom_right,
-            top_left,
-            bottom_left,
-        };
+        // Remove the trailing newline character
+        let input = input.trim();
 
-        print!(
-            "{}: {} {}, {}, {}",
-            b.total_weight(&calibration_data),
-            b.top_left_weight(&calibration_data),
-            b.bottom_right_weight(&calibration_data),
-            b.top_left_weight(&calibration_data),
-            b.bottom_left_weight(&calibration_data)
-        );
-        println!();
-        println!("{:?}", b);
-        println!(); // Add a newline at the end
-        std::thread::sleep(tokio::time::Duration::from_millis(1000));
+        println!("You entered: {}", input);
+
+        tx_input.send(Event::UserAction(Tare)).await?;
     }
 
     Ok(())

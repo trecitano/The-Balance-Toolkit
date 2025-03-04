@@ -1,5 +1,4 @@
 use anyhow::{Result, anyhow};
-use crate::bluetooth::bluetooth_communication;
 #[cfg(target_os = "linux")]
 use crate::bluetooth::linux_bluetooth_handler as handler;
 
@@ -100,33 +99,6 @@ fn bluetooth_system_state(state: &Result<Vec<Result<BluetoothAdapterInfo>>>) -> 
         None => BluetoothState::BoardNotFound
     }
 }
-
-// https://wiibrew.org/wiki/Wiimote#Bluetooth_Pairing
-// The pin is the mac address with reversed pairs
-pub fn backup_mac_address_to_wii_pin(bluetooth_mac_address: String) -> Result<String> {
-    if bluetooth_mac_address.len() != 12 {
-        return Err(anyhow!(
-            "Invalid Bluetooth Address: {}",
-            bluetooth_mac_address
-        ));
-    }
-
-    let mut bluetooth_pin = String::new();
-
-    // Process address in reverse pairs
-    for i in (0..bluetooth_mac_address.len()).rev().step_by(2) {
-        if i < 1 {
-            break;
-        }
-        let hex = &bluetooth_mac_address[i - 1..=i];
-
-        let value = u8::from_str_radix(hex, 16).unwrap();
-        bluetooth_pin.push(value as char);
-    }
-
-    Ok(bluetooth_pin)
-}
-
 
 pub fn mac_address_to_wii_pin(mac_address: [u8; 6]) -> [u8; 6] {
     let mut pin = [0u8; 6];
