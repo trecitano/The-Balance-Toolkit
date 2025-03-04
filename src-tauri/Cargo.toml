@@ -28,6 +28,7 @@ futures = "0.3"
 hidapi = "2.6.3"
 env_logger = "0.11"
 log = "0.4"
+lsl = "0.1.1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bluer = { version = "0.17.3", features = ["bluetoothd"] }
