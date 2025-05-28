@@ -11,6 +11,7 @@ pub static HID_NINTENDO_BOARD_ID: &str = "Nintendo RVL-CNT-01";
 
 #[tokio::main]
 async fn main() {
+    /*
     loop {
         bluetooth_communication::ensure_balance_board_is_connected().await;
 
@@ -19,4 +20,6 @@ async fn main() {
             Err(e) => { println!("{}", e) }
         }
     }
+    */
+    balance_toolkit_app_lib::run()
 }
