@@ -13,8 +13,10 @@
     "windows": [
       {
         "title": "balance-toolkit-app",
-        "width": 800,
-        "height": 600
+        "width": 1024,
+        "height": 600,
+        "resizable": true,
+        "maximizable": true
       }
     ],
     "security": {

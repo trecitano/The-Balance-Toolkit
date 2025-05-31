@@ -1,50 +1,36 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
+import Navigation from "./components/common/Navigation/Navigation";
+import Home from "./pages/Home/Home";
+import Devices from "./pages/Devices/Devices";
+import User from "./pages/User/User";
+import Session from "./pages/Session/Session";
 import "./App.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [activeView, setActiveView] = useState("home");
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  const renderContent = () => {
+    switch (activeView) {
+      case "home":
+        return <Home />;
+      case "devices":
+        return <Devices />;
+      case "user":
+        return <User />;
+      case "session":
+        return <Session />;
+      default:
+        return <div>Page not found</div>;
+    }
+  };
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+    <div className="app">
+      <Navigation activeView={activeView} onViewChange={setActiveView} />
+      <main className="main-content">
+        {renderContent()}
+      </main>
+    </div>
   );
 }
 

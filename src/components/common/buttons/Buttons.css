@@ -1,0 +1,16 @@
+/* Skeuomorphic button style */
+.skeuo-btn {
+  background: linear-gradient(145deg, #f0f0f0, #cacaca);
+  border-radius: 12px;
+  box-shadow:  6px 6px 16px #bebebe, -6px -6px 16px #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 12px 28px;
+  font-size: 1rem;
+  color: #333;
+  transition: box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.skeuo-btn:active {
+  box-shadow: inset 4px 4px 12px #bebebe, inset -4px -4px 12px #ffffff;
+}
