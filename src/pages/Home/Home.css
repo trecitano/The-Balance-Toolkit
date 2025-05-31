@@ -1,0 +1,36 @@
+.home-page {
+  width: 100%;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.banner {
+  width: 100%;
+  /* background: #1976d2; */
+  color: rgb(0, 0, 0);
+  padding: 15px 0;
+  text-align: center;
+  font-size: 0.5rem;
+  font-weight: bold;
+}
+
+.container-row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  margin: 0px 40px; 
+}
+
+.container {
+  background: rgb(253, 253, 253);
+  border-radius: 8px;
+  box-shadow: 0 0px 15px rgba(0,0,0,0.08);
+  padding: 32px;
+  flex: 1 1 0;
+  min-width: 220px;
+  max-width: 350px;
+  text-align: center;
+  font-size: 1.2rem;
+  min-height: 430px; 
+}
