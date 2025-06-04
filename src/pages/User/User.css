@@ -15,12 +15,6 @@
   margin-bottom: 20px;
 }
 
-.devices-title {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 0;
-}
-
 .user-scroll-wrapper {
   position: relative;
   width: 100%;
@@ -78,7 +72,7 @@
   box-sizing: border-box;
   width: 180px;
   overflow: visible;
-  font-size: 0.85em;
+  font-size: 0.9em;
 }
 
 .user-container-active {
@@ -165,7 +159,7 @@
 .user-summary .summary-label {
   font-weight: 500;
   color: #397aac;
-  font-size: 0.9em;
+  font-size: 1.1em;
   min-width: 50px;
   flex-shrink: 0;
   display: flex;
@@ -181,13 +175,13 @@
   white-space: nowrap;
   flex: 1;
   margin-left: 8px;
-  font-size: 0.8em;
+  font-size: 1.1em;
   min-width: 0;
 }
 
 .user-summary .summary-label[data-field="created"] + .summary-value,
 .user-summary .summary-label[data-field="updated"] + .summary-value {
-  font-size: 0.75em;
+  font-size: 1.1em;
   white-space: normal;
   line-height: 1.2;
 }
@@ -294,7 +288,7 @@
   padding: 0 6px;
   border-radius: 6px;
   border: 1px solid #bbb;
-  font-size: 0.85em;
+  font-size: 1.1em;
   text-align: right;
   height: 28px;
   line-height: 28px;
@@ -440,7 +434,7 @@
 }
 
 .user-metric-dropdown {
-  font-size: 0.85em !important;
+  font-size: 1.1em !important;
   height: 28px;
   padding: 0 6px;
   min-width: 40px;
@@ -456,7 +450,7 @@
   padding: 2px 4px;
   border-radius: 6px;
   border: 1px solid #bbb;
-  font-size: 0.8em;
+  font-size: 1.1em;
   margin-top: 2px;
   margin-bottom: 8px;
   height: 28px;
@@ -468,14 +462,14 @@
 
 .user-gender-dropdown option:first-child {
   color: #b0b0b0;
-  font-size: 0.75em;
+  font-size: 1.1em;
 }
 
 .user-gender-custom-input {
   padding: 4px 6px;
   border-radius: 6px;
   border: 1px solid #bbb;
-  font-size: 0.85em;
+  font-size: 1.1em;
   margin-top: 2px;
   height: 28px;
   max-width: 180px;
@@ -623,7 +617,7 @@
   justify-content: space-between;
   align-items: center;
   font-weight: 500;
-  font-size: 0.9em;
+  font-size: 1.2em;
   width: calc(100% + 32px);
   box-sizing: border-box;
 }
@@ -642,7 +636,7 @@
   background: none;
   border: none;
   color: white;
-  font-size: 1.0em;
+  font-size: 1.1em;
   cursor: pointer;
   padding: 0;
   width: 20px;
@@ -681,7 +675,7 @@
   transform: translateX(-50%);
   background: #397aac;
   color: white;
-  font-size: 0.7em;
+  font-size: 1.1em;
   font-weight: bold;
   padding: 4px 12px;
   border-radius: 4px;

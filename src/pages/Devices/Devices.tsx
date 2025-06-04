@@ -4,6 +4,7 @@ import wbbIcon from "../../assets/wbb-icon-line.svg";
 import wbbIconBlue from "../../assets/wbb-icon-line-blue.svg";
 import batteryIcon from "../../assets/battery.svg";
 import temperatureIcon from "../../assets/temperature.svg";
+import battery75Icon from '../../assets/battery-75-icon.svg';
 
 /**
  * Devices page component.
@@ -320,7 +321,7 @@ export default function Devices() {
           </div>
         </div>
       )}
-      <div className="devices-title">Devices</div>
+      <div className="page-title">Devices</div>
       <div className="devices-header">
         <button className="scan-btn" onClick={handleScanDevices} disabled={isScanning}>
           Scan Devices
@@ -424,7 +425,11 @@ export default function Devices() {
                 <div className="device-internal-info">
                   <div className="device-internal-info-icons">
                     <div className="device-internal-info-item">
-                      <img src={batteryIcon} alt="Battery" className="device-internal-icon" />
+                      <img
+                        src={battery75Icon}
+                        alt="Battery"
+                        className="device-internal-icon"
+                      />
                       <div className="device-internal-value">{device.battery}%</div>
                     </div>
                     <div className="device-internal-info-item">
