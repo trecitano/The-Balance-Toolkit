@@ -4,10 +4,18 @@ import Home from "./pages/Home/Home";
 import Devices from "./pages/Devices/Devices";
 import User from "./pages/User/User";
 import Session from "./pages/Session/Session";
+import lightIcon from "./assets/light-icon.svg";
+import darkIcon from "./assets/dark-icon.svg";
 import "./App.css";
 
 function App() {
   const [activeView, setActiveView] = useState("home");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
+    // Optionally, add logic to update body class or CSS variables here
+  };
 
   const renderContent = () => {
     switch (activeView) {
@@ -25,9 +33,25 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app ${theme}-theme`}>
       <Navigation activeView={activeView} onViewChange={setActiveView} />
       <main className="main-content">
+        <div className="theme-toggle-hover-zone">
+          <button
+            className="theme-toggle-btn"
+            onClick={(e) => {
+              handleToggleTheme();
+              e.currentTarget.blur(); // Remove focus so it hides on mouse out
+            }}
+            aria-label="Toggle theme"
+          >
+            <img
+              src={theme === "light" ? lightIcon : darkIcon}
+              alt={theme === "light" ? "Light mode" : "Dark mode"}
+              className="theme-toggle-icon"
+            />
+          </button>
+        </div>
         {renderContent()}
       </main>
     </div>

@@ -639,7 +639,7 @@ export default function User() {
   return (
     <div className="user-page">
       <div className="user-header">
-        <span className="devices-title">User</span>
+        <span className="page-title">User</span>
         <button className="user-add-btn" onClick={handleAddUser}>
           +
         </button>
