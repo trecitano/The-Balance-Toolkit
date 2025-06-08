@@ -2,8 +2,8 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import "./Session.css";
 import wbbIconLineBlue from '../../assets/wbb-icon-line-blue.svg';
 import userIcon from '../../assets/user-icon.svg';
-import folderIcon from '../../assets/folder-icon.svg'; // Import the folder icon
-import wbbTopdownIcon from '../../assets/wbb-topdown.svg'; // Changed import name and path if svg name changed
+import folderIcon from '../../assets/folder-icon.svg';
+import wbbTopdownIcon from '../../assets/wbb-topdown.svg';
 
 // Extend the Window interface to include showDirectoryPicker for TypeScript
 declare global {
@@ -46,6 +46,15 @@ const formatDisplayPath = (path: string, maxLength: number): string => {
   return displayString;
 };
 
+// Constants for the moving circle and trail
+const CIRCLE_DIAMETER = 10; // px
+const TRAIL_DOT_DIAMETER = CIRCLE_DIAMETER / 1.5; // px, trail dots are slightly smaller
+const TRAIL_MAX_AGE = 1500; // milliseconds, how long a trail point lasts
+const TRAIL_UPDATE_INTERVAL = 75; // milliseconds, how often to update COP position and add to trail
+const MAX_TRAIL_POINTS = 50; // Max number of trail points to keep for performance
+const COP_TARGET_UPDATE_INTERVAL = 750; // ms, how often the COP's target moves
+const COP_FOLLOW_SPEED = 0.1; // Factor for how quickly COP moves towards its target (0 to 1)
+
 function Session() {
   const [recording, setRecording] = useState(false);
   const [data, setData] = useState<number[]>([]);
@@ -61,10 +70,10 @@ function Session() {
   const stopAfterDropdownRef = useRef<HTMLDivElement>(null);
   const stopAfterToggleRef = useRef<HTMLButtonElement>(null);
   const stopAfterTimeTextRef = useRef<HTMLSpanElement>(null);
-  const lslDropdownRef = useRef<HTMLDivElement>(null); // New ref for LSL dropdown
-  const lslToggleRef = useRef<HTMLButtonElement>(null); // New ref for LSL toggle
-  const tcpDropdownRef = useRef<HTMLDivElement>(null); // New ref for TCP dropdown
-  const tcpToggleRef = useRef<HTMLButtonElement>(null); // New ref for TCP toggle
+  const lslDropdownRef = useRef<HTMLDivElement>(null);
+  const lslToggleRef = useRef<HTMLButtonElement>(null);
+  const tcpDropdownRef = useRef<HTMLDivElement>(null);
+  const tcpToggleRef = useRef<HTMLButtonElement>(null);
 
   const [stopAfterEnabled, setStopAfterEnabled] = useState(false);
   const [stopAfterTime, setStopAfterTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
@@ -77,20 +86,35 @@ function Session() {
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
   const [connectedBoards, setConnectedBoards] = useState<string[]>(["Alpha", "Bravo", "Charlie"]);
 
-  const [selectedUserId, setSelectedUserId] = useState<string | null>("User-123"); 
-  const [showUserDropdown, setShowUserDropdown] = useState(false); 
+  const [selectedUserId, setSelectedUserId] = useState<string | null>("User-123");
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<User[]>([
     { id: "User-123", color: "#4CAF50" },
     { id: "User-456", color: "#2196F3" },
     { id: "User-789", color: "#FFC107" },
     { id: "Guest", color: "#9E9E9E" },
-  ]); 
+  ]);
 
   const [saveLocation, setSaveLocation] = useState<string>(DEFAULT_SAVE_LOCATION);
   const [lslStreamEnabled, setLslStreamEnabled] = useState(false);
   const [tcpStreamEnabled, setTcpStreamEnabled] = useState(false);
-  const [showLslDropdown, setShowLslDropdown] = useState(false); // New state for LSL dropdown
-  const [showTcpDropdown, setShowTcpDropdown] = useState(false); // New state for TCP dropdown
+  const [showLslDropdown, setShowLslDropdown] = useState(false);
+  const [showTcpDropdown, setShowTcpDropdown] = useState(false);
+
+  // State and refs for the COP animation
+  const [copPosition, setCopPosition] = useState<{ x: number; y: number } | null>(null);
+  const [copTargetPosition, setCopTargetPosition] = useState<{ x: number; y: number } | null>(null); // Target for COP
+  const [trailPoints, setTrailPoints] = useState<Array<{ x: number; y: number; id: number; timestamp: number }>>([]);
+  const wbbTopdownContainerRef = useRef<HTMLDivElement>(null);
+  const wbbTopdownImageRef = useRef<HTMLImageElement>(null);
+  const [svgRenderedBounds, setSvgRenderedBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  
+  const copAnimationIntervalIdRef = useRef<number | null>(null); // Renamed for clarity
+  const copTargetAnimationIntervalIdRef = useRef<number | null>(null); // For target updates
+  const lastTrailPointIdRef = useRef(0);
+  // velocityXRef and velocityYRef are no longer needed for this movement model
+  // const velocityXRef = useRef(0);
+  // const velocityYRef = useRef(0);
 
   useEffect(() => {
     if (!recording) return;
@@ -282,15 +306,203 @@ function Session() {
   }, [showStopAfterDropdown]);
 
 
+  // Effect to calculate actual SVG rendered bounds
+  useEffect(() => {
+    const calculateBounds = () => {
+      if (wbbTopdownContainerRef.current && wbbTopdownImageRef.current && wbbTopdownImageRef.current.complete) {
+        const container = wbbTopdownContainerRef.current;
+        const img = wbbTopdownImageRef.current;
+
+        const containerWidth = container.offsetWidth;
+        const containerHeight = container.offsetHeight;
+        const imgNaturalWidth = img.naturalWidth;
+        const imgNaturalHeight = img.naturalHeight;
+
+        if (containerWidth === 0 || containerHeight === 0 || imgNaturalWidth === 0 || imgNaturalHeight === 0) {
+          setSvgRenderedBounds(null); return;
+        }
+        const imgAspectRatio = imgNaturalWidth / imgNaturalHeight;
+        const containerAspectRatio = containerWidth / containerHeight;
+        let renderedWidth, renderedHeight, offsetX, offsetY;
+        if (imgAspectRatio > containerAspectRatio) {
+          // SVG is wider or less tall than container (letterboxed if container is taller)
+          // Fit by width
+          renderedWidth = containerWidth;
+          renderedHeight = containerWidth / imgAspectRatio;
+          offsetX = 0;
+          offsetY = (containerHeight - renderedHeight) / 2;
+        } else {
+          // SVG is taller or less wide than container (pillarboxed if container is wider)
+          // Fit by height
+          renderedHeight = containerHeight;
+          renderedWidth = containerHeight * imgAspectRatio;
+          offsetY = 0;
+          offsetX = (containerWidth - renderedWidth) / 2;
+        }
+        setSvgRenderedBounds({ x: offsetX, y: offsetY, width: renderedWidth, height: renderedHeight });
+      } else {
+        setSvgRenderedBounds(null);
+      }
+    };
+
+    calculateBounds(); // Initial calculation
+
+    const imgElement = wbbTopdownImageRef.current;
+    if (imgElement) imgElement.addEventListener('load', calculateBounds);
+
+    const resizeObserver = new ResizeObserver(calculateBounds);
+    if (wbbTopdownContainerRef.current) resizeObserver.observe(wbbTopdownContainerRef.current);
+
+    return () => {
+      if (imgElement) imgElement.removeEventListener('load', calculateBounds);
+      resizeObserver.disconnect();
+    };
+  }, []); // Runs once on mount, calculation re-triggered by observer or load event
+
+  // Effect to manage the moving COP animation
+  useEffect(() => {
+    if (recording && svgRenderedBounds && copPosition && copTargetPosition) {
+      const { width: svgWidth, height: svgHeight } = svgRenderedBounds;
+
+      if (svgWidth === 0 || svgHeight === 0) {
+        console.warn("SVG rendered bounds have zero dimensions. COP animation stopped/prevented.");
+        if (copAnimationIntervalIdRef.current !== null) {
+          clearInterval(copAnimationIntervalIdRef.current);
+          copAnimationIntervalIdRef.current = null;
+        }
+        return;
+      }
+      
+      const moveCop = () => {
+        setCopPosition(prevCopPos => {
+          if (!prevCopPos || !copTargetPosition) return prevCopPos; // Should not happen if guarded
+
+          const dx = copTargetPosition.x - prevCopPos.x;
+          const dy = copTargetPosition.y - prevCopPos.y;
+
+          // Move a fraction of the distance towards the target
+          let newX = prevCopPos.x + dx * COP_FOLLOW_SPEED;
+          let newY = prevCopPos.y + dy * COP_FOLLOW_SPEED;
+          
+          // Ensure COP stays within SVG bounds (it should, as target is within bounds)
+          // but good to clamp just in case of extreme speeds or floating point issues.
+          const radius = CIRCLE_DIAMETER / 2;
+          newX = Math.max(radius, Math.min(svgWidth - radius, newX));
+          newY = Math.max(radius, Math.min(svgHeight - radius, newY));
+          
+          const nextPositionInSvg = { x: newX, y: newY };
+
+          setTrailPoints(currentTrail => {
+            const now = Date.now();
+            const newPoint = { ...nextPositionInSvg, id: lastTrailPointIdRef.current++, timestamp: now };
+            const updatedTrail = [...currentTrail, newPoint]
+              .filter(p => now - p.timestamp < TRAIL_MAX_AGE)
+              .slice(-MAX_TRAIL_POINTS); 
+            return updatedTrail;
+          });
+          return nextPositionInSvg;
+        });
+      };
+
+      if (copAnimationIntervalIdRef.current === null) {
+        // Add initial trail point
+        setTrailPoints(currentTrail => {
+            const now = Date.now();
+            const startPoint = copPosition;
+            const newPoint = { ...startPoint, id: lastTrailPointIdRef.current++, timestamp: now };
+            return [...currentTrail, newPoint].filter(p => now - p.timestamp < TRAIL_MAX_AGE).slice(-MAX_TRAIL_POINTS);
+        });
+        copAnimationIntervalIdRef.current = window.setInterval(moveCop, TRAIL_UPDATE_INTERVAL);
+      }
+
+    } else { // Not recording, or missing necessary data
+      if (copAnimationIntervalIdRef.current !== null) {
+        clearInterval(copAnimationIntervalIdRef.current);
+        copAnimationIntervalIdRef.current = null;
+      }
+    }
+
+    return () => { // Cleanup main COP animation interval
+      if (copAnimationIntervalIdRef.current !== null) {
+        clearInterval(copAnimationIntervalIdRef.current);
+        copAnimationIntervalIdRef.current = null;
+      }
+    };
+  }, [recording, copPosition, copTargetPosition, svgRenderedBounds]);
+
+
+  // Effect to clean up old trail points periodically
+  useEffect(() => {
+    const trailCleanupTimer = setInterval(() => {
+      if (trailPoints.length > 0) {
+        const now = Date.now();
+        setTrailPoints(currentTrail => currentTrail.filter(p => now - p.timestamp < TRAIL_MAX_AGE));
+      }
+    }, TRAIL_MAX_AGE / 2); // Clean up reasonably often
+
+    return () => clearInterval(trailCleanupTimer);
+  }, [trailPoints.length]); // Rerun only if trailPoints.length changes
+
+
   const handleRecord = () => {
     setRecording(true);
     setData([]);
     setData2([]);
+    
+    if (svgRenderedBounds) {
+        const { width: svgWidth, height: svgHeight } = svgRenderedBounds;
+
+        if (svgWidth > 0 && svgHeight > 0) {
+            // Set initial COP position to center of SVG
+            const initialCopX = svgWidth / 2;
+            const initialCopY = svgHeight / 2;
+            setCopPosition({ x: initialCopX, y: initialCopY });
+            
+            // Set initial target position randomly within SVG bounds
+            const radius = CIRCLE_DIAMETER / 2;
+            const targetX = Math.random() * (svgWidth - CIRCLE_DIAMETER) + radius;
+            const targetY = Math.random() * (svgHeight - CIRCLE_DIAMETER) + radius;
+            setCopTargetPosition({ x: targetX, y: targetY });
+
+            setTrailPoints([]); 
+            lastTrailPointIdRef.current = 0;
+
+            // Start interval to update target position
+            if (copTargetAnimationIntervalIdRef.current !== null) {
+                clearInterval(copTargetAnimationIntervalIdRef.current);
+            }
+            copTargetAnimationIntervalIdRef.current = window.setInterval(() => {
+                if (svgRenderedBounds) { // Ensure bounds are still valid
+                    const newTargetX = Math.random() * (svgRenderedBounds.width - CIRCLE_DIAMETER) + radius;
+                    const newTargetY = Math.random() * (svgRenderedBounds.height - CIRCLE_DIAMETER) + radius;
+                    setCopTargetPosition({ x: newTargetX, y: newTargetY });
+                }
+            }, COP_TARGET_UPDATE_INTERVAL);
+
+        } else {
+            console.warn("Cannot start COP animation: SVG rendered bounds have zero dimensions in handleRecord.");
+            setCopPosition(null);
+            setCopTargetPosition(null);
+        }
+    } else {
+        console.warn("Cannot start COP animation: SVG rendered bounds not available in handleRecord.");
+        setCopPosition(null);
+        setCopTargetPosition(null);
+    }
   };
 
   const handleStop = useCallback(() => {
     setRecording(false);
-  }, [setRecording]);
+    // Clear the target animation interval
+    if (copTargetAnimationIntervalIdRef.current !== null) {
+        clearInterval(copTargetAnimationIntervalIdRef.current);
+        copTargetAnimationIntervalIdRef.current = null;
+    }
+    // Main COP animation interval is cleared by its own useEffect when recording becomes false.
+    // Optionally reset COP and target positions:
+    // setCopPosition(null);
+    // setCopTargetPosition(null);
+  }, [setRecording]); // Removed svgRenderedBounds from here as it's not directly used for stopping
 
   const handleOpenStopAfterDropdown = () => {
     if (stopAfterEnabled) {
@@ -619,8 +831,52 @@ function Session() {
         </div>
       </header>
       <div className="session-content" style={{ flex: 1 }}>
-        <div className="wbb-topdown-container"> {/* Changed class name */}
-          <img src={wbbTopdownIcon} alt="WBB Topdown" className="wbb-topdown-icon" /> {/* Changed src, alt, and class name */}
+        <div className="wbb-topdown-container" ref={wbbTopdownContainerRef}>
+          <img 
+            src={wbbTopdownIcon} 
+            alt="WBB Topdown" 
+            className="wbb-topdown-icon" 
+            ref={wbbTopdownImageRef}
+            onLoad={() => { /* ... existing onLoad ... */ }}
+          />
+          {recording && copPosition && svgRenderedBounds && (
+            <>
+              {trailPoints.map(point => {
+                const age = Date.now() - point.timestamp;
+                // relativeAge goes from 0 (new) to 1 (oldest)
+                const relativeAge = Math.min(1, Math.max(0, age / TRAIL_MAX_AGE));
+                
+                // Opacity fades from 0.7 (for trail) to 0
+                const opacity = 0.7 * (1 - relativeAge);
+                // Lightness: blue (hsl(240, 100%, 50%)) lightens towards a very light blue (hsl(240, 100%, 85%))
+                // Start at 60% lightness for trail, up to 85%
+                const lightness = 60 + 25 * relativeAge; 
+
+                return (
+                  <div
+                    key={point.id}
+                    className="cop-indicator-trail" 
+                    style={{
+                      left: `${svgRenderedBounds.x + point.x - (TRAIL_DOT_DIAMETER / 2)}px`,
+                      top: `${svgRenderedBounds.y + point.y - (TRAIL_DOT_DIAMETER / 2)}px`,
+                      width: `${TRAIL_DOT_DIAMETER}px`,
+                      height: `${TRAIL_DOT_DIAMETER}px`,
+                      backgroundColor: `hsla(240, 100%, ${lightness}%, ${opacity})`,
+                    }}
+                  />
+                );
+              })}
+              <div
+                className="cop-indicator-circle" // Renamed class
+                style={{
+                  left: `${svgRenderedBounds.x + copPosition.x - (CIRCLE_DIAMETER / 2)}px`, // Changed circlePosition to copPosition
+                  top: `${svgRenderedBounds.y + copPosition.y - (CIRCLE_DIAMETER / 2)}px`,  // Changed circlePosition to copPosition
+                  width: `${CIRCLE_DIAMETER}px`,
+                  height: `${CIRCLE_DIAMETER}px`,
+                }}
+              />
+            </>
+          )}
         </div>
         {/* Other future content of session-content will go here */}
       </div>
