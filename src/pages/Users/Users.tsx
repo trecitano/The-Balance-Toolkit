@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useRef, useEffect } from "react";
-import "./User.css";
+import "./Users.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 
 /**
@@ -91,7 +91,7 @@ const genderOptions = [
  * @component
  * @returns {JSX.Element} The rendered User management page.
  */
-export default function User() {
+export default function Users() {
   const [users, setUsers] = useState<UserType[]>(
     [
       {

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navigation from "./components/common/Navigation/Navigation";
 import Home from "./pages/Home/Home";
 import Devices from "./pages/Devices/Devices";
-import User from "./pages/User/User";
+import User from "./pages/Users/Users";
 import Session from "./pages/Session/Session";
 import lightIcon from "./assets/light-icon.svg";
 import darkIcon from "./assets/dark-icon.svg";
@@ -11,10 +11,19 @@ import "./App.css";
 function App() {
   const [activeView, setActiveView] = useState("home");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [connectedDeviceNames, setConnectedDeviceNames] = useState<string[]>([]);
 
   const handleToggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
-    // Optionally, add logic to update body class or CSS variables here
+    document.body.className = theme === "light" ? "dark-theme" : "light-theme";
+  };
+
+  useEffect(() => {
+    document.body.className = theme + "-theme";
+  }, [theme]);
+
+  const handleConnectedDevicesChange = (names: string[]) => {
+    setConnectedDeviceNames(names);
   };
 
   const renderContent = () => {
@@ -22,11 +31,11 @@ function App() {
       case "home":
         return <Home />;
       case "devices":
-        return <Devices />;
+        return <Devices onConnectedDevicesChange={handleConnectedDevicesChange} />;
       case "user":
         return <User />;
       case "session":
-        return <Session />;
+        return <Session availableBoards={connectedDeviceNames} onViewChange={setActiveView} />;
       default:
         return <div>Page not found</div>;
     }

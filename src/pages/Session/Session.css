@@ -53,11 +53,283 @@
   justify-content: flex-end; 
 }
 
-.stop-after-controls {
+.session-header {
+  display: flex;
+  justify-content: flex-start; 
+  align-items: center; 
+  margin-bottom: 1rem; 
+  padding-bottom: 0.5rem; 
+  border-bottom: 1px solid #e2e8f0; 
+}
+
+.page-title {
+  
+  margin: 0; 
+}
+
+.session-settings-container {
+  display: flex;
+  flex-wrap: wrap; 
+  gap: 16px; 
+  align-items: flex-start; 
+  margin-left: 20px;
+}
+
+.toggle-label-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+}
+
+.toggle-label {
+  font-size: 0.6rem; 
+  color: #4b5563; 
+  margin-bottom: 3px; 
+  font-weight: 500;
+  white-space: nowrap; 
+}
+
+.board-selector-wrapper {
+  position: relative; 
+}
+
+.board-selector-toggle {
   display: flex;
   align-items: center;
+  gap: 8px; 
+  width: 130px; 
+  justify-content: flex-start; 
+}
+
+.board-selector-icon {
+  
+  width: 2em;  
+  height: 2em; 
+  object-fit: contain; 
+  
+  
+  
+  display: inline-flex; 
+  align-items: center;
+}
+
+.user-selector-wrapper {
+  position: relative; 
+}
+
+.board-selector-name {
+  white-space: nowrap;
+  overflow: hidden; /* Optional: good for preventing overflow if text is very long before truncation */
+  text-overflow: ellipsis; /* Optional: good for preventing overflow if text is very long before truncation */
+}
+
+.lsl-selector-wrapper, /* New style */
+.tcp-selector-wrapper {  /* New style */
+  position: relative;
+}
+
+.lsl-selector-dropdown, /* New style */
+.tcp-selector-dropdown {  /* New style */
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%); /* Center the dropdown */
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 20;
+  min-width: 180px; /* Adjust as needed */
+  padding: 10px;
+  text-align: left;
+}
+
+.lsl-selector-dropdown p, /* New style */
+.tcp-selector-dropdown p {  /* New style */
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+  color: #374151;
+}
+
+.lsl-selector-dropdown ul, /* New style */
+.tcp-selector-dropdown ul {  /* New style */
+  list-style: disc;
+  padding-left: 20px;
+  margin-bottom: 10px;
+  font-size: 0.85em;
+}
+
+.dropdown-action-button { /* New style for buttons inside new dropdowns */
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #397aac;
+  border-radius: 4px;
+  background-color: #397aac;
+  color: white;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.9em;
+}
+
+.dropdown-action-button:hover { /* New style */
+  background-color: #2c5f85;
+}
+
+
+.save-location-toggle-wide {
+  width: 220px !important; /* Increased width from 180px to 220px */
+}
+
+/* Specific style for the folder icon in the Save Location button */
+.save-location-toggle-wide img {
+  width: 2rem; /* Increased size, adjust as needed */
+  height: 2em; /* Increased size, adjust as needed */
+  flex-shrink: 0; /* Prevent the icon from shrinking if space is limited */
+  object-fit: contain; /* Ensures the icon scales properly within the dimensions */
+}
+
+.board-selector-dropdown {
+  position: absolute;
+  top: calc(100% + 5px); 
+  left: 0;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 20; 
+  min-width: 113px; 
+  padding: 8px;
+}
+
+.board-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px 0;
+}
+
+.board-list-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.board-list-item:hover {
+  background-color: #f3f4f6;
+}
+
+.user-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Adjust gap as needed */
+}
+
+.user-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.user-selector-dropdown { 
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  background-color: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 20;
+  min-width: 113px; 
+  padding: 8px;
+}
+
+.go-to-devices-btn {
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 6px; 
+  width: 100%;
+  padding: 6px 12px; 
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #f9fafb;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9em; 
+}
+
+.go-to-devices-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.go-to-devices-icon {
+  font-size: 1.1em; 
+  line-height: 1; 
+}
+
+.go-to-users-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px;
+  margin-top: 8px; 
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #f9fafb;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9em;
+}
+
+.go-to-users-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.go-to-users-icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.session-setting-toggle {
+  height: 22px; 
+  padding: 0 12px; 
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #f9fafb;
+  cursor: pointer;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9em;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+  display: flex; 
+  align-items: center; 
+  box-sizing: border-box; 
+}
+
+.session-setting-toggle:hover {
+  background-color: #f3f4f6;
+}
+
+.session-setting-toggle.active {
+  background-color: #397aac; 
+  color: white; 
+  border-color: #397aac; 
+}
+
+.stop-after-controls {
+  display: flex;
+  align-items: center; 
   gap: 3px;
-  padding: 0x 0;
+  padding: 0px 0; 
   margin-bottom: 5px;
   position: relative;
   justify-content: flex-start;
@@ -77,6 +349,7 @@
   cursor: pointer;
   font-weight: 500;
   color: #374151;
+  font-size: 0.9em; 
 }
 
 .stop-after-toggle:hover {
@@ -102,6 +375,7 @@
   background-color: #f9fafb;
   display: inline-block;
   line-height: normal;
+  font-size: 0.9em; 
 }
 
 .stop-after-time-text:hover,
@@ -110,20 +384,58 @@
   outline: none;
 }
 
+.stop-after-time-text.disabled {
+  cursor: not-allowed;
+  color: #9ca3af; /* Lighter text color */
+  background-color: #f9fafb; /* Keep similar background or make it more muted */
+}
+
+.stop-after-time-text.disabled:hover,
+.stop-after-time-text.disabled:focus {
+  background-color: #f9fafb; /* Prevent hover effect when disabled */
+}
+
 
 .stop-after-reset-btn {
   background: none;
   border: none;
   color: #ef4444;
-  font-size: 1.5em;
+  font-size: 1.2em; 
   font-weight: bold;
   cursor: pointer;
   padding: 0 4px;
-  line-height: 1;
+  line-height: 1; 
 }
 
-.stop-after-reset-btn:hover {
-  color: #dc2626;
+/* Styles for disabled session setting controls */
+.session-setting-toggle:disabled,
+.session-setting-toggle:disabled:hover,
+.board-selector-toggle:disabled, /* Handles board, user, save location */
+.board-selector-toggle:disabled:hover,
+.stop-after-toggle:disabled,
+.stop-after-toggle:disabled:hover {
+  background-color: #f0f0f0; /* More muted background */
+  color: #9ca3af;          /* Lighter text color, consistent with .stop-after-time-text.disabled */
+  border-color: #e0e0e0;   /* Lighter border */
+  cursor: not-allowed;
+  opacity: 0.7;             /* Visually fade the element */
+}
+
+/* Ensure active styles are also overridden by disabled state if necessary */
+.session-setting-toggle.active:disabled,
+.session-setting-toggle.active:disabled:hover {
+  background-color: #f0f0f0; /* Disabled background, not active blue */
+  color: #9ca3af;
+  border-color: #e0e0e0;
+  opacity: 0.7;
+}
+
+.stop-after-reset-btn:disabled,
+.stop-after-reset-btn:disabled:hover {
+  color: #9ca3af; /* Lighter, greyed-out color */
+  cursor: not-allowed;
+  opacity: 0.6;
+  background: none; /* Ensure no background on hover when disabled */
 }
 
 .stop-after-dropdown {
@@ -370,4 +682,26 @@
   height: 20px;
   border-radius: 3px;     
   background: #fff;
+}
+
+.session-content {
+  /* position: relative; /* This is only needed if you have other absolutely positioned children */
+  /* flex: 1; is handled by inline style in Session.tsx */
+  /* Add other styles for session-content if needed, like padding */
+  padding: 10px; /* Example padding */
+}
+
+.wbb-topdown-container { /* Changed class name */
+  width: 30%;    /* Set container width to 30% of parent */
+  height: 30%;   /* Set container height to 30% of parent */
+  /* margin-bottom: 10px; */
+  /* Optional: Add a border to see the container's bounds during development */
+  /* border: 1px solid #ccc; */
+}
+
+.wbb-topdown-icon { /* Changed class name */
+  display: block;
+  width: 100%;   /* Make image take full width of its container */
+  height: 100%;  /* Make image take full height of its container */
+  object-fit: contain; /* Ensures the image scales to fit within the container while maintaining aspect ratio */
 }
