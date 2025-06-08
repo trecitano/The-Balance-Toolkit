@@ -175,7 +175,7 @@
 
 .remove-device-btn:hover {
   color: #fff;
-  background: #b71c1c;
+  background: #E50012;
 }
 
 .device-image-status {
@@ -299,7 +299,7 @@
 }
 
 .device-action-btn.disconnect {
-  background: #e53935;
+  background: #E50012;
   color: #fff;
   font-weight: 700;
   border: none;
