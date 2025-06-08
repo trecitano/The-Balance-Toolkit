@@ -4,7 +4,7 @@ import deviceIcon from '../../../assets/wbb-icon-line.svg';
 import userIcon from '../../../assets/users-icon.svg';
 import sessionIcon from '../../../assets/session-icon.svg';
 import settingsIcon from '../../../assets/settings-icon.svg';
-import helpIcon from '../../../assets/question-mark-icon.svg'; // <-- Add this line
+import helpIcon from '../../../assets/question-mark-icon.svg'; 
 
 interface NavigationProps {
   activeView: string;

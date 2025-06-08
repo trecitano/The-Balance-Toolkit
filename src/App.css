@@ -20,14 +20,14 @@ body {
   box-sizing: border-box;
   box-shadow: 0 4px 32px 0 rgba(0,0,0,0.12);
   border-radius: 22px;
-  font-size: 0.85em; /* Decrease base font size by 15% */
+  font-size: 0.85em; 
 }
 
 .menu-bar {
   height: 100vh;
   width: 100px;
   min-width: 80px;
-  background: #fcfcfc !important; /* Slightly darker than #fff */
+  background: #fcfcfc !important; 
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -56,7 +56,7 @@ body {
 .logo-placeholder img,
 .logo-placeholder svg {
   width: 100% !important;
-  height: auto !important;      /* Maintain aspect ratio */
+  height: auto !important;      
   max-width: 100% !important;
   max-height: 100% !important;
   display: block;
@@ -83,17 +83,17 @@ body {
 .menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;           /* Reduced gap between icon and text */
+  gap: 10px;           
   width: 100%;
   border-radius: 8px;
-  padding: 8px 8px;   /* Reduced padding for a smaller item */
+  padding: 8px 8px;   
   background: transparent;
   color: #374151;
-  font-size: 0.9em;  /* 0.95em * 0.85 */
+  font-size: 0.9em;  
   font-weight: 500;
   cursor: pointer;
   border: none;
-  margin-bottom: 4px; /* Reduced margin between items */
+  margin-bottom: 4px; 
   transition: background 0.2s, color 0.2s;
 }
 
@@ -101,7 +101,7 @@ body {
   margin-right: 0;
   display: block;
   text-align: right;
-  color: #374151 !important; /* Ensures text is never white */
+  color: #374151 !important; 
 }
 
 .menu-item.active {
@@ -116,30 +116,30 @@ body {
 
 .menu-item-icon {
   width: 22px;
-  min-width: 22px;      /* Ensures all icons take up the same horizontal space */
+  min-width: 22px;      
   height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;           /* Remove any default padding */
-  margin: 0;            /* Remove any default margin */
+  padding: 0;           
+  margin: 0;            
 }
 
 .menu-item-icon img,
 .menu-item-icon svg {
-  width: 20px;          /* Ensures icons are the same size */
+  width: 20px;          
   height: 20px;
   display: block;
   margin: 0 auto;
   padding: 0;
   filter: none;
-  object-fit: contain;  /* Keeps SVGs and images centered and not stretched */
+  object-fit: contain;  
 }
 
 .menu-bottom {
   display: flex;
   flex-direction: column;
-  gap: 0px; /* Match the gap between main menu items */
+  gap: 0px; 
   margin-bottom: 32px;
   align-items: flex-start;
   width: 100%;
@@ -175,7 +175,7 @@ body {
 }
 
 .page-title {
-  font-size: 1.7rem; /* Example: adjust as needed */
+  font-size: 1.7rem; 
   font-weight: bold;
   margin-bottom: 0px;
   color: #222;
@@ -185,8 +185,8 @@ body {
   position: absolute;
   top: 0;
   right: 0;
-  width: 120px;   /* Increased width */
-  height: 80px;   /* Increased height */
+  width: 120px;   
+  height: 80px;   
   z-index: 20;
 }
 
@@ -196,23 +196,23 @@ body {
   right: 20px;
   opacity: 0;
   pointer-events: none;
-  background: none;      /* Remove background */
-  border: none;          /* Remove border */
-  outline: none;         /* Remove focus outline */
-  box-shadow: none;      /* Remove any box shadow */
+  background: none;      
+  border: none;          
+  outline: none;         
+  box-shadow: none;      
   cursor: pointer;
   transition: top 0.3s cubic-bezier(.4,2,.6,1), opacity 0.3s;
 }
 
 .theme-toggle-hover-zone:hover .theme-toggle-btn,
 .theme-toggle-hover-zone:focus-within .theme-toggle-btn {
-  top: 22px;    /* Slides further down into view */
+  top: 22px;    
   opacity: 1;
   pointer-events: auto;
 }
 
 .theme-toggle-icon {
-  width: 30px;   /* Increase or decrease as needed */
+  width: 30px;   
   height: 30px;
   transition: transform 0.3s, opacity 0.3s;
   will-change: transform, opacity;
