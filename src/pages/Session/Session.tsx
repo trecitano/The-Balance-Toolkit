@@ -54,6 +54,7 @@ const TRAIL_UPDATE_INTERVAL = 75; // milliseconds, how often to update COP posit
 const MAX_TRAIL_POINTS = 50; // Max number of trail points to keep for performance
 const COP_TARGET_UPDATE_INTERVAL = 750; // ms, how often the COP's target moves
 const COP_FOLLOW_SPEED = 0.1; // Factor for how quickly COP moves towards its target (0 to 1)
+const COPY_GRAPH_MAX_POINTS = 200; // Max points for the COPy graph
 
 function Session() {
   const [recording, setRecording] = useState(false);
@@ -62,6 +63,8 @@ function Session() {
   const animationRef = useRef<number>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasRef2 = useRef<HTMLCanvasElement>(null);
+  const copYCanvasRef = useRef<HTMLCanvasElement>(null); 
+  const copyGraphContainerRef = useRef<HTMLDivElement>(null); 
 
   const boardDropdownRef = useRef<HTMLDivElement>(null);
   const boardToggleRef = useRef<HTMLButtonElement>(null);
@@ -103,18 +106,17 @@ function Session() {
 
   // State and refs for the COP animation
   const [copPosition, setCopPosition] = useState<{ x: number; y: number } | null>(null);
-  const [copTargetPosition, setCopTargetPosition] = useState<{ x: number; y: number } | null>(null); // Target for COP
+  const [copTargetPosition, setCopTargetPosition] = useState<{ x: number; y: number } | null>(null);
   const [trailPoints, setTrailPoints] = useState<Array<{ x: number; y: number; id: number; timestamp: number }>>([]);
+  const [copYDataSeries, setCopYDataSeries] = useState<number[]>([]); // New state for COPy graph data
   const wbbTopdownContainerRef = useRef<HTMLDivElement>(null);
   const wbbTopdownImageRef = useRef<HTMLImageElement>(null);
   const [svgRenderedBounds, setSvgRenderedBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [copYCanvasSize, setCopYCanvasSize] = useState({ width: 0, height: 0 }); // State for COPy canvas dimensions
   
-  const copAnimationIntervalIdRef = useRef<number | null>(null); // Renamed for clarity
-  const copTargetAnimationIntervalIdRef = useRef<number | null>(null); // For target updates
+  const copAnimationIntervalIdRef = useRef<number | null>(null);
+  const copTargetAnimationIntervalIdRef = useRef<number | null>(null);
   const lastTrailPointIdRef = useRef(0);
-  // velocityXRef and velocityYRef are no longer needed for this movement model
-  // const velocityXRef = useRef(0);
-  // const velocityYRef = useRef(0);
 
   useEffect(() => {
     if (!recording) return;
@@ -359,6 +361,33 @@ function Session() {
     };
   }, []); // Runs once on mount, calculation re-triggered by observer or load event
 
+  // Effect to observe COPy graph container size and update canvas dimensions
+  useEffect(() => {
+    const container = copyGraphContainerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        setCopYCanvasSize({ width, height });
+      }
+    });
+
+    resizeObserver.observe(container);
+    
+    // Set initial size
+    const initialWidth = container.offsetWidth;
+    const initialHeight = container.offsetHeight;
+    if (initialWidth > 0 && initialHeight > 0 && (copYCanvasSize.width !== initialWidth || copYCanvasSize.height !== initialHeight)) {
+        setCopYCanvasSize({ width: initialWidth, height: initialHeight });
+    }
+
+    return () => {
+      resizeObserver.unobserve(container);
+      resizeObserver.disconnect();
+    };
+  }, []); // Runs once on mount
+
   // Effect to manage the moving COP animation
   useEffect(() => {
     if (recording && svgRenderedBounds && copPosition && copTargetPosition) {
@@ -375,23 +404,19 @@ function Session() {
       
       const moveCop = () => {
         setCopPosition(prevCopPos => {
-          if (!prevCopPos || !copTargetPosition) return prevCopPos; // Should not happen if guarded
+          if (!prevCopPos || !copTargetPosition) return prevCopPos;
 
           const dx = copTargetPosition.x - prevCopPos.x;
           const dy = copTargetPosition.y - prevCopPos.y;
-
-          // Move a fraction of the distance towards the target
           let newX = prevCopPos.x + dx * COP_FOLLOW_SPEED;
           let newY = prevCopPos.y + dy * COP_FOLLOW_SPEED;
-          
-          // Ensure COP stays within SVG bounds (it should, as target is within bounds)
-          // but good to clamp just in case of extreme speeds or floating point issues.
           const radius = CIRCLE_DIAMETER / 2;
           newX = Math.max(radius, Math.min(svgWidth - radius, newX));
           newY = Math.max(radius, Math.min(svgHeight - radius, newY));
           
           const nextPositionInSvg = { x: newX, y: newY };
 
+          // Update trail points (existing logic)
           setTrailPoints(currentTrail => {
             const now = Date.now();
             const newPoint = { ...nextPositionInSvg, id: lastTrailPointIdRef.current++, timestamp: now };
@@ -400,6 +425,13 @@ function Session() {
               .slice(-MAX_TRAIL_POINTS); 
             return updatedTrail;
           });
+
+          // Calculate normalized COPy and update data series for the graph
+          if (svgHeight > 0) {
+            const normalizedCopY = (newY / svgHeight) * 2 - 1; // Maps [0, svgHeight] to [-1, 1]
+            setCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), normalizedCopY]);
+          }
+
           return nextPositionInSvg;
         });
       };
@@ -430,6 +462,158 @@ function Session() {
     };
   }, [recording, copPosition, copTargetPosition, svgRenderedBounds]);
 
+  // Effect to draw COPy graph
+  useEffect(() => {
+    const canvas = copYCanvasRef.current;
+    if (!canvas || !copYCanvasSize || copYCanvasSize.width === 0 || copYCanvasSize.height === 0) {
+      // If canvas is not ready or dimensions are zero, don't draw
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    // Use dimensions from state, driven by ResizeObserver
+    canvas.width = copYCanvasSize.width * dpr;
+    canvas.height = copYCanvasSize.height * dpr;
+    ctx.scale(dpr, dpr);
+    
+    const canvasLogicalWidth = copYCanvasSize.width;
+    const canvasLogicalHeight = copYCanvasSize.height;
+    
+    ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
+
+    // Define padding for axes
+    const padding = { top: 0, right: 20, bottom: 0, left: 35 }; 
+    const graphWidth = canvasLogicalWidth - padding.left - padding.right;
+    const graphHeight = canvasLogicalHeight - padding.top - padding.bottom; 
+    const graphOriginX = padding.left;
+    const graphOriginY = padding.top; 
+
+    // Prevent drawing if graph dimensions are too small or negative
+    if (graphWidth <= 0 || graphHeight <= 0) {
+        return;
+    }
+
+    // Set styles for axes
+    ctx.strokeStyle = "black"; 
+    ctx.lineWidth = 1;
+    ctx.fillStyle = "black"; 
+    ctx.font = "10px Arial";
+    ctx.textAlign = "right"; 
+
+    // Draw Y-axis
+    ctx.beginPath();
+    ctx.moveTo(graphOriginX, graphOriginY);
+    ctx.lineTo(graphOriginX, graphOriginY + graphHeight);
+    ctx.stroke(); 
+
+    // Draw X-axis
+    ctx.beginPath();
+    ctx.moveTo(graphOriginX, graphOriginY + graphHeight / 2); 
+    ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight / 2);
+    ctx.stroke(); 
+
+    // Y-axis labels and ticks
+    const yTickValues = [-1, 0, 1];
+    const yLabelText: { [key: number]: string } = {
+        1: "Front",
+        0: "0",
+        [-1]: "Back"
+    };
+
+    yTickValues.forEach(value => {
+      const yPos = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2));
+      
+      ctx.beginPath(); 
+      ctx.moveTo(graphOriginX - 5, yPos); 
+      ctx.lineTo(graphOriginX, yPos);
+      ctx.stroke(); 
+
+      let baseline: CanvasTextBaseline = "middle";
+      if (value === 1) { 
+        baseline = "top";
+      } else if (value === -1) { 
+        baseline = "bottom";
+      }
+      ctx.textBaseline = baseline;
+      ctx.fillText(yLabelText[value], graphOriginX - 8, yPos);
+    });
+    ctx.textBaseline = "middle"; 
+
+    if (copYDataSeries.length > 1) {
+      ctx.save(); 
+
+      ctx.beginPath(); 
+      ctx.rect(graphOriginX, graphOriginY, graphWidth, graphHeight); // Use logical dimensions
+      ctx.clip();     
+
+      // Draw the data line
+      ctx.beginPath(); 
+      ctx.strokeStyle = "#007bff"; 
+      ctx.lineWidth = 2;
+
+      copYDataSeries.forEach((value, i) => {
+        const x = graphOriginX + (i / (COPY_GRAPH_MAX_POINTS - 1)) * graphWidth;
+        const y = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2)); 
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.stroke(); 
+
+      ctx.restore(); // Restore the context, removing the clip
+
+      // Draw a circle at the tip of the line (newest value) - AFTER restore
+      if (copYDataSeries.length > 0) { 
+        const lastIndex = copYDataSeries.length - 1;
+        const lastValue = copYDataSeries[lastIndex];
+        const tipX = graphOriginX + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * graphWidth;
+        const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
+        
+        if (tipX >= graphOriginX && tipX <= graphOriginX + graphWidth &&
+            tipY >= graphOriginY && tipY <= graphOriginY + graphHeight) {
+          
+          ctx.beginPath(); 
+          ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI); 
+          ctx.fillStyle = "#007bff"; 
+          
+          ctx.fill();
+
+          // Reset shadow for subsequent drawings (though not strictly necessary if never set)
+          // ctx.shadowColor = "transparent"; // Can be removed
+          // ctx.shadowBlur = 0; // Can be removed
+          // ctx.shadowOffsetX = 0; // Can be removed
+          // ctx.shadowOffsetY = 0; // Can be removed
+        }
+      }
+      
+    } else if (copYDataSeries.length === 1) {
+      const lastValue = copYDataSeries[0];
+      const tipX = graphOriginX + (0 / (COPY_GRAPH_MAX_POINTS - 1)) * graphWidth; 
+      const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
+
+      if (tipX >= graphOriginX && tipX <= graphOriginX + graphWidth &&
+          tipY >= graphOriginY && tipY <= graphOriginY + graphHeight) {
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI);
+        ctx.fillStyle = "#007bff";
+
+        ctx.fill();
+
+        // Reset shadow for subsequent drawings (though not strictly necessary if never set)
+        // ctx.shadowColor = "transparent"; // Can be removed
+        // ctx.shadowBlur = 0; // Can be removed
+        // ctx.shadowOffsetX = 0; // Can be removed
+        // ctx.shadowOffsetY = 0; // Can be removed
+      }
+    }
+
+  }, [copYDataSeries, copYCanvasSize]); // Added copYCanvasSize to dependencies
+
 
   // Effect to clean up old trail points periodically
   useEffect(() => {
@@ -448,6 +632,7 @@ function Session() {
     setRecording(true);
     setData([]);
     setData2([]);
+    setCopYDataSeries([]); // Clear COPy graph data
     
     if (svgRenderedBounds) {
         const { width: svgWidth, height: svgHeight } = svgRenderedBounds;
@@ -493,16 +678,13 @@ function Session() {
 
   const handleStop = useCallback(() => {
     setRecording(false);
-    // Clear the target animation interval
     if (copTargetAnimationIntervalIdRef.current !== null) {
         clearInterval(copTargetAnimationIntervalIdRef.current);
         copTargetAnimationIntervalIdRef.current = null;
     }
-    // Main COP animation interval is cleared by its own useEffect when recording becomes false.
-    // Optionally reset COP and target positions:
-    // setCopPosition(null);
-    // setCopTargetPosition(null);
-  }, [setRecording]); // Removed svgRenderedBounds from here as it's not directly used for stopping
+    // Optionally clear data on stop after a delay, or immediately
+    // setTimeout(() => { if (!recording) setCopYDataSeries([]); }, 3000); // Example
+  }, [setRecording]);
 
   const handleOpenStopAfterDropdown = () => {
     if (stopAfterEnabled) {
@@ -878,7 +1060,9 @@ function Session() {
             </>
           )}
         </div>
-        {/* Other future content of session-content will go here */}
+        <div className="copy-graph-container" ref={copyGraphContainerRef}>
+          <canvas ref={copYCanvasRef} className="copy-graph-canvas"></canvas>
+        </div>
       </div>
 
       <div className="stop-after-controls">

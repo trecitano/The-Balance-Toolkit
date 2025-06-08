@@ -119,48 +119,48 @@
 
 .board-selector-name {
   white-space: nowrap;
-  overflow: hidden; /* Optional: good for preventing overflow if text is very long before truncation */
-  text-overflow: ellipsis; /* Optional: good for preventing overflow if text is very long before truncation */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.lsl-selector-wrapper, /* New style */
-.tcp-selector-wrapper {  /* New style */
+.lsl-selector-wrapper,
+.tcp-selector-wrapper {
   position: relative;
 }
 
-.lsl-selector-dropdown, /* New style */
-.tcp-selector-dropdown {  /* New style */
+.lsl-selector-dropdown,
+.tcp-selector-dropdown {
   position: absolute;
   top: calc(100% + 5px);
   left: 50%;
-  transform: translateX(-50%); /* Center the dropdown */
+  transform: translateX(-50%);
   background-color: white;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 20;
-  min-width: 180px; /* Adjust as needed */
+  min-width: 180px;
   padding: 10px;
   text-align: left;
 }
 
-.lsl-selector-dropdown p, /* New style */
-.tcp-selector-dropdown p {  /* New style */
+.lsl-selector-dropdown p,
+.tcp-selector-dropdown p {
   margin-top: 0;
   margin-bottom: 8px;
   font-size: 0.9em;
   color: #374151;
 }
 
-.lsl-selector-dropdown ul, /* New style */
-.tcp-selector-dropdown ul {  /* New style */
+.lsl-selector-dropdown ul,
+.tcp-selector-dropdown ul {
   list-style: disc;
   padding-left: 20px;
   margin-bottom: 10px;
   font-size: 0.85em;
 }
 
-.dropdown-action-button { /* New style for buttons inside new dropdowns */
+.dropdown-action-button {
   display: block;
   width: 100%;
   padding: 8px 12px;
@@ -174,21 +174,20 @@
   font-size: 0.9em;
 }
 
-.dropdown-action-button:hover { /* New style */
+.dropdown-action-button:hover {
   background-color: #2c5f85;
 }
 
 
 .save-location-toggle-wide {
-  width: 220px !important; /* Increased width from 180px to 220px */
+  width: 220px !important;
 }
 
-/* Specific style for the folder icon in the Save Location button */
 .save-location-toggle-wide img {
-  width: 2rem; /* Increased size, adjust as needed */
-  height: 2em; /* Increased size, adjust as needed */
-  flex-shrink: 0; /* Prevent the icon from shrinking if space is limited */
-  object-fit: contain; /* Ensures the icon scales properly within the dimensions */
+  width: 2rem;
+  height: 2em;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .board-selector-dropdown {
@@ -223,7 +222,7 @@
 .user-list-item {
   display: flex;
   align-items: center;
-  gap: 8px; /* Adjust gap as needed */
+  gap: 8px;
 }
 
 .user-color-dot {
@@ -386,13 +385,13 @@
 
 .stop-after-time-text.disabled {
   cursor: not-allowed;
-  color: #9ca3af; /* Lighter text color */
-  background-color: #f9fafb; /* Keep similar background or make it more muted */
+  color: #9ca3af;
+  background-color: #f9fafb;
 }
 
 .stop-after-time-text.disabled:hover,
 .stop-after-time-text.disabled:focus {
-  background-color: #f9fafb; /* Prevent hover effect when disabled */
+  background-color: #f9fafb;
 }
 
 
@@ -407,24 +406,23 @@
   line-height: 1; 
 }
 
-/* Styles for disabled session setting controls */
+
 .session-setting-toggle:disabled,
 .session-setting-toggle:disabled:hover,
-.board-selector-toggle:disabled, /* Handles board, user, save location */
+.board-selector-toggle:disabled, 
 .board-selector-toggle:disabled:hover,
 .stop-after-toggle:disabled,
 .stop-after-toggle:disabled:hover {
-  background-color: #f0f0f0; /* More muted background */
-  color: #9ca3af;          /* Lighter text color, consistent with .stop-after-time-text.disabled */
-  border-color: #e0e0e0;   /* Lighter border */
+  background-color: #f0f0f0; 
+  border-color: #e0e0e0;   
   cursor: not-allowed;
-  opacity: 0.7;             /* Visually fade the element */
+  opacity: 0.7;           
 }
 
-/* Ensure active styles are also overridden by disabled state if necessary */
+
 .session-setting-toggle.active:disabled,
 .session-setting-toggle.active:disabled:hover {
-  background-color: #f0f0f0; /* Disabled background, not active blue */
+  background-color: #f0f0f0; 
   color: #9ca3af;
   border-color: #e0e0e0;
   opacity: 0.7;
@@ -432,10 +430,10 @@
 
 .stop-after-reset-btn:disabled,
 .stop-after-reset-btn:disabled:hover {
-  color: #9ca3af; /* Lighter, greyed-out color */
+  color: #9ca3af; 
   cursor: not-allowed;
   opacity: 0.6;
-  background: none; /* Ensure no background on hover when disabled */
+  background: none; 
 }
 
 .stop-after-dropdown {
@@ -685,19 +683,20 @@
 }
 
 .session-content {
-  /* position: relative; /* This is only needed if you have other absolutely positioned children */
-  /* flex: 1; is handled by inline style in Session.tsx */
-  /* Add other styles for session-content if needed, like padding */
-  padding: 10px; /* Example padding */
+  padding: 10px;
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  align-items: stretch;
+  flex: 1;
 }
 
 .wbb-topdown-container {
   width: 30%;
-  height: 30%;
-  /* margin-bottom: 10px; */
-  /* border: 1px solid #ccc; */
-  position: relative; /* Crucial for positioning children absolutely */
-  overflow: hidden; /* Ensures circle/trail doesn't render outside bounds if calculations are slightly off */
+  height: 30%; 
+  position: relative; 
+  overflow: hidden; 
+  flex-shrink: 0;
 }
 
 .wbb-topdown-icon {
@@ -707,18 +706,36 @@
   object-fit: contain;
 }
 
-.cop-indicator-circle { /* Renamed from .live-indicator-circle */
+.copy-graph-container {
+  width: 25%; 
+  height: 30%; 
+  border: none; 
+  background-color: #ffffff;
+  padding: 0px;
+  box-sizing: border-box;
+  display: flex; 
+  flex-direction: column; 
+}
+
+.copy-graph-canvas {
+  width: 100%;
+  height: 100%; 
+  display: block;
+}
+
+.cop-indicator-circle { 
   position: absolute;
   background-color: #007bff; 
   border-radius: 50%;
   z-index: 2; 
   pointer-events: none; 
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.7); 
+  box-shadow: none; 
 }
 
-.cop-indicator-trail { /* Renamed from .live-indicator-trail */
+.cop-indicator-trail { 
   position: absolute;
   border-radius: 50%;
+  background-color: #007bff; 
   z-index: 1; 
   pointer-events: none;
 }
