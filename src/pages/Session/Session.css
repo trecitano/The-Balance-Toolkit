@@ -691,17 +691,34 @@
   padding: 10px; /* Example padding */
 }
 
-.wbb-topdown-container { /* Changed class name */
-  width: 30%;    /* Set container width to 30% of parent */
-  height: 30%;   /* Set container height to 30% of parent */
+.wbb-topdown-container {
+  width: 30%;
+  height: 30%;
   /* margin-bottom: 10px; */
-  /* Optional: Add a border to see the container's bounds during development */
   /* border: 1px solid #ccc; */
+  position: relative; /* Crucial for positioning children absolutely */
+  overflow: hidden; /* Ensures circle/trail doesn't render outside bounds if calculations are slightly off */
 }
 
-.wbb-topdown-icon { /* Changed class name */
+.wbb-topdown-icon {
   display: block;
-  width: 100%;   /* Make image take full width of its container */
-  height: 100%;  /* Make image take full height of its container */
-  object-fit: contain; /* Ensures the image scales to fit within the container while maintaining aspect ratio */
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.cop-indicator-circle { /* Renamed from .live-indicator-circle */
+  position: absolute;
+  background-color: #007bff; 
+  border-radius: 50%;
+  z-index: 2; 
+  pointer-events: none; 
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.7); 
+}
+
+.cop-indicator-trail { /* Renamed from .live-indicator-trail */
+  position: absolute;
+  border-radius: 50%;
+  z-index: 1; 
+  pointer-events: none;
 }
