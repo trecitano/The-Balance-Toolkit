@@ -1,4 +1,4 @@
-import logo from '../../../assets/logo.svg';
+import logo from '../../../assets/app-logo.png';
 import homeIcon from '../../../assets/home-icon.svg';
 import deviceIcon from '../../../assets/wbb-icon-line.svg';
 import userIcon from '../../../assets/users-icon.svg';
