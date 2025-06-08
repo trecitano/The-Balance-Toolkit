@@ -1,8 +1,7 @@
-import React, { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import "./Devices.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import wbbIconBlue from "../../assets/wbb-icon-line-blue.svg";
-import batteryIcon from "../../assets/battery.svg";
 import temperatureIcon from "../../assets/temperature.svg";
 import battery75Icon from '../../assets/battery-75-icon.svg';
 
@@ -21,7 +20,7 @@ export default function Devices() {
   const [disconnectingDeviceIds, setDisconnectingDeviceIds] = useState<number[]>([]);
   const [connectingDeviceIds, setConnectingDeviceIds] = useState<number[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
-  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * Loads the initial list of devices from a mock backend when the component mounts.
@@ -74,7 +73,7 @@ export default function Devices() {
    * @param deviceName - The name of the device to identify.
    * @returns A promise that resolves after a short delay.
    */
-  const backendIdentifyDevice = async (deviceName: string) => {
+  const backendIdentifyDevice = async (_deviceName: string) => {
     return new Promise<void>(resolve => {
       setTimeout(() => {
         resolve();
@@ -172,12 +171,12 @@ export default function Devices() {
    * Adds a new mock device to the device list.
    * This function is kept for backend mocking purposes, but is not used in the UI.
    */
-  const handleAddDevice = () => {
-    setDevices(prev => [
-      ...prev,
-      { id: 9, name: "Device 9", lastConnected: "2024-04-28", status: "Active", mac: "00:1A:7D:DA:71:1A", battery: 70, temperature: 21, firmware: "v1.2.3" }
-    ]);
-  };
+  // const handleAddDevice = () => {
+  //   setDevices(prev => [
+  //     ...prev,
+  //     { id: 9, name: "Device 9", lastConnected: "2024-04-28", status: "Active", mac: "00:1A:7D:DA:71:1A", battery: 70, temperature: 21, firmware: "v1.2.3" }
+  //   ]);
+  // };
 
   /**
    * Removes a device from the device list by its ID.
@@ -192,7 +191,7 @@ export default function Devices() {
    * @param deviceId - The ID of the device to disconnect.
    * @returns A promise that resolves after a short delay.
    */
-  const backendDisconnectDevice = async (deviceId: number) => {
+  const backendDisconnectDevice = async (_deviceId: number) => {
     return new Promise<void>((resolve) => setTimeout(resolve, 1000));
   };
 
@@ -219,7 +218,7 @@ export default function Devices() {
    * @param deviceId - The ID of the device to connect.
    * @returns A promise that resolves after a short delay.
    */
-  const backendConnectDevice = async (deviceId: number) => {
+  const backendConnectDevice = async (_deviceId: number) => {
     return new Promise<void>((resolve) => setTimeout(resolve, 1000));
   };
 

@@ -195,7 +195,7 @@ export default function User() {
   const [weightInputThick, setWeightInputThick] = useState(false);
   const [leftFadeOpacity, setLeftFadeOpacity] = useState(0);
   const [rightFadeOpacity, setRightFadeOpacity] = useState(0);
-  const [headerField, setHeaderField] = useState<
+  const [_headerField, _setHeaderField] = useState<
     | "id"
     | "name"
     | "gender"
@@ -273,7 +273,7 @@ export default function User() {
       } else if (editingIdx !== null) {
         const originalUserIdBeforeEdit = users[editingIdx].id;
         const otherUserIds = users
-          .filter((u, i) => i !== editingIdx)
+          .filter((_u, i) => i !== editingIdx)
           .map((usr) => usr.id);
 
         if (otherUserIds.includes(userInput)) {
@@ -367,7 +367,7 @@ export default function User() {
 
     if (finalUserData.id.trim() === "" && finalUserData.id !== "DefaultUser") {
       const unknownIds = users
-        .filter((u, i) => i !== editingIdx)
+        .filter((_u, i) => i !== editingIdx)
         .map((u) => u.id)
         .filter((id) => /^Unknown\d+$/.test(id));
       let n = 1;
@@ -464,12 +464,12 @@ export default function User() {
   /**
    * Puts the currently selected user into edit mode.
    */
-  const handleEdit = () => {
-    setEditingIdx(currentIdx);
-    setUsers((users) =>
-      users.map((u, i) => (i === currentIdx ? { ...u, submitted: false } : u))
-    );
-  };
+  // const handleEdit = () => {
+  //   setEditingIdx(currentIdx);
+  //   setUsers((users) =>
+  //     users.map((u, i) => (i === currentIdx ? { ...u, submitted: false } : u))
+  //   );
+  // };
 
   /**
    * Cancels editing and resets editing state.
@@ -609,8 +609,8 @@ export default function User() {
       }
     };
 
-    container.addEventListener("wheel", onWheel, { passive: false });
-    return () => container.removeEventListener("wheel", onWheel);
+    container.addEventListener("wheel", onWheel as EventListener, { passive: false });
+    return () => container.removeEventListener("wheel", onWheel as EventListener);
   }, []);
 
   useEffect(() => {
@@ -660,7 +660,7 @@ export default function User() {
                     new Date(b.lastUpdatedOn).getTime() -
                     new Date(a.lastUpdatedOn).getTime()
                 ),
-            ].map((userInMap, visualIdx) => {
+            ].map((userInMap, _visualIdx) => {
               const realIdx =
                 userInMap.id === "DefaultUser"
                   ? 0
