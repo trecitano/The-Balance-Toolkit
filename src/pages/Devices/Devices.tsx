@@ -3,8 +3,8 @@ import "./Devices.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import wbbIconBlue from "../../assets/wbb-icon-line-blue.svg";
 import temperatureIcon from "../../assets/temperature.svg";
-import bluetoothIcon from "../../assets/bluetooth-connected-icon.svg"; 
-import signalIcon from "../../assets/bluetooth-connected-icon.svg"; 
+import bluetoothIcon from "../../assets/bluetooth-connected-icon.svg";
+import signalIcon from "../../assets/bluetooth-connected-icon.svg";
 import battery0Icon from '../../assets/battery-0-icon.svg';
 import battery25Icon from '../../assets/battery-25-icon.svg';
 import battery50Icon from '../../assets/battery-50-icon.svg';
@@ -82,18 +82,19 @@ export default function Devices() {
 
       // Bottom fade
       const scrollBottom = scrollHeight - clientHeight - scrollTop;
-      const bottomOpacity = Math.min(scrollBottom / maxFade, 1);
+      // Ensure opacity is between 0 and 1
+      const bottomOpacity = Math.max(0, Math.min(scrollBottom / maxFade, 1));
       setBottomFadeOpacity(bottomOpacity);
     };
     const list = listRef.current;
     if (list) {
       list.addEventListener("scroll", handleScroll);
-      handleScroll();
+      handleScroll(); // Call to set initial state based on content
     }
     return () => {
       if (list) list.removeEventListener("scroll", handleScroll);
     };
-  }, []);
+  }, [devices]); // Add devices to the dependency array
 
   /**
    * Simulates a backend call to identify a device (e.g., blink LED).
