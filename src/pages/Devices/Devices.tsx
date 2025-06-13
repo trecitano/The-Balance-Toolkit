@@ -3,7 +3,13 @@ import "./Devices.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import wbbIconBlue from "../../assets/wbb-icon-line-blue.svg";
 import temperatureIcon from "../../assets/temperature.svg";
+import bluetoothIcon from "../../assets/bluetooth-connected-icon.svg"; 
+import signalIcon from "../../assets/bluetooth-connected-icon.svg"; 
+import battery0Icon from '../../assets/battery-0-icon.svg';
+import battery25Icon from '../../assets/battery-25-icon.svg';
+import battery50Icon from '../../assets/battery-50-icon.svg';
 import battery75Icon from '../../assets/battery-75-icon.svg';
+import battery100Icon from '../../assets/battery-100-icon.svg';
 
 /**
  * Devices page component.
@@ -13,6 +19,7 @@ import battery75Icon from '../../assets/battery-75-icon.svg';
 export default function Devices() {
   const [devices, setDevices] = useState<any[]>([]);
   const [topFadeOpacity, setTopFadeOpacity] = useState(0);
+  const [bottomFadeOpacity, setBottomFadeOpacity] = useState(1); // Added for bottom fade
   const [showIdentifyPopup, setShowIdentifyPopup] = useState(false);
   const [identifyDeviceName, setIdentifyDeviceName] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -23,6 +30,19 @@ export default function Devices() {
   const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
+   * Returns the appropriate battery icon based on the battery percentage.
+   * @param batteryLevel - The current battery level (0-100).
+   * @returns The imported SVG icon.
+   */
+  const getBatteryIcon = (batteryLevel: number) => {
+    if (batteryLevel <= 12) return battery0Icon;
+    if (batteryLevel <= 37) return battery25Icon; // Midpoint between 0-25 and 25-50
+    if (batteryLevel <= 62) return battery50Icon; // Midpoint between 25-50 and 50-75
+    if (batteryLevel <= 87) return battery75Icon; // Midpoint between 50-75 and 75-100
+    return battery100Icon;
+  };
+
+  /**
    * Loads the initial list of devices from a mock backend when the component mounts.
    * @remarks
    * Sets the `devices` state with a static array of device objects.
@@ -31,7 +51,7 @@ export default function Devices() {
     const fetchDevices = async () => {
       const backendDevices = [
         { id: 1, name: "Device 1", lastConnected: "2025-05-20 09:15", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 85, temperature: 22, firmware: "v1.2.3" },
-        { id: 2, name: "Device 2", lastConnected: "2025-05-26 18:45", status: "Connected", mac: "00:1A:7D:DA:71:14", battery: 76, temperature: 23, firmware: "v1.2.4" },
+        { id: 2, name: "Device 2", lastConnected: "2025-05-26 18:45", status: "Connected", mac: "00:1A:7D:DA:71:14", battery: 26, temperature: 23, firmware: "v1.2.4" },
         { id: 3, name: "Device 3", lastConnected: "2025-05-25 22:10", status: "Disconnected", mac: "00:1A:7D:DA:71:15", battery: 90, temperature: 21, firmware: "v1.2.3" },
         { id: 4, name: "Device 4", lastConnected: "2025-05-19 07:30", status: "Disconnected", mac: "00:1A:7D:DA:71:16", battery: 60, temperature: 24, firmware: "v1.2.2" },
         { id: 5, name: "Device 5", lastConnected: "2025-05-13 16:00", status: "Disconnected", mac: "00:1A:7D:DA:71:17", battery: 50, temperature: 22, firmware: "v1.2.1" },
@@ -53,10 +73,17 @@ export default function Devices() {
   useEffect(() => {
     const handleScroll = () => {
       if (!listRef.current) return;
-      const scrollTop = listRef.current.scrollTop;
+      const { scrollTop, scrollHeight, clientHeight } = listRef.current;
       const maxFade = 100;
-      const opacity = Math.min(scrollTop / maxFade, 1);
-      setTopFadeOpacity(opacity);
+
+      // Top fade
+      const topOpacity = Math.min(scrollTop / maxFade, 1);
+      setTopFadeOpacity(topOpacity);
+
+      // Bottom fade
+      const scrollBottom = scrollHeight - clientHeight - scrollTop;
+      const bottomOpacity = Math.min(scrollBottom / maxFade, 1);
+      setBottomFadeOpacity(bottomOpacity);
     };
     const list = listRef.current;
     if (list) {
@@ -302,9 +329,178 @@ export default function Devices() {
     }
   }
 
+  const connectedDevicesCount = devices.filter(d => d.status === "Connected").length;
+  const connectedDevicesForPanel = devices.filter(d => d.status === "Connected");
+
   return (
     <div className="devices-page">
-      {/* Overlay during scanning */}
+      <div className="devices-header">
+        <span className="page-title">Devices</span> {/* Added page title */}
+        {isScanning ? (
+          <button onClick={handleCancelScan} className="scan-btn">
+            Cancel Scan
+          </button>
+        ) : (
+          <button onClick={handleScanDevices} className="scan-btn" disabled={isScanning}>
+            Scan for Devices
+          </button>
+        )}
+        {isScanning && <div className="spinner"></div>}
+        {devicesFound !== null && !isScanning && (
+          <div className="devices-found-text">
+            {devicesFound} {devicesFound === 1 ? "device" : "devices"} found
+          </div>
+        )}
+      </div>
+
+      <div className="devices-list-wrapper">
+        <div className="devices-list-fade-top" style={{ opacity: topFadeOpacity }} />
+        <div className="devices-list" ref={listRef}>
+          {getSortedDevices().map((device) => {
+            const isConnectButtonDisabled = isScanning || 
+                                          disconnectingDeviceIds.includes(device.id) || 
+                                          connectingDeviceIds.includes(device.id) ||
+                                          (connectedDevicesCount >= 2 && device.status !== "Connected") ||
+                                          device.status === "Disconnected"; // Added condition
+            const connectButtonTooltip = (connectedDevicesCount >= 2 && device.status !== "Connected") 
+                                          ? "You can only have two boards connected at a time" 
+                                          : device.status === "Disconnected" ? "Device is disconnected" : "";
+
+            return (
+              <div className={`device-row`} key={device.id}>
+                <div className={`device-container${device.status === "Disconnected" ? " disconnected" : ""}`}>
+                  <button onClick={() => handleRemoveDevice(device.id)} className="remove-device-btn">✕</button>
+                  <div className="device-image-status">
+                    <img
+                      src={device.status === "Connected" ? wbbIconBlue : wbbIcon}
+                      alt="Device"
+                      className={`device-image ${
+                        device.status === "Connected" ? "device-image-blue" : device.status === "Active" ? "device-image-active" : ""
+                      }`}
+                    />
+                    <div
+                      className={`device-status ${
+                        device.status === "Connected"
+                          ? "device-status-connected"
+                          : device.status === "Disconnected"
+                          ? "device-status-disconnected"
+                          : ""
+                      }`}
+                    >
+                      {disconnectingDeviceIds.includes(device.id) || connectingDeviceIds.includes(device.id)
+                        ? "..."
+                        : device.status}
+                    </div>
+                  </div>
+                  <div className="device-info">
+                    <div className="device-name">{device.name}</div>
+                    <div className="device-last-connected">
+                      {device.status !== "Disconnected" ? `MAC: ${device.mac}` : `Last seen: ${formatLastConnected(device.lastConnected)}`}
+                    </div>
+                    {device.status !== "Disconnected" && <div className="device-mac">Firmware: {device.firmware}</div>}
+                  </div>
+                  <div className="device-actions">
+                    <button
+                      onClick={() => handleIdentifyClick(device.name)}
+                      className="device-action-btn"
+                      disabled={isScanning || disconnectingDeviceIds.includes(device.id) || connectingDeviceIds.includes(device.id) || device.status === "Disconnected"}
+                      title={device.status === "Disconnected" ? "Device is disconnected" : "Identify Device"}
+                    >
+                      ID
+                    </button>
+                    {device.status === "Connected" ? (
+                      <button
+                        onClick={() => handleDisconnect(device.id)}
+                        className="device-action-btn disconnect"
+                        disabled={isScanning || disconnectingDeviceIds.includes(device.id) || connectingDeviceIds.includes(device.id)}
+                      >
+                        {disconnectingDeviceIds.includes(device.id) ? "Wait..." : "Disconnect"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleConnect(device.id)}
+                        className="device-action-btn connect"
+                        disabled={isConnectButtonDisabled}
+                        title={connectButtonTooltip}
+                      >
+                        {connectingDeviceIds.includes(device.id) ? "Wait..." : "Connect"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <div className="device-container device-container-faux" />
+        </div>
+        <div className="devices-list-fade" style={{ opacity: bottomFadeOpacity }} />
+        <div className="static-side-panel">
+          {[0, 1].map(index => {
+            const device = connectedDevicesForPanel[index];
+            const isPanelButtonDisabled = isScanning || 
+                                          (device && disconnectingDeviceIds.includes(device.id)) || 
+                                          (device && connectingDeviceIds.includes(device.id));
+
+            return (
+              <div className="side-panel-square" key={`side-panel-${index}`}>
+                {device ? (
+                  <>
+                    <div className="side-panel-header">
+                      <img src={bluetoothIcon} alt="Bluetooth" className="side-panel-bt-icon" />
+                      <div className="side-panel-header-info">
+                        <span className="side-panel-device-name">{device.name}</span>
+                        <span className="side-panel-device-mac">{device.mac}</span>
+                      </div>
+                    </div>
+                    <img src={wbbIconBlue} alt={`${device.name} icon`} className="side-panel-device-image" />
+                    <div className="side-panel-info-squares">
+                      <div className="info-square">
+                        <span className="info-square-value">{device.firmware}</span> {/* Using firmware for connectivity example */}
+                        <div className="info-square-label">
+                          <img src={signalIcon} alt="Connectivity" />
+                          <span>Firmware</span> {/* Changed label to Firmware */}
+                        </div>
+                      </div>
+                      <div className="info-square">
+                        <span className="info-square-value">{device.battery}%</span>
+                        <div className="info-square-label">
+                          <img src={getBatteryIcon(device.battery)} alt="Battery" />
+                          <span>Battery</span>
+                        </div>
+                      </div>
+                      <div className="info-square">
+                        <span className="info-square-value">{device.temperature}°C</span>
+                        <div className="info-square-label">
+                          <img src={temperatureIcon} alt="Temperature" />
+                          <span>Temp</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="side-panel-actions">
+                      <button
+                        onClick={() => handleDisconnect(device.id)}
+                        className="side-panel-btn disconnect"
+                        disabled={isPanelButtonDisabled}
+                      >
+                        {disconnectingDeviceIds.includes(device.id) ? "Wait..." : "Disconnect"}
+                      </button>
+                      <button className="side-panel-btn go-to-session" disabled={isPanelButtonDisabled}>
+                        Go to Session &rarr;
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="side-panel-empty">
+                    {/* Optional: Add an icon or text for empty slot */}
+                    <span>Device slot available</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {isScanning && (
         <div className="scan-overlay">
           <div className="scan-overlay-spinner">
@@ -320,130 +516,6 @@ export default function Devices() {
           </div>
         </div>
       )}
-      <div className="page-title">Devices</div>
-      <div className="devices-header">
-        <button className="scan-btn" onClick={handleScanDevices} disabled={isScanning}>
-          Scan Devices
-        </button>
-        {devicesFound !== null && (
-          <span className="devices-found-text">Found {devicesFound} devices!</span>
-        )}
-      </div>
-      <div className="devices-list-wrapper">
-        <div
-          className="devices-list-fade-top"
-          style={{ opacity: topFadeOpacity, pointerEvents: "none" }}
-        />
-        <div className="devices-list" ref={listRef}>
-          {getSortedDevices().map((device) => (
-            <div className={`device-row`} key={device.id}>
-              <div className={`device-container${device.status === "Disconnected" ? " disconnected" : ""}`}>
-                {/* Remove Device Cross Button */}
-                <button
-                  className="remove-device-btn"
-                  onClick={() => handleRemoveDevice(device.id)}
-                  title="Remove device"
-                >
-                  ×
-                </button>
-                <div className="device-image-status">
-                  <img
-                    className={
-                      device.status === "Connected"
-                        ? "device-image device-image-blue"
-                        : device.status === "Active"
-                        ? "device-image device-image-active"
-                        : "device-image"
-                    }
-                    src={device.status === "Connected" ? wbbIconBlue : wbbIcon}
-                    alt={device.name}
-                  />
-                  <span
-                    className={
-                      device.status === "Connected"
-                        ? "device-status device-status-connected"
-                        : device.status === "Disconnected"
-                        ? "device-status device-status-disconnected"
-                        : "device-status"
-                    }
-                  >
-                    {device.status}
-                  </span>
-                </div>
-                <div className="device-info">
-                  <span className="device-name">{device.name}</span>
-                  <span className="device-last-connected">
-                    Last connected: {formatLastConnected(device.lastConnected)}
-                  </span>
-                  <span className="device-mac">
-                    MAC: {device.mac}
-                  </span>
-                </div>
-                {device.status !== "Disconnected" && (
-                  <div className="device-actions">
-                    <button
-                      className="device-action-btn"
-                      onClick={() => handleIdentifyClick(device.name)}
-                    >
-                      Identify
-                    </button>
-                    {device.status === "Connected" ? (
-                      disconnectingDeviceIds.includes(device.id) ? (
-                        <button className="device-action-btn disconnect" disabled>
-                          <span className="spinner" style={{ marginRight: 8 }} />
-                          Disconnecting...
-                        </button>
-                      ) : (
-                        <button
-                          className="device-action-btn disconnect"
-                          onClick={() => handleDisconnect(device.id)}
-                        >
-                          Disconnect
-                        </button>
-                      )
-                    ) : (
-                      connectingDeviceIds.includes(device.id) ? (
-                        <button className="device-action-btn connect" disabled>
-                          <span className="spinner" style={{ marginRight: 8 }} />
-                          Connecting...
-                        </button>
-                      ) : (
-                        <button
-                          className="device-action-btn connect"
-                          onClick={() => handleConnect(device.id)}
-                        >
-                          Connect
-                        </button>
-                      )
-                    )}
-                  </div>
-                )}
-              </div>
-              {/* Only show internal info for connected devices */}
-              {device.status === "Connected" && (
-                <div className="device-internal-info">
-                  <div className="device-internal-info-icons">
-                    <div className="device-internal-info-item">
-                      <img
-                        src={battery75Icon}
-                        alt="Battery"
-                        className="device-internal-icon"
-                      />
-                      <div className="device-internal-value">{device.battery}%</div>
-                    </div>
-                    <div className="device-internal-info-item">
-                      <img src={temperatureIcon} alt="Temperature" className="device-internal-icon" />
-                      <div className="device-internal-value">{device.temperature}°C</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-          <div className="device-container device-container-faux" />
-        </div>
-        <div className="devices-list-fade" />
-      </div>
       {/* Popup */}
       {showIdentifyPopup && (
         <div className="identify-popup-overlay">

@@ -4,6 +4,7 @@ html, body {
   padding: 0;
   overflow: hidden;
   background: #e6e6e6;
+  font-size: clamp(0.875rem, 0.4rem + 1vw, 1.05rem);
 }
 
 body {
