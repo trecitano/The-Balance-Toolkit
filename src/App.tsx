@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import Navigation from "./components/common/Navigation/Navigation";
 import Home from "./pages/Home/Home";
 import Devices from "./pages/Devices/Devices";
-import User from "./pages/Users/Users";
+import Users from "./pages/Users/Users";
 import Session from "./pages/Session/Session";
+import Activities from "./pages/Activities/Activities";
 import lightIcon from "./assets/light-icon.svg";
 import darkIcon from "./assets/dark-icon.svg";
 import "./App.css";
@@ -32,10 +33,12 @@ function App() {
         return <Home />;
       case "devices":
         return <Devices onConnectedDevicesChange={handleConnectedDevicesChange} />;
-      case "user":
-        return <User />;
+      case "users":
+        return <Users />;
       case "session":
         return <Session availableBoards={connectedDeviceNames} onViewChange={setActiveView} />;
+      case "activities":
+        return <Activities />;
       default:
         return <div>Page not found</div>;
     }

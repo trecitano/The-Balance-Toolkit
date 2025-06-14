@@ -4,6 +4,7 @@ import clockIcon from '../../assets/clock-counter-clockwise-icon.svg';
 import fileIcon from '../../assets/file-icon.svg';
 import bookBookmarkIcon from '../../assets/book-bookmark-icon.svg';
 import questionMarkIcon from '../../assets/question-mark-icon.svg';
+import githubIcon from '../../assets/github-icon.svg';
 
 interface RecentFile {
   id: string;
@@ -43,6 +44,8 @@ declare global {
 function Home() {
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
   const listContentRef = useRef<HTMLDivElement>(null);
+  const [topFadeOpacity, setTopFadeOpacity] = useState(0);
+  const [bottomFadeOpacity, setBottomFadeOpacity] = useState(1);
 
   useEffect(() => {
     const sortedFiles = [...mockRecentFiles].sort((a, b) => {
@@ -53,6 +56,35 @@ function Home() {
     });
     setRecentFiles(sortedFiles);
   }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!listContentRef.current) return;
+      const { scrollTop, scrollHeight, clientHeight } = listContentRef.current;
+      const maxFade = 50; // Adjust this value to control fade sensitivity
+
+      // Top fade
+      const calculatedTopOpacity = Math.min(scrollTop / maxFade, 1);
+      setTopFadeOpacity(calculatedTopOpacity);
+
+      // Bottom fade
+      const scrollBottom = scrollHeight - clientHeight - scrollTop;
+      const calculatedBottomOpacity = Math.max(0, Math.min(scrollBottom / maxFade, 1));
+      setBottomFadeOpacity(calculatedBottomOpacity);
+    };
+
+    const listElement = listContentRef.current;
+    if (listElement) {
+      listElement.addEventListener('scroll', handleScroll);
+      handleScroll(); // Initial check
+    }
+
+    return () => {
+      if (listElement) {
+        listElement.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [recentFiles]); // Re-run if recentFiles changes, affecting scrollHeight
 
   const handleMoreFilesClick = async () => {
     if (window.showDirectoryPicker) {
@@ -85,6 +117,7 @@ function Home() {
             <h2 className="sidebar-header-title">Recent</h2>
           </div>
           <div className="sidebar-list-container">
+            <div className="sidebar-fade sidebar-fade-top" style={{ opacity: topFadeOpacity }} />
             <div className="sidebar-content" ref={listContentRef}>
               <div className="recent-files-header">
                 <div className="recent-files-column-header file-column">File</div>
@@ -115,6 +148,7 @@ function Home() {
                 <p className="no-recent-files">No recent files to display.</p>
               )}
             </div>
+            <div className="sidebar-fade sidebar-fade-bottom" style={{ opacity: bottomFadeOpacity }} />
           </div>
           <div className="link-footer">
             <div className="more-files-link" onClick={handleMoreFilesClick}>
@@ -171,6 +205,40 @@ function Home() {
               </div>
             </div>
           </div>
+
+          
+          <div className="main-area-section contact-section">
+            <div className="main-section-details-column">
+              <div className="contact-item-list">
+                <div className="contact-item">
+                  <span className="contact-label">Source</span>
+                  <a
+                    href="YOUR_GITHUB_REPOSITORY_LINK_HERE"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="contact-visual-link" 
+                    aria-label="View on GitHub" 
+                  >
+                    <img src={githubIcon} alt="GitHub" className="contact-icon github-icon" />
+                  </a>
+                </div>
+                <div className="contact-item">
+                  <span className="contact-label">Cite</span>
+                  <a
+                    href="YOUR_PUBLICATION_LINK_HERE"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="contact-visual-link" 
+                    aria-label="View Publication" 
+                  >
+                    <img src={fileIcon} alt="Publication" className="contact-icon citation-icon" /> 
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+
         </div>
       </div>
     </div>

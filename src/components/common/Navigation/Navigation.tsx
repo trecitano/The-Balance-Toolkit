@@ -5,6 +5,7 @@ import userIcon from '../../../assets/users-icon.svg';
 import sessionIcon from '../../../assets/session-icon.svg';
 import settingsIcon from '../../../assets/settings-icon.svg';
 import helpIcon from '../../../assets/question-mark-icon.svg'; 
+import activitiesIcon from '../../../assets/activities-icon.svg';
 
 interface NavigationProps {
   activeView: string;
@@ -14,8 +15,9 @@ interface NavigationProps {
 const menuItems = [
   { id: "home", label: "Home", icon: homeIcon },
   { id: "devices", label: "Devices", icon: deviceIcon },
-  { id: "user", label: "User", icon: userIcon },
+  { id: "users", label: "Users", icon: userIcon },
   { id: "session", label: "Session", icon: sessionIcon },
+  { id: "activities", label: "Activities", icon: activitiesIcon },
 ];
 
 function Navigation({ activeView, onViewChange }: NavigationProps) {
@@ -32,9 +34,8 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
                 onClick={() => onViewChange(item.id)}
               >
                 <span className="menu-item-icon">
-                  <img src={item.icon} alt={item.label} style={{ width: 22, height: 22 }} />
+                  <img src={item.icon} alt={item.label} className="nav-icon" />
                 </span>
-                {/* Optionally hide text on small screens */}
                 <span className="menu-item-text">{item.label}</span>
               </li>
             ))}
@@ -43,16 +44,16 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
       </div>
       <div className="menu-bottom">
         {/* Settings */}
-        <button className="menu-item settings" style={{ background: "none", border: "none" }} title="Settings">
+        <button className="menu-item settings unstyled-button" title="Settings">
           <span className="menu-item-icon">
-            <img src={settingsIcon} alt="Settings" style={{ width: 20, height: 22 }} />
+            <img src={settingsIcon} alt="Settings" className="nav-icon-sm" />
           </span>
           <span className="menu-item-text">Settings</span>
         </button>
         {/* Help & Support */}
-        <button className="menu-item help" style={{ background: "none", border: "none" }} title="Help & Support">
+        <button className="menu-item help unstyled-button" title="Help & Support">
           <span className="menu-item-icon">
-            <img src={helpIcon} alt="Help & Support" style={{ width: 20, height: 22 }} />
+            <img src={helpIcon} alt="Help & Support" className="nav-icon-sm" />
           </span>
           <span className="menu-item-text">Help</span>
         </button>
