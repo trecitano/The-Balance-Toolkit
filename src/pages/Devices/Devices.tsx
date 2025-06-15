@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Link } from "react-router-dom"; // Import Link
+import { Link } from "react-router-dom"; 
 import "./Devices.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import wbbIconBlue from "../../assets/wbb-icon-line-blue.svg";
@@ -21,8 +21,8 @@ interface Device {
 }
 
 interface DevicesProps {
-  connectedDeviceNames: string[]; // This prop might be used for initial display or comparison
-  onConnectedDevicesChange: (names: string[]) => void; // Callback to update App's state
+  connectedDeviceNames: string[]; 
+  onConnectedDevicesChange: (names: string[]) => void; 
 }
 
 export default function Devices({ connectedDeviceNames, onConnectedDevicesChange }: DevicesProps) {
@@ -40,27 +40,17 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
   const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
   const [editingDeviceName, setEditingDeviceName] = useState<string>("");
 
-  /**
-   * Returns the appropriate battery icon based on the battery percentage.
-   * @param batteryLevel - The current battery level (0-100).
-   * @returns The imported SVG icon.
-   */
   const getBatteryIcon = (batteryLevel: number) => {
     if (batteryLevel <= 12) return battery0Icon;
-    if (batteryLevel <= 37) return battery25Icon; // Midpoint between 0-25 and 25-50
-    if (batteryLevel <= 62) return battery50Icon; // Midpoint between 25-50 and 50-75
-    if (batteryLevel <= 87) return battery75Icon; // Midpoint between 50-75 and 75-100
+    if (batteryLevel <= 37) return battery25Icon; 
+    if (batteryLevel <= 62) return battery50Icon; 
+    if (batteryLevel <= 87) return battery75Icon; 
     return battery100Icon;
   };
 
-  /**
-   * Loads the initial list of devices from a mock backend when the component mounts.
-   * @remarks
-   * Sets the `devices` state with a static array of device objects.
-   */
   useEffect(() => {
     const fetchDevices = async () => {
-      // Simulating fetching devices
+      
       const backendDevices: Device[] = [
         { id: 1, name: "Nintendo RVL-WBC-01", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 85, temperature: 22, firmware: "v1.2.3", lastConnected: "2023-10-01" },
         { id: 2, name: "Nintendo RVL-WBC-02", status: "Connected", mac: "00:1A:7D:DA:71:14", battery: 26, temperature: 23, firmware: "v1.2.4", lastConnected: "2023-10-05" },
@@ -73,54 +63,43 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     fetchDevices();
   }, []);
 
-  // Effect to update App's connectedDeviceNames
   useEffect(() => {
     const currentConnectedNames = devices
-      .filter(device => device.status === "Connected") // Ensure 'status' field and value are correct
+      .filter(device => device.status === "Connected") 
       .map(device => device.name);
     
     console.log("[Devices.tsx] Calculated currentConnectedNames:", currentConnectedNames);
-    console.log("[Devices.tsx] Devices list used for calculation:", JSON.parse(JSON.stringify(devices))); // Log the full devices list
+    console.log("[Devices.tsx] Devices list used for calculation:", JSON.parse(JSON.stringify(devices))); 
     
     onConnectedDevicesChange(currentConnectedNames);
   }, [devices, onConnectedDevicesChange]);
 
-  /**
-   * Sets up a scroll event listener on the device list to update the top fade opacity.
-   * @remarks
-   * Updates the `topFadeOpacity` state based on the scroll position of the device list.
-   */
   useEffect(() => {
     const handleScroll = () => {
       if (!listRef.current) return;
       const { scrollTop, scrollHeight, clientHeight } = listRef.current;
       const maxFade = 100;
 
-      // Top fade
+      
       const topOpacity = Math.min(scrollTop / maxFade, 1);
       setTopFadeOpacity(topOpacity);
 
-      // Bottom fade
+      
       const scrollBottom = scrollHeight - clientHeight - scrollTop;
-      // Ensure opacity is between 0 and 1
+      
       const bottomOpacity = Math.max(0, Math.min(scrollBottom / maxFade, 1));
       setBottomFadeOpacity(bottomOpacity);
     };
     const list = listRef.current;
     if (list) {
       list.addEventListener("scroll", handleScroll);
-      handleScroll(); // Call to set initial state based on content
+      handleScroll(); 
     }
     return () => {
       if (list) list.removeEventListener("scroll", handleScroll);
     };
-  }, [devices]); // Add devices to the dependency array
+  }, [devices]); 
 
-  /**
-   * Simulates a backend call to identify a device (e.g., blink LED).
-   * @param deviceName - The name of the device to identify.
-   * @returns A promise that resolves after a short delay.
-   */
   const backendIdentifyDevice = async (_deviceName: string) => {
     return new Promise<void>(resolve => {
       setTimeout(() => {
@@ -129,30 +108,17 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     });
   };
 
-  /**
-   * Handles the "Identify" action for a device.
-   * Opens the identify popup and triggers the backend identify simulation.
-   * @param deviceName - The name of the device to identify.
-   * @returns A promise that resolves when the identify action is complete.
-   */
   const handleIdentifyClick = async (deviceName: string) => {
     await backendIdentifyDevice(deviceName);
     setIdentifyDeviceName(deviceName);
     setShowIdentifyPopup(true);
   };
 
-  /**
-   * Closes the identify popup and clears the selected device name.
-   */
   const handleClosePopup = () => {
     setShowIdentifyPopup(false);
     setIdentifyDeviceName(null);
   };
 
-  /**
-   * Simulates a backend scan for devices, returning a list of found devices and their statuses.
-   * @returns A promise resolving to an array of found device objects.
-   */
   const mockScanBackend = async (): Promise<{ id: number; status: "Connected" | "Active" }[]> => {
     return new Promise(resolve => {
       setTimeout(() => {
@@ -164,14 +130,6 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     });
   };
 
-  /**
-   * Initiates a scan for devices.
-   * - Found devices (both existing and newly discovered) are set to "Active".
-   * - Existing devices that were "Connected" but are *not* found in the current scan are set to "Disconnected".
-   * - Existing devices that were "Active" (but not "Connected") or "Disconnected" and are *not* found in the current scan retain their previous status.
-   * - New devices found by the scan are added to the list with "Active" status and mock details.
-   * @returns A promise that resolves when the scan is complete.
-   */
   const handleScanDevices = async () => {
     setIsScanning(true);
     setDevicesFound(null);
@@ -183,31 +141,31 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
 
       const foundDeviceIdsFromScanSet = new Set(foundDevicesFromScan.map(fd => fd.id));
 
-      // Update existing devices based on scan results
+      
       workingListOfDevices = workingListOfDevices.map(device => {
         if (foundDeviceIdsFromScanSet.has(device.id)) {
-          // Device was found by scan, ensure its status is "Active"
+          
           return { ...device, status: "Active" };
         } else {
-          // Device was NOT found by scan
+          
           if (device.status === "Connected") {
-            // If it was "Connected" and not found, mark it as "Disconnected"
+            
             return { ...device, status: "Disconnected" };
           }
-          // If it was "Active" (but not "Connected") and not found, or "Disconnected" and not found,
-          // it remains in its current state.
+          
+          
           return device;
         }
       });
 
-      // Add new devices found by scan that were not in the previous list
+      
       foundDevicesFromScan.forEach(scannedDeviceDetail => {
         const deviceAlreadyExists = workingListOfDevices.some(d => d.id === scannedDeviceDetail.id);
         if (!deviceAlreadyExists) {
-          // This is a new device, add it as "Active" with mock details
+          
           const newDevice = {
             id: scannedDeviceDetail.id,
-            name: `Nintendo RVL-WBC-${scannedDeviceDetail.id.toString().padStart(2, '0')}`, // Updated name format
+            name: `Nintendo RVL-WBC-${scannedDeviceDetail.id.toString().padStart(2, '0')}`, 
             lastConnected: new Date().toISOString().slice(0, 16).replace("T", " "),
             status: "Active",
             mac: `SC:AN:00:00:00:${scannedDeviceDetail.id.toString(16).padStart(2, '0').toUpperCase()}`,
@@ -226,10 +184,6 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     setDevicesFound(foundDevicesFromScan.length);
   };
 
-  /**
-   * Cancels an ongoing scan for devices.
-   * Clears the scan timeout and resets scanning state.
-   */
   const handleCancelScan = () => {
     if (scanTimeoutRef.current) {
       clearTimeout(scanTimeoutRef.current);
@@ -239,41 +193,21 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     setDevicesFound(null);
   };
 
-  // const handleAddDevice = () => {
-  //   setDevices(prev => [
-  //     ...prev,
-  //     { id: 9, name: "Device 9", lastConnected: "2024-04-28", status: "Active", mac: "00:1A:7D:DA:71:1A", battery: 70, temperature: 21, firmware: "v1.2.3" }
-  //   ]);
-  // };
-
-  /**
-   * Starts the editing mode for a device's name.
-   * @param deviceId - The ID of the device to edit.
-   * @param currentName - The current name of the device.
-   */
   const handleStartEditName = (deviceId: number, currentName: string) => {
     setEditingDeviceId(deviceId);
     setEditingDeviceName(currentName);
   };
 
-  /**
-   * Handles changes to the device name input field.
-   * @param event - The input change event.
-   */
   const handleNameInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     console.log(
       "handleNameInputChange called. Value:",
       event.target.value,
-      "Target class:", event.target.className, // To see which input is firing
+      "Target class:", event.target.className, 
       "Current editingDeviceId:", editingDeviceId
     );
     setEditingDeviceName(event.target.value);
   };
 
-  /**
-   * Saves the edited device name.
-   * Updates the device's name in the main devices list and exits editing mode.
-   */
   const handleSaveName = () => {
     if (editingDeviceId === null) return;
     setDevices(prevDevices =>
@@ -285,43 +219,25 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     setEditingDeviceName("");
   };
 
-  /**
-   * Cancels the device name editing mode.
-   */
   const handleCancelEditName = () => {
     setEditingDeviceId(null);
     setEditingDeviceName("");
   };
 
-  /**
-   * Removes a device from the device list by its ID.
-   * If the device is currently connected, it will initiate the disconnection process first.
-   * @param id - The ID of the device to remove.
-   */
   const handleRemoveDevice = (id: number) => {
     const deviceToRemove = devices.find(d => d.id === id);
     if (deviceToRemove && deviceToRemove.status === "Connected") {
-      handleDisconnect(id); // Initiate disconnection
+      handleDisconnect(id); 
     }
-    // Remove the device from the list
-    // This will happen immediately, while handleDisconnect runs its course
+    
+    
     setDevices(prev => prev.filter(device => device.id !== id));
   };
 
-  /**
-   * Simulates a backend call to disconnect a device.
-   * @param deviceId - The ID of the device to disconnect.
-   * @returns A promise that resolves after a short delay.
-   */
   const backendDisconnectDevice = async (_deviceId: number) => {
     return new Promise<void>((resolve) => setTimeout(resolve, 1000));
   };
 
-  /**
-   * Disconnects a device by its ID, simulating a delay and backend call, and updates device status.
-   * @param deviceId - The ID of the device to disconnect.
-   * @returns A promise that resolves when the disconnect is complete.
-   */
   const handleDisconnect = async (deviceId: number) => {
     setDisconnectingDeviceIds(prev => [...prev, deviceId]);
     setTimeout(async () => {
@@ -335,20 +251,10 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     }, 3000);
   };
 
-  /**
-   * Simulates a backend call to connect a device.
-   * @param deviceId - The ID of the device to connect.
-   * @returns A promise that resolves after a short delay.
-   */
   const backendConnectDevice = async (_deviceId: number) => {
     return new Promise<void>((resolve) => setTimeout(resolve, 1000));
   };
 
-  /**
-   * Connects a device by its ID, simulating a delay and backend call, and updates device status and lastConnected.
-   * @param deviceId - The ID of the device to connect.
-   * @returns A promise that resolves when the connect is complete.
-   */
   const handleConnect = async (deviceId: number) => {
     setConnectingDeviceIds(prev => [...prev, deviceId]);
     setTimeout(async () => {
@@ -368,11 +274,6 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     }, 3000);
   };
 
-  /**
-   * Returns the devices sorted by status and then by last connected date or name.
-   * Connected devices are sorted by lastConnected (oldest first), active and disconnected alphabetically.
-   * @returns An array of sorted device objects.
-   */
   const getSortedDevices = () => {
     const connected = devices.filter(d => d.status === "Connected");
     const active = devices.filter(d => d.status === "Active");
@@ -390,11 +291,6 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     return [...connected, ...active, ...disconnected];
   };
 
-  /**
-   * Formats a date string for the last connected time into a human-readable format.
-   * @param dateString - The date string to format.
-   * @returns A formatted string such as "Today 14:00", "Yesterday 13:00", "3 days ago", etc.
-   */
   function formatLastConnected(dateString: string) {
     const now = new Date();
     const date = new Date(dateString);
@@ -430,7 +326,7 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
   return (
     <div className="devices-page">
       <div className="devices-header">
-        <span className="page-title">Devices</span> {/* Added page title */}
+        <span className="page-title">Devices</span> 
         {isScanning ? (
           <button onClick={handleCancelScan} className="scan-btn">
             Cancel Scan
@@ -456,7 +352,7 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                                           disconnectingDeviceIds.includes(device.id) || 
                                           connectingDeviceIds.includes(device.id) ||
                                           (connectedDevicesCount >= 2 && device.status !== "Connected") ||
-                                          device.status === "Disconnected"; // Added condition
+                                          device.status === "Disconnected"; 
             const connectButtonTooltip = (connectedDevicesCount >= 2 && device.status !== "Connected") 
                                           ? "You can only have two boards connected at a time" 
                                           : device.status === "Disconnected" ? "Device is disconnected" : "";
@@ -495,15 +391,14 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                           value={editingDeviceName}
                           onChange={handleNameInputChange}
                           autoFocus
-                          // onBlur={handleSaveName} // Temporarily comment this out
+                          
                           onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') handleCancelEditName(); }}
                           className="device-name-edit-input"
                         />
-                        {/* <button onClick={handleSaveName} className="device-name-edit-btn save">Save</button>
-                        <button onClick={handleCancelEditName} className="device-name-edit-btn cancel">Cancel</button> */}
+                        
                       </div>
                     ) : (
-                      // Modified structure for device name and edit button
+                      
                       <div className="device-name-container">
                         <span className="device-name-text" title={device.name}>
                           {device.name}
@@ -580,13 +475,13 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                               value={editingDeviceName}
                               onChange={handleNameInputChange}
                               autoFocus
-                              // onBlur={handleSaveName} // Temporarily comment this out as well for testing
+                              
                               onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') handleCancelEditName(); }}
                               className="device-name-edit-input side-panel-name-edit-input"
                             />
                           </div>
                         ) : (
-                          // Modified structure for side panel device name and edit button
+                          
                           <div className="side-panel-device-name-container">
                             <span className="side-panel-device-name-text" title={device?.name}>
                               {device?.name}
@@ -605,16 +500,16 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                         <span className="side-panel-device-mac">{device?.mac}</span>
                       </div>
                     </div>
-                    <div className="side-panel-icon-container"> {/* New container for icons */}
+                    <div className="side-panel-icon-container"> 
                       <img src={rippleIcon} alt="Ripple effect" className="side-panel-ripple-icon" />
                       <img src={wbbIconBlue} alt={`${device.name} icon`} className="side-panel-device-image" />
                     </div>
                     <div className="side-panel-info-squares">
                       <div className="info-square">
-                        <span className="info-square-value">{device.firmware}</span> {/* Using firmware for connectivity example */}
+                        <span className="info-square-value">{device.firmware}</span> 
                         <div className="info-square-label">
                           <img src={signalIcon} alt="Connectivity" />
-                          <span>Firmware</span> {/* Changed label to Firmware */}
+                          <span>Firmware</span> 
                         </div>
                       </div>
                       <div className="info-square">
@@ -646,12 +541,11 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                         className={`side-panel-btn go-to-session ${isPanelButtonDisabled ? 'disabled-link' : ''}`}
                         onClick={(e) => {
                           if (isPanelButtonDisabled) {
-                            e.preventDefault(); // Prevent navigation
+                            e.preventDefault(); 
                           }
-                          // If you still need to call a function like onNavigateToSessionWithBoard for App.tsx state, do it here.
-                          // else if (onNavigateToSessionWithBoard) {
-                          //  onNavigateToSessionWithBoard(device.name);
-                          // }
+                          
+                          
+                          
                         }}
                         aria-disabled={isPanelButtonDisabled}
                         tabIndex={isPanelButtonDisabled ? -1 : undefined}
@@ -662,7 +556,7 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                   </>
                 ) : (
                   <div className="side-panel-empty">
-                    {/* Optional: Add an icon or text for empty slot */}
+                    
                     <span>Device slot available</span>
                   </div>
                 )}
@@ -687,7 +581,7 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
           </div>
         </div>
       )}
-      {/* Popup */}
+      
       {showIdentifyPopup && (
         <div className="identify-popup-overlay">
           <div className="identify-popup" onClick={e => e.stopPropagation()}>
