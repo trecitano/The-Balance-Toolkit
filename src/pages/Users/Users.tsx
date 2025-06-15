@@ -9,9 +9,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { UserType, defaultUser } from "../../types";
 import "./Users.css";
-import defaultUserIcon from "../../assets/user-icon.svg"; // Ensure this is the correct asset if used, or defaultUserIcon from assets
+import defaultUserIcon from "../../assets/user-icon.svg";
 import editIcon from "../../assets/edit-icon.svg";
-import deleteIcon from "../../assets/trash-icon.svg"; // Ensure this points to an actual delete icon
+import deleteIcon from "../../assets/trash-icon.svg";
 import plusIcon from "../../assets/plus-icon.svg";
 import { v4 as uuidv4 } from "uuid";
 
@@ -31,11 +31,12 @@ export default function Users({
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editingUserData, setEditingUserData] = useState<UserType | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [topFadeOpacity, setTopFadeOpacity] = useState(0);
+  const [bottomFadeOpacity, setBottomFadeOpacity] = useState(1);
 
   const userListRef = useRef<HTMLUListElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // Effect to scroll to the selected user in the list
   useEffect(() => {
     if (userListRef.current && currentSelectedUserId) {
       const selectedUserElement = userListRef.current.querySelector(
@@ -45,37 +46,58 @@ export default function Users({
         selectedUserElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     }
-  }, [currentSelectedUserId, allUsers]); // Re-run if allUsers changes, as IDs might shift
+  }, [currentSelectedUserId, allUsers]);
+
+  useEffect(() => {
+    const listElement = userListRef.current;
+    if (!listElement) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = listElement;
+      const maxFadeScroll = 50; 
+
+      const topOpacity = Math.min(scrollTop / maxFadeScroll, 1);
+      setTopFadeOpacity(topOpacity);
+
+      const scrollBottom = scrollHeight - clientHeight - scrollTop;
+      const bottomOpacity = Math.max(0, Math.min(scrollBottom / maxFadeScroll, 1));
+      setBottomFadeOpacity(bottomOpacity);
+    };
+
+    listElement.addEventListener("scroll", handleScroll);
+    handleScroll(); 
+
+    return () => {
+      listElement.removeEventListener("scroll", handleScroll);
+    };
+  }, [allUsers]); 
 
   const handleSelectUser = (userId: string) => {
     if (editingIdx !== null) {
-      // Maybe prompt to save changes if editing
       console.log("Currently editing, selection change aborted or prompt user.");
       return;
     }
     setCurrentSelectedUserId(userId);
-    setEditingIdx(null); // Ensure editing mode is off
+    setEditingIdx(null); 
     setEditingUserData(null);
   };
 
   const handleAddUser = () => {
     if (editingIdx !== null) {
-      // Prompt to save changes if editing
       alert("Please save or cancel current edits before adding a new user.");
       return;
     }
     const newUser: UserType = {
-      ...defaultUser, // Use a base default user
-      id: uuidv4(), // Generate a unique ID
+      ...defaultUser,
+      id: uuidv4(), 
       name: `New User ${allUsers.filter(u => u.name.startsWith("New User")).length + 1}`,
       createdOn: new Date().toISOString(),
       lastUpdatedOn: new Date().toISOString(),
-      color: `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}` // Random color
+      color: `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}` 
     };
     setAllUsers(prevUsers => [...prevUsers, newUser]);
     setCurrentSelectedUserId(newUser.id);
-    // Optionally, directly enter editing mode for the new user
-    const newIndex = allUsers.length; // Index will be the current length before adding
+    const newIndex = allUsers.length; 
     setEditingIdx(newIndex);
     setEditingUserData({ ...newUser });
     if (formRef.current) formRef.current.reset();
@@ -84,14 +106,13 @@ export default function Users({
   const handleDeleteUser = (userIdToDelete: string) => {
     setAllUsers(prevUsers => prevUsers.filter(user => user.id !== userIdToDelete));
     if (currentSelectedUserId === userIdToDelete) {
-      // If the deleted user was selected, select the first user or null
       setCurrentSelectedUserId(allUsers.length > 1 ? allUsers.filter(u => u.id !== userIdToDelete)[0]?.id || null : null);
     }
     if (editingUserData?.id === userIdToDelete) {
       setEditingIdx(null);
       setEditingUserData(null);
     }
-    setShowDeleteConfirm(null); // Close confirmation
+    setShowDeleteConfirm(null); 
   };
 
   const handleEditUser = (userId: string) => {
@@ -99,16 +120,14 @@ export default function Users({
     const userIndex = allUsers.findIndex(user => user.id === userId);
     if (userToEdit && userIndex !== -1) {
       setEditingUserData({ ...userToEdit });
-      setEditingIdx(userIndex); // Keep editingIdx for form state if needed, or rely on editingUserData.id
-      setCurrentSelectedUserId(userId); // Ensure the user being edited is the selected one
+      setEditingIdx(userIndex); 
+      setCurrentSelectedUserId(userId); 
     }
   };
 
   const handleCancelEdit = () => {
     setEditingIdx(null);
     setEditingUserData(null);
-    // If the form was for a new unsaved user, you might want to remove them
-    // This logic depends on how new users are handled before first save
   };
 
   const handleChange = (
@@ -127,18 +146,18 @@ export default function Users({
   
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!editingUserData || editingUserData.id === null) return; // editingUserData.id should always exist if editing
+    if (!editingUserData || editingUserData.id === null) return; 
 
     const updatedUser = {
         ...editingUserData,
         lastUpdatedOn: new Date().toISOString(),
-        submitted: true, // Mark as submitted/saved
+        submitted: true, 
     };
 
     setAllUsers(prevUsers =>
       prevUsers.map(user => (user.id === updatedUser.id ? updatedUser : user))
     );
-    setCurrentSelectedUserId(updatedUser.id); // Ensure the saved user remains selected
+    setCurrentSelectedUserId(updatedUser.id); 
     setEditingIdx(null);
     setEditingUserData(null);
   };
@@ -152,40 +171,42 @@ export default function Users({
       {/* New Header Section */}
       <header className="users-page-header">
         <h1 className="page-title">Users</h1>
+        <button onClick={handleAddUser} className="add-user-btn" aria-label="Add new user">
+          Add New User
+        </button>
       </header>
 
       {/* Main Content Wrapper */}
       <div className="users-main-content">
         <div className="users-list-panel">
-          <div className="users-list-header">
-            <h2>Users</h2> {/* This h2 is specific to the list panel, page-title is for the whole page */}
-            <button onClick={handleAddUser} className="add-user-btn" aria-label="Add new user">
-              <img src={plusIcon} alt="Add User" />
-            </button>
+          {/* The users-list-header div and its content (h2 "Profiles") are removed from here */}
+          <div className="user-list-scroll-container"> {/* New wrapper for list and fades */}
+            <div className="users-list-fade users-list-fade-top" style={{ opacity: topFadeOpacity }} />
+            <ul className="users-list" ref={userListRef}>
+              {allUsers.map(user => (
+                <li
+                  key={user.id}
+                  data-userid={user.id}
+                  className={`user-list-item ${currentSelectedUserId === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""}`}
+                  onClick={() => handleSelectUser(user.id)}
+                >
+                  <img
+                    src={defaultUserIcon} 
+                    alt="User"
+                    className="user-list-icon"
+                    style={{ border: `2px solid ${user.color || '#ccc'}` }}
+                  />
+                  <span className="user-list-name">{user.name}</span>
+                  {currentSelectedUserId === user.id && editingIdx === null && (
+                     <button onClick={(e) => { e.stopPropagation(); handleEditUser(user.id);}} className="user-action-btn edit-btn" aria-label="Edit user">
+                        <img src={editIcon} alt="Edit" />
+                     </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <div className="users-list-fade users-list-fade-bottom" style={{ opacity: bottomFadeOpacity }} />
           </div>
-          <ul className="users-list" ref={userListRef}>
-            {allUsers.map(user => (
-              <li
-                key={user.id}
-                data-userid={user.id}
-                className={`user-list-item ${currentSelectedUserId === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""}`}
-                onClick={() => handleSelectUser(user.id)}
-              >
-                <img
-                  src={defaultUserIcon} // Assuming defaultUserIcon is correctly imported
-                  alt="User"
-                  className="user-list-icon"
-                  style={{ border: `2px solid ${user.color || '#ccc'}` }}
-                />
-                <span className="user-list-name">{user.name}</span>
-                {currentSelectedUserId === user.id && editingIdx === null && (
-                   <button onClick={(e) => { e.stopPropagation(); handleEditUser(user.id);}} className="user-action-btn edit-btn" aria-label="Edit user">
-                      <img src={editIcon} alt="Edit" />
-                   </button>
-                )}
-              </li>
-            ))}
-          </ul>
         </div>
 
         <div className="user-details-panel">
@@ -257,7 +278,7 @@ export default function Users({
                 <div className="user-display">
                   <div className="user-display-header">
                       <img 
-                          src={defaultUserIcon} // Assuming defaultUserIcon
+                          src={defaultUserIcon} 
                           alt="User" 
                           className="user-display-icon" 
                           style={{ borderColor: displayUser.color || '#ccc' }}
@@ -306,6 +327,6 @@ export default function Users({
           </div>
         </div>
       )}
-    </div> // End of users-page
+    </div> 
   );
 }

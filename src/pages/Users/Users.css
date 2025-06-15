@@ -1,75 +1,75 @@
 .users-page {
   display: flex;
-  flex-direction: column; /* Stack header and main content vertically */
-  height: 100%; /* Fill parent (.main-content from App.tsx) */
+  flex-direction: column; 
+  height: 100%; 
   width: 100%;
   background: #fff;
   box-sizing: border-box;
-  padding: 0px 40px; /* Added to match other pages like Home, Devices, Session */
+  padding: 0px 40px; 
 }
 
-/* New: Styles for the page header */
 .users-page-header {
   display: flex;
   align-items: center;
-  padding-bottom: 15px; /* Adjust as needed */
-  margin-bottom: 20px; /* Space below header */
-  border-bottom: 1px solid #e0e0e0; /* Consistent separator */
-  flex-shrink: 0; /* Header should not shrink */
+  justify-content: flex-start; 
+  margin-bottom: 1.8vw; 
+  flex-shrink: 0; 
+  gap: 2vw; 
 }
-/* .page-title class from App.css will style the h1 */
 
-/* New: Wrapper for the two main panels */
 .users-main-content {
   display: flex;
-  flex-direction: row; /* Arrange list and details side-by-side */
-  flex-grow: 1; /* Take up remaining vertical space */
-  min-height: 0; /* Important for nested flex to prevent overflow */
-  overflow: hidden; /* Can be useful, or let panels handle their own overflow */
+  flex-direction: row; 
+  flex-grow: 1; 
+  min-height: 0; 
+  overflow: hidden; 
+  gap: 2rem; 
 }
 
 .users-list-panel {
-  flex: 0 0 300px;
+  flex: 0 0 350px; 
   display: flex;
   flex-direction: column;
-  height: 100%; /* Fill vertical space of users-main-content */
-  border-right: 1px solid #e0e0e0;
-  background-color: #f9f9f9;
+  height: 100%; 
   box-sizing: border-box;
 }
 
-.users-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  border-bottom: 1px solid #e0e0e0;
-  background-color: #fff; /* Or match panel bg if preferred */
-  flex-shrink: 0; /* Prevent header from shrinking */
-}
-
-.users-list-header h2 {
-  margin: 0;
-  font-size: 1.2em; /* Slightly smaller than page-title */
-  color: #333;
-}
-
 .add-user-btn {
-  background: #397aac;
-  color: white;
+  padding: 0.8vw 2vw;
+  font-size: clamp(0.35em, 1.0vw, 1.2em);
+  border-radius: 0.5vw;
   border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #397aac;
+  color: #fff;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s;
+  box-shadow:
+    4px 4px 12px #d1d9e6,
+    -4px -4px 12px #ffffff;
+  transition:
+    box-shadow 0.15s,
+    background 0.15s,
+    color 0.15s,
+    transform 0.08s;
 }
 
-.add-user-btn:hover {
+.add-user-btn:hover:not(:disabled) {
   background: #285a8c;
+  color: #fff;
+  box-shadow:
+    2px 2px 6px #d1d9e6,
+    -2px -2px 6px #ffffff,
+    0 0 0 2px #e3e8ef inset;
+  transform: translateY(-1px) scale(1.03);
+}
+
+.add-user-btn:active:not(:disabled) {
+  box-shadow:
+    inset 2px 2px 6px #d1d9e6,
+    inset -2px -2px 6px #ffffff;
+  background: #e3e8ef;
+  color: #397aac;
+  transform: translateY(2px) scale(0.97);
 }
 
 .add-user-btn img {
@@ -77,54 +77,76 @@
   height: 16px;
 }
 
+.user-list-scroll-container {
+  position: relative;
+  flex-grow: 1; 
+  overflow: hidden; 
+  min-height: 0; 
+}
+
 .users-list {
   list-style: none;
-  padding: 0;
+  padding: 0 0.1rem; 
   margin: 0;
-  overflow-y: auto;
-  flex-grow: 1;
+  height: 100%; 
+  overflow-y: auto; 
   display: flex;
   flex-direction: column;
+  gap: 1rem; 
+  scrollbar-width: none; 
+  box-sizing: border-box; 
 }
+.users-list::-webkit-scrollbar { 
+  display: none;
+}
+
 
 .user-list-item {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  border-bottom: 1px solid #eee;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, box-shadow 0.2s;
+  background: #f5f5f5;
+  border-radius: 0.8vw;
+  padding: 1vw 1.2vw; 
+  box-shadow: 0 3px 3px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  margin-top: 0.2vw ;
 }
 
 .user-list-item:hover {
-  background-color: #f0f0f0;
+  background-color: #e9eef5; 
+  box-shadow: 0 5px 8px rgba(0,0,0,0.18);
 }
 
 .user-list-item.selected {
-  background-color: #e0eafc;
-  font-weight: bold;
+  background-color: #e0eafc; 
+  font-weight: bold; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 0 0 2px #397aac; 
 }
 
 .user-list-item.editing {
-  /* background-color: #fffbe0; */
 }
 
 .user-list-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px; 
+  height: 40px;
   object-fit: cover;
   border-radius: 50%;
-  margin-right: 12px;
-  border: 2px solid transparent;
+  margin-right: 15px; 
+  border: 2px solid transparent; 
+  flex-shrink: 0;
 }
 
 .user-list-name {
   flex-grow: 1;
   color: #333;
-  font-size: 0.95em;
-  overflow: hidden; /* Added for long names */
-  text-overflow: ellipsis; /* Added for long names */
-  white-space: nowrap; /* Added for long names */
+  font-size: clamp(0.9em, 1.1vw, 1.3em); 
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-action-btn {
@@ -133,12 +155,15 @@
   cursor: pointer;
   padding: 5px;
   margin-left: 8px;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-  flex-shrink: 0; /* Prevent button from shrinking */
+  color: #777; 
+  font-size: clamp(0.8em, 1.0vw, 1.3em); 
+  line-height: 1;
+  transition: color 0.2s;
+  flex-shrink: 0;
 }
 
 .user-action-btn:hover {
+  color: #397aac; 
   opacity: 1;
 }
 
@@ -148,67 +173,106 @@
   display: block;
 }
 
-.user-details-panel {
-  flex-grow: 1;
-  padding: 25px;
-  overflow-y: auto;
-  height: 100%; /* Fill vertical space of users-main-content */
-  box-sizing: border-box;
-  background-color: #fff;
+.users-list-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px; 
+  z-index: 2; 
+  pointer-events: none; 
 }
 
+.users-list-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, white 70%, rgba(255,255,255,0));
+}
+
+.users-list-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, white 70%, rgba(255,255,255,0));
+}
+
+.user-details-panel {
+  flex-grow: 1; 
+  overflow: hidden;   
+  height: 100%; 
+  box-sizing: border-box;
+  background: #f5f5f5;
+  border-radius: 0.8vw;
+  box-shadow: 0 3px 3px rgba(0, 0, 0, 0.15);
+  padding: 1.5vw; 
+  display: flex; 
+  flex-direction: column; 
+}
+.user-details-panel::-webkit-scrollbar { 
+}
+
+
 .user-form {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  max-width: 550px; 
-  margin: 0 auto; 
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+  gap: 1rem 1.5rem; 
+  max-width: 100%;
+  margin: 0;
+  width: 100%; 
 }
 
 .user-form h3 {
-  font-size: 1.4em;
+  font-size: clamp(1.3em, 1.7vw, 1.9em); 
   color: #397aac;
-  margin-bottom: 10px;
-  text-align: center;
+  text-align: left; 
+  font-weight: bold;
+  grid-column: 1 / -1; 
 }
 
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0.4rem; 
+  min-width: 0; 
 }
 
 .form-field label {
   font-weight: 500;
   color: #555;
-  font-size: 0.9em;
+  font-size: clamp(0.8em, 0.9vw, 1em); 
 }
 
 .form-field input[type="text"],
 .form-field input[type="number"],
 .form-field input[type="color"],
 .form-field select {
-  padding: 10px;
+  padding: 0.7vw; 
   border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1em;
+  border-radius: 0.4vw; 
+  font-size: clamp(0.85em, 1vw, 1.1em); 
   box-sizing: border-box;
   width: 100%;
+  background-color: #fff; 
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
+.form-field input:focus, .form-field select:focus {
+  border-color: #397aac;
+  box-shadow: 0 0 0 2px rgba(57, 122, 172, 0.2);
+  outline: none;
+}
+
 
 .form-field input[type="color"] {
   padding: 2px; 
-  height: 40px;
+  height: calc(1.4vw + 20px); 
+  min-height: 38px;
 }
 
 .metric-select {
-  max-width: 70px; 
+  max-width: 80px; 
   margin-left: 8px;
 }
 
 .form-field .user-weight-row { 
   display: flex;
   align-items: center;
+  gap: 8px; 
 }
 .form-field .user-weight-row input[type="number"] {
   flex-grow: 1;
@@ -217,26 +281,41 @@
 
 .form-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 1vw; 
   justify-content: flex-end;
+  grid-column: 1 / -1; 
+  padding-top: 1rem; 
 }
 
 .form-actions button {
-  padding: 10px 20px;
+  padding: 0.7vw 1.5vw; 
   border: none;
-  border-radius: 4px;
-  font-size: 1em;
-  font-weight: 500;
+  border-radius: 0.4vw; 
+  font-size: clamp(0.8em, 0.9vw, 1.1em); 
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s, opacity 0.2s;
+  transition:
+    box-shadow 0.15s,
+    background 0.15s,
+    color 0.15s,
+    transform 0.08s;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
 }
+.form-actions button:hover:not(:disabled) {
+  box-shadow: 1px 1px 4px rgba(0,0,0,0.1), 0 0 0 1px #c5cdd6 inset;
+  transform: translateY(-1px);
+}
+.form-actions button:active:not(:disabled) {
+  box-shadow: inset 1px 1px 4px rgba(0,0,0,0.2);
+  transform: translateY(1px);
+}
+
 
 .save-btn {
   background-color: #397aac;
   color: white;
 }
-.save-btn:hover {
+.save-btn:hover:not(:disabled) {
   background-color: #285a8c;
 }
 
@@ -244,36 +323,37 @@
   background-color: #6c757d;
   color: white;
 }
-.cancel-btn:hover {
+.cancel-btn:hover:not(:disabled) {
   background-color: #5a6268;
 }
 
 .delete-btn-form {
-  background-color: #dc3545;
+  background-color: #E50012; 
   color: white;
   margin-right: auto; 
 }
-.delete-btn-form:hover {
-  background-color: #c82333;
+.delete-btn-form:hover:not(:disabled) {
+  background-color: #b71c1c; 
 }
 
 .user-display {
-  max-width: 550px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
+  width: 100%; 
 }
 
 .user-display-header {
   display: flex;
   align-items: center;
-  margin-bottom: 25px;
-  gap: 15px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  margin-bottom: 1.5rem; 
+  gap: 1rem; 
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #ddd; 
 }
 
 .user-display-icon {
-  width: 70px;
-  height: 70px;
+  width: clamp(60px, 5vw, 80px); 
+  height: clamp(60px, 5vw, 80px);
   object-fit: cover;
   border-radius: 50%;
   border: 3px solid; 
@@ -282,33 +362,58 @@
 
 .user-display-header h2 {
   margin: 0;
-  font-size: 1.6em;
+  font-size: clamp(1.5em, 2vw, 2.2em); 
   color: #333;
   flex-grow: 1;
+  font-weight: bold;
 }
 
 .user-display-actions {
   display: flex;
-  gap: 10px;
+  gap: 0.8vw; 
 }
 
 .user-display-actions button {
-  background: none;
-  border: 1px solid #ccc;
-  color: #555;
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: 0.6vw 1vw;
+  border-radius: 0.4vw;
+  border: none;
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: clamp(0.75em, 0.85vw, 1em);
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    box-shadow 0.15s,
+    background 0.15s,
+    color 0.15s,
+    transform 0.08s;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
 }
-.user-display-actions button:hover {
-  background-color: #f0f0f0;
-  border-color: #bbb;
+.user-display-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
+.user-display-actions button:active:not(:disabled) {
+  box-shadow: inset 1px 1px 4px rgba(0,0,0,0.2);
+  transform: translateY(1px);
+}
+
+.user-display-actions .edit-btn-display {
+  background-color: #f0f0f0; 
+  color: #333;
+}
+.user-display-actions .edit-btn-display:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+.user-display-actions .delete-btn-display {
+  background-color: #E50012;
+  color: white;
+}
+.user-display-actions .delete-btn-display:hover:not(:disabled) {
+  background-color: #b71c1c;
+}
+
 .user-display-actions button img {
   width: 14px;
   height: 14px;
@@ -316,22 +421,24 @@
 
 .user-info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-  gap: 15px;
-  font-size: 0.95em;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+  gap: 1rem; 
+  font-size: clamp(0.9em, 1vw, 1.05em); 
 }
 
 .user-info-grid p {
   margin: 0;
-  padding: 8px;
-  background-color: #f9f9f9;
-  border-radius: 4px;
+  padding: 0.8vw; 
+  background-color: #ececec; 
+  border-radius: 0.4vw; 
   color: #444;
+  line-height: 1.5;
 }
 
 .user-info-grid p strong {
   color: #397aac;
   margin-right: 5px;
+  font-weight: 600; 
 }
 
 .no-user-selected {
@@ -344,8 +451,12 @@
   color: #777;
 }
 .no-user-selected p {
-  margin: 5px 0;
-  font-size: 1.1em;
+  margin: 8px 0; 
+  font-size: clamp(1em, 1.2vw, 1.3em); 
+}
+.no-user-selected p:first-of-type {
+  font-weight: 500;
+  color: #555;
 }
 
 .delete-confirm-overlay {
@@ -354,7 +465,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.35); 
   display: flex;
   align-items: center;
   justify-content: center;
@@ -363,36 +474,64 @@
 
 .delete-confirm-dialog {
   background: white;
-  padding: 25px;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  padding: 2vw 2.5vw; 
+  border-radius: 0.8vw; 
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); 
   text-align: center;
-  max-width: 400px;
+  max-width: 450px; 
   width: 90%;
 }
 
 .delete-confirm-dialog h4 {
   margin-top: 0;
-  font-size: 1.3em;
+  margin-bottom: 1rem;
+  font-size: clamp(1.2em, 1.5vw, 1.7em); 
   color: #333;
+  font-weight: bold;
 }
 
 .delete-confirm-dialog p {
-  margin-bottom: 20px;
+  margin-bottom: 1.5rem; 
   color: #555;
+  font-size: clamp(0.9em, 1vw, 1.1em); 
+  line-height: 1.5;
 }
 
 .delete-confirm-actions {
   display: flex;
   justify-content: center;
-  gap: 15px;
+  gap: 1rem; 
 }
+
+.delete-confirm-actions button {
+  padding: 0.7vw 1.5vw;
+  border: none;
+  border-radius: 0.4vw;
+  font-size: clamp(0.8em, 0.9vw, 1.1em);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s,
+    background 0.15s,
+    color 0.15s,
+    transform 0.08s;
+   box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+}
+.delete-confirm-actions button:hover:not(:disabled) {
+  box-shadow: 1px 1px 4px rgba(0,0,0,0.1), 0 0 0 1px #c5cdd6 inset;
+  transform: translateY(-1px);
+}
+.delete-confirm-actions button:active:not(:disabled) {
+  box-shadow: inset 1px 1px 4px rgba(0,0,0,0.2);
+  transform: translateY(1px);
+}
+
 
 .delete-confirm-actions .confirm-btn {
   background-color: #dc3545;
   color: white;
 }
-.delete-confirm-actions .confirm-btn:hover {
+.delete-confirm-actions .confirm-btn:hover:not(:disabled) {
   background-color: #c82333;
 }
 
@@ -400,13 +539,6 @@
   background-color: #6c757d;
   color: white;
 }
-.delete-confirm-actions .cancel-btn:hover {
+.delete-confirm-actions .cancel-btn:hover:not(:disabled) {
   background-color: #5a6268;
 }
-
-/* Remove or comment out old styles that are no longer needed, for example:
-.user-scroll-wrapper, .user-scroll-container, .user-container (old card style),
-.user-list-fade-left, .user-list-fade-right, etc.
-Many specific styles for .user-container and its children will need to be re-evaluated
-if any parts are reused, or removed if they are specific to the old card layout.
-*/
