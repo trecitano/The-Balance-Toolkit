@@ -92,8 +92,8 @@
 .board-selector-toggle {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 130px;
+  gap: 0.3vw;
+  width: 17vw;
   justify-content: flex-start;
 }
 
@@ -107,6 +107,11 @@
 
 .user-selector-wrapper {
   position: relative;
+}
+
+/* Add this new rule to make the user selector button less wide */
+.user-selector-wrapper .board-selector-toggle {
+  width: 12vw; /* Adjust this value as needed, e.g., 10vw or 130px */
 }
 
 .board-selector-name {
@@ -171,7 +176,7 @@
 }
 
 .save-location-toggle-wide {
-  width: 220px !important;
+  width: 15vw !important;
 }
 
 .save-location-toggle-wide img {
@@ -232,8 +237,8 @@
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 20;
-  min-width: 113px;
-  padding: 8px;
+  min-width: 12vw; /* Adjust to match or be slightly wider than the button */
+  padding: 8px; /* Corrected typo from '2w' to '8px' for consistency */
 }
 
 .go-to-devices-btn {
@@ -290,7 +295,7 @@
 }
 
 .session-setting-toggle {
-  height: 22px;
+  height: 2vw;
   padding: 0 12px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
