@@ -3,11 +3,12 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-ro
 import Navigation from "./components/common/Navigation/Navigation";
 import Home from "./pages/Home/Home";
 import Devices from "./pages/Devices/Devices";
-import Users from "./pages/Users/Users";
-import Session from "./pages/Session/Session";
+import UsersPage from "./pages/Users/Users"; // Renamed import for clarity
+import SessionPage from "./pages/Session/Session"; // Renamed import for clarity
 import Activities from "./pages/Activities/Activities";
 import lightIcon from "./assets/light-icon.svg";
 import darkIcon from "./assets/dark-icon.svg";
+import { UserType, initialUsersData } from "./types"; // Assuming types.ts is created
 import "./App.css";
 
 interface Device {
@@ -18,7 +19,6 @@ interface Device {
 }
 
 const fetchInitialDeviceData = async (): Promise<Device[]> => {
-  console.log("[App.tsx] Simulating initial device data fetch...");
   return [
     { id: 1, name: "Nintendo RVL-WBC-01", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 85, temperature: 22, firmware: "v1.2.3", lastConnected: "2023-10-01" },
     { id: 2, name: "Nintendo RVL-WBC-02", status: "Connected", mac: "00:1A:7D:DA:71:14", battery: 26, temperature: 23, firmware: "v1.2.4", lastConnected: "2023-10-05" },
@@ -32,26 +32,26 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [users, setUsers] = useState<UserType[]>(initialUsersData);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(
+    initialUsersData.find(u => u.id === "User-123")?.id || initialUsersData[0]?.id || null // Prioritize "User-123" if exists, else first, else null
+  );
+
+
   useEffect(() => {
     const loadInitialData = async () => {
       const initialDevices = await fetchInitialDeviceData();
       const initiallyConnectedNames = initialDevices
         .filter(device => device.status === "Connected")
         .map(device => device.name);
-      console.log("[App.tsx] Setting initial connectedDeviceNames:", initiallyConnectedNames);
       setConnectedDeviceNames(initiallyConnectedNames);
     };
     loadInitialData();
   }, []);
 
   const handleSetConnectedDeviceNames = useCallback((names: string[]) => {
-    console.log("[App.tsx] handleSetConnectedDeviceNames called by Devices.tsx with:", names);
     setConnectedDeviceNames(names);
   }, []);
-
-  useEffect(() => {
-    console.log("[App.tsx] connectedDeviceNames state updated to:", connectedDeviceNames);
-  }, [connectedDeviceNames]);
 
   useEffect(() => {
     document.documentElement.className = `${theme}-theme`;
@@ -62,7 +62,7 @@ function AppContent() {
   };
 
   const handleInitialBoardConsumedInApp = useCallback(() => {
-    console.log("[App.tsx] Initial board consumed signal received by App.");
+    // Placeholder
   }, []);
 
   const handleViewChange = (view: string) => {
@@ -71,6 +71,13 @@ function AppContent() {
       navigate(targetPath);
     }
   };
+  
+  // Prepare users for Session.tsx dropdown (id, name, color)
+  const usersForSessionDropdown = users.map(user => ({
+    id: user.id,
+    name: user.name, // Assuming UserType has a name property
+    color: user.color,
+  }));
 
   return (
     <div className={`app ${theme}-theme`}>
@@ -101,13 +108,25 @@ function AppContent() {
             />
           } />
           <Route path="/session" element={
-            <Session
+            <SessionPage
               availableBoards={connectedDeviceNames}
               onViewChange={handleViewChange}
               onInitialBoardConsumed={handleInitialBoardConsumedInApp}
+              // User related props for SessionPage
+              usersForDropdown={usersForSessionDropdown}
+              currentSelectedUserId={selectedUserId}
+              onSelectUserInSession={setSelectedUserId} // Pass the setter directly
             />
           } />
-          <Route path="/users" element={<Users />} />
+          <Route path="/users" element={
+            <UsersPage
+              // User related props for UsersPage
+              allUsers={users}
+              setAllUsers={setUsers}
+              currentSelectedUserId={selectedUserId}
+              setCurrentSelectedUserId={setSelectedUserId}
+            />
+          } />
           <Route path="/activities" element={<Activities />} />
           <Route path="*" element={<div>Page not found</div>} />
         </Routes>

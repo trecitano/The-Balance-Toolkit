@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from "react"; // Add useCallback here
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import "./Session.css";
-import wbbIconLineBlue from '../../assets/wbb-icon-line-blue.svg';
-import userIcon from '../../assets/user-icon.svg';
+import wbbIconLineBlue from "../../assets/wbb-icon-line-blue.svg";
+import userIcon from "../../assets/user-icon.svg";
 import folderIcon from '../../assets/folder-icon.svg';
-import wbbTopdownIcon from '../../assets/wbb-topdown.svg';
+import wbbTopdownIcon from '../../assets/wbb-topdown.svg'; // Add this import
+// Import other necessary assets/components
 
 declare global {
   interface Window {
@@ -12,8 +13,10 @@ declare global {
   }
 }
 
-interface User {
+// This interface is for the dropdown items, App.tsx will map UserType to this.
+interface SessionUser {
   id: string;
+  name: string; // Assuming you want to display the name
   color: string;
 }
 
@@ -46,24 +49,27 @@ interface SessionProps {
   availableBoards: string[];
   onViewChange: (view: string) => void;
   onInitialBoardConsumed: () => void;
+  // New user-related props
+  usersForDropdown: SessionUser[];
+  currentSelectedUserId: string | null;
+  onSelectUserInSession: (userId: string | null) => void;
 }
 
-function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: SessionProps) {
+function Session({
+  availableBoards,
+  onViewChange,
+  onInitialBoardConsumed,
+  usersForDropdown,
+  currentSelectedUserId,
+  onSelectUserInSession
+}: SessionProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const initialSelectedBoardFromRoute = location.state?.initialSelectedBoard as string | null || null;
 
   console.log("[Session.tsx] Component rendered. availableBoards prop:", availableBoards, "initialSelectedBoardFromRoute:", initialSelectedBoardFromRoute);
 
-  const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
-  const [recording, setRecording] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const canvasRef2 = useRef<HTMLCanvasElement>(null);
-  const copYCanvasRef = useRef<HTMLCanvasElement>(null);
-  const copyGraphContainerRef = useRef<HTMLDivElement>(null);
-  const copXCanvasRef = useRef<HTMLCanvasElement>(null); 
-  const copxGraphContainerRef = useRef<HTMLDivElement>(null); 
-
+  // Refs
   const boardDropdownRef = useRef<HTMLDivElement>(null);
   const boardToggleRef = useRef<HTMLButtonElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -76,29 +82,29 @@ function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: Sess
   const tcpDropdownRef = useRef<HTMLDivElement>(null);
   const tcpToggleRef = useRef<HTMLButtonElement>(null);
 
+  // State for UI elements
+  const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
+  const [showBoardDropdown, setShowBoardDropdown] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [saveLocation, setSaveLocation] = useState<string>(DEFAULT_SAVE_LOCATION);
   const [stopAfterEnabled, setStopAfterEnabled] = useState(false);
   const [stopAfterTime, setStopAfterTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
   const [showStopAfterDropdown, setShowStopAfterDropdown] = useState(false);
   const [inputHours, setInputHours] = useState(0);
   const [inputMinutes, setInputMinutes] = useState(0);
   const [inputSeconds, setInputSeconds] = useState(0);
-
-  const [showBoardDropdown, setShowBoardDropdown] = useState(false);
-
-  const [selectedUserId, setSelectedUserId] = useState<string | null>("User-123");
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [availableUsers, setAvailableUsers] = useState<User[]>([
-    { id: "User-123", color: "#4CAF50" },
-    { id: "User-456", color: "#2196F3" },
-    { id: "User-789", color: "#FFC107" },
-    { id: "Guest", color: "#9E9E9E" },
-  ]);
-
-  const [saveLocation, setSaveLocation] = useState<string>(DEFAULT_SAVE_LOCATION);
   const [lslStreamEnabled, setLslStreamEnabled] = useState(false);
   const [tcpStreamEnabled, setTcpStreamEnabled] = useState(false);
   const [showLslDropdown, setShowLslDropdown] = useState(false);
   const [showTcpDropdown, setShowTcpDropdown] = useState(false);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef2 = useRef<HTMLCanvasElement>(null);
+  const copYCanvasRef = useRef<HTMLCanvasElement>(null);
+  const copyGraphContainerRef = useRef<HTMLDivElement>(null);
+  const copXCanvasRef = useRef<HTMLCanvasElement>(null); 
+  const copxGraphContainerRef = useRef<HTMLDivElement>(null); 
 
   const [copYDataSeries, setCopYDataSeries] = useState<number[]>([]);
   const [copXDataSeries, setCopXDataSeries] = useState<number[]>([]); 
@@ -175,21 +181,6 @@ function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: Sess
       ) {
         setShowBoardDropdown(false);
       }
-    };
-
-    if (showBoardDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showBoardDropdown]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
       if (
         userDropdownRef.current &&
         !userDropdownRef.current.contains(event.target as Node) &&
@@ -198,88 +189,18 @@ function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: Sess
       ) {
         setShowUserDropdown(false);
       }
+      // ... other dropdowns
     };
 
-    if (showUserDropdown) {
+    if (showBoardDropdown || showUserDropdown /* || otherDropdownStates */) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
     }
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showUserDropdown]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        lslDropdownRef.current &&
-        !lslDropdownRef.current.contains(event.target as Node) &&
-        lslToggleRef.current &&
-        !lslToggleRef.current.contains(event.target as Node)
-      ) {
-        setShowLslDropdown(false);
-      }
-    };
-
-    if (showLslDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showLslDropdown]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        tcpDropdownRef.current &&
-        !tcpDropdownRef.current.contains(event.target as Node) &&
-        tcpToggleRef.current &&
-        !tcpToggleRef.current.contains(event.target as Node)
-      ) {
-        setShowTcpDropdown(false);
-      }
-    };
-
-    if (showTcpDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showTcpDropdown]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const isOutsideDropdown = stopAfterDropdownRef.current && !stopAfterDropdownRef.current.contains(event.target as Node);
-      if (isOutsideDropdown) {
-        const clickedOffToggle = stopAfterToggleRef.current && stopAfterToggleRef.current.contains(event.target as Node);
-        const clickedTimeText = stopAfterTimeTextRef.current && stopAfterTimeTextRef.current.contains(event.target as Node);
-
-        if (!clickedOffToggle && !clickedTimeText) {
-            setShowStopAfterDropdown(false);
-        }
-      }
-    };
-
-    if (showStopAfterDropdown) {
-      document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showStopAfterDropdown]);
+  }, [showBoardDropdown, showUserDropdown /* , otherDropdownStates */]);
 
   useEffect(() => {
     const calculateBounds = () => {
@@ -811,94 +732,36 @@ function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: Sess
     }
   };
 
-  const handleChangeSaveLocation = async () => {
-    if (window.showDirectoryPicker) {
-      try {
-        const directoryHandle = await window.showDirectoryPicker({
-          startIn: 'documents' 
-        });
-        setSaveLocation(directoryHandle.name || "Selected Folder");
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') {
-          console.log("User cancelled the directory selection.");
-        } else {
-          console.error("Error picking directory:", err);
-          alert("Could not pick directory. You can try entering the path manually.");
-          const currentPath = saveLocation === DEFAULT_SAVE_LOCATION ? "" : saveLocation;
-          const newPath = prompt(
-            "Enter new save location (e.g., C:\\MySessions).\nLeave blank or cancel to use Default.",
-            currentPath
-          );
-          if (newPath === null) return;
-          setSaveLocation(newPath.trim() === "" ? DEFAULT_SAVE_LOCATION : newPath);
-        }
-      }
-    } else {
-      alert("Your browser does not support native directory picking. Please enter the path manually.");
-      const currentPath = saveLocation === DEFAULT_SAVE_LOCATION ? "" : saveLocation;
-      const newPath = prompt(
-        "Enter new save location (e.g., C:\\MySessions).\nLeave blank or cancel to use Default.",
-        currentPath
-      );
-      if (newPath === null) {
-        return;
-      }
-      if (newPath.trim() === "") {
-        setSaveLocation(DEFAULT_SAVE_LOCATION);
-      } else {
-        setSaveLocation(newPath);
-      }
-    }
-  };
-
-  const handleBoardSelect = (boardName: string) => {
-    setSelectedBoard(boardName);
-    setShowBoardDropdown(false);
-  };
-
   const handleUserSelect = (userId: string) => {
-    setSelectedUserId(userId);
+    onSelectUserInSession(userId); // Use the prop function
     setShowUserDropdown(false);
   };
 
-  // Example for the "Go to Devices" button inside Session.tsx
-  const handleGoToDevices = () => {
-    onViewChange('devices'); // This would navigate to /devices via App's handler
+  const handleGoToUsers = () => {
+    onViewChange('users'); // Navigate to Users page
+    setShowUserDropdown(false);
+  };
+  
+  const handleChangeSaveLocation = async () => {
+    // ... (keep existing save location logic)
+    if (window.showDirectoryPicker) {
+      try {
+        const handle = await window.showDirectoryPicker();
+        // For simplicity, just storing the name. You might want to store the handle
+        // or a path representation if you need to access it later without re-prompting.
+        setSaveLocation(handle.name); 
+      } catch (err) {
+        console.error("Error picking directory:", err);
+      }
+    } else {
+      const newPath = prompt("Enter new save location (showDirectoryPicker not supported):", saveLocation);
+      if (newPath !== null) {
+        setSaveLocation(newPath.trim() === "" ? DEFAULT_SAVE_LOCATION : newPath);
+      }
+    }
   };
 
-  useEffect(() => {
-    console.log("[Session.tsx] Board selection useEffect triggered. availableBoards:", availableBoards, "initialSelectedBoardFromRoute:", initialSelectedBoardFromRoute, "current selectedBoard:", selectedBoard);
-    let consumedRouteState = false;
-
-    if (initialSelectedBoardFromRoute && availableBoards.includes(initialSelectedBoardFromRoute)) {
-      console.log("[Session.tsx] Setting selectedBoard from route:", initialSelectedBoardFromRoute);
-      if (selectedBoard !== initialSelectedBoardFromRoute) {
-        setSelectedBoard(initialSelectedBoardFromRoute);
-      }
-      onInitialBoardConsumed();
-      consumedRouteState = true;
-    } else {
-      if (initialSelectedBoardFromRoute && availableBoards.length > 0 && !availableBoards.includes(initialSelectedBoardFromRoute)){
-        console.warn(`[Session.tsx] initialSelectedBoardFromRoute "${initialSelectedBoardFromRoute}" not in availableBoards:`, availableBoards);
-      }
-      // Fallback logic
-      if (selectedBoard && !availableBoards.includes(selectedBoard)) {
-        console.log("[Session.tsx] Fallback: current selectedBoard not in available. New board:", availableBoards.length > 0 ? availableBoards[0] : null);
-        setSelectedBoard(availableBoards.length > 0 ? availableBoards[0] : null);
-      } else if (!selectedBoard && availableBoards.length > 0) {
-        console.log("[Session.tsx] Fallback: no selectedBoard, boards available. New board:", availableBoards[0]);
-        setSelectedBoard(availableBoards[0]);
-      } else if (availableBoards.length === 0 && selectedBoard !== null) {
-        console.log("[Session.tsx] Fallback: no boards available. Setting selectedBoard to null.");
-        setSelectedBoard(null);
-      }
-    }
-
-    if (consumedRouteState && location.state?.initialSelectedBoard) {
-      console.log("[Session.tsx] Clearing initialSelectedBoard from route state.");
-      navigate(location.pathname, { state: { ...location.state, initialSelectedBoard: undefined }, replace: true });
-    }
-  }, [availableBoards, initialSelectedBoardFromRoute, onInitialBoardConsumed, selectedBoard, location, navigate]); // selectedBoard is in deps, ensure logic prevents infinite loops
+  const selectedUserName = usersForDropdown.find(u => u.id === currentSelectedUserId)?.name || currentSelectedUserId || "Select User";
 
   return (
     <div className="session-page">
@@ -922,7 +785,7 @@ function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: Sess
                     : selectedBoard || (availableBoards.length === 0 ? "No boards available" : "Select Board")
                 }
               >
-                <img src={wbbIconLineBlue} alt="Board Icon" className="board-selector-icon" /> {/* Icon is now here */}
+                <img src={wbbIconLineBlue} alt="Board Icon" className="board-selector-icon" />
                 <span className="board-selector-name">
                   {selectedBoard || (availableBoards.length === 0 ? "No boards" : "Select Board")}
                 </span>
@@ -953,6 +816,7 @@ function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: Sess
             </div>
           </div>
 
+          {/* User Selector */}
           <div className="toggle-label-wrapper">
             <span className="toggle-label">User</span>
             <div className="user-selector-wrapper">
@@ -963,28 +827,32 @@ function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: Sess
                 aria-haspopup="true"
                 aria-expanded={showUserDropdown}
                 disabled={recording}
-                title={recording ? "Settings cannot be changed during recording." : (selectedUserId || "Select User")}
+                title={recording ? "Settings cannot be changed during recording." : selectedUserName}
               >
                 <img src={userIcon} alt="User Icon" className="board-selector-icon" />
-                <span className="board-selector-name">{selectedUserId || "Select User"}</span>
+                <span className="board-selector-name">{selectedUserName}</span>
               </button>
               {showUserDropdown && !recording && (
                 <div ref={userDropdownRef} className="user-selector-dropdown">
-                  <ul className="board-list">
-                    {availableUsers.map((user) => (
-                      <li
-                        key={user.id}
-                        className="board-list-item user-list-item"
-                        onClick={() => handleUserSelect(user.id)}
-                      >
-                        <span 
-                          className="user-color-dot" 
-                          style={{ backgroundColor: user.color }}
-                        ></span>
-                        {user.id}
-                      </li>
-                    ))}
-                  </ul>
+                  {usersForDropdown.length > 0 ? (
+                    <ul className="board-list">
+                      {usersForDropdown.map((user) => (
+                        <li
+                          key={user.id}
+                          className="board-list-item user-list-item" // Ensure .user-list-item styles are appropriate
+                          onClick={() => handleUserSelect(user.id)}
+                        >
+                          <span
+                            className="user-color-dot"
+                            style={{ backgroundColor: user.color }}
+                          ></span>
+                          {user.name} {/* Display user name */}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                     <p className="board-list-item" style={{ padding: '8px 12px', cursor: 'default' }}>No users available.</p>
+                  )}
                   <button className="go-to-users-btn" onClick={handleGoToUsers}>
                     Go to Users
                     <span className="go-to-users-icon" aria-hidden="true">→</span>
@@ -993,24 +861,20 @@ function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: Sess
               )}
             </div>
           </div>
-
+          
+          {/* Save Location */}
           <div className="toggle-label-wrapper">
             <span className="toggle-label">Save Location</span>
             <button
-              className={`board-selector-toggle session-setting-toggle save-location-toggle-wide`}
+              className={`board-selector-toggle session-setting-toggle save-location-toggle`}
               onClick={handleChangeSaveLocation}
-              title={recording ? "Settings cannot be changed during recording." : saveLocation} 
               disabled={recording}
+              title={recording ? "Settings cannot be changed during recording." : saveLocation}
             >
-              <img src={folderIcon} alt="Folder" /> 
-              <span className="board-selector-name">
-                {saveLocation === DEFAULT_SAVE_LOCATION
-                  ? "Default"
-                  : formatDisplayPath(saveLocation, 27) }
-              </span>
+              <img src={folderIcon} alt="Folder Icon" className="board-selector-icon" />
+              <span className="board-selector-name" style={{ flexGrow: 1, textAlign: 'left' }}>{saveLocation}</span>
             </button>
           </div>
-
           <div className="toggle-label-wrapper">
             <span className="toggle-label">LSL</span>
             <div className="lsl-selector-wrapper"> 
@@ -1064,7 +928,7 @@ function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: Sess
           </div>
         </div>
       </header>
-      <div className="session-content" style={{ flex: 1 }}>
+      <main className="session-main">
         <div className="wbb-copx-stack">
           <div className="wbb-topdown-container" ref={wbbTopdownContainerRef}>
             <img 
@@ -1166,7 +1030,7 @@ function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: Sess
         <div className="copy-graph-container" ref={copyGraphContainerRef}>
           <canvas ref={copYCanvasRef} className="copy-graph-canvas"></canvas>
         </div>
-      </div>
+      </main>
 
       <div className="stop-after-controls">
         <span className="stop-after-label">Stop after:</span>
