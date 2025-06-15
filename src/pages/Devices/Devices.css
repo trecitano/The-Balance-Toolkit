@@ -281,6 +281,10 @@
     background 0.15s,
     color 0.15s,
     transform 0.08s;
+  text-decoration: none; /* Good to add for Links styled as buttons */
+  display: inline-flex; /* For proper alignment if needed */
+  align-items: center;
+  justify-content: center;
 }
 
 .side-panel-btn.disconnect {
@@ -293,6 +297,12 @@
   background-color: #397aac;
   color: white;
   font-weight: 700;
+}
+
+.side-panel-btn.disabled-link {
+  opacity: 0.6;
+  cursor: not-allowed;
+  /* pointer-events: none; /* Alternatively, but onClick preventDefault is also good */
 }
 
 .side-panel-btn.disconnect:hover:not(:disabled) {

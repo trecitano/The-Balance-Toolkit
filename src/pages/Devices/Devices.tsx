@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import { Link } from "react-router-dom"; // Import Link
 import "./Devices.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import wbbIconBlue from "../../assets/wbb-icon-line-blue.svg";
@@ -12,14 +13,20 @@ import battery75Icon from '../../assets/battery-75-icon.svg';
 import battery100Icon from '../../assets/battery-100-icon.svg';
 import rippleIcon from '../../assets/ripple-icon.svg'; 
 
-/**
- * Devices page component.
- * Displays and manages a list of devices, including scanning, connecting, disconnecting, identifying,
- * and renaming connected devices.
- * @returns The rendered Devices page.
- */
-export default function Devices() {
-  const [devices, setDevices] = useState<any[]>([]);
+interface Device {
+  id: number;
+  name: string;
+  status: "Connected" | "Active" | "Disconnected" | string;
+  [key: string]: any;
+}
+
+interface DevicesProps {
+  connectedDeviceNames: string[]; // This prop might be used for initial display or comparison
+  onConnectedDevicesChange: (names: string[]) => void; // Callback to update App's state
+}
+
+export default function Devices({ connectedDeviceNames, onConnectedDevicesChange }: DevicesProps) {
+  const [devices, setDevices] = useState<Device[]>([]);
   const [topFadeOpacity, setTopFadeOpacity] = useState(0);
   const [bottomFadeOpacity, setBottomFadeOpacity] = useState(1); 
   const [showIdentifyPopup, setShowIdentifyPopup] = useState(false);
@@ -53,22 +60,30 @@ export default function Devices() {
    */
   useEffect(() => {
     const fetchDevices = async () => {
-      // Simulating fetching devices from a backend
-      const backendDevices = [
-        { id: 1, name: "Nintendo RVL-WBC-01", lastConnected: "2025-05-20 09:15", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 85, temperature: 22, firmware: "v1.2.3" },
-        { id: 2, name: "Nintendo RVL-WBC-02", lastConnected: "2025-05-26 18:45", status: "Connected", mac: "00:1A:7D:DA:71:14", battery: 26, temperature: 23, firmware: "v1.2.4" },
-        { id: 3, name: "Nintendo RVL-WBC-03", lastConnected: "2025-05-25 22:10", status: "Disconnected", mac: "00:1A:7D:DA:71:15", battery: 90, temperature: 21, firmware: "v1.2.3" },
-        { id: 4, name: "Nintendo RVL-WBC-04", lastConnected: "2025-05-19 07:30", status: "Disconnected", mac: "00:1A:7D:DA:71:16", battery: 60, temperature: 24, firmware: "v1.2.2" },
-        { id: 5, name: "Nintendo RVL-WBC-05", lastConnected: "2025-05-13 16:00", status: "Disconnected", mac: "00:1A:7D:DA:71:17", battery: 50, temperature: 22, firmware: "v1.2.1" },
-        { id: 6, name: "Nintendo RVL-WBC-06", lastConnected: "2025-04-27 11:20", status: "Disconnected", mac: "00:1A:7D:DA:71:18", battery: 95, temperature: 23, firmware: "v1.2.3" },
-        { id: 7, name: "Nintendo RVL-WBC-07", lastConnected: "2025-04-20 14:55", status: "Disconnected", mac: "00:1A:7D:DA:71:19", battery: 80, temperature: 22, firmware: "v1.2.0" },
-        { id: 8, name: "Nintendo RVL-WBC-08", lastConnected: "2024-12-15 08:05", status: "Disconnected", mac: "00:1A:7D:DA:71:1A", battery: 70, temperature: 21, firmware: "v1.2.3" }
+      // Simulating fetching devices
+      const backendDevices: Device[] = [
+        { id: 1, name: "Nintendo RVL-WBC-01", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 85, temperature: 22, firmware: "v1.2.3", lastConnected: "2023-10-01" },
+        { id: 2, name: "Nintendo RVL-WBC-02", status: "Connected", mac: "00:1A:7D:DA:71:14", battery: 26, temperature: 23, firmware: "v1.2.4", lastConnected: "2023-10-05" },
+        { id: 3, name: "Generic Board X", status: "Disconnected", mac: "00:1A:7D:DA:71:15", battery: 0, temperature: 20, firmware: "v1.0.0", lastConnected: "2023-09-15" },
       ];
+      console.log("[Devices.tsx] Simulated backend devices:", backendDevices);
       setDevices(backendDevices);
     };
 
     fetchDevices();
   }, []);
+
+  // Effect to update App's connectedDeviceNames
+  useEffect(() => {
+    const currentConnectedNames = devices
+      .filter(device => device.status === "Connected") // Ensure 'status' field and value are correct
+      .map(device => device.name);
+    
+    console.log("[Devices.tsx] Calculated currentConnectedNames:", currentConnectedNames);
+    console.log("[Devices.tsx] Devices list used for calculation:", JSON.parse(JSON.stringify(devices))); // Log the full devices list
+    
+    onConnectedDevicesChange(currentConnectedNames);
+  }, [devices, onConnectedDevicesChange]);
 
   /**
    * Sets up a scroll event listener on the device list to update the top fade opacity.
@@ -625,9 +640,24 @@ export default function Devices() {
                       >
                         {disconnectingDeviceIds.includes(device.id) ? "Wait..." : "Disconnect"}
                       </button>
-                      <button className="side-panel-btn go-to-session" disabled={isPanelButtonDisabled}>
+                      <Link
+                        to="/session"
+                        state={{ initialSelectedBoard: device.name }}
+                        className={`side-panel-btn go-to-session ${isPanelButtonDisabled ? 'disabled-link' : ''}`}
+                        onClick={(e) => {
+                          if (isPanelButtonDisabled) {
+                            e.preventDefault(); // Prevent navigation
+                          }
+                          // If you still need to call a function like onNavigateToSessionWithBoard for App.tsx state, do it here.
+                          // else if (onNavigateToSessionWithBoard) {
+                          //  onNavigateToSessionWithBoard(device.name);
+                          // }
+                        }}
+                        aria-disabled={isPanelButtonDisabled}
+                        tabIndex={isPanelButtonDisabled ? -1 : undefined}
+                      >
                         Go to Session &rarr;
-                      </button>
+                      </Link>
                     </div>
                   </>
                 ) : (

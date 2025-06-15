@@ -1,4 +1,5 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react"; // Add useCallback here
+import { useLocation, useNavigate } from "react-router-dom";
 import "./Session.css";
 import wbbIconLineBlue from '../../assets/wbb-icon-line-blue.svg';
 import userIcon from '../../assets/user-icon.svg';
@@ -41,7 +42,20 @@ const formatDisplayPath = (path: string, maxLength: number): string => {
   return displayString;
 };
 
-function Session() {
+interface SessionProps {
+  availableBoards: string[];
+  onViewChange: (view: string) => void;
+  onInitialBoardConsumed: () => void;
+}
+
+function Session({ availableBoards, onViewChange, onInitialBoardConsumed }: SessionProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const initialSelectedBoardFromRoute = location.state?.initialSelectedBoard as string | null || null;
+
+  console.log("[Session.tsx] Component rendered. availableBoards prop:", availableBoards, "initialSelectedBoardFromRoute:", initialSelectedBoardFromRoute);
+
+  const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasRef2 = useRef<HTMLCanvasElement>(null);
@@ -69,9 +83,7 @@ function Session() {
   const [inputMinutes, setInputMinutes] = useState(0);
   const [inputSeconds, setInputSeconds] = useState(0);
 
-  const [selectedBoard, setSelectedBoard] = useState<string | null>("Select Board");
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
-  const [connectedBoards, setConnectedBoards] = useState<string[]>(["Alpha", "Bravo", "Charlie"]);
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>("User-123");
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -849,21 +861,51 @@ function Session() {
     setShowUserDropdown(false);
   };
 
+  // Example for the "Go to Devices" button inside Session.tsx
   const handleGoToDevices = () => {
-    console.log("Navigate to devices page");
-    setShowBoardDropdown(false); 
+    onViewChange('devices'); // This would navigate to /devices via App's handler
   };
 
-  const handleGoToUsers = () => {
-    console.log("Navigate to users page/settings");
-    setShowUserDropdown(false); 
-  };
+  useEffect(() => {
+    console.log("[Session.tsx] Board selection useEffect triggered. availableBoards:", availableBoards, "initialSelectedBoardFromRoute:", initialSelectedBoardFromRoute, "current selectedBoard:", selectedBoard);
+    let consumedRouteState = false;
+
+    if (initialSelectedBoardFromRoute && availableBoards.includes(initialSelectedBoardFromRoute)) {
+      console.log("[Session.tsx] Setting selectedBoard from route:", initialSelectedBoardFromRoute);
+      if (selectedBoard !== initialSelectedBoardFromRoute) {
+        setSelectedBoard(initialSelectedBoardFromRoute);
+      }
+      onInitialBoardConsumed();
+      consumedRouteState = true;
+    } else {
+      if (initialSelectedBoardFromRoute && availableBoards.length > 0 && !availableBoards.includes(initialSelectedBoardFromRoute)){
+        console.warn(`[Session.tsx] initialSelectedBoardFromRoute "${initialSelectedBoardFromRoute}" not in availableBoards:`, availableBoards);
+      }
+      // Fallback logic
+      if (selectedBoard && !availableBoards.includes(selectedBoard)) {
+        console.log("[Session.tsx] Fallback: current selectedBoard not in available. New board:", availableBoards.length > 0 ? availableBoards[0] : null);
+        setSelectedBoard(availableBoards.length > 0 ? availableBoards[0] : null);
+      } else if (!selectedBoard && availableBoards.length > 0) {
+        console.log("[Session.tsx] Fallback: no selectedBoard, boards available. New board:", availableBoards[0]);
+        setSelectedBoard(availableBoards[0]);
+      } else if (availableBoards.length === 0 && selectedBoard !== null) {
+        console.log("[Session.tsx] Fallback: no boards available. Setting selectedBoard to null.");
+        setSelectedBoard(null);
+      }
+    }
+
+    if (consumedRouteState && location.state?.initialSelectedBoard) {
+      console.log("[Session.tsx] Clearing initialSelectedBoard from route state.");
+      navigate(location.pathname, { state: { ...location.state, initialSelectedBoard: undefined }, replace: true });
+    }
+  }, [availableBoards, initialSelectedBoardFromRoute, onInitialBoardConsumed, selectedBoard, location, navigate]); // selectedBoard is in deps, ensure logic prevents infinite loops
 
   return (
     <div className="session-page">
       <header className="session-header">
         <h1 className="page-title">Session</h1>
         <div className="session-settings-container">
+          {/* Board Selector */}
           <div className="toggle-label-wrapper">
             <span className="toggle-label">Board</span>
             <div className="board-selector-wrapper">
@@ -873,26 +915,36 @@ function Session() {
                 onClick={() => !recording && setShowBoardDropdown(!showBoardDropdown)}
                 aria-haspopup="true"
                 aria-expanded={showBoardDropdown}
-                disabled={recording}
-                title={recording ? "Settings cannot be changed during recording." : (selectedBoard || "Select Board")}
+                disabled={recording || availableBoards.length === 0}
+                title={
+                  recording
+                    ? "Settings cannot be changed during recording."
+                    : selectedBoard || (availableBoards.length === 0 ? "No boards available" : "Select Board")
+                }
               >
-                <img src={wbbIconLineBlue} alt="Board Icon" className="board-selector-icon" />
-                <span className="board-selector-name">{selectedBoard || "Select Board"}</span>
+                <img src={wbbIconLineBlue} alt="Board Icon" className="board-selector-icon" /> {/* Icon is now here */}
+                <span className="board-selector-name">
+                  {selectedBoard || (availableBoards.length === 0 ? "No boards" : "Select Board")}
+                </span>
               </button>
               {showBoardDropdown && !recording && (
                 <div ref={boardDropdownRef} className="board-selector-dropdown">
-                  <ul className="board-list">
-                    {connectedBoards.map((board) => (
-                      <li
-                        key={board}
-                        className="board-list-item"
-                        onClick={() => handleBoardSelect(board)}
-                      >
-                        {board}
-                      </li>
-                    ))}
-                  </ul>
-                  <button className="go-to-devices-btn" onClick={handleGoToDevices}>
+                  {availableBoards.length > 0 ? (
+                    <ul className="board-list">
+                      {availableBoards.map((board) => (
+                        <li
+                          key={board}
+                          className="board-list-item"
+                          onClick={() => handleBoardSelect(board)}
+                        >
+                          {board}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="board-list-item" style={{ padding: '8px 12px', cursor: 'default' }}>No connected boards found.</p>
+                  )}
+                  <button className="go-to-devices-btn" onClick={() => onViewChange('devices')}>
                     Go to Devices
                     <span className="go-to-devices-icon" aria-hidden="true">→</span>
                   </button>
