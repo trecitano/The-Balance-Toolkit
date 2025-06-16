@@ -1,81 +1,45 @@
 export interface UserType {
   id: string;
   name: string;
-  gender: string;
-  customGender: string;
-  age: string;
-  height: string;
-  handedness: "right" | "left" | "ambidextrous"; // Or string
-  weight: string;
-  metric: "kg" | "lb"; // Or string
-  submitted: boolean;
-  createdOn: string;
-  lastUpdatedOn: string;
+  gender: "male" | "female" | "other" | "prefer_not_to_say";
+  customGender?: string;
+  age: number | "";
+  height: number | "";
+  handedness: "left" | "right" | "ambidextrous";
+  weight: number | "";
+  metric: "kg" | "lb";
   color: string;
+  lastUpdatedOn?: string;
+  submitted?: boolean;
 }
 
 export const defaultUser: UserType = {
-  id: "DefaultUser",
-  name: "DefaultUser",
-  gender: "",
-  customGender: "",
+  id: "default-user-placeholder",
+  name: "",
+  gender: "prefer_not_to_say",
   age: "",
   height: "",
   handedness: "right",
-  weight: "70", // Default weight
+  weight: "",
   metric: "kg",
-  submitted: false, // Or true if it should be considered "complete"
-  createdOn: new Date().toISOString(),
-  lastUpdatedOn: new Date().toISOString(),
-  color: "#397aac", // Default color
+  color: "#cccccc",
+  submitted: false,
 };
 
 export const initialUsersData: UserType[] = [
-  defaultUser,
-  {
-    id: "001",
-    name: "Alice Johnson",
-    gender: "Female",
-    customGender: "",
-    age: "28",
-    height: "165",
-    handedness: "right",
-    weight: "65",
-    metric: "kg",
-    submitted: false,
-    createdOn: "2024-05-20T09:15:00.000Z",
-    lastUpdatedOn: "2024-05-20T09:15:00.000Z",
-    color: "#397aac", // Example color, match Users.tsx
-  },
-  {
-    id: "002",
-    name: "Bob Smith",
-    gender: "Male",
-    customGender: "",
-    age: "34",
-    height: "180",
-    handedness: "left",
-    weight: "78",
-    metric: "kg",
-    submitted: false,
-    createdOn: "2025-05-19T14:30:00.000Z",
-    lastUpdatedOn: "2025-05-19T14:30:00.000Z",
-    color: "#397aac", // Example color
-  },
-  // Add other initial users from Users.tsx here...
-  {
-    id: "Guest", // For Session.tsx's initial example
-    name: "Guest User",
-    gender: "",
-    customGender: "",
-    age: "",
-    height: "",
-    handedness: "right",
-    weight: "",
-    metric: "kg",
-    submitted: false,
-    createdOn: new Date().toISOString(),
-    lastUpdatedOn: new Date().toISOString(),
-    color: "#9E9E9E",
-  }
+  { id: "User-123", name: "John Doe", gender: "male", age: 30, height: 180, handedness: "right", weight: 75, metric: "kg", color: "#3498db", lastUpdatedOn: "2025-06-15T10:00:00Z", submitted: true },
+  { id: "User-456", name: "Jane Smith", gender: "female", age: 28, height: 165, handedness: "left", weight: 60, metric: "kg", color: "#e74c3c", lastUpdatedOn: "2025-06-14T14:30:00Z", submitted: true },
+  { id: "User-789", name: "Alex Green", gender: "other", customGender: "Non-binary", age: 35, height: 170, handedness: "ambidextrous", weight: 150, metric: "lb", color: "#2ecc71", lastUpdatedOn: "2025-06-13T09:15:00Z", submitted: true },
 ];
+
+export interface Device {
+  id: number;
+  name: string;
+  status: "Connected" | "Active" | "Disconnected" | string;
+  mac: string;
+  battery: number;
+  temperature: number;
+  firmware: string;
+  lastConnected: string; // ISO date string
+  [key: string]: any;
+}
