@@ -2,56 +2,105 @@ import React, { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Navigation from "./components/common/Navigation/Navigation";
 import Home from "./pages/Home/Home";
-import Devices from "./pages/Devices/Devices";
-import UsersPage from "./pages/Users/Users"; // Renamed import for clarity
-import SessionPage from "./pages/Session/Session"; // Renamed import for clarity
+import DevicesPage from "./pages/Devices/Devices";
+import UsersPage from "./pages/Users/Users";
+import SessionPage from "./pages/Session/Session";
 import Activities from "./pages/Activities/Activities";
 import lightIcon from "./assets/light-icon.svg";
 import darkIcon from "./assets/dark-icon.svg";
-import { UserType, initialUsersData } from "./types"; // Assuming types.ts is created
+import { UserType, initialUsersData, Device } from "./types";
 import "./App.css";
-
-interface Device {
-  id: number;
-  name: string;
-  status: "Connected" | "Active" | "Disconnected" | string;
-  [key: string]: any;
-}
 
 const fetchInitialDeviceData = async (): Promise<Device[]> => {
   return [
-    { id: 1, name: "Nintendo RVL-WBC-01", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 85, temperature: 22, firmware: "v1.2.3", lastConnected: "2023-10-01" },
-    { id: 2, name: "Nintendo RVL-WBC-02", status: "Connected", mac: "00:1A:7D:DA:71:14", battery: 26, temperature: 23, firmware: "v1.2.4", lastConnected: "2023-10-05" },
-    { id: 3, name: "Generic Board X", status: "Disconnected", mac: "00:1A:7D:DA:71:15", battery: 0, temperature: 20, firmware: "v1.0.0", lastConnected: "2023-09-15" },
+    { id: 1, name: "Nintendo RVL-WBC-01", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 85, temperature: 22, firmware: "v1.2.3", lastConnected: "2023-10-01T10:00:00Z" },
+    { id: 2, name: "Nintendo RVL-WBC-02", status: "Connected", mac: "00:1A:7D:DA:71:14", battery: 26, temperature: 23, firmware: "v1.2.4", lastConnected: "2023-10-05T11:00:00Z" },
+    { id: 3, name: "Generic Board X", status: "Disconnected", mac: "00:1A:7D:DA:71:15", battery: 0, temperature: 20, firmware: "v1.0.0", lastConnected: "2023-09-15T12:00:00Z" },
   ];
 };
 
 function AppContent() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [connectedDeviceNames, setConnectedDeviceNames] = useState<string[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
 
   const [users, setUsers] = useState<UserType[]>(initialUsersData);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(
-    initialUsersData.find(u => u.id === "User-123")?.id || initialUsersData[0]?.id || null // Prioritize "User-123" if exists, else first, else null
+    initialUsersData.find(u => u.id === "User-123")?.id || initialUsersData[0]?.id || null
   );
 
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
+  const [editingDeviceName, setEditingDeviceName] = useState<string>("");
+  const [connectingDeviceIds, setConnectingDeviceIds] = useState<number[]>([]);
+  const [disconnectingDeviceIds, setDisconnectingDeviceIds] = useState<number[]>([]);
 
   useEffect(() => {
     const loadInitialData = async () => {
       const initialDevices = await fetchInitialDeviceData();
-      const initiallyConnectedNames = initialDevices
-        .filter(device => device.status === "Connected")
-        .map(device => device.name);
-      setConnectedDeviceNames(initiallyConnectedNames);
+      setDevices(initialDevices);
     };
     loadInitialData();
   }, []);
 
-  const handleSetConnectedDeviceNames = useCallback((names: string[]) => {
-    setConnectedDeviceNames(names);
-  }, []);
+  const connectedDeviceNames = devices
+    .filter(device => device.status === "Connected")
+    .map(device => device.name);
+
+  const handleConnectDevice = async (deviceId: number) => {
+    setConnectingDeviceIds(prev => [...prev, deviceId]);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setDevices(prevDevices =>
+      prevDevices.map(device =>
+        device.id === deviceId
+          ? { ...device, status: "Connected", lastConnected: new Date().toISOString() }
+          : device
+      )
+    );
+    setConnectingDeviceIds(prev => prev.filter(id => id !== deviceId));
+  };
+
+  const handleDisconnectDevice = async (deviceId: number) => {
+    setDisconnectingDeviceIds(prev => [...prev, deviceId]);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setDevices(prevDevices =>
+      prevDevices.map(device =>
+        device.id === deviceId ? { ...device, status: "Active" } : device // Or "Disconnected" based on logic
+      )
+    );
+    setDisconnectingDeviceIds(prev => prev.filter(id => id !== deviceId));
+  };
+
+  const handleSaveDeviceName = (deviceId: number, newName: string) => {
+    setDevices(prevDevices =>
+      prevDevices.map(d =>
+        d.id === deviceId ? { ...d, name: newName.trim() || `Device ${d.id}` } : d
+      )
+    );
+    setEditingDeviceId(null);
+    setEditingDeviceName("");
+  };
+
+  const handleRemoveDevice = (deviceId: number) => {
+    setDevices(prev => prev.filter(device => device.id !== deviceId));
+  };
+  
+  const handleScanResults = (scannedDevices: Device[]) => {
+    setDevices(prevDevices => {
+      const existingIds = new Set(prevDevices.map(d => d.id));
+      const newDevicesFromScan = scannedDevices.filter(sd => !existingIds.has(sd.id));
+      
+      const updatedDevices = prevDevices.map(pd => {
+        const scannedVersion = scannedDevices.find(sd => sd.id === pd.id);
+        return scannedVersion ? { ...pd, ...scannedVersion, status: scannedVersion.status || pd.status } : pd;
+      });
+      
+      return [...updatedDevices, ...newDevicesFromScan];
+    });
+  };
+
 
   useEffect(() => {
     document.documentElement.className = `${theme}-theme`;
@@ -71,11 +120,10 @@ function AppContent() {
       navigate(targetPath);
     }
   };
-  
-  // Prepare users for Session.tsx dropdown (id, name, color)
+
   const usersForSessionDropdown = users.map(user => ({
     id: user.id,
-    name: user.name, // Assuming UserType has a name property
+    name: user.name,
     color: user.color,
   }));
 
@@ -102,9 +150,22 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Home onViewChange={handleViewChange} />} />
           <Route path="/devices" element={
-            <Devices
-              connectedDeviceNames={connectedDeviceNames}
-              onConnectedDevicesChange={handleSetConnectedDeviceNames}
+            <DevicesPage
+              devices={devices}
+              setDevices={setDevices}
+              editingDeviceId={editingDeviceId}
+              setEditingDeviceId={setEditingDeviceId}
+              editingDeviceName={editingDeviceName}
+              setEditingDeviceName={setEditingDeviceName}
+              connectingDeviceIds={connectingDeviceIds}
+              setConnectingDeviceIds={setConnectingDeviceIds}
+              disconnectingDeviceIds={disconnectingDeviceIds}
+              setDisconnectingDeviceIds={setDisconnectingDeviceIds}
+              onConnectDevice={handleConnectDevice}
+              onDisconnectDevice={handleDisconnectDevice}
+              onSaveDeviceName={handleSaveDeviceName}
+              onRemoveDevice={handleRemoveDevice}
+              onScanResults={handleScanResults}
             />
           } />
           <Route path="/session" element={
@@ -112,15 +173,13 @@ function AppContent() {
               availableBoards={connectedDeviceNames}
               onViewChange={handleViewChange}
               onInitialBoardConsumed={handleInitialBoardConsumedInApp}
-              // User related props for SessionPage
               usersForDropdown={usersForSessionDropdown}
               currentSelectedUserId={selectedUserId}
-              onSelectUserInSession={setSelectedUserId} // Pass the setter directly
+              onSelectUserInSession={setSelectedUserId}
             />
           } />
           <Route path="/users" element={
             <UsersPage
-              // User related props for UsersPage
               allUsers={users}
               setAllUsers={setUsers}
               currentSelectedUserId={selectedUserId}

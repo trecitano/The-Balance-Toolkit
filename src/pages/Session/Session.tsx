@@ -4,8 +4,8 @@ import "./Session.css";
 import wbbIconLineBlue from "../../assets/wbb-icon-line-blue.svg";
 import userIcon from "../../assets/user-icon.svg";
 import folderIcon from '../../assets/folder-icon.svg';
-import wbbTopdownIcon from '../../assets/wbb-topdown.svg'; // Add this import
-// Import other necessary assets/components
+import wbbTopdownIcon from '../../assets/wbb-topdown.svg';
+
 
 declare global {
   interface Window {
@@ -13,10 +13,9 @@ declare global {
   }
 }
 
-// This interface is for the dropdown items, App.tsx will map UserType to this.
 interface SessionUser {
   id: string;
-  name: string; // Assuming you want to display the name
+  name: string; 
   color: string;
 }
 
@@ -49,7 +48,6 @@ interface SessionProps {
   availableBoards: string[];
   onViewChange: (view: string) => void;
   onInitialBoardConsumed: () => void;
-  // New user-related props
   usersForDropdown: SessionUser[];
   currentSelectedUserId: string | null;
   onSelectUserInSession: (userId: string | null) => void;
@@ -64,12 +62,11 @@ function Session({
   onSelectUserInSession
 }: SessionProps) {
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate = useNavigate(); 
   const initialSelectedBoardFromRoute = location.state?.initialSelectedBoard as string | null || null;
 
   console.log("[Session.tsx] Component rendered. availableBoards prop:", availableBoards, "initialSelectedBoardFromRoute:", initialSelectedBoardFromRoute);
 
-  // Refs
   const boardDropdownRef = useRef<HTMLDivElement>(null);
   const boardToggleRef = useRef<HTMLButtonElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -82,8 +79,8 @@ function Session({
   const tcpDropdownRef = useRef<HTMLDivElement>(null);
   const tcpToggleRef = useRef<HTMLButtonElement>(null);
 
-  // State for UI elements
   const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
+  const [initialBoardProcessed, setInitialBoardProcessed] = useState(false); 
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -122,6 +119,49 @@ function Session({
   const CIRCLE_DIAMETER = 10; 
   const TRAIL_MAX_AGE = 1500; 
   const MAX_TRAIL_POINTS = 50; 
+
+  useEffect(() => {
+    if (initialSelectedBoardFromRoute && !initialBoardProcessed) {
+      if (availableBoards.length > 0) {
+        if (availableBoards.includes(initialSelectedBoardFromRoute)) {
+          console.log(`[Session.tsx] Initial board from route: ${initialSelectedBoardFromRoute}. Setting as selected.`);
+          setSelectedBoard(initialSelectedBoardFromRoute);
+        } else {
+          console.warn(`[Session.tsx] Initial board from route "${initialSelectedBoardFromRoute}" not found in available boards. Will attempt to select default.`);
+          if (!selectedBoard && availableBoards.length > 0) {
+            setSelectedBoard(availableBoards[0]);
+          } else if (!selectedBoard && availableBoards.length === 0) {
+            setSelectedBoard(null); 
+          }
+        }
+        setInitialBoardProcessed(true); 
+        if (onInitialBoardConsumed) {
+          onInitialBoardConsumed(); 
+        }
+      }
+    } else if (initialBoardProcessed || !initialSelectedBoardFromRoute) {
+      if (!selectedBoard && availableBoards.length > 0) {
+        console.log("[Session.tsx] No board selected or initial processed, selecting first available board:", availableBoards[0]);
+        setSelectedBoard(availableBoards[0]);
+      } else if (selectedBoard && !availableBoards.includes(selectedBoard)) {
+        console.warn(`[Session.tsx] Selected board "${selectedBoard}" no longer available. Reselecting.`);
+        setSelectedBoard(availableBoards.length > 0 ? availableBoards[0] : null);
+      } else if (availableBoards.length === 0 && selectedBoard !== null) {
+        setSelectedBoard(null);
+      }
+    }
+  }, [
+    initialSelectedBoardFromRoute,
+    availableBoards,
+    selectedBoard,
+    initialBoardProcessed,
+    onInitialBoardConsumed,
+  ]);
+
+  const handleBoardSelect = (boardName: string) => {
+    setSelectedBoard(boardName);
+    setShowBoardDropdown(false);
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -189,10 +229,9 @@ function Session({
       ) {
         setShowUserDropdown(false);
       }
-      // ... other dropdowns
     };
 
-    if (showBoardDropdown || showUserDropdown /* || otherDropdownStates */) {
+    if (showBoardDropdown || showUserDropdown ) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -200,7 +239,7 @@ function Session({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showBoardDropdown, showUserDropdown /* , otherDropdownStates */]);
+  }, [showBoardDropdown, showUserDropdown ]);
 
   useEffect(() => {
     const calculateBounds = () => {
@@ -733,22 +772,19 @@ function Session({
   };
 
   const handleUserSelect = (userId: string) => {
-    onSelectUserInSession(userId); // Use the prop function
+    onSelectUserInSession(userId); 
     setShowUserDropdown(false);
   };
 
   const handleGoToUsers = () => {
-    onViewChange('users'); // Navigate to Users page
+    onViewChange('users'); 
     setShowUserDropdown(false);
   };
   
   const handleChangeSaveLocation = async () => {
-    // ... (keep existing save location logic)
     if (window.showDirectoryPicker) {
       try {
         const handle = await window.showDirectoryPicker();
-        // For simplicity, just storing the name. You might want to store the handle
-        // or a path representation if you need to access it later without re-prompting.
         setSaveLocation(handle.name); 
       } catch (err) {
         console.error("Error picking directory:", err);
@@ -768,7 +804,6 @@ function Session({
       <header className="session-header">
         <h1 className="page-title">Session</h1>
         <div className="session-settings-container">
-          {/* Board Selector */}
           <div className="toggle-label-wrapper">
             <span className="toggle-label">Board</span>
             <div className="board-selector-wrapper">
@@ -816,7 +851,6 @@ function Session({
             </div>
           </div>
 
-          {/* User Selector */}
           <div className="toggle-label-wrapper">
             <span className="toggle-label">User</span>
             <div className="user-selector-wrapper">
@@ -839,14 +873,14 @@ function Session({
                       {usersForDropdown.map((user) => (
                         <li
                           key={user.id}
-                          className="board-list-item user-list-item" // Ensure .user-list-item styles are appropriate
+                          className="board-list-item user-list-item" 
                           onClick={() => handleUserSelect(user.id)}
                         >
                           <span
                             className="user-color-dot"
                             style={{ backgroundColor: user.color }}
                           ></span>
-                          {user.name} {/* Display user name */}
+                          {user.name} 
                         </li>
                       ))}
                     </ul>
@@ -862,7 +896,6 @@ function Session({
             </div>
           </div>
           
-          {/* Save Location */}
           <div className="toggle-label-wrapper">
             <span className="toggle-label">Save Location</span>
             <button

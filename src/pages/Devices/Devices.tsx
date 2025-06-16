@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { Link } from "react-router-dom"; 
+import { Link } from "react-router-dom";
 import "./Devices.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import wbbIconBlue from "../../assets/wbb-icon-line-blue.svg";
@@ -11,101 +11,84 @@ import battery25Icon from '../../assets/battery-25-icon.svg';
 import battery50Icon from '../../assets/battery-50-icon.svg';
 import battery75Icon from '../../assets/battery-75-icon.svg';
 import battery100Icon from '../../assets/battery-100-icon.svg';
-import rippleIcon from '../../assets/ripple-icon.svg'; 
-
-interface Device {
-  id: number;
-  name: string;
-  status: "Connected" | "Active" | "Disconnected" | string;
-  [key: string]: any;
-}
+import rippleIcon from '../../assets/ripple-icon.svg';
+import { Device } from "../../types";
 
 interface DevicesProps {
-  connectedDeviceNames: string[]; 
-  onConnectedDevicesChange: (names: string[]) => void; 
+  devices: Device[];
+  setDevices: React.Dispatch<React.SetStateAction<Device[]>>;
+  editingDeviceId: number | null;
+  setEditingDeviceId: (id: number | null) => void;
+  editingDeviceName: string;
+  setEditingDeviceName: (name: string) => void;
+  connectingDeviceIds: number[];
+  setConnectingDeviceIds: (ids: number[]) => void;
+  disconnectingDeviceIds: number[];
+  setDisconnectingDeviceIds: (ids: number[]) => void;
+  onConnectDevice: (deviceId: number) => Promise<void>;
+  onDisconnectDevice: (deviceId: number) => Promise<void>;
+  onSaveDeviceName: (deviceId: number, newName: string) => void;
+  onRemoveDevice: (deviceId: number) => void;
+  onScanResults: (scannedDevices: Device[]) => void;
 }
 
-export default function Devices({ connectedDeviceNames, onConnectedDevicesChange }: DevicesProps) {
-  const [devices, setDevices] = useState<Device[]>([]);
+export default function Devices({
+  devices,
+  setDevices,
+  editingDeviceId,
+  setEditingDeviceId,
+  editingDeviceName,
+  setEditingDeviceName,
+  connectingDeviceIds,
+  setConnectingDeviceIds,
+  disconnectingDeviceIds,
+  setDisconnectingDeviceIds,
+  onConnectDevice,
+  onDisconnectDevice,
+  onSaveDeviceName,
+  onRemoveDevice,
+  onScanResults,
+}: DevicesProps) {
   const [topFadeOpacity, setTopFadeOpacity] = useState(0);
-  const [bottomFadeOpacity, setBottomFadeOpacity] = useState(1); 
+  const [bottomFadeOpacity, setBottomFadeOpacity] = useState(1);
   const [showIdentifyPopup, setShowIdentifyPopup] = useState(false);
   const [identifyDeviceName, setIdentifyDeviceName] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [devicesFound, setDevicesFound] = useState<number | null>(null);
-  const [disconnectingDeviceIds, setDisconnectingDeviceIds] = useState<number[]>([]);
-  const [connectingDeviceIds, setConnectingDeviceIds] = useState<number[]>([]);
   const listRef = useRef<HTMLDivElement>(null);
   const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
-  const [editingDeviceName, setEditingDeviceName] = useState<string>("");
 
   const getBatteryIcon = (batteryLevel: number) => {
     if (batteryLevel <= 12) return battery0Icon;
-    if (batteryLevel <= 37) return battery25Icon; 
-    if (batteryLevel <= 62) return battery50Icon; 
-    if (batteryLevel <= 87) return battery75Icon; 
+    if (batteryLevel <= 37) return battery25Icon;
+    if (batteryLevel <= 62) return battery50Icon;
+    if (batteryLevel <= 87) return battery75Icon;
     return battery100Icon;
   };
-
-  useEffect(() => {
-    const fetchDevices = async () => {
-      
-      const backendDevices: Device[] = [
-        { id: 1, name: "Nintendo RVL-WBC-01", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 85, temperature: 22, firmware: "v1.2.3", lastConnected: "2023-10-01" },
-        { id: 2, name: "Nintendo RVL-WBC-02", status: "Connected", mac: "00:1A:7D:DA:71:14", battery: 26, temperature: 23, firmware: "v1.2.4", lastConnected: "2023-10-05" },
-        { id: 3, name: "Generic Board X", status: "Disconnected", mac: "00:1A:7D:DA:71:15", battery: 0, temperature: 20, firmware: "v1.0.0", lastConnected: "2023-09-15" },
-      ];
-      console.log("[Devices.tsx] Simulated backend devices:", backendDevices);
-      setDevices(backendDevices);
-    };
-
-    fetchDevices();
-  }, []);
-
-  useEffect(() => {
-    const currentConnectedNames = devices
-      .filter(device => device.status === "Connected") 
-      .map(device => device.name);
-    
-    console.log("[Devices.tsx] Calculated currentConnectedNames:", currentConnectedNames);
-    console.log("[Devices.tsx] Devices list used for calculation:", JSON.parse(JSON.stringify(devices))); 
-    
-    onConnectedDevicesChange(currentConnectedNames);
-  }, [devices, onConnectedDevicesChange]);
 
   useEffect(() => {
     const handleScroll = () => {
       if (!listRef.current) return;
       const { scrollTop, scrollHeight, clientHeight } = listRef.current;
       const maxFade = 100;
-
-      
       const topOpacity = Math.min(scrollTop / maxFade, 1);
       setTopFadeOpacity(topOpacity);
-
-      
       const scrollBottom = scrollHeight - clientHeight - scrollTop;
-      
       const bottomOpacity = Math.max(0, Math.min(scrollBottom / maxFade, 1));
       setBottomFadeOpacity(bottomOpacity);
     };
     const list = listRef.current;
     if (list) {
       list.addEventListener("scroll", handleScroll);
-      handleScroll(); 
+      handleScroll();
     }
     return () => {
       if (list) list.removeEventListener("scroll", handleScroll);
     };
-  }, [devices]); 
+  }, [devices]);
 
   const backendIdentifyDevice = async (_deviceName: string) => {
-    return new Promise<void>(resolve => {
-      setTimeout(() => {
-        resolve();
-      }, 50);
-    });
+    return new Promise<void>(resolve => setTimeout(resolve, 50));
   };
 
   const handleIdentifyClick = async (deviceName: string) => {
@@ -119,67 +102,22 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     setIdentifyDeviceName(null);
   };
 
-  const mockScanBackend = async (): Promise<{ id: number; status: "Connected" | "Active" }[]> => {
+  const mockScanBackend = async (): Promise<Device[]> => {
     return new Promise(resolve => {
-      setTimeout(() => {
+      scanTimeoutRef.current = setTimeout(() => {
         resolve([
-          { id: 1, status: "Connected" },
-          { id: 2, status: "Active" }
+          { id: 1, name: "Nintendo RVL-WBC-01", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 88, temperature: 23, firmware: "v1.2.3", lastConnected: new Date().toISOString() },
+          { id: 4, name: "New Board Alpha", status: "Active", mac: "00:1A:7D:DA:71:A4", battery: 75, temperature: 21, firmware: "v1.0.0", lastConnected: new Date().toISOString() },
         ]);
-      }, 5000);
+      }, 3000);
     });
   };
 
   const handleScanDevices = async () => {
     setIsScanning(true);
     setDevicesFound(null);
-
     const foundDevicesFromScan = await mockScanBackend();
-
-    setDevices(prevDevices => {
-      let workingListOfDevices = [...prevDevices];
-
-      const foundDeviceIdsFromScanSet = new Set(foundDevicesFromScan.map(fd => fd.id));
-
-      
-      workingListOfDevices = workingListOfDevices.map(device => {
-        if (foundDeviceIdsFromScanSet.has(device.id)) {
-          
-          return { ...device, status: "Active" };
-        } else {
-          
-          if (device.status === "Connected") {
-            
-            return { ...device, status: "Disconnected" };
-          }
-          
-          
-          return device;
-        }
-      });
-
-      
-      foundDevicesFromScan.forEach(scannedDeviceDetail => {
-        const deviceAlreadyExists = workingListOfDevices.some(d => d.id === scannedDeviceDetail.id);
-        if (!deviceAlreadyExists) {
-          
-          const newDevice = {
-            id: scannedDeviceDetail.id,
-            name: `Nintendo RVL-WBC-${scannedDeviceDetail.id.toString().padStart(2, '0')}`, 
-            lastConnected: new Date().toISOString().slice(0, 16).replace("T", " "),
-            status: "Active",
-            mac: `SC:AN:00:00:00:${scannedDeviceDetail.id.toString(16).padStart(2, '0').toUpperCase()}`,
-            battery: Math.floor(Math.random() * 60) + 40,
-            temperature: Math.floor(Math.random() * 5) + 20,
-            firmware: "v_scan.1.0"
-          };
-          workingListOfDevices.push(newDevice);
-        }
-      });
-
-      return workingListOfDevices;
-    });
-
+    onScanResults(foundDevicesFromScan);
     setIsScanning(false);
     setDevicesFound(foundDevicesFromScan.length);
   };
@@ -199,24 +137,12 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
   };
 
   const handleNameInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log(
-      "handleNameInputChange called. Value:",
-      event.target.value,
-      "Target class:", event.target.className, 
-      "Current editingDeviceId:", editingDeviceId
-    );
     setEditingDeviceName(event.target.value);
   };
 
   const handleSaveName = () => {
     if (editingDeviceId === null) return;
-    setDevices(prevDevices =>
-      prevDevices.map(d =>
-        d.id === editingDeviceId ? { ...d, name: editingDeviceName.trim() || `Nintendo RVL-WBC-${d.id.toString().padStart(2, '0')}` } : d
-      )
-    );
-    setEditingDeviceId(null);
-    setEditingDeviceName("");
+    onSaveDeviceName(editingDeviceId, editingDeviceName);
   };
 
   const handleCancelEditName = () => {
@@ -224,109 +150,60 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
     setEditingDeviceName("");
   };
 
-  const handleRemoveDevice = (id: number) => {
-    const deviceToRemove = devices.find(d => d.id === id);
-    if (deviceToRemove && deviceToRemove.status === "Connected") {
-      handleDisconnect(id); 
-    }
-    
-    
-    setDevices(prev => prev.filter(device => device.id !== id));
+  const handleRemoveDeviceLocal = (id: number) => {
+    onRemoveDevice(id);
   };
 
-  const backendDisconnectDevice = async (_deviceId: number) => {
-    return new Promise<void>((resolve) => setTimeout(resolve, 1000));
+  const handleDisconnectLocal = async (deviceId: number) => {
+    await onDisconnectDevice(deviceId);
   };
 
-  const handleDisconnect = async (deviceId: number) => {
-    setDisconnectingDeviceIds(prev => [...prev, deviceId]);
-    setTimeout(async () => {
-      await backendDisconnectDevice(deviceId);
-      setDevices((prev) =>
-        prev.map((device) =>
-          device.id === deviceId ? { ...device, status: "Active" } : device
-        )
-      );
-      setDisconnectingDeviceIds(prev => prev.filter(id => id !== deviceId));
-    }, 3000);
-  };
-
-  const backendConnectDevice = async (_deviceId: number) => {
-    return new Promise<void>((resolve) => setTimeout(resolve, 1000));
-  };
-
-  const handleConnect = async (deviceId: number) => {
-    setConnectingDeviceIds(prev => [...prev, deviceId]);
-    setTimeout(async () => {
-      await backendConnectDevice(deviceId);
-      setDevices((prev) =>
-        prev.map((device) =>
-          device.id === deviceId
-            ? {
-                ...device,
-                status: "Connected",
-                lastConnected: new Date().toISOString().slice(0, 16).replace("T", " ")
-              }
-            : device
-        )
-      );
-      setConnectingDeviceIds(prev => prev.filter(id => id !== deviceId));
-    }, 3000);
+  const handleConnectLocal = async (deviceId: number) => {
+    await onConnectDevice(deviceId);
   };
 
   const getSortedDevices = () => {
+    if (!Array.isArray(devices)) return [];
     const connected = devices.filter(d => d.status === "Connected");
     const active = devices.filter(d => d.status === "Active");
     const disconnected = devices.filter(d => d.status === "Disconnected");
 
-    connected.sort((a, b) => {
-      const dateA = new Date(a.lastConnected).getTime();
-      const dateB = new Date(b.lastConnected).getTime();
-      return dateA - dateB;
-    });
-
+    connected.sort((a, b) => new Date(a.lastConnected).getTime() - new Date(b.lastConnected).getTime());
     active.sort((a, b) => a.name.localeCompare(b.name));
     disconnected.sort((a, b) => a.name.localeCompare(b.name));
 
     return [...connected, ...active, ...disconnected];
   };
 
-  function formatLastConnected(dateString: string) {
+  function formatLastConnected(dateString: string | undefined) {
+    if (!dateString) return "N/A";
     const now = new Date();
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const diffWeeks = Math.floor(diffDays / 7);
-    const diffMonths = now.getMonth() - date.getMonth() + 12 * (now.getFullYear() - date.getFullYear());
 
     const pad = (n: number) => n.toString().padStart(2, "0");
     const hours = pad(date.getHours());
     const minutes = pad(date.getMinutes());
 
-    if (diffDays === 0) {
-      return `Today ${hours}:${minutes}`;
-    } else if (diffDays === 1) {
-      return `Yesterday ${hours}:${minutes}`;
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else if (diffWeeks === 1) {
-      return `1 week ago`;
-    } else if (diffWeeks < 5) {
-      return `${diffWeeks} weeks ago`;
-    } else if (diffMonths === 1) {
-      return `1 month ago`;
-    } else {
-      return date.toISOString().slice(0, 10);
-    }
+    if (diffDays === 0) return `Today ${hours}:${minutes}`;
+    if (diffDays === 1) return `Yesterday ${hours}:${minutes}`;
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffWeeks === 1) return `1 week ago`;
+    if (diffWeeks < 5) return `${diffWeeks} weeks ago`;
+    return date.toLocaleDateString();
   }
 
+  const sortedDevices = getSortedDevices();
   const connectedDevicesCount = devices.filter(d => d.status === "Connected").length;
-  const connectedDevicesForPanel = getSortedDevices().filter(d => d.status === "Connected");
+  const connectedDevicesForPanel = sortedDevices.filter(d => d.status === "Connected");
 
   return (
     <div className="devices-page">
       <div className="devices-header">
-        <span className="page-title">Devices</span> 
+        <span className="page-title">Devices</span>
         {isScanning ? (
           <button onClick={handleCancelScan} className="scan-btn">
             Cancel Scan
@@ -347,20 +224,20 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
       <div className="devices-list-wrapper">
         <div className="devices-list-fade-top" style={{ opacity: topFadeOpacity }} />
         <div className="devices-list" ref={listRef}>
-          {getSortedDevices().map((device) => {
-            const isConnectButtonDisabled = isScanning || 
-                                          disconnectingDeviceIds.includes(device.id) || 
+          {sortedDevices.map((device) => {
+            const isConnectButtonDisabled = isScanning ||
+                                          disconnectingDeviceIds.includes(device.id) ||
                                           connectingDeviceIds.includes(device.id) ||
                                           (connectedDevicesCount >= 2 && device.status !== "Connected") ||
-                                          device.status === "Disconnected"; 
-            const connectButtonTooltip = (connectedDevicesCount >= 2 && device.status !== "Connected") 
-                                          ? "You can only have two boards connected at a time" 
+                                          device.status === "Disconnected";
+            const connectButtonTooltip = (connectedDevicesCount >= 2 && device.status !== "Connected")
+                                          ? "You can only have two boards connected at a time"
                                           : device.status === "Disconnected" ? "Device is disconnected" : "";
 
             return (
               <div className={`device-row`} key={device.id}>
                 <div className={`device-container${device.status === "Disconnected" ? " disconnected" : ""}`}>
-                  <button onClick={() => handleRemoveDevice(device.id)} className="remove-device-btn">✕</button>
+                  <button onClick={() => handleRemoveDeviceLocal(device.id)} className="remove-device-btn">✕</button>
                   <div className="device-image-status">
                     <img
                       src={device.status === "Connected" ? wbbIconBlue : wbbIcon}
@@ -391,21 +268,18 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                           value={editingDeviceName}
                           onChange={handleNameInputChange}
                           autoFocus
-                          
                           onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') handleCancelEditName(); }}
                           className="device-name-edit-input"
                         />
-                        
                       </div>
                     ) : (
-                      
                       <div className="device-name-container">
                         <span className="device-name-text" title={device.name}>
                           {device.name}
                         </span>
                         {(device.status === "Connected" || device.status === "Active") && !isScanning && !disconnectingDeviceIds.includes(device.id) && !connectingDeviceIds.includes(device.id) && (
-                          <button 
-                            onClick={() => handleStartEditName(device.id, device.name)} 
+                          <button
+                            onClick={() => handleStartEditName(device.id, device.name)}
                             className="device-edit-name-btn"
                             title="Edit name"
                           >
@@ -430,7 +304,7 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                     </button>
                     {device.status === "Connected" ? (
                       <button
-                        onClick={() => handleDisconnect(device.id)}
+                        onClick={() => handleDisconnectLocal(device.id)}
                         className="device-action-btn disconnect"
                         disabled={isScanning || disconnectingDeviceIds.includes(device.id) || connectingDeviceIds.includes(device.id)}
                       >
@@ -438,7 +312,7 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleConnect(device.id)}
+                        onClick={() => handleConnectLocal(device.id)}
                         className="device-action-btn connect"
                         disabled={isConnectButtonDisabled}
                         title={connectButtonTooltip}
@@ -457,8 +331,8 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
         <div className="static-side-panel">
           {[0, 1].map(index => {
             const device = connectedDevicesForPanel[index];
-            const isPanelButtonDisabled = isScanning || 
-                                          (device && disconnectingDeviceIds.includes(device.id)) || 
+            const isPanelButtonDisabled = isScanning ||
+                                          (device && disconnectingDeviceIds.includes(device.id)) ||
                                           (device && connectingDeviceIds.includes(device.id));
 
             return (
@@ -475,20 +349,18 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                               value={editingDeviceName}
                               onChange={handleNameInputChange}
                               autoFocus
-                              
                               onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') handleCancelEditName(); }}
                               className="device-name-edit-input side-panel-name-edit-input"
                             />
                           </div>
                         ) : (
-                          
                           <div className="side-panel-device-name-container">
                             <span className="side-panel-device-name-text" title={device?.name}>
                               {device?.name}
                             </span>
                             {device && (device.status === "Connected" || device.status === "Active") && !isScanning && !disconnectingDeviceIds.includes(device.id) && !connectingDeviceIds.includes(device.id) && (
-                              <button 
-                                onClick={() => handleStartEditName(device.id, device.name)} 
+                              <button
+                                onClick={() => handleStartEditName(device.id, device.name)}
                                 className="device-edit-name-btn side-panel-edit-btn"
                                 title="Edit name"
                               >
@@ -500,16 +372,16 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                         <span className="side-panel-device-mac">{device?.mac}</span>
                       </div>
                     </div>
-                    <div className="side-panel-icon-container"> 
+                    <div className="side-panel-icon-container">
                       <img src={rippleIcon} alt="Ripple effect" className="side-panel-ripple-icon" />
                       <img src={wbbIconBlue} alt={`${device.name} icon`} className="side-panel-device-image" />
                     </div>
                     <div className="side-panel-info-squares">
                       <div className="info-square">
-                        <span className="info-square-value">{device.firmware}</span> 
+                        <span className="info-square-value">{device.firmware}</span>
                         <div className="info-square-label">
                           <img src={signalIcon} alt="Connectivity" />
-                          <span>Firmware</span> 
+                          <span>Firmware</span>
                         </div>
                       </div>
                       <div className="info-square">
@@ -529,7 +401,7 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                     </div>
                     <div className="side-panel-actions">
                       <button
-                        onClick={() => handleDisconnect(device.id)}
+                        onClick={() => handleDisconnectLocal(device.id)}
                         className="side-panel-btn disconnect"
                         disabled={isPanelButtonDisabled}
                       >
@@ -539,14 +411,7 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                         to="/session"
                         state={{ initialSelectedBoard: device.name }}
                         className={`side-panel-btn go-to-session ${isPanelButtonDisabled ? 'disabled-link' : ''}`}
-                        onClick={(e) => {
-                          if (isPanelButtonDisabled) {
-                            e.preventDefault(); 
-                          }
-                          
-                          
-                          
-                        }}
+                        onClick={(e) => { if (isPanelButtonDisabled) e.preventDefault(); }}
                         aria-disabled={isPanelButtonDisabled}
                         tabIndex={isPanelButtonDisabled ? -1 : undefined}
                       >
@@ -556,7 +421,6 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
                   </>
                 ) : (
                   <div className="side-panel-empty">
-                    
                     <span>Device slot available</span>
                   </div>
                 )}
@@ -581,9 +445,9 @@ export default function Devices({ connectedDeviceNames, onConnectedDevicesChange
           </div>
         </div>
       )}
-      
+
       {showIdentifyPopup && (
-        <div className="identify-popup-overlay">
+        <div className="identify-popup-overlay" onClick={handleClosePopup}>
           <div className="identify-popup" onClick={e => e.stopPropagation()}>
             <p>
               The LED in <b>{identifyDeviceName}</b> should be blinking
