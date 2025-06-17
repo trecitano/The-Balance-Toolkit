@@ -47,7 +47,7 @@
   padding: 0px 40px;
   height: 100%;
   background: #fff;
-  justify-content: flex-end;
+  justify-content: flex-start; 
 }
 
 .session-header {
@@ -61,63 +61,192 @@
 
 .page-title {
   margin: 0;
+  
+  font-size: clamp(1.25rem, 2.5vw, 2rem); 
 }
 
 .session-settings-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-start;
-  margin-left: 20px;
+  gap: 1vw;
+  align-items: flex-start; 
+  margin-left: 2vw;
+  flex-grow: 1; 
+}
+
+.session-settings-container > .board-selector-wrapper {
+  width: 18%;
+}
+
+.session-settings-container > .user-selector-wrapper {
+  width: 18%;
+}
+
+
+.session-settings-container > .save-location-toggle-wide {
+   
+  flex-grow: 1;   
+  
+   
+}
+
+.session-settings-container > .stop-after-controls {
+  width: 18%;
+}
+
+.session-settings-container > .lsl-selector-wrapper {
+  width: 14%;
+}
+
+.session-settings-container > .tcp-selector-wrapper {
+  width: 14%;
 }
 
 .toggle-label-wrapper {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: center; 
+  flex-grow: 1;        
+  flex-basis: 0;       
+  min-width: 1.5vw;    
 }
 
+
+.lsl-control-wrapper,
+.tcp-control-wrapper { 
+  flex-grow: 0.2;   
+  min-width: 0.5vw;  
+}
+
+.user-control-wrapper 
+{
+  flex-grow: 0.6;   
+  min-width: 0.5vw; 
+}
+
+.board-control-wrapper
+{
+  flex-grow: 0.8;   
+  min-width: 0.5vw; 
+}
+
+.toggle-label {
+  color: #4b5563;
+  margin-bottom: 3px;
+  font-weight: 500;
+  white-space: nowrap;
+  
+  font-size: clamp(0.6rem, 1vw, 0.8rem); 
+}
+
+.board-selector-wrapper,
+.user-selector-wrapper,
+.lsl-selector-wrapper,
+.tcp-selector-wrapper {
+  position: relative;
+  width: 100%; 
+}
+
+/* Ensure .session-setting-toggle (the button) still has width: 100%
+   This was part of the previous suggestion and should be kept.
+   If it's not already there, re-add it or confirm it:
+.session-setting-toggle {
+  // ... other styles ...
+  width: 100%;
+  box-sizing: border-box; // Good to have with width: 100% and padding/border
+}
+*/
+
+/*
+  The following rules were likely not applying correctly due to the
+  .toggle-label-wrapper being the direct child of .session-settings-container,
+  not .board-selector_wrapper etc.
+  You can remove them or comment them out.
+*/
+/*
+.session-settings-container > .board-selector-wrapper {
+  width: 18%;
+}
+.session-settings-container > .user-selector-wrapper {
+  width: 18%;
+}
+*/
+/* This rule for save-location-toggle-wide was also likely mis-targeted
+   or the class was not applied to the correct element.
+.session-settings-container > .save-location-toggle-wide {
+  flex-grow: 1;
+}
+*/
+/*
+.session-settings-container > .lsl-selector-wrapper {
+  width: 14%;
+}
+.session-settings-container > .tcp-selector-wrapper {
+  width: 14%;
+}
+*/
+
+.toggle-label-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+}
+
+/* Remove this duplicate rule block:
 .toggle-label {
   font-size: 0.6rem;
   color: #4b5563;
   margin-bottom: 3px;
   font-weight: 500;
   white-space: nowrap;
+  // The label text will be centered due to align-items: center on .toggle-label-wrapper
 }
+*/
 
 .board-selector-wrapper {
   position: relative;
 }
 
-.board-selector-toggle {
+
+.board-selector-wrapper .board-selector-toggle {
   display: flex;
   align-items: center;
-  gap: 0.3vw;
-  width: 17vw;
-  justify-content: flex-start;
+  /* gap: 0.7vw; */ /* Will be inherited from .session-setting-toggle */
+  width: 100%;
+  /* justify-content: flex-start; */ /* Will be inherited from .session-setting-toggle */
+  height: clamp(23px, 2vh, 35px); 
 }
 
 .board-selector-icon {
-  width: 2em;
-  height: 2em;
+  width: 1.9em;
+  height: 1.9em;
   object-fit: contain;
   display: inline-flex;
   align-items: center;
 }
 
 .user-selector-wrapper {
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.7vw;
+  width: 100%; 
+  justify-content: flex-start;
+  height: clamp(23px, 2vh, 35px); 
 }
 
-/* Add this new rule to make the user selector button less wide */
+
 .user-selector-wrapper .board-selector-toggle {
-  width: 12vw; /* Adjust this value as needed, e.g., 10vw or 130px */
+  width: 100%; 
+  height: clamp(23px, 2vh, 35px); 
 }
 
 .board-selector-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex-grow: 1; /* Allow name to take space and truncate */
+  min-width: 0; /* For proper truncation in flex */
+  text-align: left; /* Ensure text within this span is left-aligned */
 }
 
 .lsl-selector-wrapper,
@@ -129,16 +258,25 @@
 .tcp-selector-dropdown {
   position: absolute;
   top: calc(100% + 5px);
-  left: 50%;
-  transform: translateX(-50%);
+  left: 50%; 
+  transform: translateX(-50%); 
   background-color: white;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 20;
-  min-width: 180px;
-  padding: 10px;
+  padding: clamp(8px, 0.6vw, 10px);
   text-align: left;
+  box-sizing: border-box;
+   
+}
+
+.lsl-selector-dropdown {
+  width: clamp(150px, 14vw, 200px); 
+}
+
+.tcp-selector-dropdown {
+  width: clamp(110px, 11vw, 160px); 
 }
 
 .lsl-selector-dropdown p,
@@ -157,10 +295,56 @@
   font-size: 0.85em;
 }
 
+.lsl-selector-dropdown .lsl-dropdown-input-group,
+.tcp-selector-dropdown .lsl-dropdown-input-group {
+  margin-bottom: clamp(6px, 0.5vw, 8px); 
+  display: flex;
+  flex-direction: column;
+}
+
+.lsl-selector-dropdown .lsl-dropdown-input-group label,
+.tcp-selector-dropdown .lsl-dropdown-input-group label {
+  font-size: clamp(0.65rem, 0.7vw, 0.8rem); 
+  color: #374151;
+  margin-bottom: clamp(2px, 0.2vw, 3px); 
+  font-weight: 500;
+}
+
+.lsl-selector-dropdown .lsl-dropdown-input-group input[type="text"],
+.tcp-selector-dropdown .lsl-dropdown-input-group input[type="text"] {
+  padding: clamp(4px, 0.4vw, 6px) clamp(6px, 0.5vw, 8px); 
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: clamp(0.7rem, 0.8vw, 0.9rem); 
+  width: 100%; 
+  box-sizing: border-box;
+}
+
+.lsl-selector-dropdown .lsl-dropdown-input-group input[type="text"]:disabled,
+.tcp-selector-dropdown .lsl-dropdown-input-group input[type="text"]:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.lsl-dropdown-text-display {
+  padding: clamp(4px, 0.4vw, 6px) clamp(6px, 0.5vw, 8px); 
+  font-size: clamp(0.7rem, 0.8vw, 0.9rem); 
+  color: #333;
+  background-color: #f9fafb;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  width: 100%; 
+  box-sizing: border-box;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .dropdown-action-button {
   display: block;
   width: 100%;
-  padding: 8px 12px;
+  padding: clamp(6px, 0.6vw, 8px) clamp(10px, 0.8vw, 12px); 
   border: 1px solid #397aac;
   border-radius: 4px;
   background-color: #397aac;
@@ -168,15 +352,27 @@
   cursor: pointer;
   text-align: center;
   font-weight: 500;
-  font-size: 0.9em;
+  font-size: clamp(0.7rem, 0.8vw, 0.9rem); 
 }
 
 .dropdown-action-button:hover {
   background-color: #2c5f85;
 }
 
+.dropdown-action-button-disable {
+  background-color: #ef4444; 
+  border-color: #ef4444;
+}
+
+.dropdown-action-button-disable:hover {
+  background-color: #dc2626; 
+}
+
 .save-location-toggle-wide {
-  width: 15vw !important;
+  display: flex;
+  align-items: center;
+  /* gap: 0.7vw; */ /* Will be inherited from .session-setting-toggle */
+  /* justify-content: flex-start; */ /* Will be inherited from .session-setting-toggle */
 }
 
 .save-location-toggle-wide img {
@@ -184,6 +380,16 @@
   height: 2em;
   flex-shrink: 0;
   object-fit: contain;
+}
+
+/* Added to help save location text scale and truncate */
+.save-location-toggle-wide > span {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0; /* Crucial for text-overflow in flex children */
+  text-align: left;
 }
 
 .board-selector-dropdown {
@@ -195,59 +401,92 @@
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 20;
-  min-width: 113px;
-  padding: 8px;
+  width: 100%;
+  padding: clamp(6px, 0.5vw, 8px);
+  box-sizing: border-box;
 }
 
 .board-list {
   list-style: none;
   padding: 0;
-  margin: 0 0 8px 0;
+  margin: 0 0 clamp(6px, 0.5vw, 8px) 0; 
 }
 
 .board-list-item {
-  padding: 8px 12px;
+  padding-top: clamp(6px, 0.5vw, 8px);
+  padding-bottom: clamp(6px, 0.5vw, 8px);
+  padding-right: clamp(8px, 0.8vw, 12px); /* Keep original right padding */
+  /* Revised padding-left: Target is (icon_width + gap) - dropdown_padding */
+  padding-left: calc(1.9em + 0.7vw - clamp(6px, 0.5vw, 8px)); 
   cursor: pointer;
   border-radius: 4px;
-}
-
-.board-list-item:hover {
-  background-color: #f3f4f6;
-}
-
-.user-list-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  color: #374151;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  font-size: clamp(0.7rem, 0.8vw, 0.9rem);
+}
+
+
+.board-list-item.selected-item {
+  background-color: #e0e7ff; 
+  font-weight: 600; 
+  color: #3730a3; 
+}
+
+
+.board-list-item.selected-item:hover {
+  background-color: #c7d2fe; 
+}
+
+/*
+  user-list-item is applied to the SAME <li> as board-list-item.
+  It's used to introduce elements/styles specific to user items.
+  Since board-list-item now handles display:flex and align-items:center,
+  user-list-item primarily adds the gap for the color dot.
+*/
+.user-list-item {
+  gap: 8px; /* This is the gap between the color dot and the user name */
+  /* Revised padding-left: board_item_padding_left - user_item_icon_and_gap */
+  /* (1.9em + 0.7vw - clamp(6px, 0.5vw, 8px)) - (10px + 8px) */
+  padding-left: calc(1.9em + 0.7vw - 18px - clamp(6px, 0.5vw, 8px));
+}
+
+.user-list-item:hover {
+  background-color: #f3f4f6; 
+  box-shadow: none;          
+        
+}
+
+
+.user-list-item.selected-item {
+  background-color: #e0e7ff; 
+  font-weight: 600;
+  color: #3730a3;
+}
+
+.user-list-item.selected-item:hover {
+  background-color: #c7d2fe; 
 }
 
 .user-color-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  display: inline-block;
-}
-
-.user-selector-dropdown {
-  position: absolute;
-  top: calc(100% + 5px);
-  left: 0;
-  background-color: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 20;
-  min-width: 12vw; /* Adjust to match or be slightly wider than the button */
-  padding: 8px; /* Corrected typo from '2w' to '8px' for consistency */
+  display: inline-block; 
+  flex-shrink: 0; 
 }
 
 .go-to-devices-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: clamp(4px, 0.4vw, 6px); 
   width: 100%;
-  padding: 6px 12px;
+  padding: clamp(4px, 0.5vw, 6px) clamp(8px, 0.8vw, 12px); 
   border: 1px solid #d1d5db;
   border-radius: 4px;
   background-color: #f9fafb;
@@ -255,7 +494,7 @@
   text-align: center;
   font-weight: 500;
   color: #374151;
-  font-size: 0.9em;
+  font-size: clamp(0.7rem, 0.8vw, 0.9rem); 
 }
 
 .go-to-devices-btn:hover {
@@ -271,10 +510,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: clamp(4px, 0.4vw, 6px); 
   width: 100%;
-  padding: 6px 12px;
-  margin-top: 8px;
+  padding: clamp(4px, 0.5vw, 6px) clamp(8px, 0.8vw, 12px); 
   border: 1px solid #d1d5db;
   border-radius: 4px;
   background-color: #f9fafb;
@@ -282,7 +520,7 @@
   text-align: center;
   font-weight: 500;
   color: #374151;
-  font-size: 0.9em;
+  font-size: clamp(0.7rem, 0.8vw, 0.9rem); 
 }
 
 .go-to-users-btn:hover {
@@ -295,7 +533,7 @@
 }
 
 .session-setting-toggle {
-  height: 2vw;
+  height: 2vw; /* Default height, can be overridden */
   padding: 0 12px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
@@ -303,11 +541,21 @@
   cursor: pointer;
   font-weight: 500;
   color: #374151;
-  font-size: 0.9em;
+  font-size: clamp(0.6rem, 0.9vw, 0.9rem); 
   transition: background-color 0.2s, border-color 0.2s, color 0.2s;
   display: flex;
   align-items: center;
   box-sizing: border-box;
+  width: 100%;
+  /* Added for consistent internal icon-text layout */
+  justify-content: flex-start;
+  gap: 0.7vw; 
+}
+
+.lsl-selector-wrapper .session-setting-toggle,
+.tcp-selector-wrapper .session-setting-toggle {
+  justify-content: center;
+  height: clamp(23px, 2vh, 35px); 
 }
 
 .session-setting-toggle:hover {
@@ -432,22 +680,22 @@
 .stop-after-dropdown {
   position: absolute;
   bottom: calc(100% + 5px);
-  left: 65px;
+  left: 65px; 
   background-color: white;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
-  padding: 15px;
+  padding: clamp(10px, 1vw, 15px); 
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-width: 280px;
+  gap: clamp(8px, 0.8vw, 12px); 
+  min-width: clamp(240px, 20vw, 300px); 
 }
 
 .stop-after-inputs {
   display: flex;
-  gap: 10px;
+  gap: clamp(8px, 0.7vw, 10px); 
   align-items: center;
   justify-content: space-between;
 }
@@ -455,8 +703,8 @@
 .stop-after-inputs label {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.9em;
+  gap: clamp(3px, 0.3vw, 5px); 
+  font-size: clamp(0.7rem, 0.8vw, 0.9rem); 
   color: #374151;
   justify-content: space-between;
   width: 100%;
@@ -472,13 +720,13 @@
 }
 
 .stop-after-inputs input[type="number"] {
-  width: 40px;
-  padding: 6px 4px;
+  width: clamp(32px, 3vw, 40px); 
+  padding: clamp(4px, 0.4vh, 6px) clamp(3px, 0.3vw, 4px); 
   border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 1em;
+  border-radius: 4px; 
+  font-size: clamp(0.75rem, 0.85vw, 0.95rem); 
   box-sizing: border-box;
-  height: 28px;
+  height: clamp(24px, 2.5vh, 28px); 
   line-height: normal;
   text-align: center;
   -moz-appearance: textfield;
@@ -496,12 +744,12 @@
   border: 1px solid #d1d5db;
   color: #333;
   cursor: pointer;
-  font-size: 1em;
+  font-size: clamp(0.8rem, 1vw, 1.1rem); 
   font-weight: bold;
-  height: 28px;
-  width: 28px;
+  height: clamp(24px, 2.5vh, 28px); 
+  width: clamp(22px, 2vw, 28px); 
   padding: 0;
-  line-height: 26px;
+  line-height: clamp(22px, 2.4vh, 26px); 
   text-align: center;
   user-select: none;
 }
@@ -518,54 +766,50 @@
   border-top-left-radius: 4px;
   border-bottom-left-radius: 4px;
   border-right: none;
-  width: 22px;
+  width: clamp(18px, 1.8vw, 22px); 
 }
 
 .custom-number-btn.increment-btn {
   border-top-right-radius: 4px;
   border-bottom-right-radius: 4px;
   border-left: none;
-  width: 22px;
+  width: clamp(18px, 1.8vw, 22px); 
 }
 
-.custom-number-input input[type="number"] {
+.custom-number-input input[type="number"] { 
   border-radius: 0;
 }
 
 .stop-after-dropdown-buttons {
   display: flex;
-  gap: 10px;
+  gap: clamp(8px, 0.7vw, 10px); 
   justify-content: flex-end;
   align-items: center;
 }
 
 .stop-after-reset-inputs-btn {
-  padding: 6px 10px;
+  padding: clamp(4px, 0.5vw, 6px) clamp(8px, 0.7vw, 10px); 
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
   border: 1px solid #d1d5db;
   background-color: #f3f4f6;
   color: #374151;
-  font-size: 1.2em;
+  font-size: clamp(1rem, 1.1vw, 1.2rem); 
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.stop-after-reset-inputs-btn:hover {
-  background-color: #e5e7eb;
-}
-
 .stop-after-submit-btn,
 .stop-after-cancel-btn {
-  padding: 8px 15px;
+  padding: clamp(6px, 0.7vw, 8px) clamp(12px, 1vw, 15px); 
   border-radius: 4px;
   cursor: pointer;
   font-weight: 500;
   border: 1px solid transparent;
-  font-size: 0.9em;
+  font-size: clamp(0.7rem, 0.8vw, 0.9rem); 
 }
 
 .stop-after-submit-btn {
@@ -674,30 +918,28 @@
   background: #fff;
 }
 
-.session-content {
+.session-main { 
   padding: 10px;
   display: flex;
   flex-direction: row;
   gap: 5px;
   align-items: stretch;
-  flex: 1;
+  flex: 1; 
 }
 
 .wbb-copx-stack {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  width: 20%;
+  width: 15%; /* Reduced from 20% */
   flex-shrink: 0;
 }
 
 .wbb-topdown-container {
   width: 100%;
-  height: 30%;
-  aspect-ratio: 1 / 1;
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
+  /* Height will now be dynamically set by JavaScript */
 }
 
 .wbb-topdown-icon {
@@ -709,12 +951,13 @@
 
 .copx-graph-container {
   width: 100%;
-  height: 50%;
+  height: 40%; /* Optionally reduce height if JS override is not always active or for initial render */
   border: none;
   background-color: #ffffff;
   padding: 0px;
   box-sizing: border-box;
   display: flex;
+  align-items: center; /* Add this line to vertically center the canvas */
 }
 
 .copx-graph-canvas {
@@ -724,11 +967,11 @@
 }
 
 .copy-graph-container {
-  width: 25%;
-  height: 30%;
+  width: 20%; /* Reduced from 25% */
+  height: 25%; /* Reduced from 30% */
   border: none;
   background-color: #ffffff;
-  padding: 0px; 
+  padding: 0px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -745,8 +988,6 @@
   background-color: #007bff;
   border-radius: 50%;
   z-index: 2;
-  pointer-events: none;
-  box-shadow: none;
 }
 
 .cop-indicator-trail {
@@ -755,4 +996,9 @@
   background-color: #007bff;
   z-index: 1;
   pointer-events: none;
+  box-shadow: none;
+}
+
+.toggle-label-wrapper > .session-setting-toggle.save-location-toggle-wide {
+  height: clamp(23px, 2vh, 35px);
 }

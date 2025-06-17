@@ -15,12 +15,12 @@ declare global {
 
 interface SessionUser {
   id: string;
-  name: string; 
+  name: string;
   color: string;
 }
 
 const DEFAULT_SAVE_LOCATION = "Documents\\TheBalanceToolkit";
-const COPY_GRAPH_MAX_POINTS = 200; 
+const COPY_GRAPH_MAX_POINTS = 200;
 
 const formatDisplayPath = (path: string, maxLength: number): string => {
   const parts = path.replace(/\\/g, '/').split('/').filter(part => part.length > 0);
@@ -29,17 +29,46 @@ const formatDisplayPath = (path: string, maxLength: number): string => {
   if (parts.length === 0) {
     displayString = path; 
   } else if (parts.length === 1) {
-    displayString = parts[0]; 
+    displayString = `.../${parts[0]}`;
   } else { 
-    displayString = parts.slice(-2).join('/'); 
+    displayString = parts.slice(-2).join('/');
   }
 
   if (displayString.length > maxLength) {
-    const availableLength = maxLength - 3;
-    if (availableLength < 1) {
-        return displayString.substring(0, maxLength > 3 ? maxLength -3 : maxLength) + (maxLength > 3 ? "..." : "");
+    const lastSlash = displayString.lastIndexOf('/');
+    if (lastSlash !== -1 && lastSlash > 0 && lastSlash < displayString.length -1) { 
+      let firstPart = displayString.substring(0, lastSlash);
+      const lastPart = displayString.substring(lastSlash + 1);
+
+      const availableForFirstPart = maxLength - lastPart.length - 4; 
+
+      if (lastPart.length >= maxLength - 4) { 
+        if (maxLength <= 4) displayString = "...";
+        else displayString = "..." + displayString.substring(displayString.length - maxLength + 3);
+
+      } else if (firstPart.length > availableForFirstPart) {
+        if (availableForFirstPart < 0) { 
+             if (lastPart.length > maxLength -3 ) { 
+                displayString = "..." + lastPart.substring(lastPart.length - (maxLength-3));
+             } else if (lastPart.length > 0 && maxLength > 3) { 
+                displayString = "..." + lastPart;
+             }
+             else { 
+                displayString = "...";
+             }
+        } else {
+            firstPart = firstPart.substring(0, availableForFirstPart);
+            displayString = firstPart + ".../" + lastPart;
+        }
+
+      }
+    } else { 
+      if (displayString.length > maxLength) { 
+        if (maxLength >=3) displayString = displayString.substring(0, maxLength - 3) + "...";
+        else if (maxLength > 0) displayString = ".".repeat(maxLength); 
+        else displayString = "";
+      }
     }
-    return "..." + displayString.substring(displayString.length - availableLength);
   }
   return displayString;
 };
@@ -62,7 +91,7 @@ function Session({
   onSelectUserInSession
 }: SessionProps) {
   const location = useLocation();
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const initialSelectedBoardFromRoute = location.state?.initialSelectedBoard as string | null || null;
 
   console.log("[Session.tsx] Component rendered. availableBoards prop:", availableBoards, "initialSelectedBoardFromRoute:", initialSelectedBoardFromRoute);
@@ -80,7 +109,7 @@ function Session({
   const tcpToggleRef = useRef<HTMLButtonElement>(null);
 
   const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
-  const [initialBoardProcessed, setInitialBoardProcessed] = useState(false); 
+  const [initialBoardProcessed, setInitialBoardProcessed] = useState(false);
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -92,7 +121,15 @@ function Session({
   const [inputMinutes, setInputMinutes] = useState(0);
   const [inputSeconds, setInputSeconds] = useState(0);
   const [lslStreamEnabled, setLslStreamEnabled] = useState(false);
+  const [lslStreamNameInput, setLslStreamNameInput] = useState("the-balance-toolkit"); 
+  const [activeLslStreamName, setActiveLslStreamName] = useState<string | null>(null); 
+  const [lslStreamType, setLslStreamType] = useState("BalanceData");
+  const [lslSourceId, setLslSourceId] = useState(`tbt-${Date.now().toString().slice(-6)}`);
   const [tcpStreamEnabled, setTcpStreamEnabled] = useState(false);
+  const [tcpIpAddressInput, setTcpIpAddressInput] = useState("127.0.0.1");
+  const [tcpPortInput, setTcpPortInput] = useState("12345");
+  const [activeTcpIpAddress, setActiveTcpIpAddress] = useState<string | null>(null);
+  const [activeTcpPort, setActiveTcpPort] = useState<string | null>(null);
   const [showLslDropdown, setShowLslDropdown] = useState(false);
   const [showTcpDropdown, setShowTcpDropdown] = useState(false);
 
@@ -100,25 +137,25 @@ function Session({
   const canvasRef2 = useRef<HTMLCanvasElement>(null);
   const copYCanvasRef = useRef<HTMLCanvasElement>(null);
   const copyGraphContainerRef = useRef<HTMLDivElement>(null);
-  const copXCanvasRef = useRef<HTMLCanvasElement>(null); 
-  const copxGraphContainerRef = useRef<HTMLDivElement>(null); 
+  const copXCanvasRef = useRef<HTMLCanvasElement>(null);
+  const copxGraphContainerRef = useRef<HTMLDivElement>(null);
 
   const [copYDataSeries, setCopYDataSeries] = useState<number[]>([]);
-  const [copXDataSeries, setCopXDataSeries] = useState<number[]>([]); 
+  const [copXDataSeries, setCopXDataSeries] = useState<number[]>([]);
   const wbbTopdownContainerRef = useRef<HTMLDivElement>(null);
   const wbbTopdownImageRef = useRef<HTMLImageElement>(null);
   const [svgRenderedBounds, setSvgRenderedBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [copYCanvasSize, setCopYCanvasSize] = useState({ width: 0, height: 0 });
-  const [copXCanvasSize, setCopXCanvasSize] = useState({ width: 0, height: 0 }); 
+  const [copXCanvasSize, setCopXCanvasSize] = useState({ width: 0, height: 0 });
 
   const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(null);
   const [actualCopTrail, setActualCopTrail] = useState<Array<{ x: number; y: number; id: number; timestamp: number }>>([]);
   const lastActualCopTrailPointIdRef = useRef(0);
-  const actualCopVelocityRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 }); 
+  const actualCopVelocityRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const CIRCLE_DIAMETER = 10; 
-  const TRAIL_MAX_AGE = 1500; 
-  const MAX_TRAIL_POINTS = 50; 
+  const CIRCLE_DIAMETER = 10;
+  const TRAIL_MAX_AGE = 1500;
+  const MAX_TRAIL_POINTS = 50;
 
   useEffect(() => {
     if (initialSelectedBoardFromRoute && !initialBoardProcessed) {
@@ -131,12 +168,12 @@ function Session({
           if (!selectedBoard && availableBoards.length > 0) {
             setSelectedBoard(availableBoards[0]);
           } else if (!selectedBoard && availableBoards.length === 0) {
-            setSelectedBoard(null); 
+            setSelectedBoard(null);
           }
         }
-        setInitialBoardProcessed(true); 
+        setInitialBoardProcessed(true);
         if (onInitialBoardConsumed) {
-          onInitialBoardConsumed(); 
+          onInitialBoardConsumed();
         }
       }
     } else if (initialBoardProcessed || !initialSelectedBoardFromRoute) {
@@ -181,11 +218,11 @@ function Session({
         ctx.lineTo(x, y);
       });
 
-      ctx.strokeStyle = "#007bff"; 
+      ctx.strokeStyle = "#007bff";
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-  }, [copXDataSeries, canvasRef.current]); 
+  }, [copXDataSeries, canvasRef]); // canvasRef.current removed as per standard practice
 
   useEffect(() => {
     const canvas = canvasRef2.current;
@@ -198,21 +235,22 @@ function Session({
     if (copYDataSeries.length > 1) {
       ctx.beginPath();
       ctx.moveTo(0, canvas.height / 2 - (copYDataSeries[0] * (canvas.height / 2)));
-      
+
       copYDataSeries.forEach((value, i) => {
         const x = (i / (COPY_GRAPH_MAX_POINTS - 1)) * canvas.width;
         const y = canvas.height / 2 - (value * (canvas.height / 2));
         ctx.lineTo(x, y);
       });
 
-      ctx.strokeStyle = "#007bff"; 
+      ctx.strokeStyle = "#007bff";
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-  }, [copYDataSeries, canvasRef2.current]); 
+  }, [copYDataSeries, canvasRef2]); // canvasRef2.current removed
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Board Dropdown
       if (
         boardDropdownRef.current &&
         !boardDropdownRef.current.contains(event.target as Node) &&
@@ -221,6 +259,8 @@ function Session({
       ) {
         setShowBoardDropdown(false);
       }
+
+      // User Dropdown
       if (
         userDropdownRef.current &&
         !userDropdownRef.current.contains(event.target as Node) &&
@@ -229,9 +269,39 @@ function Session({
       ) {
         setShowUserDropdown(false);
       }
+
+      // LSL Dropdown
+      if (
+        lslDropdownRef.current &&
+        !lslDropdownRef.current.contains(event.target as Node) &&
+        lslToggleRef.current &&
+        !lslToggleRef.current.contains(event.target as Node)
+      ) {
+        setShowLslDropdown(false);
+      }
+
+      // TCP Dropdown
+      if (
+        tcpDropdownRef.current &&
+        !tcpDropdownRef.current.contains(event.target as Node) &&
+        tcpToggleRef.current &&
+        !tcpToggleRef.current.contains(event.target as Node)
+      ) {
+        setShowTcpDropdown(false);
+      }
+
+      // Stop After Dropdown
+      if (
+        stopAfterDropdownRef.current &&
+        !stopAfterDropdownRef.current.contains(event.target as Node) &&
+        (!stopAfterToggleRef.current || !stopAfterToggleRef.current.contains(event.target as Node)) &&
+        (!stopAfterTimeTextRef.current || !stopAfterTimeTextRef.current.contains(event.target as Node))
+      ) {
+        setShowStopAfterDropdown(false);
+      }
     };
 
-    if (showBoardDropdown || showUserDropdown ) {
+    if (showBoardDropdown || showUserDropdown || showLslDropdown || showTcpDropdown || showStopAfterDropdown) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -239,14 +309,14 @@ function Session({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showBoardDropdown, showUserDropdown ]);
+  }, [showBoardDropdown, showUserDropdown, showLslDropdown, showTcpDropdown, showStopAfterDropdown]);
 
   useEffect(() => {
     const calculateBounds = () => {
       if (wbbTopdownContainerRef.current && wbbTopdownImageRef.current && wbbTopdownImageRef.current.complete) {
         const img = wbbTopdownImageRef.current;
-        const containerWidth = img.offsetWidth;  
-        const containerHeight = img.offsetHeight; 
+        const containerWidth = img.offsetWidth;
+        const containerHeight = img.offsetHeight;
 
         const { naturalWidth: imageNaturalWidth, naturalHeight: imageNaturalHeight } = img;
 
@@ -256,7 +326,7 @@ function Session({
         }
 
         const imageAspectRatio = imageNaturalWidth / imageNaturalHeight;
-        const containerAspectRatio = containerWidth / containerHeight; 
+        const containerAspectRatio = containerWidth / containerHeight;
 
         let renderedImageWidth = containerWidth;
         let renderedImageHeight = containerHeight;
@@ -272,7 +342,7 @@ function Session({
           renderedImageWidth = containerHeight * imageAspectRatio;
           offsetX = (containerWidth - renderedImageWidth) / 2;
         }
-        
+
         setSvgRenderedBounds({
           x: img.offsetLeft + offsetX,
           y: img.offsetTop + offsetY,
@@ -284,7 +354,7 @@ function Session({
       }
     };
 
-    calculateBounds(); 
+    calculateBounds();
 
     const imgElement = wbbTopdownImageRef.current;
     if (imgElement) imgElement.addEventListener('load', calculateBounds);
@@ -296,7 +366,7 @@ function Session({
       if (imgElement) imgElement.removeEventListener('load', calculateBounds);
       resizeObserver.disconnect();
     };
-  }, []); 
+  }, []);
 
   useEffect(() => {
     const container = copyGraphContainerRef.current;
@@ -310,7 +380,7 @@ function Session({
     });
 
     resizeObserver.observe(container);
-    
+
     const initialWidth = container.offsetWidth;
     const initialHeight = container.offsetHeight;
     if (initialWidth > 0 && initialHeight > 0 && (copYCanvasSize.width !== initialWidth || copYCanvasSize.height !== initialHeight)) {
@@ -320,7 +390,7 @@ function Session({
     return () => {
       resizeObserver.disconnect();
     };
-  }, []); 
+  }, []);
 
   useEffect(() => {
     const container = copxGraphContainerRef.current;
@@ -334,17 +404,149 @@ function Session({
     });
 
     resizeObserver.observe(container);
-    
+
     const initialWidth = container.offsetWidth;
     const initialHeight = container.offsetHeight;
     if (initialWidth > 0 && initialHeight > 0 && (copXCanvasSize.width !== initialWidth || copXCanvasSize.height !== initialHeight)) {
         setCopXCanvasSize({ width: initialWidth, height: initialHeight });
     }
-    
+
     return () => {
       resizeObserver.disconnect();
     };
+  }, []);
+
+  useEffect(() => {
+    const copYContainer = copyGraphContainerRef.current;
+    const copXContainer = copxGraphContainerRef.current;
+
+    if (!copYContainer || !copXContainer) {
+      return;
+    }
+
+    const updateCopXHeight = () => {
+      const copYWidth = copYContainer.offsetWidth;
+      if (copYWidth > 0) {
+        if (copXContainer.offsetHeight !== copYWidth) {
+          copXContainer.style.height = `${copYWidth}px`;
+        }
+      }
+    };
+
+    const initialTimeoutId = setTimeout(updateCopXHeight, 0);
+
+    const observer = new ResizeObserver(updateCopXHeight);
+    observer.observe(copYContainer); 
+
+    return () => {
+      clearTimeout(initialTimeoutId);
+      observer.disconnect();
+    };
   }, []); 
+
+  // REMOVE or COMMENT OUT the useEffect that previously set wbbTopdownContainerRef's height
+  // based on copyGraphContainerRef.current.offsetHeight
+
+  useEffect(() => {
+    const container = wbbTopdownContainerRef.current;
+    const image = wbbTopdownImageRef.current;
+    const copYGraphBox = copyGraphContainerRef.current; // Added ref for CoP-Y graph container
+
+    if (!container || !image || !copYGraphBox) { // Ensure all necessary refs are available
+      return;
+    }
+
+    const adjustHeights = () => {
+      // Ensure the image's natural dimensions are available (image has loaded)
+      if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+        const containerWidth = container.offsetWidth; // Get current width of the WBB container
+        
+        if (containerWidth > 0) {
+          const imageAspectRatio = image.naturalWidth / image.naturalHeight;
+          const calculatedHeight = containerWidth / imageAspectRatio; // This is the target height
+
+          // Apply the calculated height to the WBB container
+          // Check to prevent redundant updates and potential loops, using a small tolerance
+          if (Math.abs(container.offsetHeight - calculatedHeight) > 0.5) {
+            container.style.height = `${calculatedHeight}px`;
+          }
+
+          // Now, also set the CoP-Y graph container's height to the same calculatedHeight
+          // Use calculatedHeight directly, as container.offsetHeight might not have updated yet in this same tick
+          // for the WBB container if the change was minimal but still triggered.
+          if (Math.abs(copYGraphBox.offsetHeight - calculatedHeight) > 0.5) {
+             copYGraphBox.style.height = `${calculatedHeight}px`;
+          }
+        }
+      }
+    };
+
+    // Handler for when the image loads
+    const handleImageLoad = () => {
+      adjustHeights();
+    };
+
+    // If the image is already loaded (e.g., from cache), adjust height immediately
+    if (image.complete) {
+      handleImageLoad();
+    } else {
+      // Otherwise, add an event listener for the load event
+      image.addEventListener('load', handleImageLoad);
+    }
+
+    // Observe the WBB container for any width changes (e.g., due to window resize)
+    // When its width changes, its height will be recalculated, and then CoP-Y's height will follow.
+    const resizeObserver = new ResizeObserver(() => {
+      adjustHeights();
+    });
+    resizeObserver.observe(container);
+
+    // Cleanup function
+    return () => {
+      image.removeEventListener('load', handleImageLoad);
+      resizeObserver.disconnect();
+      // Optionally reset container heights if you want them to revert to CSS on unmount
+      // if (container) {
+      //   container.style.height = ''; 
+      // }
+      // if (copYGraphBox) {
+      //   copYGraphBox.style.height = '';
+      // }
+    };
+  }, []); // Empty dependency array: runs once on mount, cleans up on unmount.
+           // Dynamic adjustments are handled by image load and ResizeObserver.
+
+  // The useEffect for svgRenderedBounds should still work correctly.
+  // Since the container will now match the image's aspect ratio,
+  // the offsetX and offsetY calculated within svgRenderedBounds should become 0 or very close to it.
+  useEffect(() => {
+    const container = copyGraphContainerRef.current;
+    const svgElement = document.getElementById("svg-cop-trail");
+
+    if (!container || !svgElement) {
+      return;
+    }
+
+    const updateSvgPosition = () => {
+      const { x, y, width, height } = svgRenderedBounds || { x: 0, y: 0, width: 0, height: 0 };
+
+      svgElement.setAttribute("x", `${x}px`);
+      svgElement.setAttribute("y", `${y}px`);
+      svgElement.setAttribute("width", `${width}px`);
+      svgElement.setAttribute("height", `${height}px`);
+    };
+
+    updateSvgPosition();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateSvgPosition();
+    });
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [svgRenderedBounds]);
 
   useEffect(() => {
     const canvas = copYCanvasRef.current;
@@ -358,37 +560,46 @@ function Session({
     canvas.width = copYCanvasSize.width * dpr;
     canvas.height = copYCanvasSize.height * dpr;
     ctx.scale(dpr, dpr);
-    
+
     const canvasLogicalWidth = copYCanvasSize.width;
     const canvasLogicalHeight = copYCanvasSize.height;
-    
+
     ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
-    const padding = { top: 0, right: 20, bottom: 0, left: 35 }; 
-    const graphWidth = canvasLogicalWidth - padding.left - padding.right;
-    const graphHeight = canvasLogicalHeight - padding.top - padding.bottom; 
+    // Increased padding.top and padding.bottom for more label clearance
+    const padding = { top: 1, right: 2, bottom: 1, left: 35 }; 
+    const graphWidth = canvasLogicalWidth - padding.left - padding.right; 
+    const graphHeight = canvasLogicalHeight - padding.top - padding.bottom;
     const graphOriginX = padding.left;
-    const graphOriginY = padding.top; 
+    const graphOriginY = padding.top;
 
     if (graphWidth <= 0 || graphHeight <= 0) {
         return;
     }
 
-    ctx.strokeStyle = "black"; 
-    ctx.lineWidth = 1;
-    ctx.fillStyle = "black"; 
-    ctx.font = "10px Arial";
-    ctx.textAlign = "right"; 
+    const dataDisplayWidth = graphWidth - (CIRCLE_DIAMETER / 2);
 
+    if (dataDisplayWidth <= 0) { 
+        return;
+    }
+
+    ctx.strokeStyle = "black";
+    ctx.lineWidth = 1;
+    ctx.fillStyle = "black";
+    ctx.font = "10px Arial";
+    ctx.textAlign = "right";
+
+    // Draw main vertical axis line
     ctx.beginPath();
     ctx.moveTo(graphOriginX, graphOriginY);
     ctx.lineTo(graphOriginX, graphOriginY + graphHeight);
-    ctx.stroke(); 
+    ctx.stroke();
 
+    // Draw horizontal center line (CoP-Y = 0)
     ctx.beginPath();
-    ctx.moveTo(graphOriginX, graphOriginY + graphHeight / 2); 
-    ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight / 2);
-    ctx.stroke(); 
+    ctx.moveTo(graphOriginX, graphOriginY + graphHeight / 2);
+    ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight / 2); 
+    ctx.stroke();
 
     const yTickValues = [-1, 0, 1];
     const yLabelText: { [key: number]: string } = {
@@ -399,74 +610,86 @@ function Session({
 
     yTickValues.forEach(value => {
       const yPos = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2));
-      
-      ctx.beginPath(); 
-      ctx.moveTo(graphOriginX - 5, yPos); 
-      ctx.lineTo(graphOriginX, yPos);
-      ctx.stroke(); 
 
+      // Draw tick mark
+      ctx.beginPath();
+      ctx.moveTo(graphOriginX - 5, yPos);
+      ctx.lineTo(graphOriginX, yPos);
+      ctx.stroke();
+
+      // Determine text baseline for proper alignment
       let baseline: CanvasTextBaseline = "middle";
-      if (value === 1) { 
+      if (value === 1) { // "Front" label
         baseline = "top";
-      } else if (value === -1) { 
+      } else if (value === -1) { // "Back" label
         baseline = "bottom";
       }
       ctx.textBaseline = baseline;
-      ctx.fillText(yLabelText[value], graphOriginX - 8, yPos);
+      ctx.fillText(yLabelText[value], graphOriginX - 8, yPos); // Position text to the left of the tick
     });
-    ctx.textBaseline = "middle"; 
+    ctx.textBaseline = "middle"; // Reset baseline
 
     if (copYDataSeries.length > 1) {
-      ctx.save(); 
-      ctx.beginPath(); 
-      ctx.rect(graphOriginX, graphOriginY, graphWidth, graphHeight); 
-      ctx.clip();     
+      ctx.save();
+      ctx.beginPath();
+      // Clipping rectangle uses the full graphWidth
+      ctx.rect(graphOriginX, graphOriginY, graphWidth, graphHeight);
+      ctx.clip();
 
-      ctx.beginPath(); 
-      ctx.strokeStyle = "#007bff"; 
+      ctx.beginPath();
+      ctx.strokeStyle = "#007bff";
       ctx.lineWidth = 2;
 
       copYDataSeries.forEach((value, i) => {
-        const x = graphOriginX + (i / (COPY_GRAPH_MAX_POINTS - 1)) * graphWidth;
-        const y = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2)); 
-        
+        // Scale x-coordinate using dataDisplayWidth
+        const x = graphOriginX + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
+        const y = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2));
+
         if (i === 0) {
           ctx.moveTo(x, y);
         } else {
           ctx.lineTo(x, y);
         }
       });
-      ctx.stroke(); 
-      ctx.restore(); 
+      ctx.stroke();
+      ctx.restore(); // Restore before drawing the circle if circle shouldn't be clipped by this specific path (though it will be by the overall graph clip)
 
-      if (copYDataSeries.length > 0) { 
+      if (copYDataSeries.length > 0) {
         const lastIndex = copYDataSeries.length - 1;
         const lastValue = copYDataSeries[lastIndex];
-        const tipX = graphOriginX + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * graphWidth;
+        // Circle's center x-coordinate also uses dataDisplayWidth for scaling
+        const tipX = graphOriginX + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
         const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
         
-        if (tipX >= graphOriginX && tipX <= graphOriginX + graphWidth &&
-            tipY >= graphOriginY && tipY <= graphOriginY + graphHeight) {
-          ctx.beginPath(); 
-          ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI); 
-          ctx.fillStyle = "#007bff"; 
-          ctx.fill();
-        }
-      }
-    } else if (copYDataSeries.length === 1) {
-      const lastValue = copYDataSeries[0];
-      const tipX = graphOriginX + (0 / (COPY_GRAPH_MAX_POINTS - 1)) * graphWidth; 
-      const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
-
-      if (tipX >= graphOriginX && tipX <= graphOriginX + graphWidth &&
-          tipY >= graphOriginY && tipY <= graphOriginY + graphHeight) {
+        // The circle is drawn within the clipped area defined by graphWidth.
+        // Since tipX_max + CIRCLE_DIAMETER/2 will equal graphOriginX + graphWidth, it should be fully visible.
+        ctx.save(); // Save context before potential new clip for circle if needed, or just draw
+        ctx.beginPath();
+        ctx.rect(graphOriginX, graphOriginY, graphWidth, graphHeight); // Re-apply clip if needed, or ensure circle is drawn within this
+        ctx.clip();
         ctx.beginPath();
         ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI);
         ctx.fillStyle = "#007bff";
         ctx.fill();
+        ctx.restore();
       }
+    } else if (copYDataSeries.length === 1) {
+      const lastValue = copYDataSeries[0];
+      // Circle's center x-coordinate uses dataDisplayWidth
+      const tipX = graphOriginX + (0 / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth; 
+      const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphWidth, graphHeight);
+      ctx.clip();
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI);
+      ctx.fillStyle = "#007bff";
+      ctx.fill();
+      ctx.restore();
     }
-  }, [copYDataSeries, copYCanvasSize]); 
+  }, [copYDataSeries, copYCanvasSize]);
 
   useEffect(() => {
     const canvas = copXCanvasRef.current;
@@ -480,37 +703,39 @@ function Session({
     canvas.width = copXCanvasSize.width * dpr;
     canvas.height = copXCanvasSize.height * dpr;
     ctx.scale(dpr, dpr);
-    
+
     const canvasLogicalWidth = copXCanvasSize.width;
     const canvasLogicalHeight = copXCanvasSize.height;
-    
+
     ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
-    const padding = { top: 25, right: 10, bottom: 10, left: 10 }; 
-    const graphAreaWidth = canvasLogicalWidth - padding.left - padding.right; 
-    const graphAreaHeight = canvasLogicalHeight - padding.top - padding.bottom; 
+    const padding = { top: 25, right: 2, bottom: 15, left: 2 }; 
+    const graphAreaWidth = canvasLogicalWidth - padding.left - padding.right;
+    const graphAreaHeight = canvasLogicalHeight - padding.top - padding.bottom;
     const graphOriginX = padding.left;
-    const graphOriginY = padding.top; 
+    const graphOriginY = padding.top;
 
     if (graphAreaWidth <= 0 || graphAreaHeight <= 0) {
         return;
     }
 
-    ctx.strokeStyle = "black"; 
+    ctx.strokeStyle = "black";
     ctx.lineWidth = 1;
-    ctx.fillStyle = "black"; 
+    ctx.fillStyle = "black";
     ctx.font = "10px Arial";
-    
+
+    // Draw main horizontal axis line (CoP-X value axis)
     ctx.beginPath();
     ctx.moveTo(graphOriginX, graphOriginY);
     ctx.lineTo(graphOriginX + graphAreaWidth, graphOriginY);
-    ctx.stroke(); 
+    ctx.stroke();
 
-    const timeAxisX = graphOriginX + graphAreaWidth / 2;
+    // Draw vertical center line (representing CoP-X = 0, across the time/data progression)
+    const centerXValueLine = graphOriginX + graphAreaWidth / 2; // X-coordinate for CoP-X = 0
     ctx.beginPath();
-    ctx.moveTo(timeAxisX, graphOriginY);
-    ctx.lineTo(timeAxisX, graphOriginY + graphAreaHeight);
-    ctx.stroke(); 
+    ctx.moveTo(centerXValueLine, graphOriginY); // Start at the top of the graph area (at the CoP-X axis)
+    ctx.lineTo(centerXValueLine, graphOriginY + graphAreaHeight); // Extend to the bottom of the graph area
+    ctx.stroke(); // This draws the vertical line at CoP-X = 0
 
     const copxTickValues = [-1, 0, 1];
     const copxLabelText: { [key: number]: string } = {
@@ -519,78 +744,86 @@ function Session({
         [-1]: "Left"
     };
 
-    ctx.textAlign = "center";
+    // ctx.textAlign = "center"; // Default textAlign removed, will be set per label
     copxTickValues.forEach(value => {
-      const xPos = graphOriginX + (value + 1) / 2 * graphAreaWidth; 
-      
-      ctx.beginPath(); 
-      ctx.moveTo(xPos, graphOriginY); 
-      ctx.lineTo(xPos, graphOriginY - 5); 
-      ctx.stroke(); 
+      const xPos = graphOriginX + (value + 1) / 2 * graphAreaWidth;
 
-      ctx.textBaseline = "bottom";
-      ctx.fillText(copxLabelText[value], xPos, graphOriginY - 7);
+      // Draw tick mark (above the main horizontal axis line)
+      ctx.beginPath();
+      ctx.moveTo(xPos, graphOriginY);
+      ctx.lineTo(xPos, graphOriginY - 5); // Tick mark points upwards
+      ctx.stroke();
+
+      // Set textAlign based on the label
+      if (value === -1) { // "Left" label
+        ctx.textAlign = "left";
+      } else if (value === 1) { // "Right" label
+        ctx.textAlign = "right";
+      } else { // "0" label
+        ctx.textAlign = "center";
+      }
+      
+      ctx.textBaseline = "bottom"; // Align bottom of text with the y-coordinate
+      ctx.fillText(copxLabelText[value], xPos, graphOriginY - 7); // Position text above the tick
     });
 
-    if (copXDataSeries.length > 1) {
-      ctx.save(); 
-      ctx.beginPath(); 
-      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
-      ctx.clip();     
+    // Reset textAlign to default if other text operations follow
+    ctx.textAlign = "left"; 
 
-      ctx.beginPath(); 
-      ctx.strokeStyle = "#007bff"; 
+
+    if (copXDataSeries.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#007bff";
       ctx.lineWidth = 2;
 
       copXDataSeries.forEach((copXValue, i) => {
-        const pointY = graphOriginY + (i / (COPY_GRAPH_MAX_POINTS - 1)) * graphAreaHeight; 
+        const pointY = graphOriginY + (i / (COPY_GRAPH_MAX_POINTS - 1)) * graphAreaHeight;
         const pointX = graphOriginX + (copXValue + 1) / 2 * graphAreaWidth;
-        
+
         if (i === 0) {
           ctx.moveTo(pointX, pointY);
         } else {
           ctx.lineTo(pointX, pointY);
         }
       });
-      ctx.stroke(); 
-      ctx.restore(); 
+      ctx.stroke();
+      ctx.restore();
 
-      if (copXDataSeries.length > 0) { 
+      if (copXDataSeries.length > 0) {
         const lastIndex = copXDataSeries.length - 1;
         const lastCopXValue = copXDataSeries[lastIndex];
-        
+
         const tipY = graphOriginY + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * graphAreaHeight;
         const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
-        
-        if (tipX >= graphOriginX && tipX <= graphOriginX + graphAreaWidth &&
-            tipY >= graphOriginY && tipY <= graphOriginY + graphAreaHeight) {
-          ctx.beginPath(); 
-          ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI); 
-          ctx.fillStyle = "#007bff"; 
-          ctx.fill();
-        }
-      }
-    } else if (copXDataSeries.length === 1) { 
-      const lastCopXValue = copXDataSeries[0];
-      const tipY = graphOriginY; 
-      const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
 
-      if (tipX >= graphOriginX && tipX <= graphOriginX + graphAreaWidth &&
-          tipY >= graphOriginY && tipY <= graphOriginY + graphAreaHeight) {
         ctx.beginPath();
         ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI);
-        ctx.fillStyle = "#007bff"; 
+        ctx.fillStyle = "#007bff";
         ctx.fill();
       }
+    } else if (copXDataSeries.length === 1) {
+      const lastCopXValue = copXDataSeries[0];
+      const tipY = graphOriginY;
+      const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI);
+      ctx.fillStyle = "#007bff";
+      ctx.fill();
     }
   }, [copXDataSeries, copXCanvasSize]);
 
   useEffect(() => {
     if (recording) {
-      const DAMPING_FACTOR = 0.9; 
-      const ACCELERATION_SCALE = 0.03; 
-      const MAX_VELOCITY = 0.1; 
-      const BOUNDARY_LIMIT = 1.0; 
+      const DAMPING_FACTOR = 0.9;
+      const ACCELERATION_SCALE = 0.03;
+      const MAX_VELOCITY = 0.1;
+      const BOUNDARY_LIMIT = 1.0;
 
       const intervalId = setInterval(() => {
         setActualCop(prevActualCop => {
@@ -620,20 +853,20 @@ function Session({
           let newCOPy = currentY + vy;
 
           if (newCOPx > BOUNDARY_LIMIT || newCOPx < -BOUNDARY_LIMIT) {
-            vx *= -0.5; 
+            vx *= -0.5;
             actualCopVelocityRef.current.x = vx;
             newCOPx = Math.max(-BOUNDARY_LIMIT, Math.min(BOUNDARY_LIMIT, newCOPx));
           }
           if (newCOPy > BOUNDARY_LIMIT || newCOPy < -BOUNDARY_LIMIT) {
-            vy *= -0.5; 
+            vy *= -0.5;
             actualCopVelocityRef.current.y = vy;
             newCOPy = Math.max(-BOUNDARY_LIMIT, Math.min(BOUNDARY_LIMIT, newCOPy));
           }
-          
+
           const newCopData = { x: newCOPx, y: newCOPy };
 
           setCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.y]);
-          setCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]); 
+          setCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]);
 
           setActualCopTrail(currentTrail => {
             const now = Date.now();
@@ -646,21 +879,21 @@ function Session({
 
           return newCopData;
         });
-      }, 50); 
+      }, 50);
 
       return () => clearInterval(intervalId);
     } else {
-      actualCopVelocityRef.current = { x: 0, y: 0 }; 
+      actualCopVelocityRef.current = { x: 0, y: 0 };
     }
   }, [recording]);
 
   const handleRecord = () => {
     setRecording(true);
     setCopYDataSeries([]);
-    setCopXDataSeries([]); 
-    
-    setActualCop(null); 
-    actualCopVelocityRef.current = { x: 0, y: 0 }; 
+    setCopXDataSeries([]);
+
+    setActualCop(null);
+    actualCopVelocityRef.current = { x: 0, y: 0 };
     setActualCopTrail([]);
     lastActualCopTrailPointIdRef.current = 0;
   };
@@ -689,7 +922,7 @@ function Session({
       setStopAfterEnabled(true);
     } else {
       setStopAfterTime({ hours: 0, minutes: 0, seconds: 0 });
-      setStopAfterEnabled(false); 
+      setStopAfterEnabled(false);
     }
     setShowStopAfterDropdown(false);
   };
@@ -700,7 +933,7 @@ function Session({
     setInputHours(0);
     setInputMinutes(0);
     setInputSeconds(0);
-    setShowStopAfterDropdown(false); 
+    setShowStopAfterDropdown(false);
   };
 
   useEffect(() => {
@@ -727,7 +960,7 @@ function Session({
   const handleNumericInputChange = (setter: React.Dispatch<React.SetStateAction<number>>, value: string, min: number, max?: number) => {
     let num = parseInt(value, 10);
     if (isNaN(num)) {
-      setter(min); 
+      setter(min);
       return;
     }
     num = Math.max(min, num);
@@ -754,38 +987,67 @@ function Session({
   };
 
   const handleLslToggleClick = () => {
-    if (lslStreamEnabled) { 
-      setLslStreamEnabled(false);
-      setShowLslDropdown(false);
-    } else { 
-      setShowLslDropdown(prev => !prev);
+    if (!lslStreamEnabled && !showLslDropdown) { 
+      // Refresh Source ID only when LSL is OFF and dropdown is about to be opened for new configuration
+      setLslSourceId(`tbt-${Date.now().toString().slice(-6)}`);
     }
+    setShowLslDropdown(prev => !prev);
+  };
+
+  const handleEnableLslStream = () => {
+    console.log("Enabling LSL Stream with:", { streamName: lslStreamNameInput, streamType: lslStreamType, sourceId: lslSourceId });
+    setLslStreamEnabled(true);
+    setActiveLslStreamName(lslStreamNameInput); // Set the active stream name
+    setShowLslDropdown(false);
+  };
+
+  const handleDisableLslStream = () => {
+    console.log("Disabling LSL Stream");
+    setLslStreamEnabled(false);
+    setActiveLslStreamName(null); 
+    setShowLslDropdown(false);
   };
 
   const handleTcpToggleClick = () => {
-    if (tcpStreamEnabled) { 
-      setTcpStreamEnabled(false);
-      setShowTcpDropdown(false);
-    } else { 
-      setShowTcpDropdown(prev => !prev);
+    setShowTcpDropdown(prev => !prev);
+  };
+
+  const handleEnableTcpStream = () => {
+    // Basic validation (you might want more robust validation)
+    if (!tcpIpAddressInput.trim() || !tcpPortInput.trim() || isNaN(parseInt(tcpPortInput))) {
+      alert("Please enter a valid IP Address and Port.");
+      return;
     }
+    console.log("Enabling TCP Stream with:", { ip: tcpIpAddressInput, port: tcpPortInput });
+    setTcpStreamEnabled(true);
+    setActiveTcpIpAddress(tcpIpAddressInput);
+    setActiveTcpPort(tcpPortInput);
+    setShowTcpDropdown(false);
+  };
+
+  const handleDisableTcpStream = () => {
+    console.log("Disabling TCP Stream");
+    setTcpStreamEnabled(false);
+    setActiveTcpIpAddress(null);
+    setActiveTcpPort(null);
+    setShowTcpDropdown(false);
   };
 
   const handleUserSelect = (userId: string) => {
-    onSelectUserInSession(userId); 
+    onSelectUserInSession(userId);
     setShowUserDropdown(false);
   };
 
   const handleGoToUsers = () => {
-    onViewChange('users'); 
+    onViewChange('users');
     setShowUserDropdown(false);
   };
-  
+
   const handleChangeSaveLocation = async () => {
     if (window.showDirectoryPicker) {
       try {
         const handle = await window.showDirectoryPicker();
-        setSaveLocation(handle.name); 
+        setSaveLocation(handle.name);
       } catch (err) {
         console.error("Error picking directory:", err);
       }
@@ -804,7 +1066,7 @@ function Session({
       <header className="session-header">
         <h1 className="page-title">Session</h1>
         <div className="session-settings-container">
-          <div className="toggle-label-wrapper">
+          <div className="toggle-label-wrapper board-control-wrapper">
             <span className="toggle-label">Board</span>
             <div className="board-selector-wrapper">
               <button
@@ -813,7 +1075,7 @@ function Session({
                 onClick={() => !recording && setShowBoardDropdown(!showBoardDropdown)}
                 aria-haspopup="true"
                 aria-expanded={showBoardDropdown}
-                disabled={recording || availableBoards.length === 0}
+                disabled={recording}
                 title={
                   recording
                     ? "Settings cannot be changed during recording."
@@ -822,7 +1084,7 @@ function Session({
               >
                 <img src={wbbIconLineBlue} alt="Board Icon" className="board-selector-icon" />
                 <span className="board-selector-name">
-                  {selectedBoard || (availableBoards.length === 0 ? "No boards" : "Select Board")}
+                  {selectedBoard || "Select Board"}
                 </span>
               </button>
               {showBoardDropdown && !recording && (
@@ -832,7 +1094,9 @@ function Session({
                       {availableBoards.map((board) => (
                         <li
                           key={board}
-                          className="board-list-item"
+                          className={`board-list-item ${
+                            board === selectedBoard ? "selected-item" : ""
+                          }`}
                           onClick={() => handleBoardSelect(board)}
                         >
                           {board}
@@ -840,7 +1104,7 @@ function Session({
                       ))}
                     </ul>
                   ) : (
-                    <p className="board-list-item" style={{ padding: '8px 12px', cursor: 'default' }}>No connected boards found.</p>
+                    <p className="dropdown-message">No boards available.</p>
                   )}
                   <button className="go-to-devices-btn" onClick={() => onViewChange('devices')}>
                     Go to Devices
@@ -851,9 +1115,9 @@ function Session({
             </div>
           </div>
 
-          <div className="toggle-label-wrapper">
-            <span className="toggle-label">User</span>
-            <div className="user-selector-wrapper">
+          <div className="toggle-label-wrapper user-control-wrapper">
+            <label className="toggle-label">{selectedUserName === "Select User" ? "User" : "User"}</label>
+            <div className="user-selector-wrapper"> 
               <button
                 ref={userToggleRef}
                 className="board-selector-toggle session-setting-toggle"
@@ -867,25 +1131,27 @@ function Session({
                 <span className="board-selector-name">{selectedUserName}</span>
               </button>
               {showUserDropdown && !recording && (
-                <div ref={userDropdownRef} className="user-selector-dropdown">
+                <div ref={userDropdownRef} className="board-selector-dropdown"> 
                   {usersForDropdown.length > 0 ? (
                     <ul className="board-list">
                       {usersForDropdown.map((user) => (
                         <li
                           key={user.id}
-                          className="board-list-item user-list-item" 
+                          className={`board-list-item user-list-item ${
+                            user.id === currentSelectedUserId ? "selected-item" : ""
+                          }`}
                           onClick={() => handleUserSelect(user.id)}
                         >
                           <span
                             className="user-color-dot"
                             style={{ backgroundColor: user.color }}
                           ></span>
-                          {user.name} 
+                          {user.name}
                         </li>
                       ))}
                     </ul>
                   ) : (
-                     <p className="board-list-item" style={{ padding: '8px 12px', cursor: 'default' }}>No users available.</p>
+                     <p className="dropdown-message">No users available.</p>
                   )}
                   <button className="go-to-users-btn" onClick={handleGoToUsers}>
                     Go to Users
@@ -895,11 +1161,11 @@ function Session({
               )}
             </div>
           </div>
-          
-          <div className="toggle-label-wrapper">
+
+          <div className="toggle-label-wrapper save-control-wrapper">
             <span className="toggle-label">Save Location</span>
             <button
-              className={`board-selector-toggle session-setting-toggle save-location-toggle`}
+              className={`board-selector-toggle session-setting-toggle save-location-toggle-wide`}
               onClick={handleChangeSaveLocation}
               disabled={recording}
               title={recording ? "Settings cannot be changed during recording." : saveLocation}
@@ -908,53 +1174,142 @@ function Session({
               <span className="board-selector-name" style={{ flexGrow: 1, textAlign: 'left' }}>{saveLocation}</span>
             </button>
           </div>
-          <div className="toggle-label-wrapper">
-            <span className="toggle-label">LSL</span>
-            <div className="lsl-selector-wrapper"> 
+          <div className="toggle-label-wrapper lsl-control-wrapper">
+            <label className="toggle-label">LSL</label>
+            <div className="lsl-selector-wrapper">
               <button
-                ref={lslToggleRef} 
+                ref={lslToggleRef}
                 className={`session-setting-toggle ${lslStreamEnabled ? "active" : ""}`}
-                onClick={handleLslToggleClick} 
-                aria-haspopup="true" 
-                aria-expanded={showLslDropdown} 
+                onClick={handleLslToggleClick}
+                aria-haspopup="true"
+                aria-expanded={showLslDropdown}
                 disabled={recording}
-                title={recording ? "Settings cannot be changed during recording." : (lslStreamEnabled ? "LSL Stream is ON" : "LSL Stream is OFF")}
+                title={recording ? "Settings cannot be changed during recording." : (lslStreamEnabled ? "LSL Stream is ON. Click to manage." : "LSL Stream is OFF. Click to configure.")}
               >
                 {lslStreamEnabled ? "ON" : "OFF"}
               </button>
-              {showLslDropdown && !lslStreamEnabled && !recording && ( 
-                <div ref={lslDropdownRef} className="lsl-selector-dropdown"> 
-                  <p>LSL Placeholder Info:</p>
-                  <ul>
-                    <li>Setting 1</li>
-                    <li>Setting 2</li>
-                  </ul>
-                  <button onClick={() => { setLslStreamEnabled(true); setShowLslDropdown(false); }} className="dropdown-action-button">Enable LSL</button>
+              {showLslDropdown && !recording && (
+                <div ref={lslDropdownRef} className="lsl-selector-dropdown">
+                  {lslStreamEnabled ? (
+                    // Content for when LSL is ON
+                    <>
+                      <div className="lsl-dropdown-input-group">
+                        <label htmlFor="activeLslStreamNameDisplay">Stream Name:</label>
+                        <span id="activeLslStreamNameDisplay" className="lsl-dropdown-text-display">{activeLslStreamName || "N/A"}</span>
+                      </div>
+                      <div className="lsl-dropdown-input-group">
+                        <label htmlFor="lslSourceIdDisplayWhenOn">Source ID:</label>
+                        <span id="lslSourceIdDisplayWhenOn" className="lsl-dropdown-text-display">{lslSourceId}</span>
+                      </div>
+                      <button
+                        onClick={handleDisableLslStream}
+                        className="dropdown-action-button dropdown-action-button-disable"
+                        disabled={recording}
+                      >
+                        Disable LSL
+                      </button>
+                    </>
+                  ) : (
+                    // Content for when LSL is OFF
+                    <>
+                      <div className="lsl-dropdown-input-group">
+                        <label htmlFor="lslStreamNameInputControl">Stream Name:</label>
+                        <input
+                          type="text"
+                          id="lslStreamNameInputControl"
+                          value={lslStreamNameInput}
+                          onChange={(e) => setLslStreamNameInput(e.target.value)}
+                          placeholder="e.g., MyBalanceStream"
+                          disabled={recording}
+                        />
+                      </div>
+                      <div className="lsl-dropdown-input-group">
+                        <label htmlFor="lslSourceIdDisplayWhenOff">Source ID:</label>
+                        <span id="lslSourceIdDisplayWhenOff" className="lsl-dropdown-text-display">{lslSourceId}</span>
+                      </div>
+                      <button
+                        onClick={handleEnableLslStream}
+                        className="dropdown-action-button"
+                        disabled={recording}
+                      >
+                        Enable LSL
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="toggle-label-wrapper">
-            <span className="toggle-label">TCP</span>
-            <div className="tcp-selector-wrapper"> 
+          <div className="toggle-label-wrapper tcp-control-wrapper">
+            <label className="toggle-label">TCP</label>
+            <div className="tcp-selector-wrapper">
               <button
-                ref={tcpToggleRef} 
+                ref={tcpToggleRef}
                 className={`session-setting-toggle ${tcpStreamEnabled ? "active" : ""}`}
-                onClick={handleTcpToggleClick} 
-                aria-haspopup="true" 
-                aria-expanded={showTcpDropdown} 
+                onClick={handleTcpToggleClick}
+                aria-haspopup="true"
+                aria-expanded={showTcpDropdown}
                 disabled={recording}
                 title={recording ? "Settings cannot be changed during recording." : (tcpStreamEnabled ? "TCP Stream is ON" : "TCP Stream is OFF")}
               >
                 {tcpStreamEnabled ? "ON" : "OFF"}
               </button>
-              {showTcpDropdown && !tcpStreamEnabled && !recording && ( 
-                <div ref={tcpDropdownRef} className="tcp-selector-dropdown"> 
-                  <p>TCP Placeholder Info:</p>
-                  <input type="text" placeholder="Enter IP Address" style={{ marginBottom: '5px', width: 'calc(100% - 10px)' }} disabled={recording} />
-                  <input type="text" placeholder="Enter Port" style={{ marginBottom: '5px', width: 'calc(100% - 10px)' }} disabled={recording} />
-                  <button onClick={() => { setTcpStreamEnabled(true); setShowTcpDropdown(false); }} className="dropdown-action-button" disabled={recording}>Enable TCP</button>
+              {showTcpDropdown && !recording && (
+                <div ref={tcpDropdownRef} className="tcp-selector-dropdown">
+                  {tcpStreamEnabled ? (
+                    // Content for when TCP is ON
+                    <>
+                      <div className="lsl-dropdown-input-group"> {/* Reusing LSL class for styling */}
+                        <label htmlFor="activeTcpIpDisplay">IP Address:</label>
+                        <span id="activeTcpIpDisplay" className="lsl-dropdown-text-display">{activeTcpIpAddress || "N/A"}</span>
+                      </div>
+                      <div className="lsl-dropdown-input-group"> {/* Reusing LSL class for styling */}
+                        <label htmlFor="activeTcpPortDisplay">Port:</label>
+                        <span id="activeTcpPortDisplay" className="lsl-dropdown-text-display">{activeTcpPort || "N/A"}</span>
+                      </div>
+                      <button
+                        onClick={handleDisableTcpStream}
+                        className="dropdown-action-button dropdown-action-button-disable"
+                        disabled={recording}
+                      >
+                        Disable TCP
+                      </button>
+                    </>
+                  ) : (
+                    // Content for when TCP is OFF
+                    <>
+                      <div className="lsl-dropdown-input-group"> {/* Reusing LSL class for styling */}
+                        <label htmlFor="tcpIpInputControl">IP Address:</label>
+                        <input
+                          type="text"
+                          id="tcpIpInputControl"
+                          value={tcpIpAddressInput}
+                          onChange={(e) => setTcpIpAddressInput(e.target.value)}
+                          placeholder="e.g., 127.0.0.1"
+                          disabled={recording}
+                        />
+                      </div>
+                      <div className="lsl-dropdown-input-group"> {/* Reusing LSL class for styling */}
+                        <label htmlFor="tcpPortInputControl">Port:</label>
+                        <input
+                          type="text" // Using text for port to allow easier input, validation in handler
+                          id="tcpPortInputControl"
+                          value={tcpPortInput}
+                          onChange={(e) => setTcpPortInput(e.target.value)}
+                          placeholder="e.g., 12345"
+                          disabled={recording}
+                        />
+                      </div>
+                      <button
+                        onClick={handleEnableTcpStream}
+                        className="dropdown-action-button"
+                        disabled={recording}
+                      >
+                        Enable TCP
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -964,16 +1319,16 @@ function Session({
       <main className="session-main">
         <div className="wbb-copx-stack">
           <div className="wbb-topdown-container" ref={wbbTopdownContainerRef}>
-            <img 
-              src={wbbTopdownIcon} 
-              alt="WBB Topdown" 
-              className="wbb-topdown-icon" 
+            <img
+              src={wbbTopdownIcon}
+              alt="WBB Topdown"
+              className="wbb-topdown-icon"
               ref={wbbTopdownImageRef}
               onLoad={() => {
                 const img = wbbTopdownImageRef.current;
                 if (img) {
-                  const containerWidth = img.offsetWidth;  
-                  const containerHeight = img.offsetHeight; 
+                  const containerWidth = img.offsetWidth;
+                  const containerHeight = img.offsetHeight;
 
                   const { naturalWidth: imageNaturalWidth, naturalHeight: imageNaturalHeight } = img;
 
@@ -983,7 +1338,7 @@ function Session({
                   }
 
                   const imageAspectRatio = imageNaturalWidth / imageNaturalHeight;
-                  const containerAspectRatio = containerWidth / containerHeight; 
+                  const containerAspectRatio = containerWidth / containerHeight;
 
                   let renderedImageWidth = containerWidth;
                   let renderedImageHeight = containerHeight;
@@ -999,7 +1354,7 @@ function Session({
                     renderedImageWidth = containerHeight * imageAspectRatio;
                     offsetX = (containerWidth - renderedImageWidth) / 2;
                   }
-                  
+
                   setSvgRenderedBounds({
                     x: img.offsetLeft + offsetX,
                     y: img.offsetTop + offsetY,
@@ -1009,7 +1364,7 @@ function Session({
                 }
               }}
             />
-            
+
             {recording && actualCop && svgRenderedBounds && actualCopTrail.length > 1 && (
               <svg
                 style={{
@@ -1019,7 +1374,7 @@ function Session({
                   width: `${svgRenderedBounds.width}px`,
                   height: `${svgRenderedBounds.height}px`,
                   pointerEvents: 'none',
-                  zIndex: 5 
+                  zIndex: 5
                 }}
               >
                 <polyline
@@ -1041,10 +1396,10 @@ function Session({
               (() => {
                 const copPixelX = (actualCop.x + 1) / 2 * svgRenderedBounds.width;
                 const copPixelY = (1 - actualCop.y) / 2 * svgRenderedBounds.height;
-                
+
                 return (
                   <div
-                    className="cop-indicator-circle" 
+                    className="cop-indicator-circle"
                     style={{
                       left: `${svgRenderedBounds.x + copPixelX - (CIRCLE_DIAMETER / 2)}px`,
                       top: `${svgRenderedBounds.y + copPixelY - (CIRCLE_DIAMETER / 2)}px`,
@@ -1056,7 +1411,7 @@ function Session({
               })()
             )}
           </div>
-          <div className="copx-graph-container" ref={copxGraphContainerRef}> 
+          <div className="copx-graph-container" ref={copxGraphContainerRef}>
             <canvas ref={copXCanvasRef} className="copx-graph-canvas"></canvas>
           </div>
         </div>
@@ -1152,7 +1507,7 @@ function Session({
             </div>
             <div className="stop-after-dropdown-buttons">
               <button type="button" onClick={handleResetInputs} className="stop-after-reset-inputs-btn" aria-label="Reset time inputs">
-                &#x21BA; 
+                &#x21BA;
               </button>
               <button onClick={handleSubmitStopAfter} className="stop-after-submit-btn">Submit</button>
               <button onClick={() => setShowStopAfterDropdown(false)} className="stop-after-cancel-btn">Cancel</button>
