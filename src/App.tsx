@@ -102,14 +102,6 @@ function AppContent() {
   };
 
 
-  useEffect(() => {
-    document.documentElement.className = `${theme}-theme`;
-  }, [theme]);
-
-  const handleToggleTheme = () => {
-    setTheme(theme === "light" ? "dark" : "light");
-  };
-
   const handleInitialBoardConsumedInApp = useCallback(() => {
     // Placeholder
   }, []);
@@ -131,22 +123,6 @@ function AppContent() {
     <div className={`app ${theme}-theme`}>
       <Navigation activeView={location.pathname.substring(1) || "home"} onViewChange={handleViewChange} />
       <main className="main-content">
-        <div className="theme-toggle-hover-zone">
-          <button
-            className="theme-toggle-btn"
-            onClick={(e) => {
-              handleToggleTheme();
-              e.currentTarget.blur();
-            }}
-            aria-label="Toggle theme"
-          >
-            <img
-              src={theme === "light" ? lightIcon : darkIcon}
-              alt={theme === "light" ? "Light mode" : "Dark mode"}
-              className="theme-toggle-icon"
-            />
-          </button>
-        </div>
         <Routes>
           <Route path="/" element={<Home onViewChange={handleViewChange} />} />
           <Route path="/devices" element={
