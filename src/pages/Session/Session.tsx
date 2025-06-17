@@ -564,11 +564,27 @@ function Session({
     const canvasLogicalWidth = copYCanvasSize.width;
     const canvasLogicalHeight = copYCanvasSize.height;
 
+    // --- Start of scaling calculations ---
+    const baseFontSize = Math.max(8, Math.min(14, Math.floor(canvasLogicalHeight * 0.07)));
+    const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalHeight * 0.005));
+    const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalHeight * 0.015));
+    const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalHeight * 0.04)));
+
+    const yLabelPaddingLeft = baseFontSize * 3.5;
+    const yTickLength = baseFontSize * 0.4;
+    const yLabelTextOffset = baseFontSize * 0.7; // Distance from axis line to text start
+
+    const padding = {
+        top: Math.max(1, baseFontSize * 0.1),
+        right: Math.max(2, baseFontSize * 0.2) + (dynamicGraphCircleDiameter / 2), // Ensure space for circle
+        bottom: Math.max(1, baseFontSize * 0.1),
+        left: yLabelPaddingLeft
+    };
+    // --- End of scaling calculations ---
+
     ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
-    // Increased padding.top and padding.bottom for more label clearance
-    const padding = { top: 1, right: 2, bottom: 1, left: 35 }; 
-    const graphWidth = canvasLogicalWidth - padding.left - padding.right; 
+    const graphWidth = canvasLogicalWidth - padding.left - padding.right;
     const graphHeight = canvasLogicalHeight - padding.top - padding.bottom;
     const graphOriginX = padding.left;
     const graphOriginY = padding.top;
@@ -577,34 +593,36 @@ function Session({
         return;
     }
 
-    const dataDisplayWidth = graphWidth - (CIRCLE_DIAMETER / 2);
+    // Adjust dataDisplayWidth to ensure the circle at the end of the line is fully visible
+    const dataDisplayWidth = graphWidth - (dynamicGraphCircleDiameter / 2);
 
-    if (dataDisplayWidth <= 0) { 
+    if (dataDisplayWidth <= 0) {
         return;
     }
 
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
     ctx.fillStyle = "black";
-    ctx.font = "10px Arial";
+    ctx.font = `${baseFontSize}px Arial`;
     ctx.textAlign = "right";
 
     // Draw main vertical axis line
     ctx.beginPath();
+    ctx.lineWidth = axisLineWidth; // Apply scaled line width
+    ctx.strokeStyle = "black";
     ctx.moveTo(graphOriginX, graphOriginY);
     ctx.lineTo(graphOriginX, graphOriginY + graphHeight);
     ctx.stroke();
 
     // Draw horizontal center line (CoP-Y = 0)
     ctx.beginPath();
+    // ctx.lineWidth = axisLineWidth; // Already set
     ctx.moveTo(graphOriginX, graphOriginY + graphHeight / 2);
-    ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight / 2); 
+    ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight / 2);
     ctx.stroke();
 
     const yTickValues = [-1, 0, 1];
     const yLabelText: { [key: number]: string } = {
         1: "Front",
-        0: "0",
+        0: "CoPy",
         [-1]: "Back"
     };
 
@@ -613,35 +631,33 @@ function Session({
 
       // Draw tick mark
       ctx.beginPath();
-      ctx.moveTo(graphOriginX - 5, yPos);
+      // ctx.lineWidth = axisLineWidth; // Already set
+      ctx.moveTo(graphOriginX - yTickLength, yPos);
       ctx.lineTo(graphOriginX, yPos);
       ctx.stroke();
 
-      // Determine text baseline for proper alignment
       let baseline: CanvasTextBaseline = "middle";
-      if (value === 1) { // "Front" label
+      if (value === 1) {
         baseline = "top";
-      } else if (value === -1) { // "Back" label
+      } else if (value === -1) {
         baseline = "bottom";
       }
       ctx.textBaseline = baseline;
-      ctx.fillText(yLabelText[value], graphOriginX - 8, yPos); // Position text to the left of the tick
+      ctx.fillText(yLabelText[value], graphOriginX - yTickLength - yLabelTextOffset, yPos);
     });
-    ctx.textBaseline = "middle"; // Reset baseline
+    ctx.textBaseline = "middle";
 
     if (copYDataSeries.length > 1) {
       ctx.save();
       ctx.beginPath();
-      // Clipping rectangle uses the full graphWidth
       ctx.rect(graphOriginX, graphOriginY, graphWidth, graphHeight);
       ctx.clip();
 
       ctx.beginPath();
       ctx.strokeStyle = "#007bff";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = dataLineWidth; // Apply scaled data line width
 
       copYDataSeries.forEach((value, i) => {
-        // Scale x-coordinate using dataDisplayWidth
         const x = graphOriginX + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
         const y = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2));
 
@@ -652,31 +668,27 @@ function Session({
         }
       });
       ctx.stroke();
-      ctx.restore(); // Restore before drawing the circle if circle shouldn't be clipped by this specific path (though it will be by the overall graph clip)
+      ctx.restore();
 
       if (copYDataSeries.length > 0) {
         const lastIndex = copYDataSeries.length - 1;
         const lastValue = copYDataSeries[lastIndex];
-        // Circle's center x-coordinate also uses dataDisplayWidth for scaling
         const tipX = graphOriginX + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
         const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
         
-        // The circle is drawn within the clipped area defined by graphWidth.
-        // Since tipX_max + CIRCLE_DIAMETER/2 will equal graphOriginX + graphWidth, it should be fully visible.
-        ctx.save(); // Save context before potential new clip for circle if needed, or just draw
+        ctx.save();
         ctx.beginPath();
-        ctx.rect(graphOriginX, graphOriginY, graphWidth, graphHeight); // Re-apply clip if needed, or ensure circle is drawn within this
+        ctx.rect(graphOriginX, graphOriginY, graphWidth, graphHeight); 
         ctx.clip();
         ctx.beginPath();
-        ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI);
+        ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
         ctx.fillStyle = "#007bff";
         ctx.fill();
         ctx.restore();
       }
     } else if (copYDataSeries.length === 1) {
       const lastValue = copYDataSeries[0];
-      // Circle's center x-coordinate uses dataDisplayWidth
-      const tipX = graphOriginX + (0 / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth; 
+      const tipX = graphOriginX; // Start of the line for a single point
       const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
 
       ctx.save();
@@ -684,7 +696,7 @@ function Session({
       ctx.rect(graphOriginX, graphOriginY, graphWidth, graphHeight);
       ctx.clip();
       ctx.beginPath();
-      ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI);
+      ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
       ctx.fillStyle = "#007bff";
       ctx.fill();
       ctx.restore();
@@ -707,9 +719,28 @@ function Session({
     const canvasLogicalWidth = copXCanvasSize.width;
     const canvasLogicalHeight = copXCanvasSize.height;
 
+    // --- Start of scaling calculations ---
+    // Adjust factors to match CoPy's scaling relative to its value axis
+    const baseFontSize = Math.max(8, Math.min(14, Math.floor(canvasLogicalWidth * 0.07))); // Value axis is width for CoPx, factor changed from 0.03 to 0.07
+    const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalWidth * 0.005)); // Factor changed from 0.0025 to 0.005
+    const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalWidth * 0.015)); // Factor changed from 0.007 to 0.015
+    const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalWidth * 0.04))); // Factor changed from 0.015 to 0.04
+
+    const xLabelPaddingTop = baseFontSize * 2.2;
+    const xLabelPaddingBottom = baseFontSize * 1.5 + (dynamicGraphCircleDiameter / 2); 
+    const xTickLength = baseFontSize * 0.4;
+    const xLabelTextOffset = baseFontSize * 0.7; 
+    
+    const padding = {
+        top: xLabelPaddingTop,
+        right: Math.max(2, baseFontSize * 0.2),
+        bottom: xLabelPaddingBottom,
+        left: Math.max(2, baseFontSize * 0.2)
+    };
+    // --- End of scaling calculations ---
+
     ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
-    const padding = { top: 25, right: 2, bottom: 15, left: 2 }; 
     const graphAreaWidth = canvasLogicalWidth - padding.left - padding.right;
     const graphAreaHeight = canvasLogicalHeight - padding.top - padding.bottom;
     const graphOriginX = padding.left;
@@ -718,57 +749,61 @@ function Session({
     if (graphAreaWidth <= 0 || graphAreaHeight <= 0) {
         return;
     }
+    
+    // Adjust dataDisplayHeight to ensure the circle at the end of the line is fully visible
+    const dataDisplayHeight = graphAreaHeight - (dynamicGraphCircleDiameter / 2);
+    if (dataDisplayHeight <= 0) {
+        return;
+    }
 
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 1;
     ctx.fillStyle = "black";
-    ctx.font = "10px Arial";
+    ctx.font = `${baseFontSize}px Arial`;
 
     // Draw main horizontal axis line (CoP-X value axis)
     ctx.beginPath();
+    ctx.lineWidth = axisLineWidth; // Apply scaled line width
+    ctx.strokeStyle = "black";
     ctx.moveTo(graphOriginX, graphOriginY);
     ctx.lineTo(graphOriginX + graphAreaWidth, graphOriginY);
     ctx.stroke();
 
-    // Draw vertical center line (representing CoP-X = 0, across the time/data progression)
-    const centerXValueLine = graphOriginX + graphAreaWidth / 2; // X-coordinate for CoP-X = 0
+    // Draw vertical center line (representing CoP-X = 0)
+    const centerXValueLine = graphOriginX + graphAreaWidth / 2;
     ctx.beginPath();
-    ctx.moveTo(centerXValueLine, graphOriginY); // Start at the top of the graph area (at the CoP-X axis)
-    ctx.lineTo(centerXValueLine, graphOriginY + graphAreaHeight); // Extend to the bottom of the graph area
-    ctx.stroke(); // This draws the vertical line at CoP-X = 0
+    // ctx.lineWidth = axisLineWidth; // Already set
+    ctx.moveTo(centerXValueLine, graphOriginY);
+    ctx.lineTo(centerXValueLine, graphOriginY + graphAreaHeight);
+    ctx.stroke();
 
     const copxTickValues = [-1, 0, 1];
     const copxLabelText: { [key: number]: string } = {
         1: "Right",
-        0: "0",
+        0: "CoPx",
         [-1]: "Left"
     };
 
-    // ctx.textAlign = "center"; // Default textAlign removed, will be set per label
     copxTickValues.forEach(value => {
       const xPos = graphOriginX + (value + 1) / 2 * graphAreaWidth;
 
-      // Draw tick mark (above the main horizontal axis line)
+      // Draw tick mark
       ctx.beginPath();
+      // ctx.lineWidth = axisLineWidth; // Already set
       ctx.moveTo(xPos, graphOriginY);
-      ctx.lineTo(xPos, graphOriginY - 5); // Tick mark points upwards
+      ctx.lineTo(xPos, graphOriginY - xTickLength);
       ctx.stroke();
 
-      // Set textAlign based on the label
-      if (value === -1) { // "Left" label
+      if (value === -1) {
         ctx.textAlign = "left";
-      } else if (value === 1) { // "Right" label
+      } else if (value === 1) {
         ctx.textAlign = "right";
-      } else { // "0" label
+      } else {
         ctx.textAlign = "center";
       }
       
-      ctx.textBaseline = "bottom"; // Align bottom of text with the y-coordinate
-      ctx.fillText(copxLabelText[value], xPos, graphOriginY - 7); // Position text above the tick
+      ctx.textBaseline = "bottom";
+      ctx.fillText(copxLabelText[value], xPos, graphOriginY - xTickLength - xLabelTextOffset);
     });
-
-    // Reset textAlign to default if other text operations follow
-    ctx.textAlign = "left"; 
+    ctx.textAlign = "left";
 
 
     if (copXDataSeries.length > 1) {
@@ -779,10 +814,10 @@ function Session({
 
       ctx.beginPath();
       ctx.strokeStyle = "#007bff";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = dataLineWidth; // Apply scaled data line width
 
       copXDataSeries.forEach((copXValue, i) => {
-        const pointY = graphOriginY + (i / (COPY_GRAPH_MAX_POINTS - 1)) * graphAreaHeight;
+        const pointY = graphOriginY + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
         const pointX = graphOriginX + (copXValue + 1) / 2 * graphAreaWidth;
 
         if (i === 0) {
@@ -798,23 +833,33 @@ function Session({
         const lastIndex = copXDataSeries.length - 1;
         const lastCopXValue = copXDataSeries[lastIndex];
 
-        const tipY = graphOriginY + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * graphAreaHeight;
+        const tipY = graphOriginY + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
         const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
 
+        ctx.save();
         ctx.beginPath();
-        ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI);
+        ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+        ctx.clip();
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
         ctx.fillStyle = "#007bff";
         ctx.fill();
+        ctx.restore();
       }
     } else if (copXDataSeries.length === 1) {
       const lastCopXValue = copXDataSeries[0];
-      const tipY = graphOriginY;
+      const tipY = graphOriginY; // Start of the line for a single point
       const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
 
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(tipX, tipY, CIRCLE_DIAMETER / 2, 0, 2 * Math.PI);
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
       ctx.fillStyle = "#007bff";
       ctx.fill();
+      ctx.restore();
     }
   }, [copXDataSeries, copXCanvasSize]);
 
@@ -1260,11 +1305,11 @@ function Session({
                   {tcpStreamEnabled ? (
                     // Content for when TCP is ON
                     <>
-                      <div className="lsl-dropdown-input-group"> {/* Reusing LSL class for styling */}
+                      <div className="lsl-dropdown-input-group"> {}
                         <label htmlFor="activeTcpIpDisplay">IP Address:</label>
                         <span id="activeTcpIpDisplay" className="lsl-dropdown-text-display">{activeTcpIpAddress || "N/A"}</span>
                       </div>
-                      <div className="lsl-dropdown-input-group"> {/* Reusing LSL class for styling */}
+                      <div className="lsl-dropdown-input-group"> {}
                         <label htmlFor="activeTcpPortDisplay">Port:</label>
                         <span id="activeTcpPortDisplay" className="lsl-dropdown-text-display">{activeTcpPort || "N/A"}</span>
                       </div>
@@ -1279,7 +1324,7 @@ function Session({
                   ) : (
                     // Content for when TCP is OFF
                     <>
-                      <div className="lsl-dropdown-input-group"> {/* Reusing LSL class for styling */}
+                      <div className="lsl-dropdown-input-group"> {}
                         <label htmlFor="tcpIpInputControl">IP Address:</label>
                         <input
                           type="text"
@@ -1290,7 +1335,7 @@ function Session({
                           disabled={recording}
                         />
                       </div>
-                      <div className="lsl-dropdown-input-group"> {/* Reusing LSL class for styling */}
+                      <div className="lsl-dropdown-input-group"> {}
                         <label htmlFor="tcpPortInputControl">Port:</label>
                         <input
                           type="text" // Using text for port to allow easier input, validation in handler
