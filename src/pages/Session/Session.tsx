@@ -569,22 +569,24 @@ function Session({
     ctx.stroke();
 
     
+    const yAxisLinePos = graphOriginY + graphHeight / 2;
     ctx.beginPath();
-    ctx.moveTo(graphOriginX, graphOriginY + graphHeight);
-    ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight);
+    ctx.moveTo(graphOriginX, yAxisLinePos);
+    ctx.lineTo(graphOriginX + graphWidth, yAxisLinePos);
     ctx.stroke();
 
     
-    const yTickValues = [0, 0.5, 1];
+    const yTickValues = [-1, 0, 1];
     const yLabelText: { [key: number]: string } = {
       1: "Front",
-      0.5: "CoPy",
-      0: "Back"
+      0: "CoPy",
+      "-1": "Back",
     };
+
 
     yTickValues.forEach(value => {
       
-      const yPos = graphOriginY + graphHeight - (value * graphHeight);
+      const yPos = graphOriginY + ((1 - value) / 2) * graphHeight;
 
       
       ctx.beginPath();
@@ -595,7 +597,7 @@ function Session({
       let baseline: CanvasTextBaseline = "middle";
       if (value === 1) {
         baseline = "top";
-      } else if (value === 0) {
+      } else if (value === -1) {
         baseline = "bottom";
       }
       ctx.textBaseline = baseline;
@@ -615,7 +617,7 @@ function Session({
 
       copYDataSeries.forEach((value, i) => {
         const x = graphOriginX + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
-        const y = graphOriginY + graphHeight - (value * graphHeight);
+        const y = graphOriginY + ((1 - value) / 2) * graphHeight;
 
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -630,7 +632,7 @@ function Session({
         const lastIndex = copYDataSeries.length - 1;
         const lastValue = copYDataSeries[lastIndex];
         const tipX = graphOriginX + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
-        const tipY = graphOriginY + graphHeight - (lastValue * graphHeight);
+        const tipY = graphOriginY + ((1 - lastValue) / 2) * graphHeight;
         
         ctx.save();
         ctx.beginPath();
@@ -645,7 +647,7 @@ function Session({
     } else if (copYDataSeries.length === 1) {
       const lastValue = copYDataSeries[0];
       const tipX = graphOriginX; 
-      const tipY = graphOriginY + graphHeight - (lastValue * graphHeight);
+      const tipY = graphOriginY + ((1 - lastValue) / 2) * graphHeight;
 
       ctx.save();
       ctx.beginPath();
@@ -658,7 +660,6 @@ function Session({
       ctx.restore();
     }
   }, [copYDataSeries, copYCanvasSize]);
-
   useEffect(() => {
     const canvas = copXCanvasRef.current;
     if (
