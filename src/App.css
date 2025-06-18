@@ -105,7 +105,7 @@ body {
   display: block;
   text-align: center;
   color: #fff !important; 
-  font-size: clamp(5px, 1vw, 15px);
+  font-size: clamp(5px, 1vw, 18px);
 }
 
 .menu-item.active {
@@ -119,9 +119,8 @@ body {
 }
 
 .menu-item-icon {
-  width: 22px;
-  min-width: 22px;      
-  height: 22px;
+  width: 2vw; 
+  /* height: 22px; */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -132,8 +131,8 @@ body {
 
 .menu-item-icon img,
 .menu-item-icon svg {
-  width: 20px;          
-  height: 20px;
+  width: 1.5vw;          
+  height: 1.5vvw; 
   display: block;
   margin: 0 auto;
   padding: 0;
