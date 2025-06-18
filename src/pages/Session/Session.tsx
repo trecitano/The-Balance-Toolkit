@@ -1767,11 +1767,15 @@ function Session({
             <canvas ref={vCopXCanvasRef} className="vcopx-graph-canvas"></canvas>
           </div>
         </div>
-        <div className="copy-graph-container" ref={copyGraphContainerRef}>
-          <canvas ref={copYCanvasRef} className="copy-graph-canvas"></canvas>
+        <div className="second-column-container">
+          <div className="copy-graph-container" ref={copyGraphContainerRef}>
+            <canvas ref={copYCanvasRef} className="copy-graph-canvas"></canvas>
+          </div>
         </div>
-        <div className="vcopy-graph-container" ref={vCopYGraphContainerRef}>
-          <canvas ref={vCopYCanvasRef} className="vcopy-graph-canvas"></canvas>
+        <div className="second-column-container">
+          <div className="vcopy-graph-container" ref={vCopYGraphContainerRef}>
+              <canvas ref={vCopYCanvasRef} className="vcopy-graph-canvas"></canvas>
+            </div>
         </div>
       </main>
 
