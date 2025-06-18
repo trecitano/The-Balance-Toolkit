@@ -996,8 +996,19 @@
   display: block;
 }
 
+.second-column-container {
+  height: 100%; 
+  width: 20%;
+}
+
+.third-column-container {
+  height: 100%; 
+  width: 20%;
+}
+
+
 .copy-graph-container {
-  width: 20%; 
+  width: 100%; 
   height: 25%; 
   border: none;
   background-color: #ffffff;
@@ -1008,7 +1019,7 @@
 }
 
 .vcopy-graph-container {
-  width: 20%; 
+  width: 100%; 
   height: 25%; 
   border: none;
   background-color: #ffffff;
