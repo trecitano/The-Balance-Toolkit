@@ -151,9 +151,9 @@
    This was part of the previous suggestion and should be kept.
    If it's not already there, re-add it or confirm it:
 .session-setting-toggle {
-  // ... other styles ...
+  
   width: 100%;
-  box-sizing: border-box; // Good to have with width: 100% and padding/border
+  box-sizing: border-box; 
 }
 */
 
@@ -199,7 +199,7 @@
   margin-bottom: 3px;
   font-weight: 500;
   white-space: nowrap;
-  // The label text will be centered due to align-items: center on .toggle-label-wrapper
+  
 }
 */
 
