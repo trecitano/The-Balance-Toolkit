@@ -139,14 +139,18 @@ function Session({
   const copyGraphContainerRef = useRef<HTMLDivElement>(null);
   const copXCanvasRef = useRef<HTMLCanvasElement>(null);
   const copxGraphContainerRef = useRef<HTMLDivElement>(null);
+  const vCopXCanvasRef = useRef<HTMLCanvasElement>(null); // Added
+  const vCopXGraphContainerRef = useRef<HTMLDivElement>(null); // Added
 
   const [copYDataSeries, setCopYDataSeries] = useState<number[]>([]);
   const [copXDataSeries, setCopXDataSeries] = useState<number[]>([]);
+  const [vCopXDataSeries, setVCopXDataSeries] = useState<number[]>([]); // Added
   const wbbTopdownContainerRef = useRef<HTMLDivElement>(null);
   const wbbTopdownImageRef = useRef<HTMLImageElement>(null);
   const [svgRenderedBounds, setSvgRenderedBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [copYCanvasSize, setCopYCanvasSize] = useState({ width: 0, height: 0 });
   const [copXCanvasSize, setCopXCanvasSize] = useState({ width: 0, height: 0 });
+  const [vCopXCanvasSize, setVCopXCanvasSize] = useState({ width: 0, height: 0 }); // Added
 
   const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(null);
   const [actualCopTrail, setActualCopTrail] = useState<Array<{ x: number; y: number; id: number; timestamp: number }>>([]);
@@ -416,105 +420,31 @@ function Session({
     };
   }, []);
 
+  // Empty useEffect for vCoPx canvas resizing (Added)
   useEffect(() => {
-    const copYContainer = copyGraphContainerRef.current;
-    const copXContainer = copxGraphContainerRef.current;
+    const container = vCopXGraphContainerRef.current;
+    if (!container) return;
 
-    if (!copYContainer || !copXContainer) {
-      return;
-    }
-
-    const updateCopXHeight = () => {
-      const copYWidth = copYContainer.offsetWidth;
-      if (copYWidth > 0) {
-        if (copXContainer.offsetHeight !== copYWidth) {
-          copXContainer.style.height = `${copYWidth}px`;
-        }
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        setVCopXCanvasSize({ width, height });
       }
-    };
-
-    const initialTimeoutId = setTimeout(updateCopXHeight, 0);
-
-    const observer = new ResizeObserver(updateCopXHeight);
-    observer.observe(copYContainer); 
-
-    return () => {
-      clearTimeout(initialTimeoutId);
-      observer.disconnect();
-    };
-  }, []); 
-
-  // REMOVE or COMMENT OUT the useEffect that previously set wbbTopdownContainerRef's height
-  // based on copyGraphContainerRef.current.offsetHeight
-
-  useEffect(() => {
-    const container = wbbTopdownContainerRef.current;
-    const image = wbbTopdownImageRef.current;
-    const copYGraphBox = copyGraphContainerRef.current; // Added ref for CoP-Y graph container
-
-    if (!container || !image || !copYGraphBox) { // Ensure all necessary refs are available
-      return;
-    }
-
-    const adjustHeights = () => {
-      // Ensure the image's natural dimensions are available (image has loaded)
-      if (image.naturalWidth > 0 && image.naturalHeight > 0) {
-        const containerWidth = container.offsetWidth; // Get current width of the WBB container
-        
-        if (containerWidth > 0) {
-          const imageAspectRatio = image.naturalWidth / image.naturalHeight;
-          const calculatedHeight = containerWidth / imageAspectRatio; // This is the target height
-
-          // Apply the calculated height to the WBB container
-          // Check to prevent redundant updates and potential loops, using a small tolerance
-          if (Math.abs(container.offsetHeight - calculatedHeight) > 0.5) {
-            container.style.height = `${calculatedHeight}px`;
-          }
-
-          // Now, also set the CoP-Y graph container's height to the same calculatedHeight
-          // Use calculatedHeight directly, as container.offsetHeight might not have updated yet in this same tick
-          // for the WBB container if the change was minimal but still triggered.
-          if (Math.abs(copYGraphBox.offsetHeight - calculatedHeight) > 0.5) {
-             copYGraphBox.style.height = `${calculatedHeight}px`;
-          }
-        }
-      }
-    };
-
-    // Handler for when the image loads
-    const handleImageLoad = () => {
-      adjustHeights();
-    };
-
-    // If the image is already loaded (e.g., from cache), adjust height immediately
-    if (image.complete) {
-      handleImageLoad();
-    } else {
-      // Otherwise, add an event listener for the load event
-      image.addEventListener('load', handleImageLoad);
-    }
-
-    // Observe the WBB container for any width changes (e.g., due to window resize)
-    // When its width changes, its height will be recalculated, and then CoP-Y's height will follow.
-    const resizeObserver = new ResizeObserver(() => {
-      adjustHeights();
     });
+
     resizeObserver.observe(container);
 
-    // Cleanup function
+    const initialWidth = container.offsetWidth;
+    const initialHeight = container.offsetHeight;
+    if (initialWidth > 0 && initialHeight > 0 && (vCopXCanvasSize.width !== initialWidth || vCopXCanvasSize.height !== initialHeight)) {
+        setVCopXCanvasSize({ width: initialWidth, height: initialHeight });
+    }
+
     return () => {
-      image.removeEventListener('load', handleImageLoad);
       resizeObserver.disconnect();
-      // Optionally reset container heights if you want them to revert to CSS on unmount
-      // if (container) {
-      //   container.style.height = ''; 
-      // }
-      // if (copYGraphBox) {
-      //   copYGraphBox.style.height = '';
-      // }
     };
-  }, []); // Empty dependency array: runs once on mount, cleans up on unmount.
-           // Dynamic adjustments are handled by image load and ResizeObserver.
+  }, []);
+
 
   // The useEffect for svgRenderedBounds should still work correctly.
   // Since the container will now match the image's aspect ratio,
@@ -863,6 +793,155 @@ function Session({
     }
   }, [copXDataSeries, copXCanvasSize]);
 
+  // useEffect for drawing vCoPx graph (Added)
+  useEffect(() => {
+    const canvas = vCopXCanvasRef.current;
+    if (!canvas || !vCopXCanvasSize || vCopXCanvasSize.width === 0 || vCopXCanvasSize.height === 0) {
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = vCopXCanvasSize.width * dpr;
+    canvas.height = vCopXCanvasSize.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const canvasLogicalWidth = vCopXCanvasSize.width;
+    const canvasLogicalHeight = vCopXCanvasSize.height;
+
+    const baseFontSize = Math.max(8, Math.min(14, Math.floor(canvasLogicalWidth * 0.07)));
+    const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalWidth * 0.005));
+    const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalWidth * 0.015));
+    const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalWidth * 0.04)));
+
+    const xLabelPaddingTop = baseFontSize * 2.2;
+    const xLabelPaddingBottom = baseFontSize * 1.5 + (dynamicGraphCircleDiameter / 2);
+    const xTickLength = baseFontSize * 0.4;
+    const xLabelTextOffset = baseFontSize * 0.7;
+
+    const padding = {
+        top: xLabelPaddingTop,
+        right: Math.max(2, baseFontSize * 0.2),
+        bottom: xLabelPaddingBottom,
+        left: Math.max(2, baseFontSize * 0.2)
+    };
+
+    ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
+
+    const graphAreaWidth = canvasLogicalWidth - padding.left - padding.right;
+    const graphAreaHeight = canvasLogicalHeight - padding.top - padding.bottom;
+    const graphOriginX = padding.left;
+    const graphOriginY = padding.top;
+
+    if (graphAreaWidth <= 0 || graphAreaHeight <= 0) {
+        return;
+    }
+
+    const dataDisplayHeight = graphAreaHeight - (dynamicGraphCircleDiameter / 2);
+    if (dataDisplayHeight <= 0) {
+        return;
+    }
+
+    ctx.fillStyle = "black";
+    ctx.font = `${baseFontSize}px Arial`;
+
+    ctx.beginPath();
+    ctx.lineWidth = axisLineWidth;
+    ctx.strokeStyle = "black";
+    ctx.moveTo(graphOriginX, graphOriginY);
+    ctx.lineTo(graphOriginX + graphAreaWidth, graphOriginY);
+    ctx.stroke();
+
+    const centerXValueLine = graphOriginX + graphAreaWidth / 2;
+    ctx.beginPath();
+    ctx.moveTo(centerXValueLine, graphOriginY);
+    ctx.lineTo(centerXValueLine, graphOriginY + graphAreaHeight);
+    ctx.stroke();
+
+    const vcopxTickValues = [-1, 0, 1];
+    const vcopxLabelText: { [key: number]: string } = {
+        1: "Right Vel",
+        0: "vCoPx",
+        [-1]: "Left Vel"
+    };
+
+    vcopxTickValues.forEach(value => {
+      const xPos = graphOriginX + (value + 1) / 2 * graphAreaWidth;
+      ctx.beginPath();
+      ctx.moveTo(xPos, graphOriginY);
+      ctx.lineTo(xPos, graphOriginY - xTickLength);
+      ctx.stroke();
+
+      if (value === -1) {
+        ctx.textAlign = "left";
+      } else if (value === 1) {
+        ctx.textAlign = "right";
+      } else {
+        ctx.textAlign = "center";
+      }
+      ctx.textBaseline = "bottom";
+      ctx.fillText(vcopxLabelText[value], xPos, graphOriginY - xTickLength - xLabelTextOffset);
+    });
+    ctx.textAlign = "left";
+
+    if (vCopXDataSeries.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#28a745"; // Different color for vCoPx line (e.g., green)
+      ctx.lineWidth = dataLineWidth;
+
+      vCopXDataSeries.forEach((copXValue, i) => {
+        const pointY = graphOriginY + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
+        const pointX = graphOriginX + (copXValue + 1) / 2 * graphAreaWidth;
+
+        if (i === 0) {
+          ctx.moveTo(pointX, pointY);
+        } else {
+          ctx.lineTo(pointX, pointY);
+        }
+      });
+      ctx.stroke();
+      ctx.restore();
+
+      if (vCopXDataSeries.length > 0) {
+        const lastIndex = vCopXDataSeries.length - 1;
+        const lastCopXValue = vCopXDataSeries[lastIndex];
+        const tipY = graphOriginY + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
+        const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+        ctx.clip();
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
+        ctx.fillStyle = "#28a745"; // Different color for vCoPx tip
+        ctx.fill();
+        ctx.restore();
+      }
+    } else if (vCopXDataSeries.length === 1) {
+      const lastCopXValue = vCopXDataSeries[0];
+      const tipY = graphOriginY;
+      const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
+      ctx.fillStyle = "#28a745"; // Different color for vCoPx tip
+      ctx.fill();
+      ctx.restore();
+    }
+  }, [vCopXDataSeries, vCopXCanvasSize]);
+
+
   useEffect(() => {
     if (recording) {
       const DAMPING_FACTOR = 0.9;
@@ -912,6 +991,7 @@ function Session({
 
           setCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.y]);
           setCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]);
+          setVCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]); // Added for vCoPx data
 
           setActualCopTrail(currentTrail => {
             const now = Date.now();
@@ -936,6 +1016,7 @@ function Session({
     setRecording(true);
     setCopYDataSeries([]);
     setCopXDataSeries([]);
+    setVCopXDataSeries([]); // Added
 
     setActualCop(null);
     actualCopVelocityRef.current = { x: 0, y: 0 };
@@ -1458,6 +1539,9 @@ function Session({
           </div>
           <div className="copx-graph-container" ref={copxGraphContainerRef}>
             <canvas ref={copXCanvasRef} className="copx-graph-canvas"></canvas>
+          </div>
+          <div className="vcopx-graph-container" ref={vCopXGraphContainerRef}>
+            <canvas ref={vCopXCanvasRef} className="vcopx-graph-canvas"></canvas>
           </div>
         </div>
         <div className="copy-graph-container" ref={copyGraphContainerRef}>

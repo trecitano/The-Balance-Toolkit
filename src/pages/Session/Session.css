@@ -930,7 +930,7 @@
 .wbb-copx-stack {
   display: flex;
   flex-direction: column;
-  width: 15%; 
+  width: 20%; 
   flex-shrink: 0;
 }
 
@@ -938,29 +938,57 @@
   width: 100%;
   position: relative;
   overflow: hidden;
-  flex-shrink: 0;
+  flex-grow: 0; 
+  flex-shrink: 0; 
+  flex-basis: auto; 
   
 }
 
 .wbb-topdown-icon {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: contain;
+  height: auto; 
+  object-fit: contain; 
 }
 
 .copx-graph-container {
   width: 100%;
-  height: 40%; 
+   
   border: none;
   background-color: #ffffff;
   padding: 0px;
   box-sizing: border-box;
-  display: flex;
-  align-items: center; 
+   
+   
+   
+  flex-grow: 1;
+  flex-basis: 0;
+  min-height: 0; 
 }
 
 .copx-graph-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+
+.vcopx-graph-container {
+  width: 100%;
+  
+  border: none; 
+  background-color: #ffffff;
+  padding: 0px;
+  box-sizing: border-box;
+   
+   
+   
+  flex-grow: 1;
+  flex-basis: 0;
+  min-height: 0; 
+}
+
+.vcopx-graph-canvas {
   width: 100%;
   height: 100%;
   display: block;
