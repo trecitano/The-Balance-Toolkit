@@ -68,12 +68,14 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
             className="activity-image"
           />
         </div>
-        <p className="activity-description">{activity.description}</p>
-      </div>
-      <div className="activity-footer">
-        <button className="activity-start-btn" onClick={handleStartClick}>
-          Start
-        </button>
+        <div className="activity-details">
+          <p className="activity-description">{activity.description}</p>
+          <div className="activity-footer">
+            <button className="activity-start-btn" onClick={handleStartClick}>
+              Start
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
