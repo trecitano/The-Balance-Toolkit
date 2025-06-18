@@ -970,6 +970,7 @@
   width: 100%;
   height: 100%;
   display: block;
+  padding-top: 0.5vw;
 }
 
 
@@ -1029,4 +1030,9 @@
 
 .toggle-label-wrapper > .session-setting-toggle.save-location-toggle-wide {
   height: clamp(23px, 2vh, 35px);
+}
+
+
+.copx-axis-label,
+.copy-axis-label {
 }
