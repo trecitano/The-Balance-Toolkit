@@ -139,18 +139,18 @@ function Session({
   const copyGraphContainerRef = useRef<HTMLDivElement>(null);
   const copXCanvasRef = useRef<HTMLCanvasElement>(null);
   const copxGraphContainerRef = useRef<HTMLDivElement>(null);
-  const vCopXCanvasRef = useRef<HTMLCanvasElement>(null); // Added
-  const vCopXGraphContainerRef = useRef<HTMLDivElement>(null); // Added
+  const vCopXCanvasRef = useRef<HTMLCanvasElement>(null); 
+  const vCopXGraphContainerRef = useRef<HTMLDivElement>(null); 
 
   const [copYDataSeries, setCopYDataSeries] = useState<number[]>([]);
   const [copXDataSeries, setCopXDataSeries] = useState<number[]>([]);
-  const [vCopXDataSeries, setVCopXDataSeries] = useState<number[]>([]); // Added
+  const [vCopXDataSeries, setVCopXDataSeries] = useState<number[]>([]); 
   const wbbTopdownContainerRef = useRef<HTMLDivElement>(null);
   const wbbTopdownImageRef = useRef<HTMLImageElement>(null);
   const [svgRenderedBounds, setSvgRenderedBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [copYCanvasSize, setCopYCanvasSize] = useState({ width: 0, height: 0 });
   const [copXCanvasSize, setCopXCanvasSize] = useState({ width: 0, height: 0 });
-  const [vCopXCanvasSize, setVCopXCanvasSize] = useState({ width: 0, height: 0 }); // Added
+  const [vCopXCanvasSize, setVCopXCanvasSize] = useState({ width: 0, height: 0 }); 
 
   const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(null);
   const [actualCopTrail, setActualCopTrail] = useState<Array<{ x: number; y: number; id: number; timestamp: number }>>([]);
@@ -226,7 +226,7 @@ function Session({
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-  }, [copXDataSeries, canvasRef]); // canvasRef.current removed as per standard practice
+  }, [copXDataSeries, canvasRef]); 
 
   useEffect(() => {
     const canvas = canvasRef2.current;
@@ -250,11 +250,11 @@ function Session({
       ctx.lineWidth = 2;
       ctx.stroke();
     }
-  }, [copYDataSeries, canvasRef2]); // canvasRef2.current removed
+  }, [copYDataSeries, canvasRef2]); 
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Board Dropdown
+      
       if (
         boardDropdownRef.current &&
         !boardDropdownRef.current.contains(event.target as Node) &&
@@ -264,7 +264,7 @@ function Session({
         setShowBoardDropdown(false);
       }
 
-      // User Dropdown
+      
       if (
         userDropdownRef.current &&
         !userDropdownRef.current.contains(event.target as Node) &&
@@ -274,7 +274,7 @@ function Session({
         setShowUserDropdown(false);
       }
 
-      // LSL Dropdown
+      
       if (
         lslDropdownRef.current &&
         !lslDropdownRef.current.contains(event.target as Node) &&
@@ -284,7 +284,7 @@ function Session({
         setShowLslDropdown(false);
       }
 
-      // TCP Dropdown
+      
       if (
         tcpDropdownRef.current &&
         !tcpDropdownRef.current.contains(event.target as Node) &&
@@ -294,7 +294,7 @@ function Session({
         setShowTcpDropdown(false);
       }
 
-      // Stop After Dropdown
+      
       if (
         stopAfterDropdownRef.current &&
         !stopAfterDropdownRef.current.contains(event.target as Node) &&
@@ -420,7 +420,7 @@ function Session({
     };
   }, []);
 
-  // Empty useEffect for vCoPx canvas resizing (Added)
+  
   useEffect(() => {
     const container = vCopXGraphContainerRef.current;
     if (!container) return;
@@ -446,9 +446,9 @@ function Session({
   }, []);
 
 
-  // The useEffect for svgRenderedBounds should still work correctly.
-  // Since the container will now match the image's aspect ratio,
-  // the offsetX and offsetY calculated within svgRenderedBounds should become 0 or very close to it.
+  
+  
+  
   useEffect(() => {
     const container = copyGraphContainerRef.current;
     const svgElement = document.getElementById("svg-cop-trail");
@@ -494,7 +494,7 @@ function Session({
     const canvasLogicalWidth = copYCanvasSize.width;
     const canvasLogicalHeight = copYCanvasSize.height;
 
-    // --- Start of scaling calculations ---
+    
     const baseFontSize = Math.max(8, Math.min(14, Math.floor(canvasLogicalHeight * 0.07)));
     const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalHeight * 0.005));
     const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalHeight * 0.015));
@@ -502,15 +502,15 @@ function Session({
 
     const yLabelPaddingLeft = baseFontSize * 3.5;
     const yTickLength = baseFontSize * 0.4;
-    const yLabelTextOffset = baseFontSize * 0.7; // Distance from axis line to text start
+    const yLabelTextOffset = baseFontSize * 0.7; 
 
     const padding = {
         top: Math.max(1, baseFontSize * 0.1),
-        right: Math.max(2, baseFontSize * 0.2) + (dynamicGraphCircleDiameter / 2), // Ensure space for circle
+        right: Math.max(2, baseFontSize * 0.2) + (dynamicGraphCircleDiameter / 2), 
         bottom: Math.max(1, baseFontSize * 0.1),
         left: yLabelPaddingLeft
     };
-    // --- End of scaling calculations ---
+    
 
     ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
@@ -523,7 +523,7 @@ function Session({
         return;
     }
 
-    // Adjust dataDisplayWidth to ensure the circle at the end of the line is fully visible
+    
     const dataDisplayWidth = graphWidth - (dynamicGraphCircleDiameter / 2);
 
     if (dataDisplayWidth <= 0) {
@@ -534,17 +534,17 @@ function Session({
     ctx.font = `${baseFontSize}px Arial`;
     ctx.textAlign = "right";
 
-    // Draw main vertical axis line
+    
     ctx.beginPath();
-    ctx.lineWidth = axisLineWidth; // Apply scaled line width
+    ctx.lineWidth = axisLineWidth; 
     ctx.strokeStyle = "black";
     ctx.moveTo(graphOriginX, graphOriginY);
     ctx.lineTo(graphOriginX, graphOriginY + graphHeight);
     ctx.stroke();
 
-    // Draw horizontal center line (CoP-Y = 0)
+    
     ctx.beginPath();
-    // ctx.lineWidth = axisLineWidth; // Already set
+    
     ctx.moveTo(graphOriginX, graphOriginY + graphHeight / 2);
     ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight / 2);
     ctx.stroke();
@@ -559,9 +559,9 @@ function Session({
     yTickValues.forEach(value => {
       const yPos = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2));
 
-      // Draw tick mark
+      
       ctx.beginPath();
-      // ctx.lineWidth = axisLineWidth; // Already set
+      
       ctx.moveTo(graphOriginX - yTickLength, yPos);
       ctx.lineTo(graphOriginX, yPos);
       ctx.stroke();
@@ -585,7 +585,7 @@ function Session({
 
       ctx.beginPath();
       ctx.strokeStyle = "#007bff";
-      ctx.lineWidth = dataLineWidth; // Apply scaled data line width
+      ctx.lineWidth = dataLineWidth; 
 
       copYDataSeries.forEach((value, i) => {
         const x = graphOriginX + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
@@ -618,7 +618,7 @@ function Session({
       }
     } else if (copYDataSeries.length === 1) {
       const lastValue = copYDataSeries[0];
-      const tipX = graphOriginX; // Start of the line for a single point
+      const tipX = graphOriginX; 
       const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
 
       ctx.save();
@@ -641,7 +641,7 @@ function Session({
       copXCanvasSize.width === 0 ||
       copXCanvasSize.height === 0 ||
       !copYCanvasSize ||
-      !copYCanvasSize.height // <-- Add this check
+      !copYCanvasSize.height 
     ) {
       return;
     }
@@ -656,15 +656,15 @@ function Session({
     const canvasLogicalWidth = copXCanvasSize.width;
     const canvasLogicalHeight = copXCanvasSize.height;
 
-    // Use CoPy's canvas height for font size
+    
     const copYHeight = copYCanvasSize.height;
     const baseFontSize = Math.max(8, Math.min(14, Math.floor(copYHeight * 0.07)));
 
-    // --- Start of scaling calculations ---
-    // Adjust factors to match CoPy's scaling relative to its value axis
-    const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalWidth * 0.005)); // Factor changed from 0.0025 to 0.005
-    const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalWidth * 0.015)); // Factor changed from 0.007 to 0.015
-    const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalWidth * 0.04))); // Factor changed from 0.015 to 0.04
+    
+    
+    const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalWidth * 0.005)); 
+    const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalWidth * 0.015)); 
+    const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalWidth * 0.04))); 
 
     const xLabelPaddingTop = baseFontSize * 2.2;
     const xLabelPaddingBottom = baseFontSize * 1.5 + (dynamicGraphCircleDiameter / 2); 
@@ -677,7 +677,7 @@ function Session({
         bottom: xLabelPaddingBottom,
         left: Math.max(2, baseFontSize * 0.2)
     };
-    // --- End of scaling calculations ---
+    
 
     ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
@@ -690,7 +690,7 @@ function Session({
         return;
     }
     
-    // Adjust dataDisplayHeight to ensure the circle at the end of the line is fully visible
+    
     const dataDisplayHeight = graphAreaHeight - (dynamicGraphCircleDiameter / 2);
     if (dataDisplayHeight <= 0) {
         return;
@@ -699,18 +699,18 @@ function Session({
     ctx.fillStyle = "black";
     ctx.font = `${baseFontSize}px Arial`;
 
-    // Draw main horizontal axis line (CoP-X value axis)
+    
     ctx.beginPath();
-    ctx.lineWidth = axisLineWidth; // Apply scaled line width
+    ctx.lineWidth = axisLineWidth; 
     ctx.strokeStyle = "black";
     ctx.moveTo(graphOriginX, graphOriginY);
     ctx.lineTo(graphOriginX + graphAreaWidth, graphOriginY);
     ctx.stroke();
 
-    // Draw vertical center line (representing CoP-X = 0)
+    
     const centerXValueLine = graphOriginX + graphAreaWidth / 2;
     ctx.beginPath();
-    // ctx.lineWidth = axisLineWidth; // Already set
+    
     ctx.moveTo(centerXValueLine, graphOriginY);
     ctx.lineTo(centerXValueLine, graphOriginY + graphAreaHeight);
     ctx.stroke();
@@ -725,9 +725,9 @@ function Session({
     copxTickValues.forEach(value => {
       const xPos = graphOriginX + (value + 1) / 2 * graphAreaWidth;
 
-      // Draw tick mark
+      
       ctx.beginPath();
-      // ctx.lineWidth = axisLineWidth; // Already set
+      
       ctx.moveTo(xPos, graphOriginY);
       ctx.lineTo(xPos, graphOriginY - xTickLength);
       ctx.stroke();
@@ -754,7 +754,7 @@ function Session({
 
       ctx.beginPath();
       ctx.strokeStyle = "#007bff";
-      ctx.lineWidth = dataLineWidth; // Apply scaled data line width
+      ctx.lineWidth = dataLineWidth; 
 
       copXDataSeries.forEach((copXValue, i) => {
         const pointY = graphOriginY + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
@@ -788,7 +788,7 @@ function Session({
       }
     } else if (copXDataSeries.length === 1) {
       const lastCopXValue = copXDataSeries[0];
-      const tipY = graphOriginY; // Start of the line for a single point
+      const tipY = graphOriginY; 
       const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
 
       ctx.save();
@@ -803,7 +803,7 @@ function Session({
     }
   }, [copXDataSeries, copXCanvasSize, copYCanvasSize]);
 
-  // useEffect for drawing vCoPx graph (Added)
+  
   useEffect(() => {
     const canvas = vCopXCanvasRef.current;
     if (
@@ -827,16 +827,16 @@ function Session({
     const canvasLogicalWidth = vCopXCanvasSize.width;
     const canvasLogicalHeight = vCopXCanvasSize.height;
 
-    // Use CoPy's canvas height for font size
+    
     const copYHeight = copYCanvasSize.height;
     const baseFontSize = Math.max(8, Math.min(14, Math.floor(copYHeight * 0.07)));
 
-    // --- Start of scaling calculations ---
+    
     const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalHeight * 0.005));
     const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalHeight * 0.015));
     const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalHeight * 0.04)));
 
-    const yLabelPaddingLeft = baseFontSize * 3.5;
+    const yLabelPaddingLeft = baseFontSize * 4;
     const yTickLength = baseFontSize * 0.4;
     const yLabelTextOffset = baseFontSize * 0.7;
 
@@ -846,7 +846,7 @@ function Session({
       bottom: Math.max(1, baseFontSize * 0.1),
       left: yLabelPaddingLeft
     };
-    // --- End of scaling calculations ---
+    
 
     ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
@@ -859,7 +859,7 @@ function Session({
       return;
     }
 
-    // Adjust dataDisplayWidth to ensure the circle at the end of the line is fully visible
+    
     const dataDisplayWidth = graphWidth - (dynamicGraphCircleDiameter / 2);
     if (dataDisplayWidth <= 0) {
       return;
@@ -869,31 +869,33 @@ function Session({
     ctx.font = `${baseFontSize}px Arial`;
     ctx.textAlign = "right";
 
-    // Draw main vertical axis line
+    
     ctx.beginPath();
-    ctx.lineWidth = axisLineWidth;
+    ctx.lineWidth = axisLineWidth; 
     ctx.strokeStyle = "black";
     ctx.moveTo(graphOriginX, graphOriginY);
     ctx.lineTo(graphOriginX, graphOriginY + graphHeight);
     ctx.stroke();
 
-    // Draw horizontal center line (vCoPx = 0)
+    
     ctx.beginPath();
-    ctx.moveTo(graphOriginX, graphOriginY + graphHeight / 2);
-    ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight / 2);
+    ctx.moveTo(graphOriginX, graphOriginY + graphHeight);
+    ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight);
     ctx.stroke();
 
-    const yTickValues = [-1, 0, 1];
+    
+    const yTickValues = [0, 0.5, 1];
     const yLabelText: { [key: number]: string } = {
-      1: "Right",
-      0: "vCoPx",
-      [-1]: "Left"
+      1: "1",
+      0.5: "vCoPx",
+      0: "0"
     };
 
     yTickValues.forEach(value => {
-      const yPos = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2));
+      
+      const yPos = graphOriginY + graphHeight - (value * graphHeight);
 
-      // Draw tick mark
+      
       ctx.beginPath();
       ctx.moveTo(graphOriginX - yTickLength, yPos);
       ctx.lineTo(graphOriginX, yPos);
@@ -902,7 +904,7 @@ function Session({
       let baseline: CanvasTextBaseline = "middle";
       if (value === 1) {
         baseline = "top";
-      } else if (value === -1) {
+      } else if (value === 0) {
         baseline = "bottom";
       }
       ctx.textBaseline = baseline;
@@ -910,7 +912,7 @@ function Session({
     });
     ctx.textBaseline = "middle";
 
-    // Draw the vCoPx timeseries as a horizontal line (time on X, vCoPx on Y)
+    
     if (vCopXDataSeries.length > 1) {
       ctx.save();
       ctx.beginPath();
@@ -923,7 +925,9 @@ function Session({
 
       vCopXDataSeries.forEach((value, i) => {
         const x = graphOriginX + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
-        const y = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2));
+        
+        const normalizedValue = (value + 1) / 2; 
+        const y = graphOriginY + graphHeight - (normalizedValue * graphHeight);
 
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -938,7 +942,9 @@ function Session({
         const lastIndex = vCopXDataSeries.length - 1;
         const lastValue = vCopXDataSeries[lastIndex];
         const tipX = graphOriginX + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
-        const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
+        
+        const normalizedValue = (lastValue + 1) / 2; 
+        const tipY = graphOriginY + graphHeight - (normalizedValue * graphHeight);
 
         ctx.save();
         ctx.beginPath();
@@ -953,7 +959,9 @@ function Session({
     } else if (vCopXDataSeries.length === 1) {
       const lastValue = vCopXDataSeries[0];
       const tipX = graphOriginX;
-      const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
+      
+      const normalizedValue = (lastValue + 1) / 2; 
+      const tipY = graphOriginY + graphHeight - (normalizedValue * graphHeight);
 
       ctx.save();
       ctx.beginPath();
@@ -1017,7 +1025,7 @@ function Session({
 
           setCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.y]);
           setCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]);
-          setVCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]); // Added for vCoPx data
+          setVCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]); 
 
           setActualCopTrail(currentTrail => {
             const now = Date.now();
@@ -1042,7 +1050,7 @@ function Session({
     setRecording(true);
     setCopYDataSeries([]);
     setCopXDataSeries([]);
-    setVCopXDataSeries([]); // Added
+    setVCopXDataSeries([]); 
 
     setActualCop(null);
     actualCopVelocityRef.current = { x: 0, y: 0 };
@@ -1140,7 +1148,7 @@ function Session({
 
   const handleLslToggleClick = () => {
     if (!lslStreamEnabled && !showLslDropdown) { 
-      // Refresh Source ID only when LSL is OFF and dropdown is about to be opened for new configuration
+      
       setLslSourceId(`tbt-${Date.now().toString().slice(-6)}`);
     }
     setShowLslDropdown(prev => !prev);
@@ -1149,7 +1157,7 @@ function Session({
   const handleEnableLslStream = () => {
     console.log("Enabling LSL Stream with:", { streamName: lslStreamNameInput, streamType: lslStreamType, sourceId: lslSourceId });
     setLslStreamEnabled(true);
-    setActiveLslStreamName(lslStreamNameInput); // Set the active stream name
+    setActiveLslStreamName(lslStreamNameInput); 
     setShowLslDropdown(false);
   };
 
@@ -1165,7 +1173,7 @@ function Session({
   };
 
   const handleEnableTcpStream = () => {
-    // Basic validation (you might want more robust validation)
+    
     if (!tcpIpAddressInput.trim() || !tcpPortInput.trim() || isNaN(parseInt(tcpPortInput))) {
       alert("Please enter a valid IP Address and Port.");
       return;
@@ -1347,7 +1355,7 @@ function Session({
               {showLslDropdown && !recording && (
                 <div ref={lslDropdownRef} className="lsl-selector-dropdown">
                   {lslStreamEnabled ? (
-                    // Content for when LSL is ON
+                    
                     <>
                       <div className="lsl-dropdown-input-group">
                         <label htmlFor="activeLslStreamNameDisplay">Stream Name:</label>
@@ -1366,7 +1374,7 @@ function Session({
                       </button>
                     </>
                   ) : (
-                    // Content for when LSL is OFF
+                    
                     <>
                       <div className="lsl-dropdown-input-group">
                         <label htmlFor="lslStreamNameInputControl">Stream Name:</label>
@@ -1414,7 +1422,7 @@ function Session({
               {showTcpDropdown && !recording && (
                 <div ref={tcpDropdownRef} className="tcp-selector-dropdown">
                   {tcpStreamEnabled ? (
-                    // Content for when TCP is ON
+                    
                     <>
                       <div className="lsl-dropdown-input-group"> {}
                         <label htmlFor="activeTcpIpDisplay">IP Address:</label>
@@ -1433,7 +1441,7 @@ function Session({
                       </button>
                     </>
                   ) : (
-                    // Content for when TCP is OFF
+                    
                     <>
                       <div className="lsl-dropdown-input-group"> {}
                         <label htmlFor="tcpIpInputControl">IP Address:</label>
@@ -1449,7 +1457,7 @@ function Session({
                       <div className="lsl-dropdown-input-group"> {}
                         <label htmlFor="tcpPortInputControl">Port:</label>
                         <input
-                          type="text" // Using text for port to allow easier input, validation in handler
+                          type="text" 
                           id="tcpPortInputControl"
                           value={tcpPortInput}
                           onChange={(e) => setTcpPortInput(e.target.value)}
