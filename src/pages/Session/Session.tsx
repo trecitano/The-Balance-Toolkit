@@ -147,12 +147,14 @@ function Session({
   const [copYDataSeries, setCopYDataSeries] = useState<number[]>([]);
   const [copXDataSeries, setCopXDataSeries] = useState<number[]>([]);
   const [vCopXDataSeries, setVCopXDataSeries] = useState<number[]>([]); 
+  const [vCopYDataSeries, setVCopYDataSeries] = useState<number[]>([]); 
   const wbbTopdownContainerRef = useRef<HTMLDivElement>(null);
   const wbbTopdownImageRef = useRef<HTMLImageElement>(null);
   const [svgRenderedBounds, setSvgRenderedBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [copYCanvasSize, setCopYCanvasSize] = useState({ width: 0, height: 0 });
   const [copXCanvasSize, setCopXCanvasSize] = useState({ width: 0, height: 0 });
   const [vCopXCanvasSize, setVCopXCanvasSize] = useState({ width: 0, height: 0 }); 
+  const [vCopYCanvasSize, setVCopYCanvasSize] = useState({ width: 0, height: 0 }); 
 
   const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(null);
   const [actualCopTrail, setActualCopTrail] = useState<Array<{ x: number; y: number; id: number; timestamp: number }>>([]);
@@ -449,8 +451,30 @@ function Session({
 
 
   
-  
-  
+  useEffect(() => {
+    const container = vCopYGraphContainerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const { width, height } = entry.contentRect;
+        setVCopYCanvasSize({ width, height });
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    const initialWidth = container.offsetWidth;
+    const initialHeight = container.offsetHeight;
+    if (initialWidth > 0 && initialHeight > 0 && (vCopYCanvasSize.width !== initialWidth || vCopYCanvasSize.height !== initialHeight)) {
+        setVCopYCanvasSize({ width: initialWidth, height: initialHeight });
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     const container = copyGraphContainerRef.current;
     const svgElement = document.getElementById("svg-cop-trail");
@@ -538,7 +562,7 @@ function Session({
 
     
     ctx.beginPath();
-    ctx.lineWidth = axisLineWidth; 
+    ctx.lineWidth = axisLineWidth;
     ctx.strokeStyle = "black";
     ctx.moveTo(graphOriginX, graphOriginY);
     ctx.lineTo(graphOriginX, graphOriginY + graphHeight);
@@ -546,24 +570,24 @@ function Session({
 
     
     ctx.beginPath();
-    
-    ctx.moveTo(graphOriginX, graphOriginY + graphHeight / 2);
-    ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight / 2);
+    ctx.moveTo(graphOriginX, graphOriginY + graphHeight);
+    ctx.lineTo(graphOriginX + graphWidth, graphOriginY + graphHeight);
     ctx.stroke();
 
-    const yTickValues = [-1, 0, 1];
+    
+    const yTickValues = [0, 0.5, 1];
     const yLabelText: { [key: number]: string } = {
-        1: "Front",
-        0: "CoPy",
-        [-1]: "Back"
+      1: "Front",
+      0.5: "CoPy",
+      0: "Back"
     };
 
     yTickValues.forEach(value => {
-      const yPos = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2));
+      
+      const yPos = graphOriginY + graphHeight - (value * graphHeight);
 
       
       ctx.beginPath();
-      
       ctx.moveTo(graphOriginX - yTickLength, yPos);
       ctx.lineTo(graphOriginX, yPos);
       ctx.stroke();
@@ -571,7 +595,7 @@ function Session({
       let baseline: CanvasTextBaseline = "middle";
       if (value === 1) {
         baseline = "top";
-      } else if (value === -1) {
+      } else if (value === 0) {
         baseline = "bottom";
       }
       ctx.textBaseline = baseline;
@@ -591,7 +615,7 @@ function Session({
 
       copYDataSeries.forEach((value, i) => {
         const x = graphOriginX + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
-        const y = graphOriginY + graphHeight / 2 - (value * (graphHeight / 2));
+        const y = graphOriginY + graphHeight - (value * graphHeight);
 
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -606,7 +630,7 @@ function Session({
         const lastIndex = copYDataSeries.length - 1;
         const lastValue = copYDataSeries[lastIndex];
         const tipX = graphOriginX + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
-        const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
+        const tipY = graphOriginY + graphHeight - (lastValue * graphHeight);
         
         ctx.save();
         ctx.beginPath();
@@ -621,7 +645,7 @@ function Session({
     } else if (copYDataSeries.length === 1) {
       const lastValue = copYDataSeries[0];
       const tipX = graphOriginX; 
-      const tipY = graphOriginY + graphHeight / 2 - (lastValue * (graphHeight / 2));
+      const tipY = graphOriginY + graphHeight - (lastValue * graphHeight);
 
       ctx.save();
       ctx.beginPath();
@@ -731,7 +755,7 @@ function Session({
       ctx.beginPath();
       
       ctx.moveTo(xPos, graphOriginY);
-      ctx.lineTo(xPos, graphOriginY - xTickLength);
+      ctx.lineTo(xPos, graphOriginY + xTickLength);
       ctx.stroke();
 
       if (value === -1) {
@@ -743,11 +767,11 @@ function Session({
       }
       
       ctx.textBaseline = "bottom";
-      ctx.fillText(copxLabelText[value], xPos, graphOriginY - xTickLength - xLabelTextOffset);
+      ctx.fillText(copxLabelText[value], xPos, graphOriginY + xTickLength + xLabelTextOffset);
     });
     ctx.textAlign = "left";
 
-
+    
     if (copXDataSeries.length > 1) {
       ctx.save();
       ctx.beginPath();
@@ -833,7 +857,678 @@ function Session({
     const copYHeight = copYCanvasSize.height;
     const baseFontSize = Math.max(8, Math.min(14, Math.floor(copYHeight * 0.07)));
 
+    const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalWidth * 0.005));
+    const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalWidth * 0.015));
+    const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalWidth * 0.04)));
+
+    const xLabelPaddingTop = baseFontSize * 2.2;
+    const xLabelPaddingBottom = baseFontSize * 1.5 + (dynamicGraphCircleDiameter / 2); 
+    const xTickLength = baseFontSize * 0.4;
+    const xLabelTextOffset = baseFontSize * 0.7; 
     
+    const padding = {
+        top: xLabelPaddingTop,
+        right: Math.max(2, baseFontSize * 0.2),
+        bottom: xLabelPaddingBottom,
+        left: Math.max(2, baseFontSize * 0.2)
+    };
+    
+
+    ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
+
+    const graphAreaWidth = canvasLogicalWidth - padding.left - padding.right;
+    const graphAreaHeight = canvasLogicalHeight - padding.top - padding.bottom;
+    const graphOriginX = padding.left;
+    const graphOriginY = padding.top;
+
+    if (graphAreaWidth <= 0 || graphAreaHeight <= 0) {
+        return;
+    }
+    
+    const dataDisplayHeight = graphAreaHeight - (dynamicGraphCircleDiameter / 2);
+    if (dataDisplayHeight <= 0) {
+        return;
+    }
+
+    ctx.fillStyle = "black";
+    ctx.font = `${baseFontSize}px Arial`;
+
+    
+    ctx.beginPath();
+    ctx.lineWidth = axisLineWidth; 
+    ctx.strokeStyle = "black";
+    ctx.moveTo(graphOriginX, graphOriginY);
+    ctx.lineTo(graphOriginX + graphAreaWidth, graphOriginY);
+    ctx.stroke();
+
+    
+    const centerXValueLine = graphOriginX + graphAreaWidth / 2;
+    ctx.beginPath();
+    
+    ctx.moveTo(centerXValueLine, graphOriginY);
+    ctx.lineTo(centerXValueLine, graphOriginY + graphAreaHeight);
+    ctx.stroke();
+
+    const copxTickValues = [-1, 0, 1];
+    const copxLabelText: { [key: number]: string } = {
+        1: "Right",
+        0: "CoPx",
+        [-1]: "Left"
+    };
+
+    copxTickValues.forEach(value => {
+      const xPos = graphOriginX + (value + 1) / 2 * graphAreaWidth;
+
+      
+      ctx.beginPath();
+      
+      ctx.moveTo(xPos, graphOriginY);
+      ctx.lineTo(xPos, graphOriginY + xTickLength);
+      ctx.stroke();
+
+      if (value === -1) {
+        ctx.textAlign = "left";
+      } else if (value === 1) {
+        ctx.textAlign = "right";
+      } else {
+        ctx.textAlign = "center";
+      }
+      
+      ctx.textBaseline = "bottom";
+      ctx.fillText(copxLabelText[value], xPos, graphOriginY + xTickLength + xLabelTextOffset);
+    });
+    ctx.textAlign = "left";
+
+    
+    if (copXDataSeries.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#007bff";
+      ctx.lineWidth = dataLineWidth; 
+
+      copXDataSeries.forEach((copXValue, i) => {
+        const pointY = graphOriginY + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
+        const pointX = graphOriginX + (copXValue + 1) / 2 * graphAreaWidth;
+
+        if (i === 0) {
+          ctx.moveTo(pointX, pointY);
+        } else {
+          ctx.lineTo(pointX, pointY);
+        }
+      });
+      ctx.stroke();
+      ctx.restore();
+
+      if (copXDataSeries.length > 0) {
+        const lastIndex = copXDataSeries.length - 1;
+        const lastCopXValue = copXDataSeries[lastIndex];
+
+        const tipY = graphOriginY + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
+        const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+        ctx.clip();
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
+        ctx.fillStyle = "#007bff";
+        ctx.fill();
+        ctx.restore();
+      }
+    } else if (copXDataSeries.length === 1) {
+      const lastCopXValue = copXDataSeries[0];
+      const tipY = graphOriginY; 
+      const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
+      ctx.fillStyle = "#007bff";
+      ctx.fill();
+      ctx.restore();
+    }
+  }, [copXDataSeries, copXCanvasSize, copYCanvasSize]);
+
+  
+  useEffect(() => {
+    const canvas = vCopXCanvasRef.current;
+    if (
+      !canvas ||
+      !vCopXCanvasSize ||
+      vCopXCanvasSize.width === 0 ||
+      vCopXCanvasSize.height === 0 ||
+      !copYCanvasSize ||
+      !copYCanvasSize.height
+    ) {
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = vCopXCanvasSize.width * dpr;
+    canvas.height = vCopXCanvasSize.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const canvasLogicalWidth = vCopXCanvasSize.width;
+    const canvasLogicalHeight = vCopXCanvasSize.height;
+
+    
+    const copYHeight = copYCanvasSize.height;
+    const baseFontSize = Math.max(8, Math.min(14, Math.floor(copYHeight * 0.07)));
+
+    const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalWidth * 0.005));
+    const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalWidth * 0.015));
+    const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalWidth * 0.04)));
+
+    const xLabelPaddingTop = baseFontSize * 2.2;
+    const xLabelPaddingBottom = baseFontSize * 1.5 + (dynamicGraphCircleDiameter / 2); 
+    const xTickLength = baseFontSize * 0.4;
+    const xLabelTextOffset = baseFontSize * 0.7; 
+    
+    const padding = {
+        top: xLabelPaddingTop,
+        right: Math.max(2, baseFontSize * 0.2),
+        bottom: xLabelPaddingBottom,
+        left: Math.max(2, baseFontSize * 0.2)
+    };
+    
+
+    ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
+
+    const graphAreaWidth = canvasLogicalWidth - padding.left - padding.right;
+    const graphAreaHeight = canvasLogicalHeight - padding.top - padding.bottom;
+    const graphOriginX = padding.left;
+    const graphOriginY = padding.top;
+
+    if (graphAreaWidth <= 0 || graphAreaHeight <= 0) {
+        return;
+    }
+    
+    const dataDisplayHeight = graphAreaHeight - (dynamicGraphCircleDiameter / 2);
+    if (dataDisplayHeight <= 0) {
+        return;
+    }
+
+    ctx.fillStyle = "black";
+    ctx.font = `${baseFontSize}px Arial`;
+
+    
+    ctx.beginPath();
+    ctx.lineWidth = axisLineWidth; 
+    ctx.strokeStyle = "black";
+    ctx.moveTo(graphOriginX, graphOriginY);
+    ctx.lineTo(graphOriginX + graphAreaWidth, graphOriginY);
+    ctx.stroke();
+
+    
+    const centerXValueLine = graphOriginX + graphAreaWidth / 2;
+    ctx.beginPath();
+    
+    ctx.moveTo(centerXValueLine, graphOriginY);
+    ctx.lineTo(centerXValueLine, graphOriginY + graphAreaHeight);
+    ctx.stroke();
+
+    const copxTickValues = [-1, 0, 1];
+    const copxLabelText: { [key: number]: string } = {
+        1: "Right",
+        0: "CoPx",
+        [-1]: "Left"
+    };
+
+    copxTickValues.forEach(value => {
+      const xPos = graphOriginX + (value + 1) / 2 * graphAreaWidth;
+
+      
+      ctx.beginPath();
+      
+      ctx.moveTo(xPos, graphOriginY);
+      ctx.lineTo(xPos, graphOriginY + xTickLength);
+      ctx.stroke();
+
+      if (value === -1) {
+        ctx.textAlign = "left";
+      } else if (value === 1) {
+        ctx.textAlign = "right";
+      } else {
+        ctx.textAlign = "center";
+      }
+      
+      ctx.textBaseline = "bottom";
+      ctx.fillText(copxLabelText[value], xPos, graphOriginY + xTickLength + xLabelTextOffset);
+    });
+    ctx.textAlign = "left";
+
+    
+    if (copXDataSeries.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#007bff";
+      ctx.lineWidth = dataLineWidth; 
+
+      copXDataSeries.forEach((copXValue, i) => {
+        const pointY = graphOriginY + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
+        const pointX = graphOriginX + (copXValue + 1) / 2 * graphAreaWidth;
+
+        if (i === 0) {
+          ctx.moveTo(pointX, pointY);
+        } else {
+          ctx.lineTo(pointX, pointY);
+        }
+      });
+      ctx.stroke();
+      ctx.restore();
+
+      if (copXDataSeries.length > 0) {
+        const lastIndex = copXDataSeries.length - 1;
+        const lastCopXValue = copXDataSeries[lastIndex];
+
+        const tipY = graphOriginY + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
+        const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+        ctx.clip();
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
+        ctx.fillStyle = "#007bff";
+        ctx.fill();
+        ctx.restore();
+      }
+    } else if (copXDataSeries.length === 1) {
+      const lastCopXValue = copXDataSeries[0];
+      const tipY = graphOriginY; 
+      const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
+      ctx.fillStyle = "#007bff";
+      ctx.fill();
+      ctx.restore();
+    }
+  }, [copXDataSeries, copXCanvasSize, copYCanvasSize]);
+
+  
+  useEffect(() => {
+    const canvas = vCopXCanvasRef.current;
+    if (
+      !canvas ||
+      !vCopXCanvasSize ||
+      vCopXCanvasSize.width === 0 ||
+      vCopXCanvasSize.height === 0 ||
+      !copYCanvasSize ||
+      !copYCanvasSize.height
+    ) {
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = vCopXCanvasSize.width * dpr;
+    canvas.height = vCopXCanvasSize.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const canvasLogicalWidth = vCopXCanvasSize.width;
+    const canvasLogicalHeight = vCopXCanvasSize.height;
+
+    
+    const copYHeight = copYCanvasSize.height;
+    const baseFontSize = Math.max(8, Math.min(14, Math.floor(copYHeight * 0.07)));
+
+    const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalWidth * 0.005));
+    const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalWidth * 0.015));
+    const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalWidth * 0.04)));
+
+    const xLabelPaddingTop = baseFontSize * 2.2;
+    const xLabelPaddingBottom = baseFontSize * 1.5 + (dynamicGraphCircleDiameter / 2); 
+    const xTickLength = baseFontSize * 0.4;
+    const xLabelTextOffset = baseFontSize * 0.7; 
+    
+    const padding = {
+        top: xLabelPaddingTop,
+        right: Math.max(2, baseFontSize * 0.2),
+        bottom: xLabelPaddingBottom,
+        left: Math.max(2, baseFontSize * 0.2)
+    };
+    
+
+    ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
+
+    const graphAreaWidth = canvasLogicalWidth - padding.left - padding.right;
+    const graphAreaHeight = canvasLogicalHeight - padding.top - padding.bottom;
+    const graphOriginX = padding.left;
+    const graphOriginY = padding.top;
+
+    if (graphAreaWidth <= 0 || graphAreaHeight <= 0) {
+        return;
+    }
+    
+    const dataDisplayHeight = graphAreaHeight - (dynamicGraphCircleDiameter / 2);
+    if (dataDisplayHeight <= 0) {
+        return;
+    }
+
+    ctx.fillStyle = "black";
+    ctx.font = `${baseFontSize}px Arial`;
+
+    
+    ctx.beginPath();
+    ctx.lineWidth = axisLineWidth; 
+    ctx.strokeStyle = "black";
+    ctx.moveTo(graphOriginX, graphOriginY);
+    ctx.lineTo(graphOriginX + graphAreaWidth, graphOriginY);
+    ctx.stroke();
+
+    
+    const centerXValueLine = graphOriginX + graphAreaWidth / 2;
+    ctx.beginPath();
+    
+    ctx.moveTo(centerXValueLine, graphOriginY);
+    ctx.lineTo(centerXValueLine, graphOriginY + graphAreaHeight);
+    ctx.stroke();
+
+    const copxTickValues = [-1, 0, 1];
+    const copxLabelText: { [key: number]: string } = {
+        1: "Right",
+        0: "CoPx",
+        [-1]: "Left"
+    };
+
+    copxTickValues.forEach(value => {
+      const xPos = graphOriginX + (value + 1) / 2 * graphAreaWidth;
+
+      
+      ctx.beginPath();
+      
+      ctx.moveTo(xPos, graphOriginY);
+      ctx.lineTo(xPos, graphOriginY + xTickLength);
+      ctx.stroke();
+
+      if (value === -1) {
+        ctx.textAlign = "left";
+      } else if (value === 1) {
+        ctx.textAlign = "right";
+      } else {
+        ctx.textAlign = "center";
+      }
+      
+      ctx.textBaseline = "bottom";
+      ctx.fillText(copxLabelText[value], xPos, graphOriginY + xTickLength + xLabelTextOffset);
+    });
+    ctx.textAlign = "left";
+
+    
+    if (copXDataSeries.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#007bff";
+      ctx.lineWidth = dataLineWidth; 
+
+      copXDataSeries.forEach((copXValue, i) => {
+        const pointY = graphOriginY + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
+        const pointX = graphOriginX + (copXValue + 1) / 2 * graphAreaWidth;
+
+        if (i === 0) {
+          ctx.moveTo(pointX, pointY);
+        } else {
+          ctx.lineTo(pointX, pointY);
+        }
+      });
+      ctx.stroke();
+      ctx.restore();
+
+      if (copXDataSeries.length > 0) {
+        const lastIndex = copXDataSeries.length - 1;
+        const lastCopXValue = copXDataSeries[lastIndex];
+
+        const tipY = graphOriginY + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
+        const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+        ctx.clip();
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
+        ctx.fillStyle = "#007bff";
+        ctx.fill();
+        ctx.restore();
+      }
+    } else if (copXDataSeries.length === 1) {
+      const lastCopXValue = copXDataSeries[0];
+      const tipY = graphOriginY; 
+      const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
+      ctx.fillStyle = "#007bff";
+      ctx.fill();
+      ctx.restore();
+    }
+  }, [copXDataSeries, copXCanvasSize, copYCanvasSize]);
+
+  
+  useEffect(() => {
+    const canvas = vCopXCanvasRef.current;
+    if (
+      !canvas ||
+      !vCopXCanvasSize ||
+      vCopXCanvasSize.width === 0 ||
+      vCopXCanvasSize.height === 0 ||
+      !copYCanvasSize ||
+      !copYCanvasSize.height
+    ) {
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = vCopXCanvasSize.width * dpr;
+    canvas.height = vCopXCanvasSize.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const canvasLogicalWidth = vCopXCanvasSize.width;
+    const canvasLogicalHeight = vCopXCanvasSize.height;
+
+    
+    const copYHeight = copYCanvasSize.height;
+    const baseFontSize = Math.max(8, Math.min(14, Math.floor(copYHeight * 0.07)));
+
+    const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalWidth * 0.005));
+    const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalWidth * 0.015));
+    const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalWidth * 0.04)));
+
+    const xLabelPaddingTop = baseFontSize * 2.2;
+    const xLabelPaddingBottom = baseFontSize * 1.5 + (dynamicGraphCircleDiameter / 2); 
+    const xTickLength = baseFontSize * 0.4;
+    const xLabelTextOffset = baseFontSize * 0.7; 
+    
+    const padding = {
+        top: xLabelPaddingTop,
+        right: Math.max(2, baseFontSize * 0.2),
+        bottom: xLabelPaddingBottom,
+        left: Math.max(2, baseFontSize * 0.2)
+    };
+    
+
+    ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
+
+    const graphAreaWidth = canvasLogicalWidth - padding.left - padding.right;
+    const graphAreaHeight = canvasLogicalHeight - padding.top - padding.bottom;
+    const graphOriginX = padding.left;
+    const graphOriginY = padding.top;
+
+    if (graphAreaWidth <= 0 || graphAreaHeight <= 0) {
+        return;
+    }
+    
+    const dataDisplayHeight = graphAreaHeight - (dynamicGraphCircleDiameter / 2);
+    if (dataDisplayHeight <= 0) {
+        return;
+    }
+
+    ctx.fillStyle = "black";
+    ctx.font = `${baseFontSize}px Arial`;
+
+    
+    ctx.beginPath();
+    ctx.lineWidth = axisLineWidth; 
+    ctx.strokeStyle = "black";
+    ctx.moveTo(graphOriginX, graphOriginY);
+    ctx.lineTo(graphOriginX + graphAreaWidth, graphOriginY);
+    ctx.stroke();
+
+    
+    const centerXValueLine = graphOriginX + graphAreaWidth / 2;
+    ctx.beginPath();
+    
+    ctx.moveTo(centerXValueLine, graphOriginY);
+    ctx.lineTo(centerXValueLine, graphOriginY + graphAreaHeight);
+    ctx.stroke();
+
+    const copxTickValues = [-1, 0, 1];
+    const copxLabelText: { [key: number]: string } = {
+        1: "Right",
+        0: "CoPx",
+        [-1]: "Left"
+    };
+
+    copxTickValues.forEach(value => {
+      const xPos = graphOriginX + (value + 1) / 2 * graphAreaWidth;
+
+      
+      ctx.beginPath();
+      
+      ctx.moveTo(xPos, graphOriginY);
+      ctx.lineTo(xPos, graphOriginY + xTickLength);
+      ctx.stroke();
+
+      if (value === -1) {
+        ctx.textAlign = "left";
+      } else if (value === 1) {
+        ctx.textAlign = "right";
+      } else {
+        ctx.textAlign = "center";
+      }
+      
+      ctx.textBaseline = "bottom";
+      ctx.fillText(copxLabelText[value], xPos, graphOriginY + xTickLength + xLabelTextOffset);
+    });
+    ctx.textAlign = "left";
+
+    
+    if (copXDataSeries.length > 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#007bff";
+      ctx.lineWidth = dataLineWidth; 
+
+      copXDataSeries.forEach((copXValue, i) => {
+        const pointY = graphOriginY + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
+        const pointX = graphOriginX + (copXValue + 1) / 2 * graphAreaWidth;
+
+        if (i === 0) {
+          ctx.moveTo(pointX, pointY);
+        } else {
+          ctx.lineTo(pointX, pointY);
+        }
+      });
+      ctx.stroke();
+      ctx.restore();
+
+      if (copXDataSeries.length > 0) {
+        const lastIndex = copXDataSeries.length - 1;
+        const lastCopXValue = copXDataSeries[lastIndex];
+
+        const tipY = graphOriginY + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayHeight;
+        const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+        ctx.clip();
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
+        ctx.fillStyle = "#007bff";
+        ctx.fill();
+        ctx.restore();
+      }
+    } else if (copXDataSeries.length === 1) {
+      const lastCopXValue = copXDataSeries[0];
+      const tipY = graphOriginY; 
+      const tipX = graphOriginX + (lastCopXValue + 1) / 2 * graphAreaWidth;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(graphOriginX, graphOriginY, graphAreaWidth, graphAreaHeight);
+      ctx.clip();
+      ctx.beginPath();
+      ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
+      ctx.fillStyle = "#007bff";
+      ctx.fill();
+      ctx.restore();
+    }
+  }, [copXDataSeries, copXCanvasSize, copYCanvasSize]);
+
+  
+  useEffect(() => {
+    const canvas = vCopYCanvasRef.current;
+    if (
+      !canvas ||
+      !vCopYCanvasSize ||
+      vCopYCanvasSize.width === 0 ||
+      vCopYCanvasSize.height === 0 ||
+      !copYCanvasSize ||
+      !copYCanvasSize.height
+    ) {
+      return;
+    }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = vCopYCanvasSize.width * dpr;
+    canvas.height = vCopYCanvasSize.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const canvasLogicalWidth = vCopYCanvasSize.width;
+    const canvasLogicalHeight = vCopYCanvasSize.height;
+
+    
+    const copYHeight = copYCanvasSize.height;
+    const baseFontSize = Math.max(8, Math.min(14, Math.floor(copYHeight * 0.07)));
+
     const axisLineWidth = Math.max(0.5, Math.min(1.5, canvasLogicalHeight * 0.005));
     const dataLineWidth = Math.max(1, Math.min(3, canvasLogicalHeight * 0.015));
     const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor(canvasLogicalHeight * 0.04)));
@@ -848,7 +1543,6 @@ function Session({
       bottom: Math.max(1, baseFontSize * 0.1),
       left: yLabelPaddingLeft
     };
-    
 
     ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
@@ -860,7 +1554,6 @@ function Session({
     if (graphWidth <= 0 || graphHeight <= 0) {
       return;
     }
-
     
     const dataDisplayWidth = graphWidth - (dynamicGraphCircleDiameter / 2);
     if (dataDisplayWidth <= 0) {
@@ -873,7 +1566,7 @@ function Session({
 
     
     ctx.beginPath();
-    ctx.lineWidth = axisLineWidth; 
+    ctx.lineWidth = axisLineWidth;
     ctx.strokeStyle = "black";
     ctx.moveTo(graphOriginX, graphOriginY);
     ctx.lineTo(graphOriginX, graphOriginY + graphHeight);
@@ -889,7 +1582,7 @@ function Session({
     const yTickValues = [0, 0.5, 1];
     const yLabelText: { [key: number]: string } = {
       1: "1",
-      0.5: "vCoPx",
+      0.5: "vCoPy",
       0: "0"
     };
 
@@ -915,20 +1608,21 @@ function Session({
     ctx.textBaseline = "middle";
 
     
-    if (vCopXDataSeries.length > 1) {
+    if (vCopYDataSeries.length > 1) {
       ctx.save();
       ctx.beginPath();
       ctx.rect(graphOriginX, graphOriginY, graphWidth, graphHeight);
       ctx.clip();
 
       ctx.beginPath();
-      ctx.strokeStyle = "#28a745";
-      ctx.lineWidth = dataLineWidth;
+      ctx.strokeStyle = "#dc3545"; 
+      ctx.lineWidth = dataLineWidth; 
 
-      vCopXDataSeries.forEach((value, i) => {
+      vCopYDataSeries.forEach((value, i) => {
         const x = graphOriginX + (i / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
         
-        const normalizedValue = (value + 1) / 2; 
+        
+        const normalizedValue = (value + 1) / 2;
         const y = graphOriginY + graphHeight - (normalizedValue * graphHeight);
 
         if (i === 0) {
@@ -940,12 +1634,12 @@ function Session({
       ctx.stroke();
       ctx.restore();
 
-      if (vCopXDataSeries.length > 0) {
-        const lastIndex = vCopXDataSeries.length - 1;
-        const lastValue = vCopXDataSeries[lastIndex];
+      if (vCopYDataSeries.length > 0) {
+        const lastIndex = vCopYDataSeries.length - 1;
+        const lastValue = vCopYDataSeries[lastIndex];
         const tipX = graphOriginX + (lastIndex / (COPY_GRAPH_MAX_POINTS - 1)) * dataDisplayWidth;
         
-        const normalizedValue = (lastValue + 1) / 2; 
+        const normalizedValue = (lastValue + 1) / 2;
         const tipY = graphOriginY + graphHeight - (normalizedValue * graphHeight);
 
         ctx.save();
@@ -954,15 +1648,15 @@ function Session({
         ctx.clip();
         ctx.beginPath();
         ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
-        ctx.fillStyle = "#28a745";
+        ctx.fillStyle = "#dc3545";
         ctx.fill();
         ctx.restore();
       }
-    } else if (vCopXDataSeries.length === 1) {
-      const lastValue = vCopXDataSeries[0];
+    } else if (vCopYDataSeries.length === 1) {
+      const lastValue = vCopYDataSeries[0];
       const tipX = graphOriginX;
       
-      const normalizedValue = (lastValue + 1) / 2; 
+      const normalizedValue = (lastValue + 1) / 2;
       const tipY = graphOriginY + graphHeight - (normalizedValue * graphHeight);
 
       ctx.save();
@@ -971,12 +1665,11 @@ function Session({
       ctx.clip();
       ctx.beginPath();
       ctx.arc(tipX, tipY, dynamicGraphCircleDiameter / 2, 0, 2 * Math.PI);
-      ctx.fillStyle = "#28a745";
+      ctx.fillStyle = "#dc3545";
       ctx.fill();
       ctx.restore();
     }
-  }, [vCopXDataSeries, vCopXCanvasSize, copYCanvasSize]);
-
+  }, [vCopYDataSeries, vCopYCanvasSize, copYCanvasSize]);
 
   useEffect(() => {
     if (recording) {
@@ -1028,6 +1721,7 @@ function Session({
           setCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.y]);
           setCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]);
           setVCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]); 
+          setVCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.y]); 
 
           setActualCopTrail(currentTrail => {
             const now = Date.now();
@@ -1053,6 +1747,7 @@ function Session({
     setCopYDataSeries([]);
     setCopXDataSeries([]);
     setVCopXDataSeries([]); 
+    setVCopYDataSeries([]); 
 
     setActualCop(null);
     actualCopVelocityRef.current = { x: 0, y: 0 };
@@ -1588,7 +2283,7 @@ function Session({
           <canvas ref={copYCanvasRef} className="copy-graph-canvas"></canvas>
         </div>
         <div className="vcopy-graph-container" ref={vCopYGraphContainerRef}>
-          {/* <canvas ref={vCopYCanvasRef} className="vcopy-graph-canvas"></canvas> */}
+          <canvas ref={vCopYCanvasRef} className="vcopy-graph-canvas"></canvas>
         </div>
       </main>
 
