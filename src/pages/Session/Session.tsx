@@ -756,7 +756,7 @@ function Session({
       ctx.beginPath();
       
       ctx.moveTo(xPos, graphOriginY);
-      ctx.lineTo(xPos, graphOriginY + xTickLength);
+      ctx.lineTo(xPos, graphOriginY - xTickLength);
       ctx.stroke();
 
       if (value === -1) {
@@ -768,11 +768,10 @@ function Session({
       }
       
       ctx.textBaseline = "bottom";
-      ctx.fillText(copxLabelText[value], xPos, graphOriginY + xTickLength + xLabelTextOffset);
+      ctx.fillText(copxLabelText[value], xPos, graphOriginY - xTickLength - xLabelTextOffset);
     });
     ctx.textAlign = "left";
 
-    
     if (copXDataSeries.length > 1) {
       ctx.save();
       ctx.beginPath();
