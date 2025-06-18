@@ -1007,6 +1007,17 @@
   flex-direction: column;
 }
 
+.vcopy-graph-container {
+  width: 20%; 
+  height: 25%; 
+  border: none;
+  background-color: #ffffff;
+  padding: 0px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
 .copy-graph-canvas {
   width: 100%;
   height: 100%;

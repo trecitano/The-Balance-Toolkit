@@ -141,6 +141,8 @@ function Session({
   const copxGraphContainerRef = useRef<HTMLDivElement>(null);
   const vCopXCanvasRef = useRef<HTMLCanvasElement>(null); 
   const vCopXGraphContainerRef = useRef<HTMLDivElement>(null); 
+  const vCopYCanvasRef = useRef<HTMLCanvasElement>(null); 
+  const vCopYGraphContainerRef = useRef<HTMLDivElement>(null); 
 
   const [copYDataSeries, setCopYDataSeries] = useState<number[]>([]);
   const [copXDataSeries, setCopXDataSeries] = useState<number[]>([]);
@@ -1584,6 +1586,9 @@ function Session({
         </div>
         <div className="copy-graph-container" ref={copyGraphContainerRef}>
           <canvas ref={copYCanvasRef} className="copy-graph-canvas"></canvas>
+        </div>
+        <div className="vcopy-graph-container" ref={vCopYGraphContainerRef}>
+          {/* <canvas ref={vCopYCanvasRef} className="vcopy-graph-canvas"></canvas> */}
         </div>
       </main>
 
