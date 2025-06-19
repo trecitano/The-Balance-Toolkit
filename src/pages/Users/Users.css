@@ -19,7 +19,7 @@
 
 .users-main-content {
   display: flex;
-  flex-direction: column; /* Changed from row */
+  flex-direction: column; 
   flex-grow: 1; 
   min-height: 0; 
   overflow: hidden; 
@@ -31,7 +31,7 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  width: 100%; /* Added to constrain the panel width */
+  width: 100%; 
 }
 
 .add-user-btn {
@@ -77,7 +77,7 @@
   height: 16px;
 }
 
-.user-list-scroll-container {
+.user-carousel-scroll-container {
   position: relative;
   overflow: hidden; 
 }
@@ -101,44 +101,46 @@
 }
 
 
-.user-list-item {
+.user-carousel-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.4s, opacity 0.4s, background-color 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
   background: #f5f5f5;
   border-radius: 0.8vw;
   padding: 1.5vw;
   box-shadow: 0 3px 3px rgba(0, 0, 0, 0.15);
-  width: 250px;
-  height: 150px;
+  
+  width: 200px; 
+  aspect-ratio: 4/3; 
   box-sizing: border-box;
   position: relative;
   scroll-snap-align: center;
-  transform: scale(0.85);
   opacity: 0.7;
   flex-shrink: 0;
+  transform-origin: center center;
 }
 
-.user-list-item:hover {
+.user-carousel-item:hover {
   background-color: #e9eef5; 
   box-shadow: 0 5px 8px rgba(0,0,0,0.18);
 }
 
-.user-list-item.selected {
+.user-carousel-item.selected {
   background-color: #e0eafc; 
   font-weight: bold; 
   box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 0 0 2px #397aac; 
-  transform: scale(1);
   opacity: 1;
+  z-index: 1;
+  
 }
 
-.user-list-item.editing {
+.user-carousel-item.editing {
 }
 
-.user-list-icon {
+.user-carousel-icon {
   width: 60px;
   height: 60px;
   object-fit: cover;
@@ -149,7 +151,7 @@
   flex-shrink: 0;
 }
 
-.user-list-name {
+.user-carousel-name {
   flex-grow: 1;
   color: #333;
   font-size: clamp(0.9em, 1.1vw, 1.3em); 

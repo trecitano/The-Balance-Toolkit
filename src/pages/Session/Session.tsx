@@ -1612,7 +1612,7 @@ function Session({
                       {availableBoards.map((board) => (
                         <li
                           key={board}
-                          className={`board-list-item ${
+                          className={`session-board-list-item ${
                             board === selectedBoard ? "selected-item" : ""
                           }`}
                           onClick={() => handleBoardSelect(board)}
@@ -1659,7 +1659,7 @@ function Session({
                       {usersForDropdown.map((user) => (
                         <li
                           key={user.id}
-                          className={`board-list-item user-list-item ${
+                          className={`session-board-list-item session-user-list-item ${
                             user.id === currentSelectedUserId ? "selected-item" : ""
                           }`}
                           onClick={() => handleUserSelect(user.id)}
@@ -1673,7 +1673,7 @@ function Session({
                       ))}
                     </ul>
                   ) : (
-                     <p className="dropdown-message">No users available.</p>
+                    <p className="dropdown-message">No users available.</p>
                   )}
                   <button className="go-to-users-btn" onClick={handleGoToUsers}>
                     Go to Users
