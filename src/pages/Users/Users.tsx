@@ -53,6 +53,38 @@ export default function Users({
   const formRef = useRef<HTMLFormElement>(null);
 
   
+
+  useEffect(() => {
+    
+    const adjustCardWidths = () => {
+      const list = userListRef.current;
+      if (!list) return;
+      
+      const items = list.querySelectorAll('.user-carousel-item');
+      if (items.length === 0) return;
+      
+      const containerWidth = list.clientWidth;
+      const gap = 16; 
+      const desiredCardCount = 5; 
+      
+      
+      const idealCardWidth = (containerWidth - (gap * (desiredCardCount - 1))) / desiredCardCount;
+      
+      
+      items.forEach(item => {
+        (item as HTMLElement).style.width = `${idealCardWidth}px`;
+      });
+    };
+    
+    
+    adjustCardWidths();
+    window.addEventListener('resize', adjustCardWidths);
+    
+    return () => {
+      window.removeEventListener('resize', adjustCardWidths);
+    };
+  }, [allUsers.length]); 
+
   useEffect(() => {
     if (userListRef.current && currentSelectedUserId) {
       const selectedUserElement = userListRef.current.querySelector(
@@ -83,17 +115,35 @@ export default function Users({
 
     const handleWheel = (e: WheelEvent) => {
       
-      if (list.scrollWidth > list.clientWidth) {
-        
-        e.preventDefault();
-        
-        list.scrollLeft += e.deltaY;
-      }
+      e.preventDefault();
+      
+      
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      
+      
+      const items = list.querySelectorAll('.user-carousel-item');
+      if (items.length === 0) return;
+      
+      const firstItem = items[0] as HTMLElement;
+      const itemWidth = firstItem.offsetWidth;
+      const containerWidth = list.clientWidth;
+      
+      
+      const cardsPerView = Math.floor(containerWidth / itemWidth);
+      
+      
+      
+      const scrollAmount = Math.sign(delta) * (itemWidth + 26); 
+      
+      
+      list.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
     };
 
     
     container.addEventListener("wheel", handleWheel, { passive: false });
-
     
     return () => {
       if (container) {
@@ -155,13 +205,37 @@ export default function Users({
     };
   }, [allUsers, currentSelectedUserId, setCurrentSelectedUserId]);
 
-  const handleSelectUser = (userId: string) => {
+  
+
+  const handleSelectUser = (userId: string, event?: React.MouseEvent) => {
     if (editingIdx !== null) {
       console.log("Currently editing, selection change aborted or prompt user.");
       return;
     }
-    setCurrentSelectedUserId(userId);
-    setEditingIdx(null); 
+    
+    
+    if (event) {
+      event.stopPropagation(); 
+      setCurrentSelectedUserId(userId);
+      
+      
+      const selectedElement = userListRef.current?.querySelector(
+        `[data-userid="${userId}"]`
+      ) as HTMLLIElement;
+      
+      if (selectedElement) {
+        selectedElement.scrollIntoView({ 
+          behavior: "smooth", 
+          block: "nearest", 
+          inline: "center" 
+        });
+      }
+    } else {
+      
+      setCurrentSelectedUserId(userId);
+    }
+    
+    setEditingIdx(null);
     setEditingUserData(null);
   };
 
@@ -262,23 +336,23 @@ export default function Users({
       {}
       <div className="users-main-content">
         <div className="users-list-panel">
-          <div className="user-list-scroll-container" ref={scrollContainerRef}>
+          <div className="user-carousel-scroll-container" ref={scrollContainerRef}>
             <div className="users-list-fade users-list-fade-left" style={{ opacity: leftFadeOpacity }} />
             <ul className="users-list" ref={userListRef}>
               {allUsers.map(user => (
                 <li
                   key={user.id}
                   data-userid={user.id}
-                  className={`user-list-item ${currentSelectedUserId === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""}`}
-                  onClick={() => handleSelectUser(user.id)}
+                  className={`user-carousel-item ${currentSelectedUserId === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""}`}
+                  onClick={(e) => handleSelectUser(user.id, e)}
                 >
                   <img
                     src={defaultUserIcon} 
                     alt="User"
-                    className="user-list-icon"
+                    className="user-carousel-icon"
                     style={{ border: `3px solid ${user.color || '#ccc'}` }}
                   />
-                  <span className="user-list-name">{user.name}</span>
+                  <span className="user-carousel-name">{user.name}</span>
                   {currentSelectedUserId === user.id && editingIdx === null && (
                      <button onClick={(e) => { e.stopPropagation(); handleEditUser(user.id);}} className="user-action-btn edit-btn" aria-label="Edit user">
                         <img src={editIcon} alt="Edit" />

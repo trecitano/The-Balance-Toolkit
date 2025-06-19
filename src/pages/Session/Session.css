@@ -459,7 +459,7 @@
   box-shadow: none;
   color: #374151;
   transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
-  height: 36px;
+  height: 25vh;
   box-sizing: border-box;
   padding: 8px 12px;
   text-align: left;
@@ -1126,4 +1126,52 @@
 .board-list-item.selected-item:hover {
   background-color: #c7d2fe;
   box-shadow: none !important;
+}
+
+.session-user-list-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  font-size: clamp(0.7rem, 1.3vw, 1.4rem); 
+  cursor: pointer;
+  border-radius: 4px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  color: #374151;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.session-board-list-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  height: 36px; 
+  box-sizing: border-box;
+  font-size: clamp(0.7rem, 0.8vw, 0.9rem);
+  font-weight: normal; 
+  color: #374151; 
+}
+
+.session-board-list-item.selected-item {
+  background-color: #e0e7ff; 
+  font-weight: 600; 
+  color: #3730a3; 
+}
+
+.session-board-list-item:hover {
+  background-color: #f3f4f6; 
+}
+
+
+.session-board-list-item.selected-item:hover {
+  background-color: #c7d2fe; 
 }
