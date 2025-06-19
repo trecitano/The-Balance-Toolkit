@@ -1013,6 +1013,27 @@
   width: 40%;
 }
 
+.four-column-first-row-container {
+  width: 33%;
+}
+
+.stability-gauge-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.stability-gauge-canvas {
+  width: 100%;
+  height: 100%;
+  max-width: 300px;
+  max-height: 300px;
+  aspect-ratio: 1 / 1;
+}
+
 
 .copy-graph-container {
   width: 100%; 
