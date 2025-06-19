@@ -51,11 +51,11 @@ export default function Users({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const userListRef = useRef<HTMLUListElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const isAutoScrolling = useRef<boolean>(false);
 
   
 
   useEffect(() => {
-    
     const adjustCardWidths = () => {
       const list = userListRef.current;
       if (!list) return;
@@ -74,8 +74,22 @@ export default function Users({
       items.forEach(item => {
         (item as HTMLElement).style.width = `${idealCardWidth}px`;
       });
+
+      
+      items.forEach(item => {
+        const element = item as HTMLElement;
+        if (element.classList.contains('selected')) {
+          
+          const scaleIncrease = 0.15; 
+          const extraSpace = (idealCardWidth * scaleIncrease) / 2;
+          element.style.marginLeft = `${extraSpace}px`;
+          element.style.marginRight = `${extraSpace}px`;
+        } else {
+          element.style.marginLeft = '';
+          element.style.marginRight = '';
+        }
+      });
     };
-    
     
     adjustCardWidths();
     window.addEventListener('resize', adjustCardWidths);
@@ -83,7 +97,7 @@ export default function Users({
     return () => {
       window.removeEventListener('resize', adjustCardWidths);
     };
-  }, [allUsers.length]); 
+  }, [allUsers.length, currentSelectedUserId]); 
 
   useEffect(() => {
     if (userListRef.current && currentSelectedUserId) {
@@ -99,7 +113,13 @@ export default function Users({
 
         
         if (Math.abs(listCenter - elementCenter) > 1) {
+          isAutoScrolling.current = true;
           selectedUserElement.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+          
+          
+          setTimeout(() => {
+            isAutoScrolling.current = false;
+          }, 500); 
         }
       }
     }
@@ -160,6 +180,10 @@ export default function Users({
     const stableSetCurrentUser = setCurrentSelectedUserId;
 
     const updateSelectionOnScroll = () => {
+      
+      
+      if (isAutoScrolling.current) return;
+    
       const viewportCenter = listElement.getBoundingClientRect().left + listElement.clientWidth / 2;
       let closestElementId: string | null = null;
       let minDistance = Infinity;
@@ -209,8 +233,15 @@ export default function Users({
 
   const handleSelectUser = (userId: string, event?: React.MouseEvent) => {
     if (editingIdx !== null) {
-      console.log("Currently editing, selection change aborted or prompt user.");
-      return;
+      
+      if (window.confirm("You have unsaved changes. Discard changes and select a different user?")) {
+        
+        setEditingIdx(null);
+        setEditingUserData(null);
+      } else {
+        
+        return;
+      }
     }
     
     
@@ -218,20 +249,24 @@ export default function Users({
       event.stopPropagation(); 
       setCurrentSelectedUserId(userId);
       
-      
       const selectedElement = userListRef.current?.querySelector(
         `[data-userid="${userId}"]`
       ) as HTMLLIElement;
       
       if (selectedElement) {
+        isAutoScrolling.current = true;
         selectedElement.scrollIntoView({ 
           behavior: "smooth", 
           block: "nearest", 
           inline: "center" 
         });
+        
+        
+        setTimeout(() => {
+          isAutoScrolling.current = false;
+        }, 500); 
       }
     } else {
-      
       setCurrentSelectedUserId(userId);
     }
     
