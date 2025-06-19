@@ -1673,7 +1673,7 @@ function Session({
         </div>
       </header>
       <main className="session-main">
-        <div className="wbb-copx-stack">
+        <div className="first-column-container">
           <div className="wbb-topdown-container" ref={wbbTopdownContainerRef}>
             <img
               src={wbbTopdownIcon}
@@ -1779,10 +1779,15 @@ function Session({
             <canvas ref={copYCanvasRef} className="copy-graph-canvas"></canvas>
           </div>
         </div>
-        <div className="second-column-container">
+        <div className="third-column-container">
           <div className="vcopy-graph-container" ref={vCopYGraphContainerRef}>
               <canvas ref={vCopYCanvasRef} className="vcopy-graph-canvas"></canvas>
             </div>
+        </div>
+        <div className="four-column-container">
+          {/* <div className="vcopy-graph-container" ref={vCopYGraphContainerRef}>
+              <canvas ref={vCopYCanvasRef} className="vcopy-graph-canvas"></canvas>
+            </div> */}
         </div>
       </main>
 
