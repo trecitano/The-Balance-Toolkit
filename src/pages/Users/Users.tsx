@@ -47,6 +47,10 @@ export default function Users({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [leftFadeOpacity, setLeftFadeOpacity] = useState(0);
   const [rightFadeOpacity, setRightFadeOpacity] = useState(1);
+  const [carouselScrollPosition, setCarouselScrollPosition] = useState<number>(0);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<UserType[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const userListRef = useRef<HTMLUListElement>(null);
@@ -99,6 +103,7 @@ export default function Users({
     };
   }, [allUsers.length, currentSelectedUserId]); 
 
+  
   useEffect(() => {
     if (userListRef.current && currentSelectedUserId) {
       const selectedUserElement = userListRef.current.querySelector(
@@ -106,21 +111,39 @@ export default function Users({
       ) as HTMLLIElement;
       
       if (selectedUserElement) {
-        const listBounds = userListRef.current.getBoundingClientRect();
-        const elementBounds = selectedUserElement.getBoundingClientRect();
-        const listCenter = listBounds.left + listBounds.width / 2;
-        const elementCenter = elementBounds.left + elementBounds.width / 2;
-
         
-        if (Math.abs(listCenter - elementCenter) > 1) {
-          isAutoScrolling.current = true;
-          selectedUserElement.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        setTimeout(() => {
+          const listElement = userListRef.current;
+          if (!listElement) return;
+          
+          const listRect = listElement.getBoundingClientRect();
+          const elementRect = selectedUserElement.getBoundingClientRect();
           
           
-          setTimeout(() => {
-            isAutoScrolling.current = false;
-          }, 500); 
-        }
+          const listCenter = listRect.left + listRect.width / 2;
+          const elementCenter = elementRect.left + elementRect.width / 2;
+          const offset = elementCenter - listCenter;
+          
+          
+          if (Math.abs(offset) > 2) { 
+            isAutoScrolling.current = true;
+            
+            
+            const newScrollLeft = listElement.scrollLeft + offset;
+            
+            
+            listElement.scrollTo({
+              left: newScrollLeft,
+              behavior: 'smooth'
+            });
+            
+            
+            
+            setTimeout(() => {
+              isAutoScrolling.current = false;
+            }, 600);
+          }
+        }, 50); 
       }
     }
   }, [currentSelectedUserId, allUsers]);
@@ -181,12 +204,15 @@ export default function Users({
 
     const updateSelectionOnScroll = () => {
       
-      
       if (isAutoScrolling.current) return;
-    
+
+      const listElement = userListRef.current;
+      if (!listElement) return;
+      
       const viewportCenter = listElement.getBoundingClientRect().left + listElement.clientWidth / 2;
       let closestElementId: string | null = null;
       let minDistance = Infinity;
+      let minDistancePercent = 100; 
 
       Array.from(listElement.children).forEach(child => {
         const element = child as HTMLLIElement;
@@ -194,14 +220,20 @@ export default function Users({
         const elementBounds = element.getBoundingClientRect();
         const elementCenter = elementBounds.left + elementBounds.width / 2;
         const distance = Math.abs(viewportCenter - elementCenter);
+        const distancePercent = (distance / elementBounds.width) * 100;
 
         if (distance < minDistance) {
           minDistance = distance;
+          minDistancePercent = distancePercent;
           closestElementId = element.dataset.userid || null;
         }
       });
 
-      if (closestElementId && closestElementId !== currentSelectedUserId) {
+      
+      
+      if (closestElementId && 
+          closestElementId !== currentSelectedUserId && 
+          minDistancePercent < 30) { 
         stableSetCurrentUser(closestElementId);
       }
     };
@@ -209,8 +241,15 @@ export default function Users({
     const debouncedUpdate = debounce(updateSelectionOnScroll, 150);
 
     const handleScroll = () => {
+      const listElement = userListRef.current;
+      if (!listElement) return;
       
       const { scrollLeft, scrollWidth, clientWidth } = listElement;
+      
+      
+      setCarouselScrollPosition(scrollLeft);
+      
+      
       const maxFadeScroll = 50;
       const leftOpacity = Math.min(scrollLeft / maxFadeScroll, 1);
       setLeftFadeOpacity(leftOpacity);
@@ -229,45 +268,78 @@ export default function Users({
     };
   }, [allUsers, currentSelectedUserId, setCurrentSelectedUserId]);
 
-  
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    
+    if (!term.trim()) {
+      setIsSearching(false);
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    
+    
+    const filtered = allUsers.filter(user => 
+      user.name.toLowerCase().includes(term.toLowerCase()) || 
+      user.id.toLowerCase().includes(term.toLowerCase())
+    );
+    
+    setSearchResults(filtered);
+  };
+
+  const handleSelectSearchResult = (userId: string) => {
+    handleSelectUser(userId);
+    setSearchTerm("");
+    setIsSearching(false);
+    setSearchResults([]);
+  };
 
   const handleSelectUser = (userId: string, event?: React.MouseEvent) => {
     if (editingIdx !== null) {
-      
       if (window.confirm("You have unsaved changes. Discard changes and select a different user?")) {
-        
         setEditingIdx(null);
         setEditingUserData(null);
       } else {
-        
         return;
       }
     }
     
+    setCurrentSelectedUserId(userId);
     
     if (event) {
-      event.stopPropagation(); 
-      setCurrentSelectedUserId(userId);
+      event.stopPropagation();
       
       const selectedElement = userListRef.current?.querySelector(
         `[data-userid="${userId}"]`
       ) as HTMLLIElement;
       
-      if (selectedElement) {
+      if (selectedElement && userListRef.current) {
         isAutoScrolling.current = true;
-        selectedElement.scrollIntoView({ 
-          behavior: "smooth", 
-          block: "nearest", 
-          inline: "center" 
-        });
         
+        const listElement = userListRef.current;
+        const listRect = listElement.getBoundingClientRect();
+        const elementRect = selectedElement.getBoundingClientRect();
+        
+        
+        const listCenter = listRect.left + listRect.width / 2;
+        const elementCenter = elementRect.left + elementRect.width / 2;
+        const offset = elementCenter - listCenter;
+        
+        
+        const newScrollLeft = listElement.scrollLeft + offset;
+        
+        
+        listElement.scrollTo({
+          left: newScrollLeft,
+          behavior: 'smooth'
+        });
         
         setTimeout(() => {
           isAutoScrolling.current = false;
-        }, 500); 
+        }, 500);
       }
-    } else {
-      setCurrentSelectedUserId(userId);
     }
     
     setEditingIdx(null);
@@ -358,11 +430,78 @@ export default function Users({
   const displayUser = editingUserData || currentUserData;
 
 
+  const renderCarouselIndicators = () => {
+    if (!allUsers.length) return null;
+    
+    const currentIndex = allUsers.findIndex(user => user.id === currentSelectedUserId);
+    
+    return (
+      <div className="carousel-indicators">
+        {allUsers.map((user, index) => {
+          
+          const distance = Math.abs(index - currentIndex);
+          let className = "carousel-indicator-dot";
+          
+          if (user.id === currentSelectedUserId) {
+            className += " active";
+          } else if (distance <= 2) {
+            className += " nearby";
+          }
+          
+          return (
+            <div 
+              key={user.id} 
+              className={className}
+              onClick={() => handleSelectUser(user.id)}
+              title={user.name}
+            />
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="users-page">
       {}
       <header className="users-page-header">
         <h1 className="page-title">Users</h1>
+        
+        <div className="search-container">
+          <input 
+            type="text"
+            className="search-input"
+            placeholder="Search by name or ID..."
+            value={searchTerm}
+            onChange={handleSearch}
+          />
+          {isSearching && searchResults.length > 0 && (
+            <div className="search-results">
+              {searchResults.map(user => (
+                <div 
+                  key={user.id} 
+                  className="search-result-item"
+                  onClick={() => handleSelectSearchResult(user.id)}
+                >
+                  <img
+                    src={defaultUserIcon} 
+                    alt=""
+                    className="search-result-icon"
+                    style={{ border: `2px solid ${user.color || '#ccc'}` }}
+                  />
+                  <span className="search-result-name">{user.name}</span>
+                  <span className="search-result-id">{user.id.substring(0, 8)}...</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {isSearching && searchResults.length === 0 && (
+            <div className="search-results">
+              <div className="search-no-results">No users found</div>
+            </div>
+          )}
+        </div>
+        
         <button onClick={handleAddUser} className="add-user-btn" aria-label="Add new user">
           Add New User
         </button>
@@ -398,6 +537,7 @@ export default function Users({
             </ul>
             <div className="users-list-fade users-list-fade-right" style={{ opacity: rightFadeOpacity }} />
           </div>
+          {renderCarouselIndicators()}
         </div>
 
         <div className="user-details-panel">
