@@ -15,6 +15,20 @@ import deleteIcon from "../../assets/trash-icon.svg";
 import plusIcon from "../../assets/plus-icon.svg";
 import { v4 as uuidv4 } from "uuid";
 
+
+function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  const debounced = (...args: Parameters<F>) => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    timeout = setTimeout(() => func(...args), waitFor);
+  };
+
+  return debounced;
+}
+
 interface UsersProps {
   allUsers: UserType[];
   setAllUsers: React.Dispatch<React.SetStateAction<UserType[]>>;
@@ -31,37 +45,106 @@ export default function Users({
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editingUserData, setEditingUserData] = useState<UserType | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [topFadeOpacity, setTopFadeOpacity] = useState(0);
-  const [bottomFadeOpacity, setBottomFadeOpacity] = useState(1);
+  const [leftFadeOpacity, setLeftFadeOpacity] = useState(0);
+  const [rightFadeOpacity, setRightFadeOpacity] = useState(1);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const userListRef = useRef<HTMLUListElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
+  
   useEffect(() => {
     if (userListRef.current && currentSelectedUserId) {
       const selectedUserElement = userListRef.current.querySelector(
         `[data-userid="${currentSelectedUserId}"]`
       ) as HTMLLIElement;
+      
       if (selectedUserElement) {
-        selectedUserElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        const listBounds = userListRef.current.getBoundingClientRect();
+        const elementBounds = selectedUserElement.getBoundingClientRect();
+        const listCenter = listBounds.left + listBounds.width / 2;
+        const elementCenter = elementBounds.left + elementBounds.width / 2;
+
+        
+        if (Math.abs(listCenter - elementCenter) > 1) {
+          selectedUserElement.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        }
       }
     }
   }, [currentSelectedUserId, allUsers]);
 
+  
+  
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    const list = userListRef.current;
+
+    if (!container || !list) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      
+      if (list.scrollWidth > list.clientWidth) {
+        
+        e.preventDefault();
+        
+        list.scrollLeft += e.deltaY;
+      }
+    };
+
+    
+    container.addEventListener("wheel", handleWheel, { passive: false });
+
+    
+    return () => {
+      if (container) {
+        container.removeEventListener("wheel", handleWheel);
+      }
+    };
+  }, []); 
+
+  
   useEffect(() => {
     const listElement = userListRef.current;
     if (!listElement) return;
 
+    const stableSetCurrentUser = setCurrentSelectedUserId;
+
+    const updateSelectionOnScroll = () => {
+      const viewportCenter = listElement.getBoundingClientRect().left + listElement.clientWidth / 2;
+      let closestElementId: string | null = null;
+      let minDistance = Infinity;
+
+      Array.from(listElement.children).forEach(child => {
+        const element = child as HTMLLIElement;
+        if (!element.dataset.userid) return; 
+        const elementBounds = element.getBoundingClientRect();
+        const elementCenter = elementBounds.left + elementBounds.width / 2;
+        const distance = Math.abs(viewportCenter - elementCenter);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestElementId = element.dataset.userid || null;
+        }
+      });
+
+      if (closestElementId && closestElementId !== currentSelectedUserId) {
+        stableSetCurrentUser(closestElementId);
+      }
+    };
+
+    const debouncedUpdate = debounce(updateSelectionOnScroll, 150);
+
     const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = listElement;
-      const maxFadeScroll = 50; 
+      
+      const { scrollLeft, scrollWidth, clientWidth } = listElement;
+      const maxFadeScroll = 50;
+      const leftOpacity = Math.min(scrollLeft / maxFadeScroll, 1);
+      setLeftFadeOpacity(leftOpacity);
+      const scrollRight = scrollWidth - clientWidth - scrollLeft;
+      const rightOpacity = Math.max(0, Math.min(scrollRight / maxFadeScroll, 1));
+      setRightFadeOpacity(rightOpacity);
 
-      const topOpacity = Math.min(scrollTop / maxFadeScroll, 1);
-      setTopFadeOpacity(topOpacity);
-
-      const scrollBottom = scrollHeight - clientHeight - scrollTop;
-      const bottomOpacity = Math.max(0, Math.min(scrollBottom / maxFadeScroll, 1));
-      setBottomFadeOpacity(bottomOpacity);
+      debouncedUpdate();
     };
 
     listElement.addEventListener("scroll", handleScroll);
@@ -70,7 +153,7 @@ export default function Users({
     return () => {
       listElement.removeEventListener("scroll", handleScroll);
     };
-  }, [allUsers]); 
+  }, [allUsers, currentSelectedUserId, setCurrentSelectedUserId]);
 
   const handleSelectUser = (userId: string) => {
     if (editingIdx !== null) {
@@ -168,7 +251,7 @@ export default function Users({
 
   return (
     <div className="users-page">
-      {/* New Header Section */}
+      {}
       <header className="users-page-header">
         <h1 className="page-title">Users</h1>
         <button onClick={handleAddUser} className="add-user-btn" aria-label="Add new user">
@@ -176,12 +259,11 @@ export default function Users({
         </button>
       </header>
 
-      {/* Main Content Wrapper */}
+      {}
       <div className="users-main-content">
         <div className="users-list-panel">
-          {/* The users-list-header div and its content (h2 "Profiles") are removed from here */}
-          <div className="user-list-scroll-container"> {/* New wrapper for list and fades */}
-            <div className="users-list-fade users-list-fade-top" style={{ opacity: topFadeOpacity }} />
+          <div className="user-list-scroll-container" ref={scrollContainerRef}>
+            <div className="users-list-fade users-list-fade-left" style={{ opacity: leftFadeOpacity }} />
             <ul className="users-list" ref={userListRef}>
               {allUsers.map(user => (
                 <li
@@ -194,7 +276,7 @@ export default function Users({
                     src={defaultUserIcon} 
                     alt="User"
                     className="user-list-icon"
-                    style={{ border: `2px solid ${user.color || '#ccc'}` }}
+                    style={{ border: `3px solid ${user.color || '#ccc'}` }}
                   />
                   <span className="user-list-name">{user.name}</span>
                   {currentSelectedUserId === user.id && editingIdx === null && (
@@ -205,7 +287,7 @@ export default function Users({
                 </li>
               ))}
             </ul>
-            <div className="users-list-fade users-list-fade-bottom" style={{ opacity: bottomFadeOpacity }} />
+            <div className="users-list-fade users-list-fade-right" style={{ opacity: rightFadeOpacity }} />
           </div>
         </div>
 
@@ -215,7 +297,7 @@ export default function Users({
               {editingUserData ? (
                 <form onSubmit={handleSubmit} className="user-form" ref={formRef}>
                   <h3>{editingUserData.id === defaultUser.id || !allUsers.find(u=>u.id === editingUserData.id)?.submitted ? "Create User" : "Edit User"}</h3>
-                  {/* Form Fields */}
+                  {}
                   <div className="form-field">
                     <label htmlFor="name">Name:</label>
                     <input type="text" id="name" name="name" value={editingUserData.name} onChange={handleChange} required />
@@ -313,7 +395,7 @@ export default function Users({
             </div>
           )}
         </div>
-      </div> {/* End of users-main-content */}
+      </div> {}
 
       {showDeleteConfirm && (
         <div className="delete-confirm-overlay">
