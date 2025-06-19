@@ -4,7 +4,7 @@ import Navigation from "./components/common/Navigation/Navigation";
 import Home from "./pages/Home/Home";
 import DevicesPage from "./pages/Devices/Devices";
 import UsersPage from "./pages/Users/Users";
-import SessionPage from "./pages/Session/Session";
+import Session from "./pages/Session/Session";
 import Activities from "./pages/Activities/Activities";
 import lightIcon from "./assets/light-icon.svg";
 import darkIcon from "./assets/dark-icon.svg";
@@ -25,9 +25,20 @@ function AppContent() {
   const location = useLocation();
 
   const [users, setUsers] = useState<UserType[]>(initialUsersData);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(
-    initialUsersData.find(u => u.id === "User-123")?.id || initialUsersData[0]?.id || null
-  );
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(() => {
+    // First try to get from localStorage
+    const savedUserId = localStorage.getItem('selectedUserId');
+    
+    // If we have a saved ID and it exists in our users array, use it
+    if (savedUserId && initialUsersData.some(user => user.id === savedUserId)) {
+      return savedUserId;
+    }
+    
+    // Otherwise fall back to the default logic
+    return initialUsersData.find(u => u.id === "User-123")?.id || 
+           initialUsersData[0]?.id || 
+           null;
+  });
 
   const [devices, setDevices] = useState<Device[]>([]);
   const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
@@ -42,6 +53,13 @@ function AppContent() {
     };
     loadInitialData();
   }, []);
+
+  // Add an effect to save the selectedUserId to localStorage when it changes
+  useEffect(() => {
+    if (selectedUserId) {
+      localStorage.setItem('selectedUserId', selectedUserId);
+    }
+  }, [selectedUserId]);
 
   const connectedDeviceNames = devices
     .filter(device => device.status === "Connected")
@@ -145,7 +163,7 @@ function AppContent() {
             />
           } />
           <Route path="/session" element={
-            <SessionPage
+            <Session
               availableBoards={connectedDeviceNames}
               onViewChange={handleViewChange}
               onInitialBoardConsumed={handleInitialBoardConsumedInApp}
