@@ -215,10 +215,34 @@ interface SessionProps {
   onSelectUserInSession: (userId: string | null) => void;
 }
 
-const getMockVelocityData = () => {
-  const vCopX = Math.random() * 2 - 1; // Random value between -1 and 1
-  const vCopY = Math.random() * 2 - 1; // Random value between -1 and 1
-  return { vCopX, vCopY };
+let lastStabilityIndex = 5.0;
+const getStabilityIndexFromBackend = (): number => {
+  // Simulate a smoother change with a random walk.
+  const change = (Math.random() - 0.5) * 0.2; // small, centered random change
+  let newIndex = lastStabilityIndex + change;
+
+  // Clamp the value between 0 and 10
+  newIndex = Math.max(0, Math.min(10, newIndex));
+
+  lastStabilityIndex = newIndex;
+  return newIndex;
+};
+
+let lastVCopX = 0;
+let lastVCopY = 0;
+const getMockStabilityData = () => {
+  // Simulate a smoother change with a random walk.
+  const changeX = (Math.random() - 0.5) * 0.2;
+  let newVCopX = lastVCopX + changeX;
+  newVCopX = Math.max(-1, Math.min(1, newVCopX)); // Clamp between -1 and 1
+  lastVCopX = newVCopX;
+
+  const changeY = (Math.random() - 0.5) * 0.2;
+  let newVCopY = lastVCopY + changeY;
+  newVCopY = Math.max(-1, Math.min(1, newVCopY)); // Clamp between -1 and 1
+  lastVCopY = newVCopY;
+
+  return { vCopX: newVCopX, vCopY: newVCopY };
 };
 
 function Session({
@@ -296,7 +320,7 @@ function Session({
   const [vCopYCanvasSize, setVCopYCanvasSize] = useState({ width: 0, height: 0 }); 
 
   const [stabilityIndex, setStabilityIndex] = useState(0);
-  const MAX_STABILITY_INDEX = 1.5; // This would be the max value for the index
+  const MAX_STABILITY_INDEX = 10; // This would be the max value for the index
 
   const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(null);
   const [actualCopTrail, setActualCopTrail] = useState<Array<{ x: number; y: number; id: number; timestamp: number }>>([]);
@@ -1347,10 +1371,11 @@ function Session({
           }
 
           const newCopData = { x: newCOPx, y: newCOPy };
-          const { vCopX, vCopY } = getMockVelocityData();
+          const { vCopX, vCopY } = getMockStabilityData();
 
           const instability = Math.sqrt(vCopX**2 + vCopY**2);
-          const currentStabilityIndex = Math.max(0, MAX_STABILITY_INDEX - instability);
+          const maxInstability = Math.sqrt(2); // Max possible value for sqrt(vCopX^2 + vCopY^2) where vCopX, vCopY are in [-1, 1]
+          const currentStabilityIndex = Math.max(0, (1 - instability / maxInstability) * MAX_STABILITY_INDEX);
           setStabilityIndex(currentStabilityIndex);
 
           setCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.y]);
