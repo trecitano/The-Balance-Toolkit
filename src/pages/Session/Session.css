@@ -927,12 +927,7 @@
   flex: 1; 
 }
 
-.wbb-copx-stack {
-  display: flex;
-  flex-direction: column;
-  width: 20%; 
-  flex-shrink: 0;
-}
+
 
 .wbb-topdown-container {
   width: 100%;
@@ -996,6 +991,13 @@
   display: block;
 }
 
+.first-column-container {
+  display: flex;
+  flex-direction: column;
+  width: 20%; 
+  flex-shrink: 0;
+}
+
 .second-column-container {
   height: 100%; 
   width: 20%;
@@ -1004,6 +1006,11 @@
 .third-column-container {
   height: 100%; 
   width: 20%;
+}
+
+.four-column-container {
+  height: 100%; 
+  width: 40%;
 }
 
 
