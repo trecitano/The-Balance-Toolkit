@@ -82,6 +82,12 @@ interface SessionProps {
   onSelectUserInSession: (userId: string | null) => void;
 }
 
+const getMockVelocityData = () => {
+  const vCopX = Math.random() * 2 - 1; // Random value between -1 and 1
+  const vCopY = Math.random() * 2 - 1; // Random value between -1 and 1
+  return { vCopX, vCopY };
+};
+
 function Session({
   availableBoards,
   onViewChange,
@@ -1205,11 +1211,12 @@ function Session({
           }
 
           const newCopData = { x: newCOPx, y: newCOPy };
+          const { vCopX, vCopY } = getMockVelocityData();
 
           setCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.y]);
           setCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]);
-          setVCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]); 
-          setVCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.y]); 
+          setVCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), vCopX]);
+          setVCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), vCopY]);
 
           setActualCopTrail(currentTrail => {
             const now = Date.now();
