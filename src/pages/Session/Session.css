@@ -413,28 +413,26 @@
 }
 
 .board-list-item {
-  padding-top: clamp(6px, 0.5vw, 8px);
-  padding-bottom: clamp(6px, 0.5vw, 8px);
-  padding-right: clamp(8px, 0.8vw, 12px); 
-  
-  padding-left: calc(1.9em + 0.7vw - clamp(6px, 0.5vw, 8px)); 
+  padding: 8px 12px;
   cursor: pointer;
   border-radius: 4px;
   display: flex;
   align-items: center;
-  background-color: transparent;
-  border: none;
-  box-shadow: none;
-  color: #374151;
-  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  height: 36px; 
+  box-sizing: border-box;
   font-size: clamp(0.7rem, 0.8vw, 0.9rem);
+  font-weight: normal; 
+  color: #374151; 
 }
-
 
 .board-list-item.selected-item {
   background-color: #e0e7ff; 
   font-weight: 600; 
   color: #3730a3; 
+}
+
+.board-list-item:hover {
+  background-color: #f3f4f6; 
 }
 
 
@@ -449,35 +447,47 @@
   user-list-item primarily adds the gap for the color dot.
 */
 .user-list-item {
-  gap: 8px; 
-  
-  
-  padding-left: calc(1.9em + 0.7vw - 18px - clamp(6px, 0.5vw, 8px));
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  font-size: clamp(0.7rem, 1.3vw, 1.4rem); 
+  cursor: pointer;
+  border-radius: 4px;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  color: #374151;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  text-align: left;
+  justify-content: flex-start;
 }
 
-.user-list-item:hover {
-  background-color: #f3f4f6; 
-  box-shadow: none;          
-        
-}
-
-
-.user-list-item.selected-item {
-  background-color: #e0e7ff; 
-  font-weight: 600;
-  color: #3730a3;
-}
-
-.user-list-item.selected-item:hover {
-  background-color: #c7d2fe; 
-}
 
 .user-color-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  display: inline-block; 
-  flex-shrink: 0; 
+  display: inline-block;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.user-list-item:hover {
+  background-color: #f3f4f6;
+}
+
+.user-list-item.selected-item {
+  background-color: #e0e7ff;
+  font-weight: 600;
+  color: #3730a3;
+}
+
+.user-list-item.selected-item:hover {
+  background-color: #c7d2fe;
 }
 
 .go-to-devices-btn {
@@ -956,8 +966,8 @@
    
    
    
-  /* flex-grow: 1; */
-  /* flex-basis: 0; */
+  
+  
   min-height: 0; 
 }
 
@@ -1103,4 +1113,17 @@
 
 .copx-axis-label,
 .copy-axis-label {
+}
+
+.user-list-item:hover,
+.board-list-item:hover {
+  background-color: #f3f4f6;
+  box-shadow: none !important; 
+}
+
+
+.user-list-item.selected-item:hover,
+.board-list-item.selected-item:hover {
+  background-color: #c7d2fe;
+  box-shadow: none !important;
 }

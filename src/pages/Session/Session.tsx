@@ -57,10 +57,10 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 3;
 
-    // Draw background circle
+    
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = '#f3f4f6'; // Dark background
+    ctx.fillStyle = '#f3f4f6'; 
     ctx.fill();
 
     ctx.shadowColor = 'transparent';
@@ -69,7 +69,7 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
     ctx.shadowOffsetY = 0;
 
 
-    // Draw the ticks
+    
     const totalTicks = 20;
     const startAngle = Math.PI * 0.75;
     const endAngle = Math.PI * 2.25;
@@ -88,42 +88,42 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
       ctx.lineTo(radius, 0);
       ctx.lineWidth = radius * 0.1;
 
-      // Colors for stability: Low is red, high is green
+      
       if (ratio <= 0.3) {
-        ctx.strokeStyle = '#b71c1c'; // Red
+        ctx.strokeStyle = '#b71c1c'; 
       } else if (ratio <= 0.6) {
-        ctx.strokeStyle = '#ffc107'; // Yellow
+        ctx.strokeStyle = '#ffc107'; 
       } else {
-        ctx.strokeStyle = '#28a745'; // Green
+        ctx.strokeStyle = '#28a745'; 
       }
       
       ctx.stroke();
       ctx.restore();
     }
 
-    // Draw the needle
+    
     const valueRatio = Math.min(value / maxValue, 1);
     const needleAngle = startAngle + valueRatio * totalAngleRange;
     ctx.save();
     ctx.translate(centerX, centerY);
     
-    // Needle
+    
     ctx.rotate(needleAngle);
     ctx.beginPath();
     ctx.moveTo(-radius * 0.15, 0);
     ctx.lineTo(radius * 0.75, 0);
     ctx.lineWidth = Math.max(2, radius * 0.07);
-    ctx.strokeStyle = '#b71c1c'; // Bright red for needle
+    ctx.strokeStyle = '#b71c1c'; 
     ctx.stroke();
     ctx.restore();
 
-    // Center circle for needle
+    
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius * 0.1, 0, 2 * Math.PI);
-    ctx.fillStyle = '#990000'; // Darker red for center
+    ctx.fillStyle = '#990000'; 
     ctx.fill();
 
-    // Draw the stability value
+    
     ctx.fillStyle = 'black';
     ctx.font = `bold ${radius * 0.25}px Arial`;
     ctx.textAlign = 'center';
@@ -217,11 +217,11 @@ interface SessionProps {
 
 let lastStabilityIndex = 5.0;
 const getStabilityIndexFromBackend = (): number => {
-  // Simulate a smoother change with a random walk.
-  const change = (Math.random() - 0.5) * 0.2; // small, centered random change
+  
+  const change = (Math.random() - 0.5) * 0.2; 
   let newIndex = lastStabilityIndex + change;
 
-  // Clamp the value between 0 and 10
+  
   newIndex = Math.max(0, Math.min(10, newIndex));
 
   lastStabilityIndex = newIndex;
@@ -231,15 +231,15 @@ const getStabilityIndexFromBackend = (): number => {
 let lastVCopX = 0;
 let lastVCopY = 0;
 const getMockStabilityData = () => {
-  // Simulate a smoother change with a random walk.
+  
   const changeX = (Math.random() - 0.5) * 0.2;
   let newVCopX = lastVCopX + changeX;
-  newVCopX = Math.max(-1, Math.min(1, newVCopX)); // Clamp between -1 and 1
+  newVCopX = Math.max(-1, Math.min(1, newVCopX)); 
   lastVCopX = newVCopX;
 
   const changeY = (Math.random() - 0.5) * 0.2;
   let newVCopY = lastVCopY + changeY;
-  newVCopY = Math.max(-1, Math.min(1, newVCopY)); // Clamp between -1 and 1
+  newVCopY = Math.max(-1, Math.min(1, newVCopY)); 
   lastVCopY = newVCopY;
 
   return { vCopX: newVCopX, vCopY: newVCopY };
@@ -320,7 +320,7 @@ function Session({
   const [vCopYCanvasSize, setVCopYCanvasSize] = useState({ width: 0, height: 0 }); 
 
   const [stabilityIndex, setStabilityIndex] = useState(0);
-  const MAX_STABILITY_INDEX = 10; // This would be the max value for the index
+  const MAX_STABILITY_INDEX = 10; 
 
   const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(null);
   const [actualCopTrail, setActualCopTrail] = useState<Array<{ x: number; y: number; id: number; timestamp: number }>>([]);
@@ -1374,7 +1374,7 @@ function Session({
           const { vCopX, vCopY } = getMockStabilityData();
 
           const instability = Math.sqrt(vCopX**2 + vCopY**2);
-          const maxInstability = Math.sqrt(2); // Max possible value for sqrt(vCopX^2 + vCopY^2) where vCopX, vCopY are in [-1, 1]
+          const maxInstability = Math.sqrt(2); 
           const currentStabilityIndex = Math.max(0, (1 - instability / maxInstability) * MAX_STABILITY_INDEX);
           setStabilityIndex(currentStabilityIndex);
 
@@ -1634,8 +1634,8 @@ function Session({
           </div>
 
           <div className="toggle-label-wrapper user-control-wrapper">
-            <label className="toggle-label">{selectedUserName === "Select User" ? "User" : "User"}</label>
-            <div className="user-selector-wrapper"> 
+            <span className="toggle-label">User</span>
+            <div className="board-selector-wrapper">
               <button
                 ref={userToggleRef}
                 className="board-selector-toggle session-setting-toggle"
@@ -1653,7 +1653,7 @@ function Session({
                 <span className="board-selector-name">{selectedUserName}</span>
               </button>
               {showUserDropdown && !recording && (
-                <div ref={userDropdownRef} className="board-selector-dropdown"> 
+                <div ref={userDropdownRef} className="board-selector-dropdown">
                   {usersForDropdown.length > 0 ? (
                     <ul className="board-list">
                       {usersForDropdown.map((user) => (
