@@ -1927,7 +1927,10 @@ function Session({
         </div>
         <div className="four-column-container">
           <div className="four-column-first-row-container">
-            <StabilityGauge value={stabilityIndex} maxValue={MAX_STABILITY_INDEX} />
+            <div className="gauge-wrapper">
+              <div className="gauge-title">Stability Index</div>
+              <StabilityGauge value={stabilityIndex} maxValue={MAX_STABILITY_INDEX} />
+            </div>
           </div>
         </div>
       </main>
