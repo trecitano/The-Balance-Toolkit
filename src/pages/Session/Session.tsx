@@ -19,6 +19,139 @@ interface SessionUser {
   color: string;
 }
 
+interface StabilityGaugeProps {
+  value: number;
+  maxValue: number;
+}
+
+const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const rect = container.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const width = rect.width;
+    const height = rect.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 2 * 0.85;
+
+    ctx.clearRect(0, 0, width, height);
+
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+    ctx.shadowBlur = 3;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 3;
+
+    // Draw background circle
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.fillStyle = '#f3f4f6'; // Dark background
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+
+    // Draw the ticks
+    const totalTicks = 20;
+    const startAngle = Math.PI * 0.75;
+    const endAngle = Math.PI * 2.25;
+    const totalAngleRange = endAngle - startAngle;
+
+    for (let i = 0; i <= totalTicks; i++) {
+      const ratio = i / totalTicks;
+      const angle = startAngle + ratio * totalAngleRange;
+      
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(angle);
+      
+      ctx.beginPath();
+      ctx.moveTo(radius * 0.8, 0);
+      ctx.lineTo(radius, 0);
+      ctx.lineWidth = radius * 0.1;
+
+      // Colors for stability: Low is red, high is green
+      if (ratio <= 0.3) {
+        ctx.strokeStyle = '#b71c1c'; // Red
+      } else if (ratio <= 0.6) {
+        ctx.strokeStyle = '#ffc107'; // Yellow
+      } else {
+        ctx.strokeStyle = '#28a745'; // Green
+      }
+      
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Draw the needle
+    const valueRatio = Math.min(value / maxValue, 1);
+    const needleAngle = startAngle + valueRatio * totalAngleRange;
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    
+    // Needle
+    ctx.rotate(needleAngle);
+    ctx.beginPath();
+    ctx.moveTo(-radius * 0.15, 0);
+    ctx.lineTo(radius * 0.75, 0);
+    ctx.lineWidth = Math.max(2, radius * 0.07);
+    ctx.strokeStyle = '#b71c1c'; // Bright red for needle
+    ctx.stroke();
+    ctx.restore();
+
+    // Center circle for needle
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius * 0.1, 0, 2 * Math.PI);
+    ctx.fillStyle = '#990000'; // Darker red for center
+    ctx.fill();
+
+    // Draw the stability value
+    ctx.fillStyle = 'black';
+    ctx.font = `bold ${radius * 0.25}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(value.toFixed(2), centerX, centerY + radius * 0.5);
+  }, [value, maxValue]);
+
+  useEffect(() => {
+    drawCanvas();
+  }, [drawCanvas]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const resizeObserver = new ResizeObserver(() => {
+      drawCanvas();
+    });
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [drawCanvas]);
+
+  return (
+    <div ref={containerRef} className="stability-gauge-container">
+      <canvas ref={canvasRef} className="stability-gauge-canvas"></canvas>
+    </div>
+  );
+};
+
 const DEFAULT_SAVE_LOCATION = "Documents\\TheBalanceToolkit";
 const COPY_GRAPH_MAX_POINTS = 200;
 
@@ -161,6 +294,9 @@ function Session({
   const [copXCanvasSize, setCopXCanvasSize] = useState({ width: 0, height: 0 });
   const [vCopXCanvasSize, setVCopXCanvasSize] = useState({ width: 0, height: 0 }); 
   const [vCopYCanvasSize, setVCopYCanvasSize] = useState({ width: 0, height: 0 }); 
+
+  const [stabilityIndex, setStabilityIndex] = useState(0);
+  const MAX_STABILITY_INDEX = 1.5; // This would be the max value for the index
 
   const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(null);
   const [actualCopTrail, setActualCopTrail] = useState<Array<{ x: number; y: number; id: number; timestamp: number }>>([]);
@@ -1213,6 +1349,10 @@ function Session({
           const newCopData = { x: newCOPx, y: newCOPy };
           const { vCopX, vCopY } = getMockVelocityData();
 
+          const instability = Math.sqrt(vCopX**2 + vCopY**2);
+          const currentStabilityIndex = Math.max(0, MAX_STABILITY_INDEX - instability);
+          setStabilityIndex(currentStabilityIndex);
+
           setCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.y]);
           setCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]);
           setVCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), vCopX]);
@@ -1234,6 +1374,7 @@ function Session({
       return () => clearInterval(intervalId);
     } else {
       actualCopVelocityRef.current = { x: 0, y: 0 };
+      setStabilityIndex(0);
     }
   }, [recording]);
 
@@ -1785,9 +1926,9 @@ function Session({
             </div>
         </div>
         <div className="four-column-container">
-          {/* <div className="vcopy-graph-container" ref={vCopYGraphContainerRef}>
-              <canvas ref={vCopYCanvasRef} className="vcopy-graph-canvas"></canvas>
-            </div> */}
+          <div className="four-column-first-row-container">
+            <StabilityGauge value={stabilityIndex} maxValue={MAX_STABILITY_INDEX} />
+          </div>
         </div>
       </main>
 
