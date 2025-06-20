@@ -51,13 +51,15 @@ export default function Users({
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResults, setSearchResults] = useState<UserType[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [showColorDropdown, setShowColorDropdown] = useState<boolean>(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const userListRef = useRef<HTMLUListElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const isAutoScrolling = useRef<boolean>(false);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
 
-  
+  const fixedColors = ["#e55d82", "#409edb", "#e8bd00", "#894c2f", "#dd2020", "#2a2a2a", "#989898", "#9bbc0f"];
 
   useEffect(() => {
     const adjustCardWidths = () => {
@@ -461,6 +463,31 @@ export default function Users({
     );
   };
 
+  const handleColorClick = (e: React.MouseEvent) => {
+    
+    if (e.target === e.currentTarget) {
+      e.preventDefault();
+      setShowColorDropdown(prev => !prev);
+    }
+  };
+
+  const selectFixedColor = (color: string) => {
+    if (!editingUserData) return;
+    setEditingUserData(prev => prev ? { ...prev, color } : null);
+    setShowColorDropdown(false);
+  };
+
+  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!editingUserData) return;
+    const { name, value } = e.target;
+    
+    
+    setEditingUserData(prev => prev ? { ...prev, [name]: value } : null);
+    
+    
+    setShowColorDropdown(false);
+  };
+
   return (
     <div className="users-page">
       {}
@@ -527,6 +554,10 @@ export default function Users({
                     style={{ border: `3px solid ${user.color || '#ccc'}` }}
                   />
                   <span className="user-carousel-name">{user.name}</span>
+                  <span className="user-carousel-date">
+                    <span className="user-carousel-date-label">Updated</span>
+                    <span className="user-carousel-date-value">{new Date(user.lastUpdatedOn).toLocaleDateString()}</span>
+                  </span>
                   {currentSelectedUserId === user.id && editingIdx === null && (
                      <button onClick={(e) => { e.stopPropagation(); handleEditUser(user.id);}} className="user-action-btn edit-btn" aria-label="Edit user">
                         <img src={editIcon} alt="Edit" />
@@ -553,7 +584,35 @@ export default function Users({
                   </div>
                   <div className="form-field">
                     <label htmlFor="color">Color:</label>
-                    <input type="color" id="color" name="color" value={editingUserData.color || '#397aac'} onChange={handleChange} />
+                    <div className="color-picker-container" ref={colorPickerRef}>
+                      <input 
+                        type="color" 
+                        id="color" 
+                        name="color" 
+                        value={editingUserData.color || '#397aac'} 
+                        onChange={handleColorChange}
+                      />
+                      <div 
+                        className="color-swatch-trigger"
+                        onClick={(e) => handleColorClick(e)}
+                        style={{ backgroundColor: editingUserData.color || '#397aac' }}
+                      ></div>
+                      {showColorDropdown && (
+                        <div className="recent-colors-dropdown">
+                          <div className="recent-colors">
+                            {fixedColors.map((color, index) => (
+                              <div 
+                                key={index}
+                                className="recent-color-swatch"
+                                style={{ backgroundColor: color }}
+                                onClick={() => selectFixedColor(color)}
+                                title={color}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="form-field">
                     <label htmlFor="age">Age:</label>
@@ -582,11 +641,13 @@ export default function Users({
                   </div>
                   <div className="form-field">
                     <label htmlFor="weight">Weight:</label>
-                    <input type="number" id="weight" name="weight" value={editingUserData.weight} onChange={handleChange} />
-                    <select name="metric" value={editingUserData.metric} onChange={handleChange} className="metric-select">
-                      <option value="kg">kg</option>
-                      <option value="lb">lb</option>
-                    </select>
+                    <div className="user-weight-row">
+                      <input type="number" id="weight" name="weight" value={editingUserData.weight} onChange={handleChange} />
+                      <select name="metric" value={editingUserData.metric} onChange={handleChange} className="">
+                        <option value="kg">kg</option>
+                        <option value="lb">lb</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="form-field">
                     <label htmlFor="handedness">Handedness:</label>
