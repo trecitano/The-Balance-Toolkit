@@ -283,7 +283,20 @@
 .form-field label {
   font-weight: 500;
   color: #555;
-  font-size: clamp(0.75em, 0.8vw, 0.9em); 
+  font-size: clamp(0.75em, 0.8vw, 0.9em);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-field-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #397aac;
+  flex-shrink: 0;
 }
 
 .form-field input[type="text"],
@@ -558,6 +571,16 @@
 }
 
 .user-info-grid p {
+  display: flex;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.user-info-grid p strong {
+  margin-right: 5px;
+}
+
+.user-info-grid p {
   margin: 0;
   padding: 0.6vw; 
   background-color: #ececec; 
@@ -807,4 +830,12 @@
   font-style: italic;
   width: 100%;
   box-sizing: border-box;
+}
+
+.info-grid-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  vertical-align: middle;
+  display: inline-block;
 }

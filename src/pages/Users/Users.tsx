@@ -2,7 +2,7 @@
  * @file User.tsx
  * @description User management page for the Balance Toolkit App.
  * Allows creating, editing, deleting, and viewing user profiles.
- * Each user has fields for ID, name, gender, age, height, handedness, weight, and color.
+ * Each user has fields for ID, name, sex, age, height, handedness, weight, and color.
  * Includes UI for scrolling, editing, and selecting users.
  */
 
@@ -14,7 +14,13 @@ import editIcon from "../../assets/edit-icon.svg";
 import deleteIcon from "../../assets/trash-icon.svg";
 import plusIcon from "../../assets/plus-icon.svg";
 import { v4 as uuidv4 } from "uuid";
-
+import personIcon from "../../assets/user-icon.svg";
+import paletteIcon from "../../assets/palette-icon.svg";
+import calendarIcon from "../../assets/calendar-icon.svg";
+import sexIcon from "../../assets/sex-icon.svg";
+import heightIcon from "../../assets/measure-icon.svg";
+import weightIcon from "../../assets/weight-icon.svg";
+import handIcon from "../../assets/hand-icon.svg";
 
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   let timeout: ReturnType<typeof setTimeout> | null = null;
@@ -579,11 +585,17 @@ export default function Users({
                   <h3>{editingUserData.id === defaultUser.id || !allUsers.find(u=>u.id === editingUserData.id)?.submitted ? "Create User" : "Edit User"}</h3>
                   {}
                   <div className="form-field">
-                    <label htmlFor="name">Name:</label>
+                    <label htmlFor="name">
+                      <img src={personIcon} alt="" className="form-field-icon" />
+                      Name:
+                    </label>
                     <input type="text" id="name" name="name" value={editingUserData.name} onChange={handleChange} required />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="color">Color:</label>
+                    <label htmlFor="color">
+                      <img src={paletteIcon} alt="" className="form-field-icon" />
+                      Color:
+                    </label>
                     <div className="color-picker-container" ref={colorPickerRef}>
                       <input 
                         type="color" 
@@ -615,11 +627,17 @@ export default function Users({
                     </div>
                   </div>
                   <div className="form-field">
-                    <label htmlFor="age">Age:</label>
+                    <label htmlFor="age">
+                      <img src={calendarIcon} alt="" className="form-field-icon" />
+                      Age:
+                    </label>
                     <input type="number" id="age" name="age" value={editingUserData.age} onChange={handleChange} />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="gender">Gender:</label>
+                    <label htmlFor="gender">
+                      <img src={sexIcon} alt="" className="form-field-icon" />
+                      Gender:
+                    </label>
                     <select id="gender" name="gender" value={editingUserData.gender} onChange={handleChange}>
                       <option value="">Select...</option>
                       <option value="Male">Male</option>
@@ -631,26 +649,38 @@ export default function Users({
                   </div>
                   {editingUserData.gender === "Other" && (
                     <div className="form-field">
-                      <label htmlFor="customGender">Specify Gender:</label>
+                      <label htmlFor="customGender">
+                        <img src={sexIcon} alt="" className="form-field-icon" />
+                        Specify Gender:
+                      </label>
                       <input type="text" id="customGender" name="customGender" value={editingUserData.customGender} onChange={handleChange} />
                     </div>
                   )}
                   <div className="form-field">
-                    <label htmlFor="height">Height (cm):</label>
+                    <label htmlFor="height">
+                      <img src={heightIcon} alt="" className="form-field-icon" />
+                      Height (cm):
+                    </label>
                     <input type="number" id="height" name="height" value={editingUserData.height} onChange={handleChange} />
                   </div>
                   <div className="form-field">
-                    <label htmlFor="weight">Weight:</label>
+                    <label htmlFor="weight">
+                      <img src={weightIcon} alt="" className="form-field-icon" />
+                      Weight:
+                    </label>
                     <div className="user-weight-row">
                       <input type="number" id="weight" name="weight" value={editingUserData.weight} onChange={handleChange} />
-                      <select name="metric" value={editingUserData.metric} onChange={handleChange} className="">
+                      <select name="metric" value={editingUserData.metric} onChange={handleChange} className="metric-select">
                         <option value="kg">kg</option>
                         <option value="lb">lb</option>
                       </select>
                     </div>
                   </div>
                   <div className="form-field">
-                    <label htmlFor="handedness">Handedness:</label>
+                    <label htmlFor="handedness">
+                      <img src={handIcon} alt="" className="form-field-icon" />
+                      Handedness:
+                    </label>
                     <select id="handedness" name="handedness" value={editingUserData.handedness} onChange={handleChange}>
                       <option value="right">Right</option>
                       <option value="left">Left</option>
@@ -686,14 +716,38 @@ export default function Users({
                       </div>
                   </div>
                   <div className="user-info-grid">
-                      <p><strong>Age:</strong> {displayUser.age || "N/A"}</p>
-                      <p><strong>Gender:</strong> {displayUser.gender === "Other" ? displayUser.customGender : displayUser.gender || "N/A"}</p>
-                      <p><strong>Height:</strong> {displayUser.height ? `${displayUser.height} cm` : "N/A"}</p>
-                      <p><strong>Weight:</strong> {displayUser.weight ? `${displayUser.weight} ${displayUser.metric}` : "N/A"}</p>
-                      <p><strong>Handedness:</strong> {displayUser.handedness || "N/A"}</p>
-                      <p><strong>User ID:</strong> {displayUser.id}</p>
-                      <p><strong>Created:</strong> {new Date(displayUser.createdOn).toLocaleDateString()}</p>
-                      <p><strong>Last Updated:</strong> {new Date(displayUser.lastUpdatedOn).toLocaleDateString()}</p>
+                      <p>
+                        <img src={calendarIcon} alt="" className="info-grid-icon" />
+                        <strong>Age:</strong> {displayUser.age || "N/A"}
+                      </p>
+                      <p>
+                        <img src={sexIcon} alt="" className="info-grid-icon" />
+                        <strong>Gender:</strong> {displayUser.gender === "Other" ? displayUser.customGender : displayUser.gender || "N/A"}
+                      </p>
+                      <p>
+                        <img src={heightIcon} alt="" className="info-grid-icon" />
+                        <strong>Height:</strong> {displayUser.height ? `${displayUser.height} cm` : "N/A"}
+                      </p>
+                      <p>
+                        <img src={weightIcon} alt="" className="info-grid-icon" />
+                        <strong>Weight:</strong> {displayUser.weight ? `${displayUser.weight} ${displayUser.metric}` : "N/A"}
+                      </p>
+                      <p>
+                        <img src={handIcon} alt="" className="info-grid-icon" />
+                        <strong>Handedness:</strong> {displayUser.handedness || "N/A"}
+                      </p>
+                      <p>
+                        <img src={personIcon} alt="" className="info-grid-icon" />
+                        <strong>User ID:</strong> {displayUser.id}
+                      </p>
+                      <p>
+                        <img src={calendarIcon} alt="" className="info-grid-icon" />
+                        <strong>Created:</strong> {new Date(displayUser.createdOn).toLocaleDateString()}
+                      </p>
+                      <p>
+                        <img src={calendarIcon} alt="" className="info-grid-icon" />
+                        <strong>Last Updated:</strong> {new Date(displayUser.lastUpdatedOn).toLocaleDateString()}
+                      </p>
                   </div>
                 </div>
               )}
