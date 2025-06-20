@@ -582,8 +582,29 @@ export default function Users({
             <>
               {editingUserData ? (
                 <form onSubmit={handleSubmit} className="user-form" ref={formRef}>
-                  <h3>{editingUserData.id === defaultUser.id || !allUsers.find(u=>u.id === editingUserData.id)?.submitted ? "Create User" : "Edit User"}</h3>
-                  {}
+                  <div className="user-form-header">
+                    <img 
+                      src={defaultUserIcon} 
+                      alt="User" 
+                      className="user-display-icon" 
+                      style={{ borderColor: editingUserData.color || '#ccc' }}
+                    />
+                    <h3>{editingUserData.id === defaultUser.id || !allUsers.find(u=>u.id === editingUserData.id)?.submitted ? "Create User" : "Edit User"}</h3>
+                    <div className="user-form-actions">
+                      <button type="submit" className="save-btn">
+                        Save
+                      </button>
+                      <button type="button" onClick={handleCancelEdit} className="cancel-btn">
+                        Cancel
+                      </button>
+                      {editingUserData.id !== defaultUser.id && allUsers.find(u=>u.id === editingUserData.id)?.submitted && (
+                        <button type="button" onClick={() => setShowDeleteConfirm(editingUserData.id)} className="delete-btn-form">
+                          <img src={deleteIcon} alt="Delete" /> Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
                   <div className="form-field">
                     <label htmlFor="name">
                       <img src={personIcon} alt="" className="form-field-icon" />
@@ -591,6 +612,74 @@ export default function Users({
                     </label>
                     <input type="text" id="name" name="name" value={editingUserData.name} onChange={handleChange} required />
                   </div>
+                  
+                  <div className="form-field">
+                    <label htmlFor="age">
+                      <img src={calendarIcon} alt="" className="form-field-icon" />
+                      Age:
+                    </label>
+                    <input type="number" id="age" name="age" value={editingUserData.age} onChange={handleChange} />
+                  </div>
+                  
+                  <div className="form-field">
+                    <label htmlFor="gender">
+                      <img src={sexIcon} alt="" className="form-field-icon" />
+                      Gender:
+                    </label>
+                    <select id="gender" name="gender" value={editingUserData.gender} onChange={handleChange}>
+                      <option value="">Select...</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Non-binary">Non-binary</option>
+                      <option value="Other">Other</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                  </div>
+                  
+                  {editingUserData.gender === "Other" ? (
+                    <div className="form-field">
+                      <label htmlFor="customGender">
+                        <img src={sexIcon} alt="" className="form-field-icon" />
+                        Specify Gender:
+                      </label>
+                      <input type="text" id="customGender" name="customGender" value={editingUserData.customGender} onChange={handleChange} />
+                    </div>
+                  ) : (
+                    <div className="form-field">
+                      <label htmlFor="height">
+                        <img src={heightIcon} alt="" className="form-field-icon" />
+                        Height (cm):
+                      </label>
+                      <input type="number" id="height" name="height" value={editingUserData.height} onChange={handleChange} />
+                    </div>
+                  )}
+                  
+                  <div className="form-field">
+                    <label htmlFor="weight">
+                      <img src={weightIcon} alt="" className="form-field-icon" />
+                      Weight:
+                    </label>
+                    <div className="user-weight-row">
+                      <input type="number" id="weight" name="weight" value={editingUserData.weight} onChange={handleChange} />
+                      <select name="metric" value={editingUserData.metric} onChange={handleChange} className="metric-select">
+                        <option value="kg">kg</option>
+                        <option value="lb">lb</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="form-field">
+                    <label htmlFor="handedness">
+                      <img src={handIcon} alt="" className="form-field-icon" />
+                      Handedness:
+                    </label>
+                    <select id="handedness" name="handedness" value={editingUserData.handedness} onChange={handleChange}>
+                      <option value="right">Right</option>
+                      <option value="left">Left</option>
+                      <option value="ambidextrous">Ambidextrous</option>
+                    </select>
+                  </div>
+                  
                   <div className="form-field">
                     <label htmlFor="color">
                       <img src={paletteIcon} alt="" className="form-field-icon" />
@@ -626,75 +715,19 @@ export default function Users({
                       )}
                     </div>
                   </div>
-                  <div className="form-field">
-                    <label htmlFor="age">
-                      <img src={calendarIcon} alt="" className="form-field-icon" />
-                      Age:
-                    </label>
-                    <input type="number" id="age" name="age" value={editingUserData.age} onChange={handleChange} />
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor="gender">
-                      <img src={sexIcon} alt="" className="form-field-icon" />
-                      Gender:
-                    </label>
-                    <select id="gender" name="gender" value={editingUserData.gender} onChange={handleChange}>
-                      <option value="">Select...</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Non-binary">Non-binary</option>
-                      <option value="Other">Other</option>
-                      <option value="Prefer not to say">Prefer not to say</option>
-                    </select>
-                  </div>
+                  
                   {editingUserData.gender === "Other" && (
                     <div className="form-field">
-                      <label htmlFor="customGender">
-                        <img src={sexIcon} alt="" className="form-field-icon" />
-                        Specify Gender:
+                      <label htmlFor="height">
+                        <img src={heightIcon} alt="" className="form-field-icon" />
+                        Height (cm):
                       </label>
-                      <input type="text" id="customGender" name="customGender" value={editingUserData.customGender} onChange={handleChange} />
+                      <input type="number" id="height" name="height" value={editingUserData.height} onChange={handleChange} />
                     </div>
                   )}
-                  <div className="form-field">
-                    <label htmlFor="height">
-                      <img src={heightIcon} alt="" className="form-field-icon" />
-                      Height (cm):
-                    </label>
-                    <input type="number" id="height" name="height" value={editingUserData.height} onChange={handleChange} />
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor="weight">
-                      <img src={weightIcon} alt="" className="form-field-icon" />
-                      Weight:
-                    </label>
-                    <div className="user-weight-row">
-                      <input type="number" id="weight" name="weight" value={editingUserData.weight} onChange={handleChange} />
-                      <select name="metric" value={editingUserData.metric} onChange={handleChange} className="metric-select">
-                        <option value="kg">kg</option>
-                        <option value="lb">lb</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor="handedness">
-                      <img src={handIcon} alt="" className="form-field-icon" />
-                      Handedness:
-                    </label>
-                    <select id="handedness" name="handedness" value={editingUserData.handedness} onChange={handleChange}>
-                      <option value="right">Right</option>
-                      <option value="left">Left</option>
-                      <option value="ambidextrous">Ambidextrous</option>
-                    </select>
-                  </div>
                   
-                  <div className="form-actions">
-                    <button type="submit" className="save-btn">Save</button>
-                    <button type="button" onClick={handleCancelEdit} className="cancel-btn">Cancel</button>
-                    {editingUserData.id !== defaultUser.id && allUsers.find(u=>u.id === editingUserData.id)?.submitted && (
-                       <button type="button" onClick={() => setShowDeleteConfirm(editingUserData.id)} className="delete-btn-form">Delete User</button>
-                    )}
-                  </div>
+                  {}
+                  <div className="form-actions"></div>
                 </form>
               ) : (
                 <div className="user-display">
@@ -705,49 +738,103 @@ export default function Users({
                           className="user-display-icon" 
                           style={{ borderColor: displayUser.color || '#ccc' }}
                       />
-                      <h2>{displayUser.name}</h2>
+                      <div className="user-header-info">
+                          <h2>{displayUser.name}</h2>
+                          <div className="user-metadata">
+                              <span className="metadata-item">
+                                  <span className="metadata-label">ID:</span>
+                                  <span className="metadata-value">{displayUser.id.substring(0, 10)}...</span>
+                              </span>
+                              <span className="metadata-item">
+                                  <span className="metadata-label">Created:</span>
+                                  <span className="metadata-value">{new Date(displayUser.createdOn).toLocaleDateString()}</span>
+                              </span>
+                              <span className="metadata-item">
+                                  <span className="metadata-label">Updated:</span>
+                                  <span className="metadata-value">{new Date(displayUser.lastUpdatedOn).toLocaleDateString()}</span>
+                              </span>
+                          </div>
+                      </div>
                       <div className="user-display-actions">
                           <button onClick={() => handleEditUser(displayUser.id)} className="edit-btn-display" aria-label="Edit user">
                               <img src={editIcon} alt="Edit" /> Edit
                           </button>
-                           <button onClick={() => setShowDeleteConfirm(displayUser.id)} className="delete-btn-display" aria-label="Delete user">
+                          <button onClick={() => setShowDeleteConfirm(displayUser.id)} className="delete-btn-display" aria-label="Delete user">
                               <img src={deleteIcon} alt="Delete" /> Delete
                           </button>
                       </div>
                   </div>
                   <div className="user-info-grid">
-                      <p>
-                        <img src={calendarIcon} alt="" className="info-grid-icon" />
-                        <strong>Age:</strong> {displayUser.age || "N/A"}
-                      </p>
-                      <p>
-                        <img src={sexIcon} alt="" className="info-grid-icon" />
-                        <strong>Gender:</strong> {displayUser.gender === "Other" ? displayUser.customGender : displayUser.gender || "N/A"}
-                      </p>
-                      <p>
-                        <img src={heightIcon} alt="" className="info-grid-icon" />
-                        <strong>Height:</strong> {displayUser.height ? `${displayUser.height} cm` : "N/A"}
-                      </p>
-                      <p>
-                        <img src={weightIcon} alt="" className="info-grid-icon" />
-                        <strong>Weight:</strong> {displayUser.weight ? `${displayUser.weight} ${displayUser.metric}` : "N/A"}
-                      </p>
-                      <p>
-                        <img src={handIcon} alt="" className="info-grid-icon" />
-                        <strong>Handedness:</strong> {displayUser.handedness || "N/A"}
-                      </p>
-                      <p>
+                    <div className="form-field">
+                      <label>
                         <img src={personIcon} alt="" className="info-grid-icon" />
-                        <strong>User ID:</strong> {displayUser.id}
-                      </p>
-                      <p>
+                        Name:
+                      </label>
+                      <div className="display-value">{displayUser.name}</div>
+                    </div>
+                    
+                    <div className="form-field">
+                      <label>
                         <img src={calendarIcon} alt="" className="info-grid-icon" />
-                        <strong>Created:</strong> {new Date(displayUser.createdOn).toLocaleDateString()}
-                      </p>
-                      <p>
-                        <img src={calendarIcon} alt="" className="info-grid-icon" />
-                        <strong>Last Updated:</strong> {new Date(displayUser.lastUpdatedOn).toLocaleDateString()}
-                      </p>
+                        Age:
+                      </label>
+                      <div className="display-value">{displayUser.age || "N/A"}</div>
+                    </div>
+                    
+                    <div className="form-field">
+                      <label>
+                        <img src={sexIcon} alt="" className="info-grid-icon" />
+                        Gender:
+                      </label>
+                      <div className="display-value">{displayUser.gender === "Other" ? displayUser.customGender : displayUser.gender || "N/A"}</div>
+                    </div>
+                    
+                    {displayUser.gender !== "Other" && (
+                      <div className="form-field">
+                        <label>
+                          <img src={heightIcon} alt="" className="info-grid-icon" />
+                          Height (cm):
+                        </label>
+                        <div className="display-value">{displayUser.height || "N/A"}</div>
+                      </div>
+                    )}
+                    
+                    <div className="form-field">
+                      <label>
+                        <img src={weightIcon} alt="" className="info-grid-icon" />
+                        Weight:
+                      </label>
+                      <div className="display-value">{displayUser.weight ? `${displayUser.weight} ${displayUser.metric}` : "N/A"}</div>
+                    </div>
+                    
+                    <div className="form-field">
+                      <label>
+                        <img src={handIcon} alt="" className="info-grid-icon" />
+                        Handedness:
+                      </label>
+                      <div className="display-value">{displayUser.handedness || "N/A"}</div>
+                    </div>
+                    
+                    <div className="form-field">
+                      <label>
+                        <img src={paletteIcon} alt="" className="info-grid-icon" />
+                        Color:
+                      </label>
+                      <div className="color-display">
+                        <div className="color-swatch" style={{ backgroundColor: displayUser.color || '#ccc' }}></div>
+                        <span>{displayUser.color || "N/A"}</span>
+                      </div>
+                    </div>
+                    
+                    {displayUser.gender === "Other" && (
+                      <div className="form-field">
+                        <label>
+                          <img src={heightIcon} alt="" className="info-grid-icon" />
+                          Height (cm):
+                        </label>
+                        <div className="display-value">{displayUser.height || "N/A"}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
