@@ -710,17 +710,30 @@ export default function Users({
                   <div className="form-field">
                     <label>
                       <img src={heightIcon} alt="" className="info-grid-icon" />
-                      Height (cm):
+                      Height:
                     </label>
                     {editingUserData ? (
-                      <input 
-                        type="number" 
-                        name="height" 
-                        value={editingUserData.height} 
-                        onChange={handleChange} 
-                      />
+                      <div className="user-weight-row">
+                        <input 
+                          type="number" 
+                          name="height" 
+                          value={editingUserData.height} 
+                          onChange={handleChange} 
+                        />
+                        <select 
+                          name="heightMetric" 
+                          value={editingUserData.heightMetric || "cm"} 
+                          onChange={handleChange} 
+                          className="metric-select"
+                        >
+                          <option value="cm">cm</option>
+                          <option value="in">in</option>
+                        </select>
+                      </div>
                     ) : (
-                      <div className="display-value">{displayUser.height || "N/A"}</div>
+                      <div className="display-value">
+                        {displayUser.height ? `${displayUser.height} ${displayUser.heightMetric || "cm"}` : "N/A"}
+                      </div>
                     )}
                   </div>
                 )}
@@ -823,7 +836,7 @@ export default function Users({
                   <div className="form-field">
                     <label>
                       <img src={heightIcon} alt="" className="info-grid-icon" />
-                      Height (cm):
+                      Height:
                     </label>
                     <input 
                       type="number" 
