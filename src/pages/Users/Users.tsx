@@ -12,7 +12,6 @@ import "./Users.css";
 import defaultUserIcon from "../../assets/user-icon.svg";
 import editIcon from "../../assets/edit-icon.svg";
 import deleteIcon from "../../assets/trash-icon.svg";
-import plusIcon from "../../assets/plus-icon.svg";
 import { v4 as uuidv4 } from "uuid";
 import personIcon from "../../assets/user-icon.svg";
 import paletteIcon from "../../assets/palette-icon.svg";
@@ -418,12 +417,20 @@ export default function Users({
   
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!editingUserData || editingUserData.id === null) return; 
+    if (!editingUserData || editingUserData.id === null) return;
+    
+    
+    if (!editingUserData.weight) {
+      
+      const weightField = document.querySelector('.form-field.required-field');
+      weightField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return; 
+    }
 
     const updatedUser = {
         ...editingUserData,
         lastUpdatedOn: new Date().toISOString(),
-        submitted: true, 
+        submitted: true,
     };
 
     setAllUsers(prevUsers =>
@@ -607,7 +614,15 @@ export default function Users({
                 <div className="user-display-actions">
                   {editingUserData ? (
                     <>
-                      <button type="button" onClick={handleSubmit} className="save-btn">
+                      <button type="button" onClick={() => {
+                        if (!editingUserData?.weight) {
+                          
+                          const weightField = document.querySelector('.form-field.required-field');
+                          weightField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          return;
+                        }
+                        handleSubmit(new Event('submit') as unknown as React.FormEvent<HTMLFormElement>);
+                      }} className="save-btn">
                         Save
                       </button>
                       <button type="button" onClick={handleCancelEdit} className="cancel-btn">
@@ -738,29 +753,35 @@ export default function Users({
                   </div>
                 )}
                 
-                <div className="form-field">
+                <div className="form-field required-field">
                   <label>
                     <img src={weightIcon} alt="" className="info-grid-icon" />
                     Weight:
                   </label>
                   {editingUserData ? (
-                    <div className="user-weight-row">
-                      <input 
-                        type="number" 
-                        name="weight" 
-                        value={editingUserData.weight} 
-                        onChange={handleChange} 
-                      />
-                      <select 
-                        name="metric" 
-                        value={editingUserData.metric} 
-                        onChange={handleChange} 
-                        className="metric-select"
-                      >
-                        <option value="kg">kg</option>
-                        <option value="lb">lb</option>
-                      </select>
-                    </div>
+                    <>
+                      <div className={`user-weight-row ${!editingUserData.weight ? 'error' : ''}`}>
+                        <input 
+                          type="number" 
+                          name="weight" 
+                          value={editingUserData.weight} 
+                          onChange={handleChange}
+                          required
+                        />
+                        <select 
+                          name="metric" 
+                          value={editingUserData.metric} 
+                          onChange={handleChange} 
+                          className="metric-select"
+                        >
+                          <option value="kg">kg</option>
+                          <option value="lb">lb</option>
+                        </select>
+                      </div>
+                      {!editingUserData.weight && (
+                        <div className="validation-error">Weight is required</div>
+                      )}
+                    </>
                   ) : (
                     <div className="display-value">{displayUser.weight ? `${displayUser.weight} ${displayUser.metric}` : "N/A"}</div>
                   )}

@@ -26,15 +26,15 @@ function AppContent() {
 
   const [users, setUsers] = useState<UserType[]>(initialUsersData);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(() => {
-    // First try to get from localStorage
+    
     const savedUserId = localStorage.getItem('selectedUserId');
     
-    // If we have a saved ID and it exists in our users array, use it
+    
     if (savedUserId && initialUsersData.some(user => user.id === savedUserId)) {
       return savedUserId;
     }
     
-    // Otherwise fall back to the default logic
+    
     return initialUsersData.find(u => u.id === "User-123")?.id || 
            initialUsersData[0]?.id || 
            null;
@@ -54,7 +54,7 @@ function AppContent() {
     loadInitialData();
   }, []);
 
-  // Add an effect to save the selectedUserId to localStorage when it changes
+  
   useEffect(() => {
     if (selectedUserId) {
       localStorage.setItem('selectedUserId', selectedUserId);
@@ -67,7 +67,7 @@ function AppContent() {
 
   const handleConnectDevice = async (deviceId: number) => {
     setConnectingDeviceIds(prev => [...prev, deviceId]);
-    // Simulate API call
+    
     await new Promise(resolve => setTimeout(resolve, 1000));
     setDevices(prevDevices =>
       prevDevices.map(device =>
@@ -81,11 +81,11 @@ function AppContent() {
 
   const handleDisconnectDevice = async (deviceId: number) => {
     setDisconnectingDeviceIds(prev => [...prev, deviceId]);
-    // Simulate API call
+    
     await new Promise(resolve => setTimeout(resolve, 1000));
     setDevices(prevDevices =>
       prevDevices.map(device =>
-        device.id === deviceId ? { ...device, status: "Active" } : device // Or "Disconnected" based on logic
+        device.id === deviceId ? { ...device, status: "Active" } : device 
       )
     );
     setDisconnectingDeviceIds(prev => prev.filter(id => id !== deviceId));
@@ -121,7 +121,7 @@ function AppContent() {
 
 
   const handleInitialBoardConsumedInApp = useCallback(() => {
-    // Placeholder
+    
   }, []);
 
   const handleViewChange = (view: string) => {

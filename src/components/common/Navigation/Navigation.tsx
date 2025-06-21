@@ -1,26 +1,40 @@
+import React, { useState } from 'react';
 import logo from '../../../assets/app-logo.png';
 import homeIcon from '../../../assets/home-icon.svg';
-import deviceIcon from '../../../assets/wbb-icon-line.svg';
-import userIcon from '../../../assets/users-icon.svg';
+import devicesIcon from '../../../assets/wbb-icon-line.svg';
+import usersIcon from '../../../assets/users-icon.svg';
 import sessionIcon from '../../../assets/session-icon.svg';
 import settingsIcon from '../../../assets/settings-icon.svg';
 import helpIcon from '../../../assets/question-mark-icon.svg'; 
 import activitiesIcon from '../../../assets/activities-icon.svg';
+import Settings from '../Settings/Settings';
 
 interface NavigationProps {
   activeView: string;
   onViewChange: (view: string) => void;
 }
 
-const menuItems = [
-  { id: "home", label: "Home", icon: homeIcon },
-  { id: "devices", label: "Devices", icon: deviceIcon },
-  { id: "users", label: "Users", icon: userIcon },
-  { id: "session", label: "Session", icon: sessionIcon },
-  { id: "activities", label: "Activities", icon: activitiesIcon },
+type MenuItemType = {
+  id: string;
+  label: string;
+  icon: string;
+};
+
+const menuItems: MenuItemType[] = [
+  { id: 'home', label: 'Home', icon: homeIcon },
+  { id: 'users', label: 'Users', icon: usersIcon },
+  { id: 'devices', label: 'Devices', icon: devicesIcon },
+  { id: 'session', label: 'Session', icon: sessionIcon },
+  { id: 'activities', label: 'Activities', icon: activitiesIcon },
 ];
 
 function Navigation({ activeView, onViewChange }: NavigationProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const handleSettingsClick = () => {
+    setSettingsOpen(true);
+  };
+
   return (
     <nav className={`menu-bar${activeView ? ' menu-bar--active' : ''}`}>
       <div>
@@ -44,7 +58,11 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
       </div>
       <div className="menu-bottom">
         {/* Settings */}
-        <button className="menu-item settings unstyled-button" title="Settings">
+        <button 
+          className="menu-item settings unstyled-button" 
+          title="Settings"
+          onClick={handleSettingsClick}
+        >
           <span className="menu-item-icon">
             <img src={settingsIcon} alt="Settings" className="nav-icon-sm" />
           </span>
@@ -58,6 +76,9 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
           <span className="menu-item-text">Help</span>
         </button>
       </div>
+      
+      {/* Settings Popup */}
+      <Settings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </nav>
   );
 }
