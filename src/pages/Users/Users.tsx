@@ -374,7 +374,23 @@ export default function Users({
     if (formRef.current) formRef.current.reset();
   };
 
+  
+  const isDefaultUser = (user: UserType) => {
+    
+    return user.id === defaultUser.id || 
+      (user.name === "Default User" && user.id.startsWith("default"));
+  };
+
   const handleDeleteUser = (userIdToDelete: string) => {
+    const userToDelete = allUsers.find(user => user.id === userIdToDelete);
+    
+    
+    if (userToDelete && isDefaultUser(userToDelete)) {
+      alert("The Default User cannot be deleted.");
+      setShowDeleteConfirm(null);
+      return;
+    }
+    
     setAllUsers(prevUsers => prevUsers.filter(user => user.id !== userIdToDelete));
     if (currentSelectedUserId === userIdToDelete) {
       setCurrentSelectedUserId(allUsers.length > 1 ? allUsers.filter(u => u.id !== userIdToDelete)[0]?.id || null : null);
@@ -383,8 +399,45 @@ export default function Users({
       setEditingIdx(null);
       setEditingUserData(null);
     }
-    setShowDeleteConfirm(null); 
+    setShowDeleteConfirm(null);
   };
+
+  
+  
+  useEffect(() => {
+    
+    const defaultUserExists = allUsers.some(user => 
+      user.id === defaultUser.id || 
+      (user.name === "Default User" && user.submitted === true)
+    );
+    
+    
+    if (!defaultUserExists) {
+      
+      const defaultUserId = defaultUser.id || "default-user-" + uuidv4();
+      
+      const newDefaultUser: UserType = {
+        ...defaultUser,
+        id: defaultUserId,
+        name: "Default User",
+        createdOn: new Date().toISOString(),
+        lastUpdatedOn: new Date().toISOString(),
+        color: "#397aac",
+        submitted: true
+      };
+      
+      
+      setAllUsers(prevUsers => {
+        const filteredUsers = prevUsers.filter(user => user.name !== "Default User");
+        return [...filteredUsers, newDefaultUser];
+      });
+      
+      
+      if (!currentSelectedUserId) {
+        setCurrentSelectedUserId(defaultUserId);
+      }
+    }
+  }, []); 
 
   const handleEditUser = (userId: string) => {
     const userToEdit = allUsers.find(user => user.id === userId);
@@ -501,6 +554,20 @@ export default function Users({
     setShowColorDropdown(false);
   };
 
+  
+  const getSortedUsers = () => {
+    
+    return [...allUsers].sort((a, b) => {
+      
+      if (isDefaultUser(a)) return -1;
+      
+      if (isDefaultUser(b)) return 1;
+      
+      
+      return new Date(b.lastUpdatedOn).getTime() - new Date(a.lastUpdatedOn).getTime();
+    });
+  };
+
   return (
     <div className="users-page">
       {}
@@ -553,14 +620,16 @@ export default function Users({
           <div className="user-carousel-scroll-container" ref={scrollContainerRef}>
             <div className="users-list-fade users-list-fade-left" style={{ opacity: leftFadeOpacity }} />
             <ul className="users-list" ref={userListRef}>
-              {allUsers.map(user => (
+              {getSortedUsers().map(user => (
                 <li
                   key={user.id}
                   data-userid={user.id}
-                  className={`user-carousel-item ${currentSelectedUserId === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""}`}
+                  className={`user-carousel-item ${currentSelectedUserId === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""} ${isDefaultUser(user) ? "default-user" : ""}`}
                   onClick={(e) => handleSelectUser(user.id, e)}
                 >
-                  <div className="user-selection-status">Selected</div>
+                  <div className="user-selection-status">
+                    {currentSelectedUserId === user.id && (isDefaultUser(user) ? "Default" : "Selected")}
+                  </div>
                   <img
                     src={defaultUserIcon} 
                     alt="User"
@@ -629,7 +698,7 @@ export default function Users({
                       <button type="button" onClick={handleCancelEdit} className="cancel-btn">
                         Cancel
                       </button>
-                      {displayUser.id !== defaultUser.id && allUsers.find(u=>u.id === displayUser.id)?.submitted && (
+                      {!isDefaultUser(displayUser) && displayUser.id !== defaultUser.id && (
                         <button type="button" onClick={() => setShowDeleteConfirm(displayUser.id)} className="delete-btn-display">
                           <img src={deleteIcon} alt="Delete" /> Delete
                         </button>
@@ -640,9 +709,11 @@ export default function Users({
                       <button onClick={() => handleEditUser(displayUser.id)} className="edit-btn-display" aria-label="Edit user">
                         <img src={editIcon} alt="Edit" /> Edit
                       </button>
-                      <button onClick={() => setShowDeleteConfirm(displayUser.id)} className="delete-btn-display" aria-label="Delete user">
-                        <img src={deleteIcon} alt="Delete" /> Delete
-                      </button>
+                      {!isDefaultUser(displayUser) && (
+                        <button onClick={() => setShowDeleteConfirm(displayUser.id)} className="delete-btn-display" aria-label="Delete user">
+                          <img src={deleteIcon} alt="Delete" /> Delete
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -884,8 +955,19 @@ export default function Users({
           <div className="delete-confirm-dialog">
             <h4>Confirm Delete</h4>
             <p>Are you sure you want to delete user "{allUsers.find(u => u.id === showDeleteConfirm)?.name}"?</p>
+            
+            {allUsers.find(u => u.id === showDeleteConfirm && isDefaultUser(u)) && (
+              <p className="default-user-warning">Default User cannot be deleted!</p>
+            )}
+            
             <div className="delete-confirm-actions">
-              <button onClick={() => handleDeleteUser(showDeleteConfirm)} className="confirm-btn">Delete</button>
+              <button 
+                onClick={() => handleDeleteUser(showDeleteConfirm)} 
+                className="confirm-btn"
+                disabled={allUsers.find(u => u.id === showDeleteConfirm && isDefaultUser(u)) !== undefined}
+              >
+                Delete
+              </button>
               <button onClick={() => setShowDeleteConfirm(null)} className="cancel-btn">Cancel</button>
             </div>
           </div>
