@@ -129,6 +129,33 @@
   transform: scale(1);  
 }
 
+.user-selection-status {
+  position: absolute;
+  top: 0.5vw;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: clamp(0.5em, 0.8vw, 0.9em);
+  color: #fff;
+  padding: 0.25vw 1vw;
+  border-radius: 1.2vw;
+  display: inline-block;
+  text-align: center;
+  white-space: nowrap;
+  background: #397aac;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.user-carousel-item.selected .user-selection-status {
+  opacity: 1;
+}
+
+
+.user-carousel-item.selected .user-carousel-icon {
+  margin-top: 1.5vw;
+}
+
 .user-carousel-date {
   font-size: clamp(0.7em, 0.8vw, 0.9em);
   color: #777;

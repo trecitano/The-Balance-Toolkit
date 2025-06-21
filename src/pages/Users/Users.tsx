@@ -560,6 +560,7 @@ export default function Users({
                   className={`user-carousel-item ${currentSelectedUserId === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""}`}
                   onClick={(e) => handleSelectUser(user.id, e)}
                 >
+                  <div className="user-selection-status">Selected</div>
                   <img
                     src={defaultUserIcon} 
                     alt="User"
