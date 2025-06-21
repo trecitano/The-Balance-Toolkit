@@ -151,6 +151,10 @@
   opacity: 1;
 }
 
+.user-carousel-item.selected.default-user .user-selection-status {
+  background: #e8bd00;
+  color: #fff;
+}
 
 .user-carousel-item.selected .user-carousel-icon {
   margin-top: 1.5vw;
@@ -1236,4 +1240,27 @@
 .user-info-fields .user-weight-row.error select {
   border-color: #E50012;
   box-shadow: 0 0 0 1px #E50012;
+}
+
+
+.user-carousel-item.default-user .user-selection-status {
+  background: #e8bd00;
+  opacity: 1;
+}
+
+.user-carousel-item.selected.default-user .user-selection-status {
+  background: linear-gradient(90deg, #397aac 50%, #e8bd00 50%);
+}
+
+.delete-btn-display.default-user-btn {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #999;
+}
+
+.delete-confirm-dialog .default-user-warning {
+  color: #e8bd00;
+  font-weight: bold;
+  margin-top: 10px;
+  font-style: italic;
 }
