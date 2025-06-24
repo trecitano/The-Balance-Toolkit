@@ -6,6 +6,9 @@ import userIcon from "../../assets/user-icon.svg";
 import folderIcon from '../../assets/folder-icon.svg';
 import wbbTopdownIcon from '../../assets/wbb-topdown.svg';
 
+import CopXGraph from "./CopXGraph";
+import CopYGraph from "./CopYGraph";
+import VCopXGraph from "./VCopXGraph";
 
 declare global {
   interface Window {
@@ -57,7 +60,6 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 3;
 
-    
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
     ctx.fillStyle = '#f3f4f6'; 
@@ -68,8 +70,6 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
 
-
-    
     const totalTicks = 20;
     const startAngle = Math.PI * 0.75;
     const endAngle = Math.PI * 2.25;
@@ -78,17 +78,13 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
     for (let i = 0; i <= totalTicks; i++) {
       const ratio = i / totalTicks;
       const angle = startAngle + ratio * totalAngleRange;
-      
       ctx.save();
       ctx.translate(centerX, centerY);
       ctx.rotate(angle);
-      
       ctx.beginPath();
       ctx.moveTo(radius * 0.8, 0);
       ctx.lineTo(radius, 0);
       ctx.lineWidth = radius * 0.1;
-
-      
       if (ratio <= 0.3) {
         ctx.strokeStyle = '#b71c1c'; 
       } else if (ratio <= 0.6) {
@@ -96,18 +92,14 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
       } else {
         ctx.strokeStyle = '#28a745'; 
       }
-      
       ctx.stroke();
       ctx.restore();
     }
 
-    
     const valueRatio = Math.min(value / maxValue, 1);
     const needleAngle = startAngle + valueRatio * totalAngleRange;
     ctx.save();
     ctx.translate(centerX, centerY);
-    
-    
     ctx.rotate(needleAngle);
     ctx.beginPath();
     ctx.moveTo(-radius * 0.15, 0);
@@ -117,13 +109,11 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
     ctx.stroke();
     ctx.restore();
 
-    
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius * 0.1, 0, 2 * Math.PI);
     ctx.fillStyle = '#990000'; 
     ctx.fill();
 
-    
     ctx.fillStyle = 'black';
     ctx.font = `bold ${radius * 0.25}px Arial`;
     ctx.textAlign = 'center';
@@ -1933,8 +1923,8 @@ function Session({
               })()
             )}
           </div>
-          <div className="copx-graph-container" ref={copxGraphContainerRef}>
-            <canvas ref={copXCanvasRef} className="copx-graph-canvas"></canvas>
+          <div className="copx-graph-container">
+            <CopXGraph data={copXDataSeries} />
           </div>
           <div className="vcopx-graph-container" ref={vCopXGraphContainerRef}>
             <canvas ref={vCopXCanvasRef} className="vcopx-graph-canvas"></canvas>
@@ -1942,7 +1932,7 @@ function Session({
         </div>
         <div className="second-column-container">
           <div className="copy-graph-container" ref={copyGraphContainerRef}>
-            <canvas ref={copYCanvasRef} className="copy-graph-canvas"></canvas>
+            <CopYGraph data={copYDataSeries} />
           </div>
         </div>
         <div className="third-column-container">
