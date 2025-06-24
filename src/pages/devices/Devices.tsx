@@ -1,18 +1,19 @@
 import { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "./Devices.css";
-import wbbIcon from "../../assets/wbb-icon-line.svg";
-import wbbIconBlue from "../../assets/wbb-icon-line-blue.svg";
-import temperatureIcon from "../../assets/temperature.svg";
-import bluetoothIcon from "../../assets/bluetooth-connected-icon.svg";
-import signalIcon from "../../assets/bluetooth-connected-icon.svg";
-import battery0Icon from '../../assets/battery-0-icon.svg';
-import battery25Icon from '../../assets/battery-25-icon.svg';
-import battery50Icon from '../../assets/battery-50-icon.svg';
-import battery75Icon from '../../assets/battery-75-icon.svg';
-import battery100Icon from '../../assets/battery-100-icon.svg';
-import rippleIcon from '../../assets/ripple-icon.svg';
-import { Device } from "../../types";
+import wbbIcon from "@/assets/wbb-icon-line.svg";
+import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
+import temperatureIcon from "@/assets/temperature.svg";
+import bluetoothIcon from "@/assets/bluetooth-connected-icon.svg";
+import signalIcon from "@/assets/bluetooth-connected-icon.svg";
+import battery0Icon from '@/assets/battery-0-icon.svg';
+import battery25Icon from '@/assets/battery-25-icon.svg';
+import battery50Icon from '@/assets/battery-50-icon.svg';
+import battery75Icon from '@/assets/battery-75-icon.svg';
+import battery100Icon from '@/assets/battery-100-icon.svg';
+import rippleIcon from '@/assets/ripple-icon.svg';
+import { Device } from "@/types";
+import {commands} from "@/utils/requests.ts";
 
 interface DevicesProps {
   devices: Device[];
@@ -102,21 +103,10 @@ export default function Devices({
     setIdentifyDeviceName(null);
   };
 
-  const mockScanBackend = async (): Promise<Device[]> => {
-    return new Promise(resolve => {
-      scanTimeoutRef.current = setTimeout(() => {
-        resolve([
-          { id: 1, name: "Nintendo RVL-WBC-01", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 88, temperature: 23, firmware: "v1.2.3", lastConnected: new Date().toISOString() },
-          { id: 4, name: "New Board Alpha", status: "Active", mac: "00:1A:7D:DA:71:A4", battery: 75, temperature: 21, firmware: "v1.0.0", lastConnected: new Date().toISOString() },
-        ]);
-      }, 3000);
-    });
-  };
-
   const handleScanDevices = async () => {
     setIsScanning(true);
     setDevicesFound(null);
-    const foundDevicesFromScan = await mockScanBackend();
+    const foundDevicesFromScan = await commands.scanDevices();
     onScanResults(foundDevicesFromScan);
     setIsScanning(false);
     setDevicesFound(foundDevicesFromScan.length);
