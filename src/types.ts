@@ -15,6 +15,14 @@ export interface UserType {
   submitted?: boolean;
 }
 
+export interface RecentFile {
+  id: string;
+  name: string;
+  location: string;
+  lastUpdated: string;
+  userName: string;
+}
+
 export const defaultUser: UserType = {
   id: '',
   name: '',
@@ -31,55 +39,6 @@ export const defaultUser: UserType = {
   lastUpdatedOn: new Date().toISOString(),
   submitted: false
 };
-
-export const initialUsersData: UserType[] = [
-  { 
-    id: "User-123", 
-    name: "John Doe", 
-    gender: "Male", 
-    age: 30, 
-    height: 180, 
-    heightMetric: "cm", 
-    handedness: "Right", 
-    weight: 75, 
-    metric: "kg", 
-    color: "#3498db", 
-    createdOn: "2025-06-10T10:00:00Z",
-    lastUpdatedOn: "2025-06-15T10:00:00Z", 
-    submitted: true 
-  },
-  { 
-    id: "User-456", 
-    name: "Jane Smith", 
-    gender: "Female", 
-    age: 28, 
-    height: 165, 
-    heightMetric: "cm", 
-    handedness: "Left", 
-    weight: 60, 
-    metric: "kg", 
-    color: "#e74c3c", 
-    createdOn: "2025-06-09T14:30:00Z",
-    lastUpdatedOn: "2025-06-14T14:30:00Z", 
-    submitted: true 
-  },
-  { 
-    id: "User-789", 
-    name: "Alex Green", 
-    gender: "Other", 
-    customGender: "Non-binary", 
-    age: 35, 
-    height: 67, 
-    heightMetric: "in", 
-    handedness: "Ambidextrous", 
-    weight: 150, 
-    metric: "lb", 
-    color: "#2ecc71", 
-    createdOn: "2025-06-08T09:15:00Z",
-    lastUpdatedOn: "2025-06-13T09:15:00Z", 
-    submitted: true 
-  },
-];
 
 export interface Device {
   id: number;

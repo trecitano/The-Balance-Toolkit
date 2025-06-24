@@ -1,45 +1,22 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
-import Navigation from "./components/common/Navigation/Navigation";
-import Home from "./pages/Home/Home";
-import DevicesPage from "./pages/Devices/Devices";
-import UsersPage from "./pages/Users/Users";
-import Session from "./pages/Session/Session";
-import Activities from "./pages/Activities/Activities";
-import lightIcon from "./assets/light-icon.svg";
-import darkIcon from "./assets/dark-icon.svg";
-import { UserType, initialUsersData, Device } from "./types";
+import Navigation from "@/components/navigation/Navigation";
+import Home from "@/pages/home/Home";
+import DevicesPage from "@/pages/devices/Devices";
+import UsersPage from "@/pages/users/Users";
+import Session from "@/pages/session/Session";
+import Activities from "@/pages/activities/Activities";
+import { UserType, Device } from "./types";
+import { commands } from "@/utils/requests"
 import "./App.css";
 
-const fetchInitialDeviceData = async (): Promise<Device[]> => {
-  return [
-    { id: 1, name: "Nintendo RVL-WBC-01", status: "Connected", mac: "00:1A:7D:DA:71:13", battery: 85, temperature: 22, firmware: "v1.2.3", lastConnected: "2023-10-01T10:00:00Z" },
-    { id: 2, name: "Nintendo RVL-WBC-02", status: "Connected", mac: "00:1A:7D:DA:71:14", battery: 26, temperature: 23, firmware: "v1.2.4", lastConnected: "2023-10-05T11:00:00Z" },
-    { id: 3, name: "Generic Board X", status: "Disconnected", mac: "00:1A:7D:DA:71:15", battery: 0, temperature: 20, firmware: "v1.0.0", lastConnected: "2023-09-15T12:00:00Z" },
-  ];
-};
-
 function AppContent() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [users, setUsers] = useState<UserType[]>(initialUsersData);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(() => {
-    
-    const savedUserId = localStorage.getItem('selectedUserId');
-    
-    
-    if (savedUserId && initialUsersData.some(user => user.id === savedUserId)) {
-      return savedUserId;
-    }
-    
-    
-    return initialUsersData.find(u => u.id === "User-123")?.id || 
-           initialUsersData[0]?.id || 
-           null;
-  });
-
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
   const [editingDeviceName, setEditingDeviceName] = useState<string>("");
@@ -47,11 +24,21 @@ function AppContent() {
   const [disconnectingDeviceIds, setDisconnectingDeviceIds] = useState<number[]>([]);
 
   useEffect(() => {
+    const fetchUsers = async () => {
+      const users = await commands.fetchUsers()
+      setUsers(users);
+    }
+
+    void fetchUsers();
+  }, []);
+
+  useEffect(() => {
     const loadInitialData = async () => {
-      const initialDevices = await fetchInitialDeviceData();
+      const initialDevices = await commands.fetchDevices();
       setDevices(initialDevices);
     };
-    loadInitialData();
+
+    void loadInitialData();
   }, []);
 
   
