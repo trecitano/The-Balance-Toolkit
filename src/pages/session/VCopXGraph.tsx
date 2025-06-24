@@ -6,6 +6,8 @@ interface VCopXGraphProps {
   containerHeight?: number; 
 }
 
+const CIRCLE_RADIUS = 5;
+
 const VCopXGraph: React.FC<VCopXGraphProps> = ({ data, containerHeight }) => {
   const ref = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -28,19 +30,21 @@ const VCopXGraph: React.FC<VCopXGraphProps> = ({ data, containerHeight }) => {
     const svg = d3.select(ref.current);
     svg.selectAll("*").remove();
 
+    const MAX_POINTS = 200;
     
+    const plotData = data.slice(-MAX_POINTS);
+
     const baseFontSize = Math.max(8, Math.min(14, Math.floor((containerHeight ?? size.height) * 0.07)));
     const dynamicGraphCircleDiameter = Math.max(4, Math.min(10, Math.floor((containerHeight ?? size.height) * 0.04)));
     const padding = {
       top: Math.max(1, baseFontSize * 0.1),
       right: Math.max(2, baseFontSize * 0.2) + (dynamicGraphCircleDiameter / 2),
       bottom: Math.max(1, baseFontSize * 0.1),
-      left: baseFontSize * 4
+      left: baseFontSize * 4.5
     };
 
     const graphWidth = size.width - padding.left - padding.right;
     const graphHeight = size.height - padding.top - padding.bottom;
-    const MAX_POINTS = 200;
 
     
     const y = d3.scaleLinear()
@@ -98,14 +102,14 @@ const VCopXGraph: React.FC<VCopXGraphProps> = ({ data, containerHeight }) => {
     });
 
     
-    if (data.length > 1) {
+    if (plotData.length > 1) {
       const line = d3.line<number>()
         .x((_, i) => x(i))
         .y(d => y((d + 1) / 2))
         .curve(d3.curveMonotoneX);
 
       svg.append("path")
-        .datum(data)
+        .datum(plotData)
         .attr("fill", "none")
         .attr("stroke", "#dc3545")
         .attr("stroke-width", 2)
@@ -113,12 +117,12 @@ const VCopXGraph: React.FC<VCopXGraphProps> = ({ data, containerHeight }) => {
     }
 
     
-    if (data.length > 0) {
-      const lastIdx = data.length - 1;
+    if (plotData.length > 0) {
+      const lastIdx = plotData.length - 1;
       svg.append("circle")
         .attr("cx", x(lastIdx))
-        .attr("cy", y((data[lastIdx] + 1) / 2))
-        .attr("r", dynamicGraphCircleDiameter / 2)
+        .attr("cy", y((plotData[lastIdx] + 1) / 2))
+        .attr("r", CIRCLE_RADIUS)
         .attr("fill", "#dc3545");
     }
   }, [data, size, containerHeight]);
