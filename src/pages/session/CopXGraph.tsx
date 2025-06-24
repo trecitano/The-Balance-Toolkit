@@ -10,6 +10,8 @@ const CopXGraph: React.FC<CopXGraphProps> = ({ data }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
+  const CIRCLE_RADIUS = 5;
+
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver(entries => {
@@ -96,7 +98,7 @@ const CopXGraph: React.FC<CopXGraphProps> = ({ data }) => {
       svg.append("circle")
         .attr("cx", x(data[lastIdx]))
         .attr("cy", y(lastIdx))
-        .attr("r", 5)
+        .attr("r", CIRCLE_RADIUS)
         .attr("fill", "#007bff");
     }
   }, [data, size]);

@@ -10,7 +10,8 @@ const CopYGraph: React.FC<CopYGraphProps> = ({ data }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  
+  const CIRCLE_RADIUS = 5;
+
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver(entries => {
@@ -112,7 +113,7 @@ const CopYGraph: React.FC<CopYGraphProps> = ({ data }) => {
       svg.append("circle")
         .attr("cx", x(lastIdx))
         .attr("cy", y(data[lastIdx]))
-        .attr("r", 5)
+        .attr("r", CIRCLE_RADIUS)
         .attr("fill", "#007bff");
     }
   }, [data, size]);
