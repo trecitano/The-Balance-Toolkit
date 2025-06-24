@@ -501,12 +501,12 @@ export default function Users({
   const renderCarouselIndicators = () => {
     if (!allUsers.length) return null;
     
-    const currentIndex = allUsers.findIndex(user => user.id === currentSelectedUserId);
+    const sortedUsers = getSortedUsers();
+    const currentIndex = sortedUsers.findIndex(user => user.id === currentSelectedUserId);
     
     return (
       <div className="carousel-indicators">
-        {allUsers.map((user, index) => {
-          
+        {sortedUsers.map((user, index) => {
           const distance = Math.abs(index - currentIndex);
           let className = "carousel-indicator-dot";
           
@@ -609,7 +609,7 @@ export default function Users({
           )}
         </div>
         
-        <button onClick={handleAddUser} className="add-user-btn" aria-label="Add new user">
+        <button onClick={handleAddUser} className="btn btn--primary add-user-btn" aria-label="Add new user">
           Add New User
         </button>
       </header>
@@ -642,7 +642,7 @@ export default function Users({
                     <span className="user-carousel-date-value">{new Date(user.lastUpdatedOn).toLocaleDateString()}</span>
                   </span>
                   {currentSelectedUserId === user.id && editingIdx === null && (
-                     <button onClick={(e) => { e.stopPropagation(); handleEditUser(user.id);}} className="user-action-btn edit-btn" aria-label="Edit user">
+                     <button onClick={(e) => { e.stopPropagation(); handleEditUser(user.id);}} className="user-action-btn btn--icon-only" aria-label="Edit user">
                         <img src={editIcon} alt="Edit" />
                      </button>
                   )}
@@ -692,25 +692,25 @@ export default function Users({
                           return;
                         }
                         handleSubmit(new Event('submit') as unknown as React.FormEvent<HTMLFormElement>);
-                      }} className="save-btn">
+                      }} className="btn btn--primary">
                         Save
                       </button>
-                      <button type="button" onClick={handleCancelEdit} className="cancel-btn">
+                      <button type="button" onClick={handleCancelEdit} className="btn btn--secondary">
                         Cancel
                       </button>
                       {!isDefaultUser(displayUser) && displayUser.id !== defaultUser.id && (
-                        <button type="button" onClick={() => setShowDeleteConfirm(displayUser.id)} className="delete-btn-display">
+                        <button type="button" onClick={() => setShowDeleteConfirm(displayUser.id)} className="btn btn--delete">
                           <img src={deleteIcon} alt="Delete" /> Delete
                         </button>
                       )}
                     </>
                   ) : (
                     <>
-                      <button onClick={() => handleEditUser(displayUser.id)} className="edit-btn-display" aria-label="Edit user">
+                      <button onClick={() => handleEditUser(displayUser.id)} className="btn btn--primary" aria-label="Edit user">
                         <img src={editIcon} alt="Edit" /> Edit
                       </button>
                       {!isDefaultUser(displayUser) && (
-                        <button onClick={() => setShowDeleteConfirm(displayUser.id)} className="delete-btn-display" aria-label="Delete user">
+                        <button onClick={() => setShowDeleteConfirm(displayUser.id)} className="btn btn--delete" aria-label="Delete user">
                           <img src={deleteIcon} alt="Delete" /> Delete
                         </button>
                       )}
@@ -963,12 +963,20 @@ export default function Users({
             <div className="delete-confirm-actions">
               <button 
                 onClick={() => handleDeleteUser(showDeleteConfirm)} 
-                className="confirm-btn"
+                className="btn btn--delete btn--medium"
                 disabled={allUsers.find(u => u.id === showDeleteConfirm && isDefaultUser(u)) !== undefined}
               >
+                <span className="btn__icon btn__icon--left">
+                  <img src={deleteIcon} alt="" />
+                </span>
                 Delete
               </button>
-              <button onClick={() => setShowDeleteConfirm(null)} className="cancel-btn">Cancel</button>
+              <button 
+                onClick={() => setShowDeleteConfirm(null)} 
+                className="btn btn--secondary btn--medium"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
