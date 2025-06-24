@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, FC } from 'react';
 import "./Home.css";
 import clockIcon from '../../assets/clock-counter-clockwise-icon.svg';
 import fileIcon from '../../assets/file-icon.svg';
@@ -40,6 +40,84 @@ declare global {
     }) => Promise<FileSystemDirectoryHandle>;
   }
 }
+
+// Helper component for main content sections
+interface MainSectionProps {
+  className?: string;
+  icon: string;
+  alt: string;
+  title:string;
+  text: string;
+  linkText: string;
+  onLinkClick: () => void;
+}
+
+const MainSection: FC<MainSectionProps> = ({ className, icon, alt, title, text, linkText, onLinkClick }) => (
+  <div className={`main-area-section ${className || ''}`}>
+    <div className="main-section-icon-panel">
+      <img src={icon} alt={alt} className="main-section-icon" />
+    </div>
+    <div className="main-section-details-column">
+      <h3 className="main-section-title">{title}</h3>
+      <div className="main-section-text-wrapper">
+        <p className="main-section-text">{text}</p>
+      </div>
+      <div className="link-footer">
+        <div className="main-section-action-link" onClick={onLinkClick}>
+          {linkText} &rarr;
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Helper component for a single recent file item
+interface RecentFileItemProps {
+  file: RecentFile;
+}
+
+const RecentFileItem: FC<RecentFileItemProps> = ({ file }) => (
+  <li className="recent-file-item">
+    <div className="recent-file-column file-column">
+      <img src={fileIcon} alt="file" className="recent-file-icon" />
+      <div className="recent-file-info">
+        <span className="recent-file-name">{file.name}</span>
+        <span className="recent-file-location">{file.location}</span>
+      </div>
+    </div>
+    <div className="recent-file-column user-column">
+      <span className="recent-file-user">{file.userName}</span>
+    </div>
+    <div className="recent-file-column updated-column">
+      <span className="recent-file-date">{file.lastUpdated}</span>
+    </div>
+  </li>
+);
+
+// Helper component for a single contact item
+interface ContactItemProps {
+  label: string;
+  href: string;
+  ariaLabel: string;
+  icon: string;
+  alt: string;
+  iconClassName: string;
+}
+
+const ContactItem: FC<ContactItemProps> = ({ label, href, ariaLabel, icon, alt, iconClassName }) => (
+  <div className="contact-item">
+    <span className="contact-label">{label}</span>
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="contact-visual-link"
+      aria-label={ariaLabel}
+    >
+      <img src={icon} alt={alt} className={`contact-icon ${iconClassName}`} />
+    </a>
+  </div>
+);
 
 function Home() {
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
@@ -127,21 +205,7 @@ function Home() {
               {recentFiles.length > 0 ? (
                 <ul className="recent-files-list">
                   {recentFiles.map((file) => (
-                    <li key={file.id} className="recent-file-item">
-                      <div className="recent-file-column file-column">
-                        <img src={fileIcon} alt="file" className="recent-file-icon" />
-                        <div className="recent-file-info">
-                          <span className="recent-file-name">{file.name}</span>
-                          <span className="recent-file-location">{file.location}</span>
-                        </div>
-                      </div>
-                      <div className="recent-file-column user-column">
-                        <span className="recent-file-user">{file.userName}</span>
-                      </div>
-                      <div className="recent-file-column updated-column">
-                        <span className="recent-file-date">{file.lastUpdated}</span>
-                      </div>
-                    </li>
+                    <RecentFileItem key={file.id} file={file} />
                   ))}
                 </ul>
               ) : (
@@ -157,83 +221,53 @@ function Home() {
           </div>
         </div>
         <div className="home-main-area">
-          <div className="main-area-section documentation-section">
-            <div className="main-section-icon-panel">
-              <img src={bookBookmarkIcon} alt="Documentation" className="main-section-icon" />
-            </div>
-            <div className="main-section-details-column">
-              <h3 className="main-section-title">Documentation</h3>
-              <div className="main-section-text-wrapper">
-                <p className="main-section-text">Read through the documentation for a seamless experience of using the balance toolkit with your wii balance board</p>
-              </div>
-              <div className="link-footer">
-                <div className="main-section-action-link" onClick={() => console.log('View documentation clicked')}>
-                  View documentation &rarr;
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="main-area-section placeholder-section">
-            <div className="main-section-icon-panel">
-              <img src={fileIcon} alt="Placeholder" className="main-section-icon" />
-            </div>
-            <div className="main-section-details-column">
-              <h3 className="main-section-title">Placeholder</h3>
-              <div className="main-section-text-wrapper">
-                <p className="main-section-text">Placeholder Content</p>
-              </div>
-              <div className="link-footer">
-                <div className="main-section-action-link" onClick={() => console.log('Placeholder action clicked')}>
-                  Placeholder &rarr;
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="main-area-section help-section">
-            <div className="main-section-icon-panel">
-              <img src={questionMarkIcon} alt="Help" className="main-section-icon" />
-            </div>
-            <div className="main-section-details-column">
-              <h3 className="main-section-title">Help & Support</h3>
-              <div className="main-section-text-wrapper">
-                <p className="main-section-text">Go through a quick tutorial and see how you can make the most of The Balance Toolkit</p>
-              </div>
-              <div className="link-footer">
-                <div className="main-section-action-link" onClick={() => console.log('Go to tutorial clicked')}>
-                  Go to tutorial &rarr;
-                </div>
-              </div>
-            </div>
-          </div>
-
+          <MainSection
+            className="documentation-section"
+            icon={bookBookmarkIcon}
+            alt="Documentation"
+            title="Documentation"
+            text="Read through the documentation for a seamless experience of using the balance toolkit with your wii balance board"
+            linkText="View documentation"
+            onLinkClick={() => console.log('View documentation clicked')}
+          />
+          <MainSection
+            className="placeholder-section"
+            icon={fileIcon}
+            alt="Placeholder"
+            title="Placeholder"
+            text="Placeholder Content"
+            linkText="Placeholder"
+            onLinkClick={() => console.log('Placeholder action clicked')}
+          />
+          <MainSection
+            className="help-section"
+            icon={questionMarkIcon}
+            alt="Help"
+            title="Help & Support"
+            text="Go through a quick tutorial and see how you can make the most of The Balance Toolkit"
+            linkText="Go to tutorial"
+            onLinkClick={() => console.log('Go to tutorial clicked')}
+          />
           
           <div className="main-area-section contact-section">
             <div className="main-section-details-column">
               <div className="contact-item-list">
-                <div className="contact-item">
-                  <span className="contact-label">Source</span>
-                  <a
-                    href="YOUR_GITHUB_REPOSITORY_LINK_HERE"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="contact-visual-link" 
-                    aria-label="View on GitHub" 
-                  >
-                    <img src={githubIcon} alt="GitHub" className="contact-icon github-icon" />
-                  </a>
-                </div>
-                <div className="contact-item">
-                  <span className="contact-label">Cite</span>
-                  <a
-                    href="YOUR_PUBLICATION_LINK_HERE"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="contact-visual-link" 
-                    aria-label="View Publication" 
-                  >
-                    <img src={fileIcon} alt="Publication" className="contact-icon citation-icon" /> 
-                  </a>
-                </div>
+                <ContactItem
+                  label="Source"
+                  href="YOUR_GITHUB_REPOSITORY_LINK_HERE"
+                  ariaLabel="View on GitHub"
+                  icon={githubIcon}
+                  alt="GitHub"
+                  iconClassName="github-icon"
+                />
+                <ContactItem
+                  label="Cite"
+                  href="YOUR_PUBLICATION_LINK_HERE"
+                  ariaLabel="View Publication"
+                  icon={fileIcon}
+                  alt="Publication"
+                  iconClassName="citation-icon"
+                />
               </div>
             </div>
           </div>

@@ -150,18 +150,6 @@ export default function Devices({
     setEditingDeviceName("");
   };
 
-  const handleRemoveDeviceLocal = (id: number) => {
-    onRemoveDevice(id);
-  };
-
-  const handleDisconnectLocal = async (deviceId: number) => {
-    await onDisconnectDevice(deviceId);
-  };
-
-  const handleConnectLocal = async (deviceId: number) => {
-    await onConnectDevice(deviceId);
-  };
-
   const getSortedDevices = () => {
     if (!Array.isArray(devices)) return [];
     const connected = devices.filter(d => d.status === "Connected");
@@ -196,6 +184,28 @@ export default function Devices({
     return date.toLocaleDateString();
   }
 
+  const isDeviceDisabled = (device: Device) => {
+    return isScanning ||
+           disconnectingDeviceIds.includes(device.id) ||
+           connectingDeviceIds.includes(device.id);
+  };
+
+  const isConnectButtonDisabled = (device: Device, connectedCount: number) => {
+    return isDeviceDisabled(device) ||
+           (connectedCount >= 2 && device.status !== "Connected") ||
+           device.status === "Disconnected";
+  };
+
+  const getConnectButtonTooltip = (device: Device, connectedCount: number) => {
+    if (connectedCount >= 2 && device.status !== "Connected") {
+      return "You can only have two boards connected at a time";
+    }
+    if (device.status === "Disconnected") {
+      return "Device is disconnected";
+    }
+    return "";
+  };
+
   const sortedDevices = getSortedDevices();
   const connectedDevicesCount = devices.filter(d => d.status === "Connected").length;
   const connectedDevicesForPanel = sortedDevices.filter(d => d.status === "Connected");
@@ -204,15 +214,13 @@ export default function Devices({
     <div className="devices-page">
       <div className="devices-header">
         <span className="page-title">Devices</span>
-        {isScanning ? (
-          <button onClick={handleCancelScan} className="scan-btn">
-            Cancel Scan
-          </button>
-        ) : (
-          <button onClick={handleScanDevices} className="scan-btn" disabled={isScanning}>
-            Scan for Devices
-          </button>
-        )}
+        <button 
+          onClick={isScanning ? handleCancelScan : handleScanDevices} 
+          className="scan-btn" 
+          disabled={false}
+        >
+          {isScanning ? "Cancel Scan" : "Scan for Devices"}
+        </button>
         {isScanning && <div className="spinner"></div>}
         {devicesFound !== null && !isScanning && (
           <div className="devices-found-text">
@@ -225,41 +233,40 @@ export default function Devices({
         <div className="devices-list-fade-top" style={{ opacity: topFadeOpacity }} />
         <div className="devices-list" ref={listRef}>
           {sortedDevices.map((device) => {
-            const isConnectButtonDisabled = isScanning ||
-                                          disconnectingDeviceIds.includes(device.id) ||
-                                          connectingDeviceIds.includes(device.id) ||
-                                          (connectedDevicesCount >= 2 && device.status !== "Connected") ||
-                                          device.status === "Disconnected";
-            const connectButtonTooltip = (connectedDevicesCount >= 2 && device.status !== "Connected")
-                                          ? "You can only have two boards connected at a time"
-                                          : device.status === "Disconnected" ? "Device is disconnected" : "";
+            const isConnectDisabled = isConnectButtonDisabled(device, connectedDevicesCount);
+            const connectTooltip = getConnectButtonTooltip(device, connectedDevicesCount);
+            const canEdit = (device.status === "Connected" || device.status === "Active") && 
+                           !isDeviceDisabled(device);
 
             return (
-              <div className={`device-row`} key={device.id}>
+              <div className="device-row" key={device.id}>
                 <div className={`device-container${device.status === "Disconnected" ? " disconnected" : ""}`}>
-                  <button onClick={() => handleRemoveDeviceLocal(device.id)} className="remove-device-btn">✕</button>
+                  <button 
+                    onClick={() => onRemoveDevice(device.id)} 
+                    className="remove-device-btn"
+                  >
+                    ✕
+                  </button>
+                  
                   <div className="device-image-status">
                     <img
                       src={device.status === "Connected" ? wbbIconBlue : wbbIcon}
                       alt="Device"
                       className={`device-image ${
-                        device.status === "Connected" ? "device-image-blue" : device.status === "Active" ? "device-image-active" : ""
+                        device.status === "Connected" ? "device-image-blue" : 
+                        device.status === "Active" ? "device-image-active" : ""
                       }`}
                     />
                     <div
                       className={`device-status ${
-                        device.status === "Connected"
-                          ? "device-status-connected"
-                          : device.status === "Disconnected"
-                          ? "device-status-disconnected"
-                          : ""
+                        device.status === "Connected" ? "device-status-connected" :
+                        device.status === "Disconnected" ? "device-status-disconnected" : ""
                       }`}
                     >
-                      {disconnectingDeviceIds.includes(device.id) || connectingDeviceIds.includes(device.id)
-                        ? "..."
-                        : device.status}
+                      {isDeviceDisabled(device) ? "..." : device.status}
                     </div>
                   </div>
+                  
                   <div className="device-info">
                     {editingDeviceId === device.id ? (
                       <div className="device-name-edit-container">
@@ -268,7 +275,10 @@ export default function Devices({
                           value={editingDeviceName}
                           onChange={handleNameInputChange}
                           autoFocus
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') handleCancelEditName(); }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveName();
+                            if (e.key === 'Escape') handleCancelEditName();
+                          }}
                           className="device-name-edit-input"
                         />
                       </div>
@@ -277,7 +287,7 @@ export default function Devices({
                         <span className="device-name-text" title={device.name}>
                           {device.name}
                         </span>
-                        {(device.status === "Connected" || device.status === "Active") && !isScanning && !disconnectingDeviceIds.includes(device.id) && !connectingDeviceIds.includes(device.id) && (
+                        {canEdit && (
                           <button
                             onClick={() => handleStartEditName(device.id, device.name)}
                             className="device-edit-name-btn"
@@ -289,33 +299,39 @@ export default function Devices({
                       </div>
                     )}
                     <div className="device-last-connected">
-                      {device.status !== "Disconnected" ? `MAC: ${device.mac}` : `Last seen: ${formatLastConnected(device.lastConnected)}`}
+                      {device.status !== "Disconnected" 
+                        ? `MAC: ${device.mac}` 
+                        : `Last seen: ${formatLastConnected(device.lastConnected)}`
+                      }
                     </div>
-                    {device.status !== "Disconnected" && <div className="device-mac">Firmware: {device.firmware}</div>}
+                    {device.status !== "Disconnected" && (
+                      <div className="device-mac">Firmware: {device.firmware}</div>
+                    )}
                   </div>
+                  
                   <div className="device-actions">
                     <button
                       onClick={() => handleIdentifyClick(device.name)}
-                      className="device-action-btn"
-                      disabled={isScanning || disconnectingDeviceIds.includes(device.id) || connectingDeviceIds.includes(device.id) || device.status === "Disconnected"}
+                      className="device-action-btn btn-circle"
+                      disabled={isDeviceDisabled(device) || device.status === "Disconnected"}
                       title={device.status === "Disconnected" ? "Device is disconnected" : "Identify Device"}
                     >
                       ID
                     </button>
                     {device.status === "Connected" ? (
                       <button
-                        onClick={() => handleDisconnectLocal(device.id)}
+                        onClick={() => onDisconnectDevice(device.id)}
                         className="device-action-btn disconnect"
-                        disabled={isScanning || disconnectingDeviceIds.includes(device.id) || connectingDeviceIds.includes(device.id)}
+                        disabled={isDeviceDisabled(device)}
                       >
                         {disconnectingDeviceIds.includes(device.id) ? "Wait..." : "Disconnect"}
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleConnectLocal(device.id)}
+                        onClick={() => onConnectDevice(device.id)}
                         className="device-action-btn connect"
-                        disabled={isConnectButtonDisabled}
-                        title={connectButtonTooltip}
+                        disabled={isConnectDisabled}
+                        title={connectTooltip}
                       >
                         {connectingDeviceIds.includes(device.id) ? "Wait..." : "Connect"}
                       </button>
@@ -328,12 +344,11 @@ export default function Devices({
           <div className="device-container device-container-faux" />
         </div>
         <div className="devices-list-fade" style={{ opacity: bottomFadeOpacity }} />
+        
         <div className="static-side-panel">
           {[0, 1].map(index => {
             const device = connectedDevicesForPanel[index];
-            const isPanelButtonDisabled = isScanning ||
-                                          (device && disconnectingDeviceIds.includes(device.id)) ||
-                                          (device && connectingDeviceIds.includes(device.id));
+            const isPanelDisabled = device && isDeviceDisabled(device);
 
             return (
               <div className="side-panel-square" key={`side-panel-${index}`}>
@@ -342,23 +357,26 @@ export default function Devices({
                     <div className="side-panel-header">
                       <img src={bluetoothIcon} alt="Bluetooth" className="side-panel-bt-icon" />
                       <div className="side-panel-header-info">
-                        {editingDeviceId === device?.id && device ? (
+                        {editingDeviceId === device.id ? (
                           <div className="device-name-edit-container">
-                             <input
+                            <input
                               type="text"
                               value={editingDeviceName}
                               onChange={handleNameInputChange}
                               autoFocus
-                              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') handleCancelEditName(); }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveName();
+                                if (e.key === 'Escape') handleCancelEditName();
+                              }}
                               className="device-name-edit-input side-panel-name-edit-input"
                             />
                           </div>
                         ) : (
                           <div className="side-panel-device-name-container">
-                            <span className="side-panel-device-name-text" title={device?.name}>
-                              {device?.name}
+                            <span className="side-panel-device-name-text" title={device.name}>
+                              {device.name}
                             </span>
-                            {device && (device.status === "Connected" || device.status === "Active") && !isScanning && !disconnectingDeviceIds.includes(device.id) && !connectingDeviceIds.includes(device.id) && (
+                            {!isPanelDisabled && (
                               <button
                                 onClick={() => handleStartEditName(device.id, device.name)}
                                 className="device-edit-name-btn side-panel-edit-btn"
@@ -369,13 +387,15 @@ export default function Devices({
                             )}
                           </div>
                         )}
-                        <span className="side-panel-device-mac">{device?.mac}</span>
+                        <span className="side-panel-device-mac">{device.mac}</span>
                       </div>
                     </div>
+                    
                     <div className="side-panel-icon-container">
                       <img src={rippleIcon} alt="Ripple effect" className="side-panel-ripple-icon" />
                       <img src={wbbIconBlue} alt={`${device.name} icon`} className="side-panel-device-image" />
                     </div>
+                    
                     <div className="side-panel-info-squares">
                       <div className="info-square">
                         <span className="info-square-value">{device.firmware}</span>
@@ -399,21 +419,22 @@ export default function Devices({
                         </div>
                       </div>
                     </div>
+                    
                     <div className="side-panel-actions">
                       <button
-                        onClick={() => handleDisconnectLocal(device.id)}
+                        onClick={() => onDisconnectDevice(device.id)}
                         className="side-panel-btn disconnect"
-                        disabled={isPanelButtonDisabled}
+                        disabled={isPanelDisabled}
                       >
                         {disconnectingDeviceIds.includes(device.id) ? "Wait..." : "Disconnect"}
                       </button>
                       <Link
                         to="/session"
                         state={{ initialSelectedBoard: device.name }}
-                        className={`side-panel-btn go-to-session ${isPanelButtonDisabled ? 'disabled-link' : ''}`}
-                        onClick={(e) => { if (isPanelButtonDisabled) e.preventDefault(); }}
-                        aria-disabled={isPanelButtonDisabled}
-                        tabIndex={isPanelButtonDisabled ? -1 : undefined}
+                        className={`side-panel-btn go-to-session ${isPanelDisabled ? 'disabled-link' : ''}`}
+                        onClick={(e) => { if (isPanelDisabled) e.preventDefault(); }}
+                        aria-disabled={isPanelDisabled}
+                        tabIndex={isPanelDisabled ? -1 : undefined}
                       >
                         Go to Session &rarr;
                       </Link>
