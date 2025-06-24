@@ -865,13 +865,13 @@ function Session({
     <div className="session-page">
       <header className="session-header">
         <h1 className="page-title">Session</h1>
-        <div className="session-settings-container">
-          <div className="toggle-label-wrapper board-control-wrapper">
-            <span className="toggle-label">Board</span>
-            <div className="board-selector-wrapper">
+        <div className="settings-container">
+          <div className="control-group control-group--wide">
+            <span className="control-label">Board</span>
+            <div className="relative w-full">
               <button
                 ref={boardToggleRef}
-                className="board-selector-toggle session-setting-toggle"
+                className="control-toggle control-toggle--full-width"
                 onClick={() => !recording && setShowBoardDropdown(!showBoardDropdown)}
                 aria-haspopup="true"
                 aria-expanded={showBoardDropdown}
@@ -882,20 +882,20 @@ function Session({
                     : selectedBoard || (availableBoards.length === 0 ? "No boards available" : "Select Board")
                 }
               >
-                <img src={wbbIconLineBlue} alt="Board Icon" className="board-selector-icon" />
-                <span className="board-selector-name">
+                <img src={wbbIconLineBlue} alt="Board Icon" className="icon" />
+                <span className="control-name">
                   {selectedBoard || "Select Board"}
                 </span>
               </button>
               {showBoardDropdown && !recording && (
-                <div ref={boardDropdownRef} className="board-selector-dropdown">
+                <div ref={boardDropdownRef} className="dropdown">
                   {availableBoards.length > 0 ? (
-                    <ul className="board-list">
+                    <ul className="list">
                       {availableBoards.map((board) => (
                         <li
                           key={board}
-                          className={`session-board-list-item ${
-                            board === selectedBoard ? "selected-item" : ""
+                          className={`list-item ${
+                            board === selectedBoard ? "list-item--selected" : ""
                           }`}
                           onClick={() => handleBoardSelect(board)}
                         >
@@ -906,7 +906,7 @@ function Session({
                   ) : (
                     <p className="dropdown-message">No boards available.</p>
                   )}
-                  <button className="go-to-devices-btn" onClick={() => onViewChange('devices')}>
+                  <button className="btn btn--secondary" onClick={() => onViewChange('devices')}>
                     Go to Devices
                     <span className="go-to-devices-icon" aria-hidden="true">→</span>
                   </button>
@@ -915,12 +915,12 @@ function Session({
             </div>
           </div>
 
-          <div className="toggle-label-wrapper user-control-wrapper">
-            <span className="toggle-label">User</span>
-            <div className="board-selector-wrapper">
+          <div className="control-group control-group--medium">
+            <span className="control-label">User</span>
+            <div className="relative w-full">
               <button
                 ref={userToggleRef}
-                className="board-selector-toggle session-setting-toggle"
+                className="control-toggle control-toggle--full-width"
                 onClick={() => !recording && setShowUserDropdown(!showUserDropdown)}
                 aria-haspopup="true"
                 aria-expanded={showUserDropdown}
@@ -931,23 +931,23 @@ function Session({
                     : selectedUserName
                 }
               >
-                <img src={userIcon} alt="User Icon" className="board-selector-icon" />
-                <span className="board-selector-name">{selectedUserName}</span>
+                <img src={userIcon} alt="User Icon" className="icon" />
+                <span className="control-name">{selectedUserName}</span>
               </button>
               {showUserDropdown && !recording && (
-                <div ref={userDropdownRef} className="board-selector-dropdown">
+                <div ref={userDropdownRef} className="dropdown">
                   {usersForDropdown.length > 0 ? (
-                    <ul className="board-list">
+                    <ul className="list">
                       {usersForDropdown.map((user) => (
                         <li
                           key={user.id}
-                          className={`session-board-list-item session-user-list-item ${
-                            user.id === currentSelectedUserId ? "selected-item" : ""
+                          className={`list-item ${
+                            user.id === currentSelectedUserId ? "list-item--selected" : ""
                           }`}
                           onClick={() => handleUserSelect(user.id)}
                         >
                           <span
-                            className="user-color-dot"
+                            className="icon--small"
                             style={{ backgroundColor: user.color }}
                           ></span>
                           {user.name}
@@ -957,7 +957,7 @@ function Session({
                   ) : (
                     <p className="dropdown-message">No users available.</p>
                   )}
-                  <button className="go-to-users-btn" onClick={handleGoToUsers}>
+                  <button className="btn btn--secondary" onClick={handleGoToUsers}>
                     Go to Users
                     <span className="go-to-users-icon" aria-hidden="true">→</span>
                   </button>
@@ -966,24 +966,25 @@ function Session({
             </div>
           </div>
 
-          <div className="toggle-label-wrapper save-control-wrapper">
-            <span className="toggle-label">Save Location</span>
+          <div className="control-group flex-grow">
+            <span className="control-label">Save Location</span>
             <button
-              className={`board-selector-toggle session-setting-toggle save-location-toggle-wide`}
+              className="control-toggle control-toggle--full-width"
               onClick={handleChangeSaveLocation}
               disabled={recording}
               title={recording ? "Settings cannot be changed during recording." : saveLocation}
             >
-              <img src={folderIcon} alt="Folder Icon" className="board-selector-icon" />
-              <span className="board-selector-name" style={{ flexGrow: 1, textAlign: 'left' }}>{saveLocation}</span>
+              <img src={folderIcon} alt="Folder Icon" className="icon" />
+              <span className="control-name">{saveLocation}</span>
             </button>
           </div>
-          <div className="toggle-label-wrapper lsl-control-wrapper">
-            <label className="toggle-label">LSL</label>
-            <div className="lsl-selector-wrapper">
+
+          <div className="control-group control-group--narrow">
+            <label className="control-label">LSL</label>
+            <div className="relative w-full">
               <button
                 ref={lslToggleRef}
-                className={`session-setting-toggle ${lslStreamEnabled ? "active" : ""}`}
+                className={`control-toggle control-toggle--center ${lslStreamEnabled ? "control-toggle--active" : ""}`}
                 onClick={handleLslToggleClick}
                 aria-haspopup="true"
                 aria-expanded={showLslDropdown}
@@ -993,47 +994,46 @@ function Session({
                 {lslStreamEnabled ? "ON" : "OFF"}
               </button>
               {showLslDropdown && !recording && (
-                <div ref={lslDropdownRef} className="lsl-selector-dropdown">
+                <div ref={lslDropdownRef} className="dropdown dropdown--right dropdown--medium">
                   {lslStreamEnabled ? (
-                    
                     <>
-                      <div className="lsl-dropdown-input-group">
-                        <label htmlFor="activeLslStreamNameDisplay">Stream Name:</label>
-                        <span id="activeLslStreamNameDisplay" className="lsl-dropdown-text-display">{activeLslStreamName || "N/A"}</span>
+                      <div className="form-group">
+                        <label htmlFor="activeLslStreamNameDisplay" className="form-label">Stream Name:</label>
+                        <span id="activeLslStreamNameDisplay" className="form-display">{activeLslStreamName || "N/A"}</span>
                       </div>
-                      <div className="lsl-dropdown-input-group">
-                        <label htmlFor="lslSourceIdDisplayWhenOn">Source ID:</label>
-                        <span id="lslSourceIdDisplayWhenOn" className="lsl-dropdown-text-display">{lslSourceId}</span>
+                      <div className="form-group">
+                        <label htmlFor="lslSourceIdDisplayWhenOn" className="form-label">Source ID:</label>
+                        <span id="lslSourceIdDisplayWhenOn" className="form-display">{lslSourceId}</span>
                       </div>
                       <button
                         onClick={handleDisableLslStream}
-                        className="dropdown-action-button dropdown-action-button-disable"
+                        className="btn btn--danger"
                         disabled={recording}
                       >
                         Disable LSL
                       </button>
                     </>
                   ) : (
-                    
                     <>
-                      <div className="lsl-dropdown-input-group">
-                        <label htmlFor="lslStreamNameInputControl">Stream Name:</label>
+                      <div className="form-group">
+                        <label htmlFor="lslStreamNameInputControl" className="form-label">Stream Name:</label>
                         <input
                           type="text"
                           id="lslStreamNameInputControl"
+                          className="input"
                           value={lslStreamNameInput}
                           onChange={(e) => setLslStreamNameInput(e.target.value)}
                           placeholder="e.g., MyBalanceStream"
                           disabled={recording}
                         />
                       </div>
-                      <div className="lsl-dropdown-input-group">
-                        <label htmlFor="lslSourceIdDisplayWhenOff">Source ID:</label>
-                        <span id="lslSourceIdDisplayWhenOff" className="lsl-dropdown-text-display">{lslSourceId}</span>
+                      <div className="form-group">
+                        <label htmlFor="lslSourceIdDisplayWhenOff" className="form-label">Source ID:</label>
+                        <span id="lslSourceIdDisplayWhenOff" className="form-display">{lslSourceId}</span>
                       </div>
                       <button
                         onClick={handleEnableLslStream}
-                        className="dropdown-action-button"
+                        className="btn btn--primary"
                         disabled={recording}
                       >
                         Enable LSL
@@ -1045,12 +1045,12 @@ function Session({
             </div>
           </div>
 
-          <div className="toggle-label-wrapper tcp-control-wrapper">
-            <label className="toggle-label">TCP</label>
-            <div className="tcp-selector-wrapper">
+          <div className="control-group control-group--narrow">
+            <label className="control-label">TCP</label>
+            <div className="relative w-full">
               <button
                 ref={tcpToggleRef}
-                className={`session-setting-toggle ${tcpStreamEnabled ? "active" : ""}`}
+                className={`control-toggle control-toggle--center ${tcpStreamEnabled ? "control-toggle--active" : ""}`}
                 onClick={handleTcpToggleClick}
                 aria-haspopup="true"
                 aria-expanded={showTcpDropdown}
@@ -1060,45 +1060,45 @@ function Session({
                 {tcpStreamEnabled ? "ON" : "OFF"}
               </button>
               {showTcpDropdown && !recording && (
-                <div ref={tcpDropdownRef} className="tcp-selector-dropdown">
+                <div ref={tcpDropdownRef} className="dropdown dropdown--right dropdown--small">
                   {tcpStreamEnabled ? (
-                    
                     <>
-                      <div className="lsl-dropdown-input-group"> {}
-                        <label htmlFor="activeTcpIpDisplay">IP Address:</label>
-                        <span id="activeTcpIpDisplay" className="lsl-dropdown-text-display">{activeTcpIpAddress || "N/A"}</span>
+                      <div className="form-group">
+                        <label htmlFor="activeTcpIpDisplay" className="form-label">IP Address:</label>
+                        <span id="activeTcpIpDisplay" className="form-display">{activeTcpIpAddress || "N/A"}</span>
                       </div>
-                      <div className="lsl-dropdown-input-group"> {}
-                        <label htmlFor="activeTcpPortDisplay">Port:</label>
-                        <span id="activeTcpPortDisplay" className="lsl-dropdown-text-display">{activeTcpPort || "N/A"}</span>
+                      <div className="form-group">
+                        <label htmlFor="activeTcpPortDisplay" className="form-label">Port:</label>
+                        <span id="activeTcpPortDisplay" className="form-display">{activeTcpPort || "N/A"}</span>
                       </div>
                       <button
                         onClick={handleDisableTcpStream}
-                        className="dropdown-action-button dropdown-action-button-disable"
+                        className="btn btn--danger"
                         disabled={recording}
                       >
                         Disable TCP
                       </button>
                     </>
                   ) : (
-                    
                     <>
-                      <div className="lsl-dropdown-input-group"> {}
-                        <label htmlFor="tcpIpInputControl">IP Address:</label>
+                      <div className="form-group">
+                        <label htmlFor="tcpIpInputControl" className="form-label">IP Address:</label>
                         <input
                           type="text"
                           id="tcpIpInputControl"
+                          className="input"
                           value={tcpIpAddressInput}
                           onChange={(e) => setTcpIpAddressInput(e.target.value)}
                           placeholder="e.g., 127.0.0.1"
                           disabled={recording}
                         />
                       </div>
-                      <div className="lsl-dropdown-input-group"> {}
-                        <label htmlFor="tcpPortInputControl">Port:</label>
+                      <div className="form-group">
+                        <label htmlFor="tcpPortInputControl" className="form-label">Port:</label>
                         <input
                           type="text" 
                           id="tcpPortInputControl"
+                          className="input"
                           value={tcpPortInput}
                           onChange={(e) => setTcpPortInput(e.target.value)}
                           placeholder="e.g., 12345"
@@ -1107,7 +1107,7 @@ function Session({
                       </div>
                       <button
                         onClick={handleEnableTcpStream}
-                        className="dropdown-action-button"
+                        className="btn btn--primary"
                         disabled={recording}
                       >
                         Enable TCP
@@ -1120,13 +1120,14 @@ function Session({
           </div>
         </div>
       </header>
+
       <main className="session-main">
-        <div className="first-column-container">
-          <div className="wbb-topdown-container" ref={wbbTopdownContainerRef} style={{ position: "relative" }}>
+        <div className="column column--narrow">
+          <div className="wbb-container" ref={wbbTopdownContainerRef}>
             <img
               src={wbbTopdownIcon}
               alt="WBB Topdown"
-              className="wbb-topdown-icon"
+              className="wbb-image"
               ref={wbbTopdownImageRef}
               onLoad={() => {
                 const img = wbbTopdownImageRef.current;
@@ -1177,25 +1178,28 @@ function Session({
               />
             )}
           </div>
-          <div className="copx-graph-container">
+          <div className="graph-container graph-container--large">
             <CopXGraph data={copXDataSeries} />
           </div>
-          <div className="vcopx-graph-container">
+          <div className="graph-container graph-container--medium">
             <VCopXGraph data={vCopXDataSeries} />
           </div>
         </div>
-        <div className="second-column-container">
-          <div className="copy-graph-container" ref={copyGraphContainerRef}>
+
+        <div className="column column--narrow">
+          <div className="graph-container graph-container--small" ref={copyGraphContainerRef}>
             <CopYGraph data={copYDataSeries} />
           </div>
         </div>
-        <div className="third-column-container">
-          <div className="vcopy-graph-container">
+
+        <div className="column column--narrow">
+          <div className="graph-container graph-container--small">
              <VCopYGraph data={vCopYDataSeries} /> 
           </div>
         </div>
-        <div className="four-column-container">
-          <div className="four-column-first-row-container">
+
+        <div className="column column--wide">
+          <div className="column--quarter h-full">
             <div className="gauge-wrapper">
               <div className="gauge-title">Stability Index</div>
               <StabilityGauge value={stabilityIndex} maxValue={MAX_STABILITY_INDEX} />
@@ -1221,7 +1225,7 @@ function Session({
             <span
               ref={stopAfterTimeTextRef}
               onClick={!recording ? handleOpenStopAfterDropdown : undefined}
-              className={`stop-after-time-text ${recording ? 'disabled' : ''}`}
+              className={`stop-after-time ${recording ? 'stop-after-time--disabled' : ''}`}
               role="button"
               tabIndex={recording ? -1 : 0}
               onKeyDown={(e) => !recording && e.key === 'Enter' && handleOpenStopAfterDropdown()}
@@ -1232,7 +1236,7 @@ function Session({
             </span>
             <button
               onClick={!recording ? handleResetStopAfter : undefined}
-              className="stop-after-reset-btn"
+              className="stop-after-reset"
               aria-label="Reset stop after time"
               disabled={recording}
               title={recording ? "Settings cannot be changed during recording." : "Reset automatic stop time"}
@@ -1243,11 +1247,11 @@ function Session({
         )}
         {showStopAfterDropdown && !recording && (
           <div ref={stopAfterDropdownRef} className="stop-after-dropdown">
-            <div className="stop-after-inputs">
+            <div className="number-input-group">
               <label>
                 <span>Hours:</span>
-                <div className="custom-number-input">
-                  <button type="button" onClick={() => adjustTimeValue(setInputHours, -1, 0)} className="custom-number-btn decrement-btn" aria-label="Decrement hours">-</button>
+                <div className="number-input">
+                  <button type="button" onClick={() => adjustTimeValue(setInputHours, -1, 0)} className="number-btn number-btn--decrement" aria-label="Decrement hours">-</button>
                   <input
                     type="number"
                     min="0"
@@ -1255,13 +1259,13 @@ function Session({
                     onChange={(e) => handleNumericInputChange(setInputHours, e.target.value, 0)}
                     aria-label="Input hours for stop after"
                   />
-                  <button type="button" onClick={() => adjustTimeValue(setInputHours, 1, 0)} className="custom-number-btn increment-btn" aria-label="Increment hours">+</button>
+                  <button type="button" onClick={() => adjustTimeValue(setInputHours, 1, 0)} className="number-btn number-btn--increment" aria-label="Increment hours">+</button>
                 </div>
               </label>
               <label>
                 <span>Minutes:</span>
-                <div className="custom-number-input">
-                  <button type="button" onClick={() => adjustTimeValue(setInputMinutes, -1, 0, 59)} className="custom-number-btn decrement-btn" aria-label="Decrement minutes">-</button>
+                <div className="number-input">
+                  <button type="button" onClick={() => adjustTimeValue(setInputMinutes, -1, 0, 59)} className="number-btn number-btn--decrement" aria-label="Decrement minutes">-</button>
                   <input
                     type="number"
                     min="0"
@@ -1270,13 +1274,13 @@ function Session({
                     onChange={(e) => handleNumericInputChange(setInputMinutes, e.target.value, 0, 59)}
                     aria-label="Input minutes for stop after"
                   />
-                  <button type="button" onClick={() => adjustTimeValue(setInputMinutes, 1, 0, 59)} className="custom-number-btn increment-btn" aria-label="Increment minutes">+</button>
+                  <button type="button" onClick={() => adjustTimeValue(setInputMinutes, 1, 0, 59)} className="number-btn number-btn--increment" aria-label="Increment minutes">+</button>
                 </div>
               </label>
               <label>
                 <span>Seconds:</span>
-                <div className="custom-number-input">
-                  <button type="button" onClick={() => adjustTimeValue(setInputSeconds, -1, 0, 59)} className="custom-number-btn decrement-btn" aria-label="Decrement seconds">-</button>
+                <div className="number-input">
+                  <button type="button" onClick={() => adjustTimeValue(setInputSeconds, -1, 0, 59)} className="number-btn number-btn--decrement" aria-label="Decrement seconds">-</button>
                   <input
                     type="number"
                     min="0"
@@ -1285,16 +1289,16 @@ function Session({
                     onChange={(e) => handleNumericInputChange(setInputSeconds, e.target.value, 0, 59)}
                     aria-label="Input seconds for stop after"
                   />
-                  <button type="button" onClick={() => adjustTimeValue(setInputSeconds, 1, 0, 59)} className="custom-number-btn increment-btn" aria-label="Increment seconds">+</button>
+                  <button type="button" onClick={() => adjustTimeValue(setInputSeconds, 1, 0, 59)} className="number-btn number-btn--increment" aria-label="Increment seconds">+</button>
                 </div>
               </label>
             </div>
             <div className="stop-after-dropdown-buttons">
-              <button type="button" onClick={handleResetInputs} className="stop-after-reset-inputs-btn" aria-label="Reset time inputs">
+              <button type="button" onClick={handleResetInputs} className="btn btn--secondary" aria-label="Reset time inputs">
                 &#x21BA;
               </button>
-              <button onClick={handleSubmitStopAfter} className="stop-after-submit-btn">Submit</button>
-              <button onClick={() => setShowStopAfterDropdown(false)} className="stop-after-cancel-btn">Cancel</button>
+              <button onClick={handleSubmitStopAfter} className="btn btn--primary">Submit</button>
+              <button onClick={() => setShowStopAfterDropdown(false)} className="btn btn--secondary">Cancel</button>
             </div>
           </div>
         )}
@@ -1306,7 +1310,7 @@ function Session({
           <canvas ref={canvasRef2} width={400} height={100} className="timeline-canvas" />
         </div>
         <button
-          className={`timeline-btn timeline-btn--icon ${recording ? "stop" : "record"}`}
+          className={`record-btn ${recording ? "record-btn--stop" : "record-btn--record"}`}
           onClick={recording ? handleStop : handleRecord}
           aria-label={recording ? "Stop" : "Record"}
         >

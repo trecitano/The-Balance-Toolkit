@@ -20,7 +20,6 @@
   --space-xl: 1.5rem;
   --space-xxl: 2rem;
 
-  --radius-sm: 0.4vw;
   --radius-md: 0.5vw;
   --radius-lg: 0.8vw;
   --radius-xl: 1.2vw;
@@ -40,9 +39,8 @@
     -2px -2px 6px #ffffff,
     0 0 0 2px #e3e8ef inset;
 
-  --text-xs: clamp(0.5em, 0.7vw, 1.1em);
-  --text-sm: clamp(0.55em, 0.8vw, 1.2em);
-  --text-md: clamp(0.6em, 0.9vw, 1.6em);
+  --text-sm: clamp(0.50em, 0.8vw, 1.2em);
+  --text-md: clamp(0.6em, 0.6vw, 1.6em);
   --text-lg: clamp(0.6em, 1.2vw, 1.6em);
   --text-xl: clamp(1.5rem, 2.5vw, 2.5rem);
 
@@ -96,13 +94,13 @@
   width: 4vw;
   height: 4vw;
   border-radius: var(--radius-round);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 .btn-sm,
 .side-panel-btn {
   padding: 0.6vw var(--space-lg);
   font-size: var(--text-sm);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
 }
 .btn-md,
 .device-action-btn {
@@ -230,7 +228,7 @@
   background: transparent;
   border: none;
   color: #c7c7c7;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: bold;
   cursor: pointer;
   z-index: 2;
@@ -252,7 +250,7 @@
   border: none;
   color: var(--text-light);
   cursor: pointer;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   padding: 0;
   line-height: 1;
   flex-shrink: 0;
@@ -374,7 +372,7 @@
   opacity: 1;
 }
 .device-status {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--primary);
   margin-top: 0.75vw;
   padding: var(--space-xs) var(--space-lg);
@@ -564,7 +562,7 @@
   align-items: center;
   background-color: var(--light-accent);
   padding: var(--space-xs);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   flex: 1;
   text-align: center;
   box-sizing: border-box;
