@@ -1,11 +1,10 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import './Settings.css';
 
 interface SettingsProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
 
 interface SettingsState {
   theme: string;
