@@ -111,7 +111,7 @@ function Home() {
 
   useEffect(() => {
     const sortedFiles = async () => {
-      const recentFiles = await commands.fetchRecentFiles();
+      const recentFiles = await commands.files.fetchRecentFiles();
       [...recentFiles].sort((a, b) => {
         const dateA = new Date(a.lastUpdated);
         const dateB = new Date(b.lastUpdated);

@@ -3,8 +3,11 @@
 
 mod balance_board_com;
 mod bluetooth;
+mod file_system;
+mod user;
 
 use crate::bluetooth::bluetooth_communication;
+use crate::file_system::FileSystem;
 
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 pub static HID_NINTENDO_BOARD_ID: &str = "Nintendo RVL-CNT-01";
@@ -13,11 +16,28 @@ pub static HID_NINTENDO_BOARD_ID: &str = "Nintendo RVL-CNT-01";
 async fn main() {
     /*
     loop {
-        bluetooth_communication::ensure_balance_board_is_connected().await;
+        let connected_balance_boards = bluetooth_communication::get_connected_balance_boards().await;
 
-        match balance_board_com::connect().await {
-            Ok(_) => {}
-            Err(e) => { println!("{}", e) }
+        if connected_balance_boards.is_empty() {
+            bluetooth_communication::connect_to_new_balance_board(&connected_balance_boards).await;
+        }
+
+        println!("The following balance boards are connected:");
+        for (idx, board) in connected_balance_boards.iter().enumerate() {
+            println!("Board {}: MAC ({}), name: {}", idx + 1, board.mac_address, board.name);
+        }
+
+        println!("Should we start capturing the inputs (1), or wait for more boards? (2)");
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+
+        if input == "2" {
+            match balance_board_com::connect().await {
+                Ok(_) => {}
+                Err(e) => { println!("{}", e) }
+            };
+        } else {
+            bluetooth_communication::connect_to_new_balance_board(connected_balance_boards)
         }
     }
     */

@@ -10,10 +10,10 @@ export const mockUsersData: UserType[] = [
         heightMetric: "cm",
         handedness: "Right",
         weight: 75,
-        metric: "kg",
+        weightMetric: "kg",
         color: "#3498db",
-        createdOn: "2025-06-10T10:00:00Z",
-        lastUpdatedOn: "2025-06-15T10:00:00Z",
+        createdAt: "2025-06-10T10:00:00Z",
+        updatedAt: "2025-06-15T10:00:00Z",
         submitted: true
     },
     {
@@ -25,10 +25,10 @@ export const mockUsersData: UserType[] = [
         heightMetric: "cm",
         handedness: "Left",
         weight: 60,
-        metric: "kg",
+        weightMetric: "kg",
         color: "#e74c3c",
-        createdOn: "2025-06-09T14:30:00Z",
-        lastUpdatedOn: "2025-06-14T14:30:00Z",
+        createdAt: "2025-06-09T14:30:00Z",
+        updatedAt: "2025-06-14T14:30:00Z",
         submitted: true
     },
     {
@@ -41,10 +41,10 @@ export const mockUsersData: UserType[] = [
         heightMetric: "in",
         handedness: "Ambidextrous",
         weight: 150,
-        metric: "lb",
+        weightMetric: "lb",
         color: "#2ecc71",
-        createdOn: "2025-06-08T09:15:00Z",
-        lastUpdatedOn: "2025-06-13T09:15:00Z",
+        createdAt: "2025-06-08T09:15:00Z",
+        updatedAt: "2025-06-13T09:15:00Z",
         submitted: true
     },
 ];
