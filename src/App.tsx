@@ -25,7 +25,7 @@ function AppContent() {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const users = await commands.fetchUsers()
+      const users = await commands.users.fetchUsers();
       setUsers(users);
     }
 
@@ -34,7 +34,7 @@ function AppContent() {
 
   useEffect(() => {
     const loadInitialData = async () => {
-      const initialDevices = await commands.fetchDevices();
+      const initialDevices = await commands.devices.fetchDevices();
       setDevices(initialDevices);
     };
 

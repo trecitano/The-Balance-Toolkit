@@ -20,6 +20,7 @@ import sexIcon from "../../assets/sex-icon.svg";
 import heightIcon from "../../assets/measure-icon.svg";
 import weightIcon from "../../assets/weight-icon.svg";
 import handIcon from "../../assets/hand-icon.svg";
+import {commands} from "@/utils/requests.ts";
 
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   let timeout: ReturnType<typeof setTimeout> | null = null;
@@ -353,7 +354,7 @@ export default function Users({
     setEditingUserData(null);
   };
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (editingIdx !== null) {
       alert("Please save or cancel current edits before adding a new user.");
       return;
@@ -362,11 +363,15 @@ export default function Users({
       ...defaultUser,
       id: uuidv4(), 
       name: `New User ${allUsers.filter(u => u.name.startsWith("New User")).length + 1}`,
-      createdOn: new Date().toISOString(),
-      lastUpdatedOn: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       color: `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}` 
     };
-    setAllUsers(prevUsers => [...prevUsers, newUser]);
+
+    await commands.users.addUser(newUser);
+    const users = await commands.users.fetchUsers()
+
+    setAllUsers(users);
     setCurrentSelectedUserId(newUser.id);
     const newIndex = allUsers.length; 
     setEditingIdx(newIndex);
@@ -381,17 +386,11 @@ export default function Users({
       (user.name === "Default User" && user.id.startsWith("default"));
   };
 
-  const handleDeleteUser = (userIdToDelete: string) => {
-    const userToDelete = allUsers.find(user => user.id === userIdToDelete);
-    
-    
-    if (userToDelete && isDefaultUser(userToDelete)) {
-      alert("The Default User cannot be deleted.");
-      setShowDeleteConfirm(null);
-      return;
-    }
-    
-    setAllUsers(prevUsers => prevUsers.filter(user => user.id !== userIdToDelete));
+  const handleDeleteUser = async (userIdToDelete: string) => {
+    await commands.users.deleteUser(userIdToDelete);
+    const users = await commands.users.fetchUsers()
+
+    setAllUsers(users);
     if (currentSelectedUserId === userIdToDelete) {
       setCurrentSelectedUserId(allUsers.length > 1 ? allUsers.filter(u => u.id !== userIdToDelete)[0]?.id || null : null);
     }
@@ -402,10 +401,7 @@ export default function Users({
     setShowDeleteConfirm(null);
   };
 
-  
-  
   useEffect(() => {
-    
     const defaultUserExists = allUsers.some(user => 
       user.id === defaultUser.id || 
       (user.name === "Default User" && user.submitted === true)
@@ -420,8 +416,8 @@ export default function Users({
         ...defaultUser,
         id: defaultUserId,
         name: "Default User",
-        createdOn: new Date().toISOString(),
-        lastUpdatedOn: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         color: "#397aac",
         submitted: true
       };
@@ -459,16 +455,19 @@ export default function Users({
   ) => {
     if (!editingUserData) return;
     const { name, value, type } = e.target;
-    
+
     if (type === "checkbox") {
         const { checked } = e.target as HTMLInputElement;
         setEditingUserData(prev => prev ? { ...prev, [name]: checked } : null);
+    } else if (type === "number") {
+      const numValue = parseFloat(value);
+      setEditingUserData(prev => prev ? { ...prev, [name]: numValue } : null);
     } else {
-        setEditingUserData(prev => prev ? { ...prev, [name]: value } : null);
+      setEditingUserData(prev => prev ? { ...prev, [name]: value } : null);
     }
   };
   
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingUserData || editingUserData.id === null) return;
     
@@ -486,9 +485,10 @@ export default function Users({
         submitted: true,
     };
 
-    setAllUsers(prevUsers =>
-      prevUsers.map(user => (user.id === updatedUser.id ? updatedUser : user))
-    );
+    await commands.users.updateUser(updatedUser);
+    const users = await commands.users.fetchUsers()
+
+    setAllUsers(users);
     setCurrentSelectedUserId(updatedUser.id); 
     setEditingIdx(null);
     setEditingUserData(null);
@@ -564,7 +564,7 @@ export default function Users({
       if (isDefaultUser(b)) return 1;
       
       
-      return new Date(b.lastUpdatedOn).getTime() - new Date(a.lastUpdatedOn).getTime();
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
   };
 
@@ -639,7 +639,7 @@ export default function Users({
                   <span className="user-carousel-name">{user.name}</span>
                   <span className="user-carousel-date">
                     <span className="user-carousel-date-label">Updated</span>
-                    <span className="user-carousel-date-value">{new Date(user.lastUpdatedOn).toLocaleDateString()}</span>
+                    <span className="user-carousel-date-value">{new Date(user.updatedAt).toLocaleDateString()}</span>
                   </span>
                   {currentSelectedUserId === user.id && editingIdx === null && (
                      <button onClick={(e) => { e.stopPropagation(); handleEditUser(user.id);}} className="user-action-btn btn--icon-only" aria-label="Edit user">
@@ -673,20 +673,19 @@ export default function Users({
                     </span>
                     <span className="metadata-item">
                       <span className="metadata-label">Created:</span>
-                      <span className="metadata-value">{new Date(displayUser.createdOn).toLocaleDateString()}</span>
+                      <span className="metadata-value">{new Date(displayUser.createdAt).toLocaleDateString()}</span>
                     </span>
                     <span className="metadata-item">
                       <span className="metadata-label">Updated:</span>
-                      <span className="metadata-value">{new Date(displayUser.lastUpdatedOn).toLocaleDateString()}</span>
+                      <span className="metadata-value">{new Date(displayUser.updatedAt).toLocaleDateString()}</span>
                     </span>
                   </div>
                 </div>
                 <div className="user-display-actions">
                   {editingUserData ? (
                     <>
-                      <button type="button" onClick={() => {
+                      <button type="button" onClick={async () => {
                         if (!editingUserData?.weight) {
-                          
                           const weightField = document.querySelector('.form-field.required-field');
                           weightField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                           return;
@@ -747,7 +746,7 @@ export default function Users({
                     <input 
                       type="number" 
                       name="age" 
-                      value={editingUserData.age} 
+                      value={editingUserData.age ?? ''}
                       onChange={handleChange} 
                     />
                   ) : (
@@ -804,7 +803,7 @@ export default function Users({
                         <input 
                           type="number" 
                           name="height" 
-                          value={editingUserData.height} 
+                          value={editingUserData.height ?? ''}
                           onChange={handleChange} 
                         />
                         <select 
@@ -836,13 +835,13 @@ export default function Users({
                         <input 
                           type="number" 
                           name="weight" 
-                          value={editingUserData.weight} 
+                          value={editingUserData.weight ?? ''}
                           onChange={handleChange}
                           required
                         />
                         <select 
                           name="metric" 
-                          value={editingUserData.metric} 
+                          value={editingUserData.weightMetric}
                           onChange={handleChange} 
                           className="metric-select"
                         >
@@ -855,7 +854,7 @@ export default function Users({
                       )}
                     </>
                   ) : (
-                    <div className="display-value">{displayUser.weight ? `${displayUser.weight} ${displayUser.metric}` : "N/A"}</div>
+                    <div className="display-value">{displayUser.weight ? `${displayUser.weight} ${displayUser.weightMetric}` : "N/A"}</div>
                   )}
                 </div>
                 

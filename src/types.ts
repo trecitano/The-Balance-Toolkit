@@ -7,11 +7,11 @@ export interface UserType {
   height?: number;
   heightMetric?: string; // New field for height unit (cm/in)
   weight?: number;
-  metric?: string; // Weight unit (kg/lb)
+  weightMetric?: string; // Weight unit (kg/lb)
   handedness?: 'Right' | 'Left' | 'Ambidextrous';
   color?: string;
-  createdOn: string;
-  lastUpdatedOn: string;
+  createdAt: string;
+  updatedAt: string;
   submitted?: boolean;
 }
 
@@ -32,11 +32,11 @@ export const defaultUser: UserType = {
   height: undefined,
   heightMetric: 'cm', // Default to centimeters
   weight: undefined,
-  metric: 'kg', // Default to kilograms
+  weightMetric: 'kg', // Default to kilograms
   handedness: 'Right',
   color: '#397aac',
-  createdOn: new Date().toISOString(),
-  lastUpdatedOn: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
   submitted: false
 };
 
