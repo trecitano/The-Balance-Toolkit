@@ -14,6 +14,7 @@ pub static HID_NINTENDO_BOARD_ID: &str = "Nintendo RVL-CNT-01";
 
 #[tokio::main]
 async fn main() {
+    FileSystem::initialize_app_dir();
     /*
     loop {
         let connected_balance_boards = bluetooth_communication::get_connected_balance_boards().await;

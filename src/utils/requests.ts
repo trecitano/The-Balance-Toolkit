@@ -2,16 +2,16 @@
 import { invoke } from '@tauri-apps/api/core';
 
 import {mockUsersData, mockDeviceData, mockRecentFiles, mockScanDeviceData} from "@/utils/mocks.ts";
-import {Device, RecentFile, UserType} from "@/types.ts";
+import {Device, ErrorMessage, RecentFile, UserType} from "@/types.ts";
 
 
-const useUserMocks = true;
+const useUserMocks = false;
 const useFileMocks = true;
 const useDeviceMocks = true;
 
 export const commands = {
     users: {
-        async fetchUsers(): Promise<UserType[]> {
+        async fetchUsers(): Promise<UserType[] | ErrorMessage> {
             if (useUserMocks) {
                 return mockUsersData;
             }
@@ -19,7 +19,7 @@ export const commands = {
             console.log("user_fetch_users");
             return invoke("user_fetch_users");
         },
-        async addUser(user: UserType): Promise<void> {
+        async addUser(user: UserType): Promise<void | ErrorMessage> {
             if (useUserMocks) {
                 mockUsersData.push(user);
                 return;
@@ -28,7 +28,7 @@ export const commands = {
             console.log("user_add, user:", user);
             return invoke("user_add", { user: user });
         },
-        async updateUser(user: UserType): Promise<void> {
+        async updateUser(user: UserType): Promise<void | ErrorMessage> {
             if (useUserMocks) {
                 const indexToUpdate = mockUsersData.findIndex(
                   user => user.id === user.id,
@@ -42,7 +42,7 @@ export const commands = {
             console.log("user_update, user:", user);
             return invoke("user_update", {user: user});
         },
-        async deleteUser(userId: string): Promise<void> {
+        async deleteUser(userId: string): Promise<void | ErrorMessage> {
             if (useUserMocks) {
                 const indexToRemove = mockUsersData.findIndex(
                   user => user.id === userId,
@@ -53,13 +53,13 @@ export const commands = {
                 return;
             }
 
-            console.log("user_delete, user_id:", user_id);
+            console.log("user_delete, user_id:", userId);
             return invoke("user_delete", { user_id: userId });
         },
     },
 
     files: {
-        async fetchRecentFiles(): Promise<RecentFile[]> {
+        async fetchRecentFiles(): Promise<RecentFile[] | ErrorMessage> {
             if (useFileMocks) {
                 return mockRecentFiles;
             }
@@ -76,7 +76,7 @@ export const commands = {
     },
 
     devices: {
-        async fetchDevices(): Promise<Device[]> {
+        async fetchDevices(): Promise<Device[] | ErrorMessage > {
             if (useDeviceMocks) {
                 return mockDeviceData;
             }
@@ -84,7 +84,7 @@ export const commands = {
             return invoke("get_devices_information");
         },
 
-        async scanDevices(): Promise<Device[]> {
+        async scanDevices(): Promise<Device[] | ErrorMessage> {
             if (useDeviceMocks) {
                 return new Promise(resolve => {
                     setTimeout(() => {resolve(mockScanDeviceData) }, 3000);
