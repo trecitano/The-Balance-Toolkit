@@ -16,8 +16,8 @@ export const commands = {
                 return mockUsersData;
             }
 
-            console.log("user_fetch_users");
-            return invoke("user_fetch_users");
+            console.log("user_fetch_all");
+            return invoke("user_fetch_all");
         },
         async addUser(user: UserType): Promise<void | ErrorMessage> {
             if (useUserMocks) {
@@ -81,7 +81,15 @@ export const commands = {
                 return mockDeviceData;
             }
 
-            return invoke("get_devices_information");
+            return invoke("devices_fetch_all");
+        },
+
+        async removeDevice(): Promise<void | ErrorMessage> {
+            if (useDeviceMocks) {
+                return;
+            }
+
+            return invoke("devices_remove");
         },
 
         async scanDevices(): Promise<Device[] | ErrorMessage> {
