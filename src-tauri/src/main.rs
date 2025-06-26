@@ -5,12 +5,13 @@ mod balance_board_com;
 mod bluetooth;
 mod file_system;
 mod user;
-
-use crate::bluetooth::bluetooth_communication;
-use crate::file_system::FileSystem;
+mod tauri_setup;
 
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 pub static HID_NINTENDO_BOARD_ID: &str = "Nintendo RVL-CNT-01";
+
+use crate::bluetooth::bluetooth_communication;
+use crate::file_system::FileSystem;
 
 #[tokio::main]
 async fn main() {
@@ -42,5 +43,5 @@ async fn main() {
         }
     }
     */
-    balance_toolkit_app_lib::run()
+    tauri_setup::run()
 }

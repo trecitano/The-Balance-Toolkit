@@ -1,22 +1,22 @@
-use std::thread;
-use std::time::Duration;
 use crate::HID_NINTENDO_BOARD_ID;
+use crate::balance_board_com::Event::BoardReading;
+use crate::balance_board_com::UserAction::Tare;
 use anyhow::Result;
 use anyhow::anyhow;
 use futures::executor::block_on;
 use hidapi::HidDevice;
 use lsl::Pushable;
+use std::thread;
+use std::time::Duration;
 use tokio::time::sleep;
-use crate::balance_board_com::Event::BoardReading;
-use crate::balance_board_com::UserAction::Tare;
 
 enum UserAction {
-    Tare
+    Tare,
 }
 
 enum Event {
     BoardReading(BalanceBoardSensorReading),
-    UserAction(UserAction)
+    UserAction(UserAction),
 }
 
 #[derive(Debug, Clone)]
@@ -236,8 +236,12 @@ pub async fn connect() -> Result<()> {
     });
 
     thread::spawn(move || {
-        let mut last_reading = BalanceBoardSensorReading { ..Default::default() };
-        let mut tare = BalanceBoardSensorReading { ..Default::default() };
+        let mut last_reading = BalanceBoardSensorReading {
+            ..Default::default()
+        };
+        let mut tare = BalanceBoardSensorReading {
+            ..Default::default()
+        };
 
         // Start receiving messages
         while let Ok(event) = processor_rx.recv() {
@@ -246,13 +250,21 @@ pub async fn connect() -> Result<()> {
                     tare = last_reading.clone();
                 }
                 Event::BoardReading(reading) => {
-                    let top_right = reading.top_right_weight(&calibration_data) - tare.top_right_weight(&calibration_data);
-                    let bottom_right  = reading.bottom_right_weight(&calibration_data) - tare.bottom_right_weight(&calibration_data);
-                    let top_left  = reading.top_left_weight(&calibration_data) - tare.top_left_weight(&calibration_data);
-                    let bottom_left  = reading.bottom_left_weight(&calibration_data) - tare.bottom_left_weight(&calibration_data);
+                    let top_right = reading.top_right_weight(&calibration_data)
+                        - tare.top_right_weight(&calibration_data);
+                    let bottom_right = reading.bottom_right_weight(&calibration_data)
+                        - tare.bottom_right_weight(&calibration_data);
+                    let top_left = reading.top_left_weight(&calibration_data)
+                        - tare.top_left_weight(&calibration_data);
+                    let bottom_left = reading.bottom_left_weight(&calibration_data)
+                        - tare.bottom_left_weight(&calibration_data);
 
-                    let total_weight = reading.total_weight(&calibration_data) - tare.total_weight(&calibration_data);
-                    println!("Good Total?: {}. UR: {}, BR: {}, TL: {}, BL: {}", total_weight, top_right, bottom_right, top_left, bottom_left);
+                    let total_weight = reading.total_weight(&calibration_data)
+                        - tare.total_weight(&calibration_data);
+                    println!(
+                        "Good Total?: {}. UR: {}, BR: {}, TL: {}, BL: {}",
+                        total_weight, top_right, bottom_right, top_left, bottom_left
+                    );
                     last_reading = reading;
                     let reading_after_tare = BalanceBoardSensorReading {
                         top_right: last_reading.top_right - tare.top_right,
@@ -274,32 +286,41 @@ pub async fn connect() -> Result<()> {
 
     thread::spawn(move || {
         let info = lsl::StreamInfo::new(
-            "the-balance-toolkit", "EEG", 4, 100.0,
-            lsl::ChannelFormat::Float32, "myid234365").unwrap();
+            "the-balance-toolkit",
+            "EEG",
+            4,
+            100.0,
+            lsl::ChannelFormat::Float32,
+            "myid234365",
+        )
+        .unwrap();
         let outlet = lsl::StreamOutlet::new(&info, 0, 360).unwrap();
 
         while let Ok([tr, br, tl, bl]) = lsl_rx.recv() {
-            let total_weight = tr+br+tl+bl;
-            println!("Total: {}. UR: {}, BR: {}, TL: {}, BL: {}", total_weight, tr, br, tl, bl);
+            let total_weight = tr + br + tl + bl;
+            println!(
+                "Total: {}. UR: {}, BR: {}, TL: {}, BL: {}",
+                total_weight, tr, br, tl, bl
+            );
 
             outlet.push_sample(&vec![tr, br, tl, bl]).unwrap();
         }
     });
 
     /*
-        while let Some(event) = rx.recv().await {
-            println!("Beep!");
+    while let Some(event) = rx.recv().await {
+        println!("Beep!");
 
-            match event {
-                Event::UserAction(action) => {
+        match event {
+            Event::UserAction(action) => {
 
-                }
-                Event::BoardReading(reading) => {
-                    println!("{:?}", reading);
-                }
+            }
+            Event::BoardReading(reading) => {
+                println!("{:?}", reading);
             }
         }
-        */
+    }
+    */
 
     loop {
         // Create a mutable String to store the input
@@ -307,8 +328,7 @@ pub async fn connect() -> Result<()> {
         println!("Please enter a command: (1)");
 
         // Read input from the keyboard
-        std::io::stdin()
-            .read_line(&mut input)?;
+        std::io::stdin().read_line(&mut input)?;
 
         // Remove the trailing newline character
         let input = input.trim();

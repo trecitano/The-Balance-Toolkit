@@ -1,11 +1,9 @@
-mod file_system;
-mod user;
-
 use crate::file_system::FileSystem;
 use crate::user::User;
 use tauri_plugin_fs::FsExt;
+use crate::bluetooth::bluetooth_communication;
+use crate::bluetooth::bluetooth_communication::BluetoothAdapterInfo;
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
@@ -19,10 +17,11 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            user_fetch_users,
+            user_fetch_all,
             user_add,
             user_update,
             user_delete,
+            devices_fetch_all
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -38,7 +37,7 @@ struct FileMetadata {
 // USERS
 
 #[tauri::command]
-fn user_fetch_users() -> Result<Vec<User>, String> {
+fn user_fetch_all() -> Result<Vec<User>, String> {
     FileSystem::get_users().map_err(|e| e.to_string())
 }
 
@@ -55,4 +54,21 @@ fn user_update(user: User) -> Result<(), String> {
 #[tauri::command]
 fn user_delete(user_id: String) -> Result<(), String> {
     FileSystem::remove_user(user_id).map_err(|e| e.to_string())
+}
+
+// DEVICES
+
+#[tauri::command]
+fn devices_fetch_all() -> Result<(), String> {
+    Ok(())
+}
+
+#[tauri::command]
+async fn devices_get_current_state() -> Result<Vec<anyhow::Result<BluetoothAdapterInfo>>, String> {
+    bluetooth_communication::get_system_view().await.map_err(|e| e.to_string())
+}
+
+fn devices_remove(device_id: String) -> Result<(), String> {
+    println!("Removing device: {}", device_id);
+    Ok(())
 }

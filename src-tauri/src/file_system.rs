@@ -1,13 +1,10 @@
 use crate::user::User;
-use serde::{Deserialize, Serialize};
-use std::{env, fs};
+use serde::Serialize;
+use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 use anyhow::Context;
-
-#[derive(Serialize, Deserialize)]
-pub struct FileSystem;
 
 #[derive(Serialize)]
 pub struct FileMetadata {
@@ -19,6 +16,7 @@ pub struct FileMetadata {
 
 const USERS_FILE: &str = "users.json";
 
+pub struct FileSystem;
 impl FileSystem {
     pub fn get_users() -> anyhow::Result<Vec<User>> {
         let file_path = Self::app_dir().join(USERS_FILE);

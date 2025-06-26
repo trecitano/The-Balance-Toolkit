@@ -1,9 +1,14 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
+use crate::NINTENDO_BOARD_ID;
 use crate::bluetooth::bluetooth_communication::{
     BluetoothAdapterInfo, BluetoothPeripheral, better_mac_address_to_wii_pin,
 };
-use bluer::{Adapter, AdapterEvent, Address, DeviceEvent, DeviceProperty, DiscoveryFilter, DiscoveryTransport, Session};
+use bluer::agent::{Agent, ReqResult, RequestPinCode, RequestPinCodeFn};
+use bluer::{
+    Adapter, AdapterEvent, Address, DeviceEvent, DeviceProperty, DiscoveryFilter,
+    DiscoveryTransport, Session,
+};
 use futures::future::join_all;
 use futures::stream::StreamExt;
 use std::collections::HashMap;
@@ -12,10 +17,8 @@ use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use bluer::agent::{Agent, ReqResult, RequestPinCode, RequestPinCodeFn};
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
-use crate::NINTENDO_BOARD_ID;
 
 pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
     // Create a BlueZ session
@@ -126,7 +129,7 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
                             if let Ok(paired) = device.is_paired().await {
                                 if paired {
                                     println!("Device is already paired");
-                           //         return Ok(());
+                                    //         return Ok(());
                                 }
                             }
 
@@ -138,7 +141,9 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
                                 println!("Lets potato time!");
                                 while let Some(event) = device_events.next().await {
                                     match event {
-                                        DeviceEvent::PropertyChanged(DeviceProperty::Paired(paired)) => {
+                                        DeviceEvent::PropertyChanged(DeviceProperty::Paired(
+                                            paired,
+                                        )) => {
                                             if paired {
                                                 println!("!!! Device successfully paired!");
                                             }
@@ -146,7 +151,9 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
                                         DeviceEvent::PropertyChanged(prop) => {
                                             println!("!!! Property changed: {:?}", prop);
                                         }
-                                        _ => { println!("!!! {:?}", event); }
+                                        _ => {
+                                            println!("!!! {:?}", event);
+                                        }
                                     }
                                 }
                             });

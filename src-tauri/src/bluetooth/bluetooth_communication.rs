@@ -1,7 +1,7 @@
-use anyhow::{Result, anyhow};
 #[cfg(target_os = "linux")]
 use crate::bluetooth::linux_bluetooth_handler as handler;
-
+use anyhow::{Result};
+use crate::NINTENDO_BOARD_ID;
 #[cfg(target_os = "windows")]
 use crate::bluetooth::windows_bluetooth_handler as handler;
 
@@ -13,7 +13,7 @@ enum BluetoothState {
     BoardNotFound,
     BoardNotPaired,
     BoardNotConnected,
-    BoardConnected
+    BoardConnected,
 }
 
 #[derive(Debug)]
@@ -21,7 +21,6 @@ pub struct BluetoothAdapterInfo {
     pub id: String,
     pub name: String,
     pub mac_address: [u8; 6],
-    pub wii_board_pin: [u8; 6],
     pub is_active: bool,
     pub devices: Vec<Result<BluetoothPeripheral>>,
 }
@@ -35,6 +34,11 @@ pub struct BluetoothPeripheral {
     pub is_connected: bool,
 }
 
+
+pub async fn get_system_view() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
+    handler::get_all_bluetooth_adapters_info().await
+}
+
 pub async fn ensure_balance_board_is_connected() {
     loop {
         let system_state = handler::get_all_bluetooth_adapters_info().await;
@@ -43,17 +47,19 @@ pub async fn ensure_balance_board_is_connected() {
         match bluetooth_system_state(&system_state) {
             BluetoothState::BluetoothError(error) => {
                 println!("{}", error);
-            },
+            }
             BluetoothState::BluetoothIsOff => {
                 println!("Please turn on the bluetooth.");
-            },
+            }
             BluetoothState::NoAdaptersActive => {
                 println!("Please turn on one bluetooth adapter.");
             }
             BluetoothState::BoardConnected => {
                 return;
             }
-            BluetoothState::BoardNotFound | BluetoothState::BoardNotPaired | BluetoothState::BoardNotConnected => {
+            BluetoothState::BoardNotFound
+            | BluetoothState::BoardNotPaired
+            | BluetoothState::BoardNotConnected => {
                 println!("{:?}", enum_state);
                 let adapter: &BluetoothAdapterInfo = &system_state
                     .as_ref() // Borrow the Result
@@ -96,7 +102,7 @@ fn bluetooth_system_state(state: &Result<Vec<Result<BluetoothAdapterInfo>>>) -> 
                 BluetoothState::BoardConnected
             }
         }
-        None => BluetoothState::BoardNotFound
+        None => BluetoothState::BoardNotFound,
     }
 }
 
@@ -118,7 +124,7 @@ pub fn find_nintendo_balance_board<'a>(
     for adapter in bluetooth_view {
         for device_result in &adapter.devices {
             if let Ok(device) = device_result {
-                if device.name == crate::NINTENDO_BOARD_ID {
+                if device.name == NINTENDO_BOARD_ID {
                     return Some(device);
                 }
             }

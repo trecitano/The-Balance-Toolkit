@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use windows::{
     Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothDevice},
@@ -15,8 +15,8 @@ use crate::bluetooth::bluetooth_communication::{
 };
 use tokio::time::{Duration, Instant, sleep};
 use windows::Devices::Enumeration::{DeviceInformationUpdate, DevicePairingResultStatus};
-use windows::core::HSTRING;
 use windows::Foundation::IPropertyValue;
+use windows::core::HSTRING;
 use windows_core::Interface;
 
 // In Windows, we can only use a single bluetooth adapter. (This is an assumption).
@@ -39,7 +39,6 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
             id: adapter_id.to_string(),
             name: adapter_name.to_string(),
             mac_address,
-            wii_board_pin: mac_address_to_wii_pin(mac_address),
             is_active,
             devices: vec![],
         })
@@ -92,11 +91,11 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
 pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()> {
     let selector = BluetoothDevice::GetDeviceSelectorFromPairingState(false)?;
     let watcher = DeviceInformation::CreateWatcherAqsFilter(&selector)?;
-    let pin = adapter.wii_board_pin.clone();
+    let pin = mac_address_to_wii_pin(adapter.mac_address);
 
     let added = TypedEventHandler::new(
         move |watcher: windows::core::Ref<DeviceWatcher>,
-                    info: windows::core::Ref<DeviceInformation>| {
+              info: windows::core::Ref<DeviceInformation>| {
             let device_info: &DeviceInformation = info.unwrap();
             let device_id = device_info.Id()?;
             let device_name = device_info.Name().unwrap();
@@ -105,7 +104,8 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
             println!("Found device {}, {}", device_id, device_name);
 
             let device_name_matches = device_name == NINTENDO_BOARD_ID;
-            let properties_matches = properties_has_matching_name(&device_properties, NINTENDO_BOARD_ID);
+            let properties_matches =
+                properties_has_matching_name(&device_properties, NINTENDO_BOARD_ID);
 
             if device_name_matches || properties_matches {
                 println!("Found the balance (in an add)! Pairing...");
@@ -206,7 +206,10 @@ async fn try_pair_with_board(device_id: HSTRING, pin: [u8; 6]) -> Result<()> {
     if pairing_result.Status()? == DevicePairingResultStatus::Paired {
         Ok(())
     } else {
-        Err(anyhow!("Pairing failed with status: {}", pairing_result.Status()?.0))
+        Err(anyhow!(
+            "Pairing failed with status: {}",
+            pairing_result.Status()?.0
+        ))
     }
 }
 
