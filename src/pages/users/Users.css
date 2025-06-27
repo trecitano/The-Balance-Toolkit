@@ -49,15 +49,6 @@
   --btn-min-width: 90px;
 }
 
-
-.flex { display: flex; }
-.flex-col { display: flex; flex-direction: column; }
-.flex-center { display: flex; align-items: center; justify-content: center; }
-.flex-between { display: flex; justify-content: space-between; align-items: center; }
-.w-full { width: 100%; }
-.h-full { height: 100%; }
-
-
 .users-page {
   display: flex;
   flex-direction: column;
