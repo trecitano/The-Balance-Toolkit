@@ -5,9 +5,9 @@ import {mockUsersData, mockDeviceData, mockRecentFiles, mockScanDeviceData} from
 import {Device, ErrorMessage, RecentFile, UserType} from "@/types.ts";
 
 
-const useUserMocks = false;
 const useFileMocks = true;
-const useDeviceMocks = true;
+const useUserMocks = false;
+const useDeviceMocks = false;
 
 export const commands = {
     users: {

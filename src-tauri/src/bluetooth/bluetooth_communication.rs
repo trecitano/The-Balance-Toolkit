@@ -1,6 +1,7 @@
 #[cfg(target_os = "linux")]
 use crate::bluetooth::linux_bluetooth_handler as handler;
 use anyhow::{Result};
+use serde::Serialize;
 use crate::NINTENDO_BOARD_ID;
 #[cfg(target_os = "windows")]
 use crate::bluetooth::windows_bluetooth_handler as handler;
@@ -25,7 +26,7 @@ pub struct BluetoothAdapterInfo {
     pub devices: Vec<Result<BluetoothPeripheral>>,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 pub struct BluetoothPeripheral {
     pub id: String,
     pub name: String,
@@ -35,8 +36,22 @@ pub struct BluetoothPeripheral {
 }
 
 
-pub async fn get_system_view() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
-    handler::get_all_bluetooth_adapters_info().await
+pub async fn get_nintendo_devices() -> Result<Vec<BluetoothPeripheral>> {
+    let adapters: Vec<BluetoothAdapterInfo> = handler::get_all_bluetooth_adapters_info().await?
+        .into_iter()
+        .filter_map(|result| result.ok())
+        .collect();
+
+    let devices: Vec<BluetoothPeripheral> = adapters
+        .into_iter()
+        .flat_map(|adapter| adapter.devices.into_iter())
+        .filter_map(|result| result.ok())
+        .collect();
+    
+    let nintendo_devices = devices.into_iter()
+        .filter(|device| device.name == NINTENDO_BOARD_ID).collect();
+
+    Ok(nintendo_devices)
 }
 
 pub async fn ensure_balance_board_is_connected() {
