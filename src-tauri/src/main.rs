@@ -4,18 +4,15 @@
 mod balance_board_com;
 mod bluetooth;
 mod file_system;
-mod user;
+mod types;
 mod tauri_setup;
 
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 pub static HID_NINTENDO_BOARD_ID: &str = "Nintendo RVL-CNT-01";
 
-use crate::bluetooth::bluetooth_communication;
-use crate::file_system::FileSystem;
-
 #[tokio::main]
 async fn main() {
-    FileSystem::initialize_app_dir();
+    file_system::initialize_app_dir();
     /*
     loop {
         let connected_balance_boards = bluetooth_communication::get_connected_balance_boards().await;

@@ -1,8 +1,10 @@
-use crate::file_system::FileSystem;
-use crate::user::User;
+use std::collections::HashSet;
+use crate::file_system::{DeviceFileSystem, UserFileSystem};
+use crate::types::{NintendoDevice, User};
 use tauri_plugin_fs::FsExt;
 use crate::bluetooth::bluetooth_communication;
-use crate::bluetooth::bluetooth_communication::BluetoothAdapterInfo;
+use crate::bluetooth::bluetooth_communication::{BluetoothAdapterInfo, BluetoothPeripheral};
+use crate::file_system;
 
 pub fn run() {
     tauri::Builder::default()
@@ -10,7 +12,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // allowed the given directory
-            let app_dir = FileSystem::app_dir();
+            let app_dir = file_system::app_dir();
             let scope = app.fs_scope();
             scope.allow_directory(app_dir, true)?;
 
@@ -38,34 +40,58 @@ struct FileMetadata {
 
 #[tauri::command]
 fn user_fetch_all() -> Result<Vec<User>, String> {
-    FileSystem::get_users().map_err(|e| e.to_string())
+    UserFileSystem::get_users().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn user_add(user: User) -> Result<(), String> {
-    FileSystem::add_user(user).map_err(|e| e.to_string())
+    UserFileSystem::add_user(user).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn user_update(user: User) -> Result<(), String> {
-    FileSystem::update_user(user).map_err(|e| e.to_string())
+    UserFileSystem::update_user(user).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 fn user_delete(user_id: String) -> Result<(), String> {
-    FileSystem::remove_user(user_id).map_err(|e| e.to_string())
+    UserFileSystem::remove_user(user_id).map_err(|e| e.to_string())
 }
 
 // DEVICES
 
-#[tauri::command]
-fn devices_fetch_all() -> Result<(), String> {
-    Ok(())
+#[tauri::command(async)]
+pub async fn devices_fetch_all() -> Result<Vec<NintendoDevice>, String> {
+    let stored_devices = DeviceFileSystem::get_stored_devices().map_err(|e| e.to_string())?;
+    let connected_devices: Vec<NintendoDevice> = bluetooth_communication::get_nintendo_devices()
+        .await
+        .map_err(|e| e.to_string())?
+        .into_iter()
+        .map(|p| p.into())
+        .collect();
+
+    // First we add all stored devices to the result,
+    let mut result: Vec<NintendoDevice> = Vec::new();
+    for device in stored_devices {
+        result.push(device);
+    }
+
+    // Then we upsert the connected devices
+    for device in connected_devices {
+        match result.iter_mut().find(|d| d.mac_address == device.mac_address) {
+            Some(found) => found.last_seen = None,
+            None => result.push(device)
+        }
+    }
+
+    println!("Returning devices: #{:?}", result);
+
+    Ok(result)
 }
 
-#[tauri::command]
-async fn devices_get_current_state() -> Result<Vec<anyhow::Result<BluetoothAdapterInfo>>, String> {
-    bluetooth_communication::get_system_view().await.map_err(|e| e.to_string())
+#[tauri::command(async)]
+async fn devices_scan() -> Result<Vec<BluetoothPeripheral>, String> {
+    bluetooth_communication::get_nintendo_devices().await.map_err(|e| e.to_string())
 }
 
 fn devices_remove(device_id: String) -> Result<(), String> {
