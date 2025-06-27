@@ -1,3 +1,4 @@
+import bluetoothDisconnectedIcon from "@/assets/bluetooth-disconnected-icon.svg";
 import { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "./Devices.css";
@@ -199,6 +200,7 @@ export default function Devices({
   const sortedDevices = getSortedDevices();
   const connectedDevicesCount = devices.filter(d => d.status === "Connected").length;
   const connectedDevicesForPanel = sortedDevices.filter(d => d.status === "Connected");
+  const noDevices = sortedDevices.length === 0;
 
   return (
     <div className="devices-page">
@@ -206,7 +208,7 @@ export default function Devices({
         <span className="page-title">Devices</span>
         <button 
           onClick={isScanning ? handleCancelScan : handleScanDevices} 
-          className="scan-btn" 
+          className={`scan-btn ${noDevices ? 'scan-button-highlight' : ''}`}
           disabled={false}
         >
           {isScanning ? "Cancel Scan" : "Scan for Devices"}
@@ -222,6 +224,13 @@ export default function Devices({
       <div className="devices-list-wrapper">
         <div className="devices-list-fade-top" style={{ opacity: topFadeOpacity }} />
         <div className="devices-list" ref={listRef}>
+          {noDevices && (
+            <div className="h-full flex flex-col items-center justify-center text-center p-8 mt-8 bg-gray-100 rounded-lg shadow-inner">
+              <img src={bluetoothDisconnectedIcon} alt="No devices found" className="w-20 h-20 mb-6 opacity-50" />
+              <p className="text-xl text-gray-600">No devices found.</p>
+              <p className="text-base text-gray-400">Click the "Scan for Devices" button to search for nearby devices.</p>
+            </div>
+          )}
           {sortedDevices.map((device) => {
             const isConnectDisabled = isConnectButtonDisabled(device, connectedDevicesCount);
             const connectTooltip = getConnectButtonTooltip(device, connectedDevicesCount);

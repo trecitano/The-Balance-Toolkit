@@ -1178,22 +1178,22 @@ function Session({
               />
             )}
           </div>
-          <div className="graph-container graph-container--large">
+          <div className="w-full box-border h-4/10">
             <CopXGraph data={copXDataSeries} />
           </div>
-          <div className="graph-container graph-container--medium">
+          <div className="w-full box-border h-3/10 min-h-[60px]">
             <VCopXGraph data={vCopXDataSeries} />
           </div>
         </div>
 
         <div className="column column--narrow">
-          <div className="graph-container graph-container--small" ref={copyGraphContainerRef}>
+          <div className="w-full box-border h-1/4" ref={copyGraphContainerRef}>
             <CopYGraph data={copYDataSeries} />
           </div>
         </div>
 
         <div className="column column--narrow">
-          <div className="graph-container graph-container--small">
+          <div className="w-full box-border h-1/4">
              <VCopYGraph data={vCopYDataSeries} /> 
           </div>
         </div>

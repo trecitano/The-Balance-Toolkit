@@ -35,33 +35,6 @@
   --font-md: clamp(0.7rem, 1vw, 1.4rem);
 }
 
-/* === UTILITY CLASSES === */
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.flex-grow { flex-grow: 1; }
-.items-center { align-items: center; }
-.items-stretch { align-items: stretch; }
-.justify-center { justify-content: center; }
-.justify-between { justify-content: space-between; }
-.justify-start { justify-content: flex-start; }
-.gap-xs { gap: var(--space-xs); }
-.gap-sm { gap: var(--space-sm); }
-.gap-md { gap: var(--space-md); }
-.gap-lg { gap: var(--space-lg); }
-.w-full { width: 100%; }
-.h-full { height: 100%; }
-.relative { position: relative; }
-.absolute { position: absolute; }
-.overflow-hidden { overflow: hidden; }
-.text-center { text-align: center; }
-.text-left { text-align: left; }
-.font-medium { font-weight: 500; }
-.font-semibold { font-weight: 600; }
-.font-bold { font-weight: bold; }
-.whitespace-nowrap { white-space: nowrap; }
-.cursor-pointer { cursor: pointer; }
-.cursor-not-allowed { cursor: not-allowed; }
-
 /* === BASE COMPONENTS === */
 
 /* Buttons */
@@ -542,11 +515,6 @@
   width: 100%;
   box-sizing: border-box;
 }
-
-.graph-container--small { height: 25%; }
-.graph-container--medium { height: 30%; min-height: 60px; }
-.graph-container--large { height: 40%; min-height: 0; }
-.graph-container--full { height: 100%; }
 
 .graph-canvas {
   width: 100%;
