@@ -1,14 +1,10 @@
 use crate::HID_NINTENDO_BOARD_ID;
-use crate::balance_board_com::Event::BoardReading;
 use crate::balance_board_com::UserAction::Tare;
 use anyhow::Result;
 use anyhow::anyhow;
-use futures::executor::block_on;
 use hidapi::HidDevice;
 use lsl::Pushable;
 use std::thread;
-use std::time::Duration;
-use tokio::time::sleep;
 
 enum UserAction {
     Tare,
@@ -335,7 +331,7 @@ pub async fn connect() -> Result<()> {
 
         println!("You entered: {}", input);
 
-        board_tx_inputs.send(Event::UserAction(Tare));
+        board_tx_inputs.send(Event::UserAction(Tare))?;
     }
 
     Ok(())
