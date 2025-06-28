@@ -10,6 +10,19 @@ mod tauri_setup;
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 pub static HID_NINTENDO_BOARD_ID: &str = "Nintendo RVL-CNT-01";
 
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tokio::task::AbortHandle;
+
+#[derive(Default)]
+pub struct ScanState {
+    pub handle: Option<AbortHandle>,
+}
+
+pub struct AppState {
+    pub scan_state: Arc<Mutex<ScanState>>,
+}
+
 #[tokio::main]
 async fn main() {
     file_system::initialize_app_dir();

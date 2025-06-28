@@ -1,9 +1,7 @@
-use std::collections::HashSet;
 use crate::file_system::{DeviceFileSystem, UserFileSystem};
 use crate::types::{NintendoDevice, User};
 use tauri_plugin_fs::FsExt;
 use crate::bluetooth::bluetooth_communication;
-use crate::bluetooth::bluetooth_communication::{BluetoothAdapterInfo, BluetoothPeripheral};
 use crate::file_system;
 
 pub fn run() {
@@ -23,7 +21,8 @@ pub fn run() {
             user_add,
             user_update,
             user_delete,
-            devices_fetch_all
+            //devices_fetch_all,
+            devices_scan
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -90,11 +89,30 @@ pub async fn devices_fetch_all() -> Result<Vec<NintendoDevice>, String> {
 }
 
 #[tauri::command(async)]
-async fn devices_scan() -> Result<Vec<BluetoothPeripheral>, String> {
-    bluetooth_communication::get_nintendo_devices().await.map_err(|e| e.to_string())
+async fn devices_scan() {
+    //tokio::spawn(async {
+        bluetooth_communication::ensure_balance_board_is_connected().await;
+    //});
 }
+
+/*
+#[tauri::command]
+pub async fn cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
+    let mut scan_state = state.scan_state.lock().await;
+
+    if let Some(handle) = scan_state.handle.take() {
+        println!("Cancelling scan...");
+        handle.abort();
+        println!("Scan cancelled.");
+        Ok(())
+    } else {
+        Err("No scan is currently in progress.".to_string())
+    }
+}
+*/
 
 fn devices_remove(device_id: String) -> Result<(), String> {
     println!("Removing device: {}", device_id);
     Ok(())
 }
+

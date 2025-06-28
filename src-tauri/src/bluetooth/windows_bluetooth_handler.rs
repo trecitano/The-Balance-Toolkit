@@ -23,8 +23,8 @@ use windows_core::Interface;
 // Regardless of the assumption, it is extremely complicated to associate the adapters to the devices.
 // As such, we assume that every connected device is directly connected to the default adapter.
 pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
-    tokio::task::spawn_blocking(move || {
-        futures::executor::block_on(async {
+    //tokio::task::spawn_blocking(move || {
+        //futures::executor::block_on(async {
             // Get list of all Bluetooth Adapters
             let adapter_selector = BluetoothAdapter::GetDeviceSelector()?;
             let adapter_collection = DeviceInformation::FindAllAsyncAqsFilter(&adapter_selector)?.await?;
@@ -83,8 +83,8 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
             }
 
             Ok(adapter_list)
-        })
-    }).await?
+  //      })
+  //  }).await?
 }
 
 //

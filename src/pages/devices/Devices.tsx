@@ -107,10 +107,11 @@ export default function Devices({
   const handleScanDevices = async () => {
     setIsScanning(true);
     setDevicesFound(null);
-    const foundDevicesFromScan = await commands.scanDevices();
-    onScanResults(foundDevicesFromScan);
-    setIsScanning(false);
-    setDevicesFound(foundDevicesFromScan.length);
+    await commands.devices.scanDevices();
+    const foundDevicesFromScan = await commands.devices.scanDevices();
+    //onScanResults(foundDevicesFromScan);
+    setIsScanning(true);
+    //setDevicesFound(foundDevicesFromScan.length);
   };
 
   const handleCancelScan = () => {

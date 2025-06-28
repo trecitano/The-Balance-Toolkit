@@ -56,6 +56,7 @@ pub async fn get_nintendo_devices() -> Result<Vec<BluetoothPeripheral>> {
 
 pub async fn ensure_balance_board_is_connected() {
     loop {
+        println!("Checking...");
         let system_state = handler::get_all_bluetooth_adapters_info().await;
         println!("{:#?}", system_state);
         let enum_state = bluetooth_system_state(&system_state);
@@ -89,6 +90,7 @@ pub async fn ensure_balance_board_is_connected() {
         }
 
         // If the current state failed, wait one second before trying again
+        println!("Ensuring board is connected, sleeping for 2 seconds.");
         tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
     }
 }
