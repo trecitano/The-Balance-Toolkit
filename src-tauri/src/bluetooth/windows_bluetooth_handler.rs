@@ -23,68 +23,64 @@ use windows_core::Interface;
 // Regardless of the assumption, it is extremely complicated to associate the adapters to the devices.
 // As such, we assume that every connected device is directly connected to the default adapter.
 pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
-    //tokio::task::spawn_blocking(move || {
-        //futures::executor::block_on(async {
-            // Get list of all Bluetooth Adapters
-            let adapter_selector = BluetoothAdapter::GetDeviceSelector()?;
-            let adapter_collection = DeviceInformation::FindAllAsyncAqsFilter(&adapter_selector)?.await?;
-            let adapter_futures = adapter_collection.into_iter().map(|info| async move {
-                let adapter_id = info.Id()?;
-                let adapter_name = info.Name()?;
-                let is_active = info.IsEnabled()?;
+    // Get list of all Bluetooth Adapters
+    let adapter_selector = BluetoothAdapter::GetDeviceSelector()?;
+    let adapter_collection = DeviceInformation::FindAllAsyncAqsFilter(&adapter_selector)?.await?;
+    let adapter_futures = adapter_collection.into_iter().map(|info| async move {
+        let adapter_id = info.Id()?;
+        let adapter_name = info.Name()?;
+        let is_active = info.IsEnabled()?;
 
-                let adapter = BluetoothAdapter::FromIdAsync(&adapter_id)?.await?;
+        let adapter = BluetoothAdapter::FromIdAsync(&adapter_id)?.await?;
 
-                let mac_address = convert_u64_to_mac_address(adapter.BluetoothAddress()?);
+        let mac_address = convert_u64_to_mac_address(adapter.BluetoothAddress()?);
 
-                Ok(BluetoothAdapterInfo {
-                    id: adapter_id.to_string(),
-                    name: adapter_name.to_string(),
-                    mac_address,
-                    is_active,
-                    devices: vec![],
-                })
-            });
+        Ok(BluetoothAdapterInfo {
+            id: adapter_id.to_string(),
+            name: adapter_name.to_string(),
+            mac_address,
+            is_active,
+            devices: vec![],
+        })
+    });
 
-            // Get list of all Bluetooth Devices
-            let devices_selector = BluetoothDevice::GetDeviceSelector()?;
-            let device_collection = DeviceInformation::FindAllAsyncAqsFilter(&devices_selector)?.await?;
-            let device_futures = device_collection.into_iter().map(|info| async move {
-                let device_id = info.Id()?;
-                let device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
-                // In windows, the BluetoothDevice::GetDeviceSelector query only returns the bluetooth devices
-                // that have been paired.
-                let is_paired = true;
-                let is_connected = device.ConnectionStatus()? == BluetoothConnectionStatus::Connected;
-                let mac_address = convert_u64_to_mac_address(device.BluetoothAddress()?);
+    // Get list of all Bluetooth Devices
+    let devices_selector = BluetoothDevice::GetDeviceSelector()?;
+    let device_collection = DeviceInformation::FindAllAsyncAqsFilter(&devices_selector)?.await?;
+    let device_futures = device_collection.into_iter().map(|info| async move {
+        let device_id = info.Id()?;
+        let device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
+        // In windows, the BluetoothDevice::GetDeviceSelector query only returns the bluetooth devices
+        // that have been paired.
+        let is_paired = true;
+        let is_connected = device.ConnectionStatus()? == BluetoothConnectionStatus::Connected;
+        let mac_address = convert_u64_to_mac_address(device.BluetoothAddress()?);
 
-                Ok(BluetoothPeripheral {
-                    id: device.BluetoothDeviceId()?.Id()?.to_string(),
-                    name: device.Name()?.to_string(),
-                    mac_address,
-                    is_paired,
-                    is_connected,
-                })
-            });
+        Ok(BluetoothPeripheral {
+            id: device.BluetoothDeviceId()?.Id()?.to_string(),
+            name: device.Name()?.to_string(),
+            mac_address,
+            is_paired,
+            is_connected,
+        })
+    });
 
-            let mut adapter_list = futures::future::join_all(adapter_futures).await;
-            let device_list = futures::future::join_all(device_futures).await;
+    let mut adapter_list = futures::future::join_all(adapter_futures).await;
+    let device_list = futures::future::join_all(device_futures).await;
 
-            // Add the device list to the default adapter
-            let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
-            let default_adapter_id = default_adapter.DeviceId()?;
-            for entry in adapter_list.iter_mut() {
-                if let Ok(adapter) = entry {
-                    if adapter.id == default_adapter_id {
-                        adapter.devices = device_list;
-                        break;
-                    }
-                }
+    // Add the device list to the default adapter
+    let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
+    let default_adapter_id = default_adapter.DeviceId()?;
+    for entry in adapter_list.iter_mut() {
+        if let Ok(adapter) = entry {
+            if adapter.id == default_adapter_id {
+                adapter.devices = device_list;
+                break;
             }
+        }
+    }
 
-            Ok(adapter_list)
-  //      })
-  //  }).await?
+    Ok(adapter_list)
 }
 
 //
@@ -96,6 +92,13 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
     let selector = BluetoothDevice::GetDeviceSelectorFromPairingState(false)?;
     let watcher = DeviceInformation::CreateWatcherAqsFilter(&selector)?;
     let pin = mac_address_to_wii_pin(adapter.mac_address);
+    println!("Pin: {:?}", pin);
+    let hex_string: String = pin.iter()
+        .map(|b| format!("{:02X}", b))
+        .collect::<Vec<_>>()
+        .join(" ");
+    println!("Hexa Pin: {}", hex_string);
+    println!("String Pin: {}", String::from_utf8_lossy(&pin));
 
     let added = TypedEventHandler::new(
         move |watcher: windows::core::Ref<DeviceWatcher>,
