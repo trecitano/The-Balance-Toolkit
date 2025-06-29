@@ -18,6 +18,7 @@ use windows::Devices::Enumeration::{DeviceInformationUpdate, DevicePairingResult
 use windows::Foundation::IPropertyValue;
 use windows::core::HSTRING;
 use windows_core::Interface;
+use crate::types::MacAddress;
 
 // In Windows, we can only use a single bluetooth adapter. (This is an assumption).
 // Regardless of the assumption, it is extremely complicated to associate the adapters to the devices.
@@ -88,18 +89,14 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
 // that does not have the name. This name is later added via an "Updated" event, that updates the
 // "System.ItemNameDisplay" device property.
 // As such, we need to pay attention to both "Added" and "Updated" events.
-pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()> {
+pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<MacAddress> {
     let selector = BluetoothDevice::GetDeviceSelectorFromPairingState(false)?;
     let watcher = DeviceInformation::CreateWatcherAqsFilter(&selector)?;
     let pin = mac_address_to_wii_pin(adapter.mac_address);
-    println!("Pin: {:?}", pin);
-    let hex_string: String = pin.iter()
-        .map(|b| format!("{:02X}", b))
-        .collect::<Vec<_>>()
-        .join(" ");
-    println!("Hexa Pin: {}", hex_string);
-    println!("String Pin: {}", String::from_utf8_lossy(&pin));
 
+    let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+
+    let added_tx = tx.clone();
     let added = TypedEventHandler::new(
         move |watcher: windows::core::Ref<DeviceWatcher>,
               info: windows::core::Ref<DeviceInformation>| {
@@ -116,27 +113,15 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
 
             if device_name_matches || properties_matches {
                 println!("Found the balance (in an add)! Pairing...");
-
-                let _ = tokio::runtime::Runtime::new()?.block_on(async move {
-                    match try_pair_with_board(device_id, pin).await {
-                        Ok(_) => {
-                            println!("Balance paired successfully!");
-                            if let Err(e) = watcher.as_ref().unwrap().Stop() {
-                                eprintln!("Failed to stop watcher: {:?}", e);
-                            }
-                        }
-                        Err(e) => println!("{}", e.to_string()),
-                    }
-                });
+                let _ = watcher.as_ref().unwrap().Stop();
+                added_tx.try_send(device_id).unwrap();
             }
 
             Ok(())
         },
     );
 
-    // Create the event handler for device discovery
-    // If we receive an update that contains the device name, we must check if it is the board.
-    // If it is the board, then we can stop the search and check it.
+    let updated_tx = tx.clone();
     let updated = TypedEventHandler::new(
         move |watcher: windows::core::Ref<DeviceWatcher>,
               info: windows::core::Ref<DeviceInformationUpdate>| {
@@ -150,17 +135,9 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
             let properties_matches = properties_has_matching_name(&properties, NINTENDO_BOARD_ID);
 
             if properties_matches {
-                let _ = tokio::runtime::Runtime::new()?.block_on(async move {
-                    match try_pair_with_board(device_id, pin).await {
-                        Ok(_) => {
-                            println!("Balance paired successfully!");
-                            if let Err(e) = watcher.as_ref().unwrap().Stop() {
-                                eprintln!("Failed to stop watcher: {:?}", e);
-                            }
-                        }
-                        Err(e) => println!("{}", e.to_string()),
-                    }
-                });
+                println!("Found the balance (in an update)! Pairing...");
+                let _ = watcher.as_ref().unwrap().Stop();
+                updated_tx.try_send(device_id).unwrap();
             }
 
             Ok(())
@@ -174,23 +151,14 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()
     println!("Starting device watcher...");
     watcher.Start()?;
 
-    let timeout = Duration::from_secs(30); // Total duration to loop
-    let interval = Duration::from_secs(1); // Wait time between checks
-    let start = Instant::now(); // Record the start time
-    while start.elapsed() < timeout {
-        // Check if something has happened
-        let watcher_status = watcher.Status()?;
-
-        if watcher_status == DeviceWatcherStatus::Stopped
-            || watcher_status == DeviceWatcherStatus::Aborted
-        {
-            break;
-        }
-
-        sleep(interval).await; // Wait for 2 seconds
+    if let Some(device_id) = rx.recv().await {
+        try_pair_with_board(device_id.clone(), pin).await?;
+        let bluetooth_device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
+        let mac_address = convert_u64_to_mac_address(bluetooth_device.BluetoothAddress()?);
+        return Ok(mac_address);
     }
 
-    Ok(())
+    Err(anyhow!("Failed to find a device to pair with."))
 }
 
 async fn try_pair_with_board(device_id: HSTRING, pin: [u8; 6]) -> Result<()> {
@@ -211,6 +179,7 @@ async fn try_pair_with_board(device_id: HSTRING, pin: [u8; 6]) -> Result<()> {
 
     let pairing_result = pairing.PairAsync(DevicePairingKinds::ProvidePin)?.await?;
     if pairing_result.Status()? == DevicePairingResultStatus::Paired {
+        println!("Successfully paired with device {}!", device_id);
         Ok(())
     } else {
         Err(anyhow!(

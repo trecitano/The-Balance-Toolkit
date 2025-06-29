@@ -99,7 +99,7 @@ export const commands = {
                 });
             }
 
-            return invoke("devices_scan");
+            return invoke("devices_scan_without_timeout");
         }
     },
 }

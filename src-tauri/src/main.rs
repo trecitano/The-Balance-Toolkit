@@ -5,23 +5,10 @@ mod balance_board_com;
 mod bluetooth;
 mod file_system;
 mod types;
-mod tauri_setup;
+mod requests;
 
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 pub static HID_NINTENDO_BOARD_ID: &str = "Nintendo RVL-CNT-01";
-
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use tokio::task::AbortHandle;
-
-#[derive(Default)]
-pub struct ScanState {
-    pub handle: Option<AbortHandle>,
-}
-
-pub struct AppState {
-    pub scan_state: Arc<Mutex<ScanState>>,
-}
 
 #[tokio::main]
 async fn main() {
@@ -53,5 +40,5 @@ async fn main() {
         }
     }
     */
-    tauri_setup::run()
+    requests::run()
 }
