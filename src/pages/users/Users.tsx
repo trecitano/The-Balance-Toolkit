@@ -20,6 +20,7 @@ import sexIcon from "../../assets/sex-icon.svg";
 import heightIcon from "../../assets/measure-icon.svg";
 import weightIcon from "../../assets/weight-icon.svg";
 import handIcon from "../../assets/hand-icon.svg";
+import searchIcon from "../../assets/search-icon.svg";
 import {commands} from "@/utils/requests.ts";
 
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
@@ -575,6 +576,9 @@ export default function Users({
         <h1 className="page-title">Users</h1>
         
         <div className="search-container">
+          <span className="search-icon">
+            <img src={searchIcon} alt="Search" />
+          </span>
           <input 
             type="text"
             className="search-input"
