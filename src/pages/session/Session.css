@@ -141,7 +141,7 @@
 
 .list-item {
   width: 100%;
-  padding: 8px 12px;
+  padding: 8px 0px;
   cursor: pointer;
   border-radius: var(--radius);
   font-size: var(--font-md);
