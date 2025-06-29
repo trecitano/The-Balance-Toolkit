@@ -5,6 +5,7 @@ use serde::Serialize;
 use crate::NINTENDO_BOARD_ID;
 #[cfg(target_os = "windows")]
 use crate::bluetooth::windows_bluetooth_handler as handler;
+use crate::types::MacAddress;
 
 #[derive(Debug)]
 enum BluetoothState {
@@ -21,7 +22,7 @@ enum BluetoothState {
 pub struct BluetoothAdapterInfo {
     pub id: String,
     pub name: String,
-    pub mac_address: [u8; 6],
+    pub mac_address: MacAddress,
     pub is_active: bool,
     pub devices: Vec<Result<BluetoothPeripheral>>,
 }
@@ -30,11 +31,10 @@ pub struct BluetoothAdapterInfo {
 pub struct BluetoothPeripheral {
     pub id: String,
     pub name: String,
-    pub mac_address: [u8; 6],
+    pub mac_address: MacAddress,
     pub is_paired: bool,
     pub is_connected: bool,
 }
-
 
 pub async fn get_nintendo_devices() -> Result<Vec<BluetoothPeripheral>> {
     let adapters: Vec<BluetoothAdapterInfo> = handler::get_all_bluetooth_adapters_info().await?
@@ -54,44 +54,29 @@ pub async fn get_nintendo_devices() -> Result<Vec<BluetoothPeripheral>> {
     Ok(nintendo_devices)
 }
 
-pub async fn ensure_balance_board_is_connected() {
+pub async fn connect_new_balance_board() -> Result<()> {
+    let connected_nintendo_devices = get_nintendo_devices().await?;
+    println!("Current boards: #{:?}", connected_nintendo_devices);
+
     loop {
         println!("Checking...");
         let system_state = handler::get_all_bluetooth_adapters_info().await;
-        println!("{:#?}", system_state);
-        let enum_state = bluetooth_system_state(&system_state);
-        match bluetooth_system_state(&system_state) {
-            BluetoothState::BluetoothError(error) => {
-                println!("{}", error);
-            }
-            BluetoothState::BluetoothIsOff => {
-                println!("Please turn on the bluetooth.");
-            }
-            BluetoothState::NoAdaptersActive => {
-                println!("Please turn on one bluetooth adapter.");
-            }
-            BluetoothState::BoardConnected => {
-                return;
-            }
-            BluetoothState::BoardNotFound
-            | BluetoothState::BoardNotPaired
-            | BluetoothState::BoardNotConnected => {
-                println!("{:?}", enum_state);
-                let adapter: &BluetoothAdapterInfo = &system_state
-                    .as_ref() // Borrow the Result
-                    .unwrap() // Unwrap the outer Result
-                    .first() // Get the first element
-                    .unwrap() // Unwrap the Option
-                    .as_ref() // Borrow the inner Result
-                    .unwrap(); // Unwrap the inner Result
+        let adapter: &BluetoothAdapterInfo = &system_state
+            .as_ref() // Borrow the Result
+            .unwrap() // Unwrap the outer Result
+            .first() // Get the first element
+            .unwrap() // Unwrap the Option
+            .as_ref() // Borrow the inner Result
+            .unwrap(); // Unwrap the inner Result
 
-                handler::scan_and_pair_nintendo(&adapter).await.unwrap()
-            }
+        let new_board_mac_address = handler::scan_and_pair_nintendo(&adapter).await?;
+        if connected_nintendo_devices.iter().find(|device| device.mac_address == new_board_mac_address).is_none() {
+            return Ok(());
         }
 
         // If the current state failed, wait one second before trying again
-        println!("Ensuring board is connected, sleeping for 2 seconds.");
-        tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+        println!("Ensuring board is connected, sleeping for half a second.");
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
     }
 }
 

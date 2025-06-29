@@ -30,6 +30,8 @@ pub struct NintendoDevice {
     pub last_seen: Option<DateTime<Utc>>,
 }
 
+pub type MacAddress = [u8; 6];
+
 impl From<BluetoothPeripheral> for NintendoDevice {
     fn from(p: BluetoothPeripheral) -> Self {
         let mac_str = p.mac_address
