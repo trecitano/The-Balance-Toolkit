@@ -35,6 +35,7 @@ function AppContent() {
   useEffect(() => {
     const loadInitialData = async () => {
       const initialDevices = await commands.devices.fetchDevices();
+      debugger;
       setDevices(initialDevices);
     };
 
