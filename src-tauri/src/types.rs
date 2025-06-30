@@ -23,11 +23,10 @@ pub struct User {
 #[serde(rename_all = "camelCase")]
 pub struct NintendoDevice {
     pub name: String,
-    pub address: String,
+    pub status: String,
     pub mac_address: String,
     pub pin: String,
-    pub pin_hexa: String,
-    pub last_seen: Option<DateTime<Utc>>,
+    pub last_connected: Option<DateTime<Utc>>,
 }
 
 pub type MacAddress = [u8; 6];
@@ -49,11 +48,10 @@ impl From<BluetoothPeripheral> for NintendoDevice {
 
         NintendoDevice {
             name: p.name,
-            address: p.id,
+            status: "Connected".to_string(),
             mac_address: mac_str,
             pin: pin_hex_str.clone(),
-            pin_hexa: format!("0x{}", pin_hex_str),
-            last_seen: None,
+            last_connected: None,
         }
     }
 }

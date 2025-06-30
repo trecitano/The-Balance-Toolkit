@@ -54,29 +54,35 @@ pub async fn get_nintendo_devices() -> Result<Vec<BluetoothPeripheral>> {
     Ok(nintendo_devices)
 }
 
-pub async fn connect_new_balance_board() -> Result<()> {
+pub async fn connect_new_balance_board() -> Result<MacAddress> {
     let connected_nintendo_devices = get_nintendo_devices().await?;
     println!("Current boards: #{:?}", connected_nintendo_devices);
 
     loop {
-        println!("Checking...");
         let system_state = handler::get_all_bluetooth_adapters_info().await;
-        let adapter: &BluetoothAdapterInfo = &system_state
-            .as_ref() // Borrow the Result
-            .unwrap() // Unwrap the outer Result
-            .first() // Get the first element
-            .unwrap() // Unwrap the Option
-            .as_ref() // Borrow the inner Result
-            .unwrap(); // Unwrap the inner Result
+        let adapter = match system_state?.into_iter().find_map(Result::ok) {
+            Some(adapter) => adapter,
+            None => {
+                println!("Bluetooth is off.");
+                return Err(anyhow::anyhow!("Bluetooth is off."));
+            }
+        };
 
-        let new_board_mac_address = handler::scan_and_pair_nintendo(&adapter).await?;
+        let new_board_mac_address = match handler::scan_and_pair_nintendo(&adapter).await {
+            Ok(mac_address) => mac_address,
+            Err(e) => {
+                println!("Failed to scan and pair nintendo balance board: {:?}", e);
+                return Err(e);
+            }
+        };
+
         if connected_nintendo_devices.iter().find(|device| device.mac_address == new_board_mac_address).is_none() {
-            return Ok(());
+            return Ok(new_board_mac_address);
         }
 
         // If the current state failed, wait one second before trying again
         println!("Ensuring board is connected, sleeping for half a second.");
-        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
     }
 }
 

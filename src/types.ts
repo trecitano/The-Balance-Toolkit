@@ -46,10 +46,8 @@ export interface Device {
   id: number;
   name: string;
   status: "Connected" | "Active" | "Disconnected" | string;
-  mac: string;
-  battery: number;
-  temperature: number;
-  firmware: string;
+  macAddress: string;
+  battery?: number;
+  temperature?: number;
   lastConnected: string; // ISO date string
-  [key: string]: any;
 }

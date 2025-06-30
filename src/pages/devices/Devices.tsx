@@ -114,11 +114,13 @@ export default function Devices({
     //setDevicesFound(foundDevicesFromScan.length);
   };
 
-  const handleCancelScan = () => {
+  const handleCancelScan = async () => {
     if (scanTimeoutRef.current) {
       clearTimeout(scanTimeoutRef.current);
       scanTimeoutRef.current = null;
     }
+    await commands.devices.cancelScanDevices();
+    console.log("Setting stuff");
     setIsScanning(false);
     setDevicesFound(null);
   };

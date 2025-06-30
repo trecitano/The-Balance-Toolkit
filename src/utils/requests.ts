@@ -83,7 +83,6 @@ export const commands = {
 
             return invoke("devices_fetch_all");
         },
-
         async removeDevice(): Promise<void | ErrorMessage> {
             if (useDeviceMocks) {
                 return;
@@ -91,7 +90,6 @@ export const commands = {
 
             return invoke("devices_remove");
         },
-
         async scanDevices(): Promise<Device[] | ErrorMessage> {
             if (useDeviceMocks) {
                 return new Promise(resolve => {
@@ -99,7 +97,17 @@ export const commands = {
                 });
             }
 
+            debugger;
+            console.log("Invoking devices_scan_without_timeout");
             return invoke("devices_scan_without_timeout");
+        },
+        async cancelScanDevices(): Promise<void | ErrorMessage> {
+            if (useDeviceMocks) {
+                return;
+            }
+
+            console.log("Invoking devices_cancel_scan");
+            return invoke("devices_cancel_scan");
         }
     },
 }

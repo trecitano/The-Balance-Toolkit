@@ -1,15 +1,15 @@
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager, State};
 use crate::file_system::{DeviceFileSystem, UserFileSystem};
 use crate::types::{NintendoDevice, User};
 use tauri_plugin_fs::FsExt;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, watch};
 use crate::bluetooth::bluetooth_communication;
-use crate::{file_system, AppState, ScanState};
+use crate::{file_system};
 
 #[derive(Default)]
 pub struct AppState {
-    pub scan_state: Arc<Mutex<ScanState>>,
+    pub cancel_tx: Arc<Mutex<Option<watch::Sender<()>>>>,
 }
 
 pub fn run() {
@@ -30,7 +30,8 @@ pub fn run() {
             user_update,
             user_delete,
             devices_fetch_all,
-            devices_scan_without_timeout
+            devices_scan_without_timeout,
+            devices_cancel_scan
         ])
         .manage(AppState::default())
         .run(tauri::generate_context!())
@@ -89,7 +90,7 @@ pub async fn devices_fetch_all() -> Result<Vec<NintendoDevice>, String> {
     // Then we upsert the connected devices
     for device in connected_devices {
         match result.iter_mut().find(|d| d.mac_address == device.mac_address) {
-            Some(found) => found.last_seen = None,
+            Some(found) => found.last_connected = None,
             None => result.push(device)
         }
     }
@@ -100,24 +101,47 @@ pub async fn devices_fetch_all() -> Result<Vec<NintendoDevice>, String> {
 }
 
 #[tauri::command(async)]
-async fn devices_scan_without_timeout(app: AppHandle) -> Result<(), String> {
+async fn devices_scan_without_timeout(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    println!("Scan START");
+    let cancel_tx_lock = state.cancel_tx.lock().await.take();
+        if cancel_tx_lock.is_some() {
+        return Err("A scan is already in progress.".to_string());
+    }
+
+    let (cancel_tx, mut cancel_rx) = watch::channel(());
+    *state.cancel_tx.lock().await = Some(cancel_tx);
+    drop(cancel_tx_lock);
+
     println!("Scanning for devices...");
-    tokio::task::spawn_blocking(move || {
-        futures::executor::block_on(async {
-            loop {
-                println!("Starting scan");
-                app.emit("new_board", 1).unwrap();
-                let new_board = bluetooth_communication::connect_new_balance_board().await;
-                app.emit("new_board", 2).unwrap();
+    loop {
+        tokio::select! {
+            _ = cancel_rx.changed() => {
+                println!("Scan cancelled.");
+                break;
             }
-        });
-    }).await.map_err(|e| e.to_string())
+            new_board = bluetooth_communication::connect_new_balance_board() => {
+                if let Ok(mac_address) = new_board {
+                    app.emit("new_board", mac_address).unwrap();
+                }
+            }
+        }
+
+        println!("Looping!");
+    }
+
+    let mut cancel_tx_lock = state.cancel_tx.lock().await;
+    *cancel_tx_lock = None;
+    println!("Exiting");
+    Ok(())
 }
 
 
 #[tauri::command]
 async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
-
+    if let Some(cancel_tx) = state.cancel_tx.lock().await.take() {
+        let _ = cancel_tx.send(());
+    }
+    Ok(())
 }
 
 
