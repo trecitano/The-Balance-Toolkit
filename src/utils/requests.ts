@@ -103,7 +103,6 @@ export const commands = {
         });
       }
 
-      debugger;
       console.log("Invoking devices_scan_without_timeout");
       return invoke("devices_scan_without_timeout");
     },
