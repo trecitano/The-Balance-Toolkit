@@ -16,6 +16,7 @@ import battery100Icon from "@/assets/battery-100-icon.svg";
 import rippleIcon from "@/assets/ripple-icon.svg";
 import { Device } from "@/types";
 import { commands } from "@/utils/requests.ts";
+import { listen } from '@tauri-apps/api/event';
 
 interface DevicesProps {
   devices: Device[];
@@ -55,13 +56,12 @@ export default function Devices({
   const [topFadeOpacity, setTopFadeOpacity] = useState(0);
   const [bottomFadeOpacity, setBottomFadeOpacity] = useState(1);
   const [showIdentifyPopup, setShowIdentifyPopup] = useState(false);
-  const [identifyDeviceName, setIdentifyDeviceName] = useState<string | null>(
-    null,
-  );
+  const [identifyDeviceName, setIdentifyDeviceName] = useState<string | null>(null);
+  const [devicesFoundCount, setDevicesFoundCount] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
   const [devicesFound, setDevicesFound] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 
   const getBatteryIcon = (batteryLevel: number) => {
     if (batteryLevel <= 12) return battery0Icon;
@@ -70,6 +70,29 @@ export default function Devices({
     if (batteryLevel <= 87) return battery75Icon;
     return battery100Icon;
   };
+
+  useEffect(() => {
+    let unlisten;
+
+    // We need an async function to handle the promise returned by `listen`
+    async function setupListener() {
+      unlisten = await listen<Device>("new_board", (event) => {
+        setDevicesFoundCount(devicesFoundCount + 1);
+        console.log("REACT: Received device-discovered event", event.payload);
+        setDevices([event.payload]);
+      });
+    }
+
+    if (isScanning) {
+      setupListener();
+    }
+
+    return () => {
+      if (unlisten) {
+        unlisten(); // This detaches the event listener
+      }
+    };
+  }, [isScanning]); // Re-run the effect whenever `isScanning` changes
 
   useEffect(() => {
     const handleScroll = () => {
@@ -83,6 +106,7 @@ export default function Devices({
       setBottomFadeOpacity(bottomOpacity);
     };
     const list = listRef.current;
+    console.log(list);
     if (list) {
       list.addEventListener("scroll", handleScroll);
       handleScroll();
@@ -110,20 +134,14 @@ export default function Devices({
   const handleScanDevices = async () => {
     setIsScanning(true);
     setDevicesFound(null);
+    setDevicesFoundCount(0)
     await commands.devices.scanDevices();
-    const foundDevicesFromScan = await commands.devices.scanDevices();
     //onScanResults(foundDevicesFromScan);
-    setIsScanning(true);
     //setDevicesFound(foundDevicesFromScan.length);
   };
 
   const handleCancelScan = async () => {
-    if (scanTimeoutRef.current) {
-      clearTimeout(scanTimeoutRef.current);
-      scanTimeoutRef.current = null;
-    }
     await commands.devices.cancelScanDevices();
-    console.log("Setting stuff");
     setIsScanning(false);
     setDevicesFound(null);
   };
@@ -229,7 +247,7 @@ export default function Devices({
         <button
           onClick={isScanning ? handleCancelScan : handleScanDevices}
           className={`scan-btn ${noDevices ? "scan-button-highlight" : ""}`}
-          disabled={false}
+          disabled={isScanning}
         >
           {isScanning ? "Cancel Scan" : "Scan for Devices"}
         </button>
@@ -348,7 +366,7 @@ export default function Devices({
                     )}
                     <div className="device-last-connected">
                       {device.status !== "Disconnected"
-                        ? `MAC: ${device.mac}`
+                        ? `MAC: ${device.macAddress}`
                         : `Last seen: ${formatLastConnected(device.lastConnected)}`}
                     </div>
                     {device.status !== "Disconnected" && (
@@ -551,6 +569,13 @@ export default function Devices({
           <div className="scan-overlay-spinner">
             <span className="spinner" />
             <span className="scan-overlay-text">Scanning...</span>
+
+            {devicesFoundCount > 0 && (
+              <p className="scan-overlay-count">
+                {`Found ${devicesFoundCount} devices so far...`}
+              </p>
+            )}
+
             <button
               className="scan-btn"
               style={{ marginTop: 24, minWidth: 120 }}

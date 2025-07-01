@@ -121,7 +121,10 @@ async fn devices_scan_without_timeout(app: AppHandle, state: State<'_, AppState>
             }
             new_board = bluetooth_communication::connect_new_balance_board() => {
                 if let Ok(mac_address) = new_board {
-                    app.emit("new_board", mac_address).unwrap();
+                    match bluetooth_communication::get_nintendo_device_by_mac_address(mac_address).await {
+                        Ok(device) => app.emit("new_board", NintendoDevice::from(device)).unwrap(),
+                        Err(e) => (),
+                    }
                 }
             }
         }

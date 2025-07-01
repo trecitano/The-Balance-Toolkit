@@ -54,6 +54,13 @@ pub async fn get_nintendo_devices() -> Result<Vec<BluetoothPeripheral>> {
     Ok(nintendo_devices)
 }
 
+pub async fn get_nintendo_device_by_mac_address(mac_address: MacAddress) -> Result<BluetoothPeripheral> {
+    get_nintendo_devices().await?
+        .into_iter()
+        .find(|device| device.mac_address == mac_address)
+        .ok_or(anyhow::anyhow!("Nintendo balance board not found."))
+}
+
 pub async fn connect_new_balance_board() -> Result<MacAddress> {
     let connected_nintendo_devices = get_nintendo_devices().await?;
     println!("Current boards: #{:?}", connected_nintendo_devices);
