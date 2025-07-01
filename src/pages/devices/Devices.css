@@ -170,7 +170,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition);
 }
 .remove-device-btn:hover {
   color: var(--white);
@@ -249,12 +251,16 @@
 .devices-list-fade-top {
   top: 0;
   height: 10vw;
-  background: linear-gradient(to top, rgba(255,255,255,0), var(--white) 80%);
+  background: linear-gradient(to top, rgba(255, 255, 255, 0), var(--white) 80%);
 }
 .devices-list-fade {
   bottom: 0;
   height: var(--fade-height);
-  background: linear-gradient(to bottom, rgba(255,255,255,0), var(--white) 80%);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    var(--white) 80%
+  );
 }
 
 .device-row {
@@ -524,12 +530,15 @@
 
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  background: rgba(0,0,0,0.25);
+  background: rgba(0, 0, 0, 0.25);
 }
 .modal {
   background: var(--white);
@@ -542,12 +551,14 @@
   max-width: var(--modal-max-width);
 }
 
-
 .scan-overlay {
   position: fixed;
   z-index: 2000;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(120,120,120,0.25);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(120, 120, 120, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -569,11 +580,13 @@
   font-weight: 600;
 }
 
-
 .identify-popup-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.25);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -605,13 +618,17 @@
   box-sizing: border-box;
 }
 @keyframes spin {
-  0% { transform: rotate(0deg);}
-  100% { transform: rotate(360deg);}
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .devices-found-text {
   font-size: var(--text-md);
   color: var(--text-dark);
   font-weight: 500;
-  margin-left: -1.0vw;
+  margin-left: -1vw;
 }

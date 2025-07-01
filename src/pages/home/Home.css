@@ -162,9 +162,19 @@
   box-sizing: border-box;
 }
 
-.file-column { flex: 3 1 0; padding-right: 10px; }
-.user-column { flex: 1 1 0; justify-content: flex-start; padding-right: 10px; }
-.updated-column { flex: 1 1 0; justify-content: flex-end; }
+.file-column {
+  flex: 3 1 0;
+  padding-right: 10px;
+}
+.user-column {
+  flex: 1 1 0;
+  justify-content: flex-start;
+  padding-right: 10px;
+}
+.updated-column {
+  flex: 1 1 0;
+  justify-content: flex-end;
+}
 
 .recent-file-icon {
   width: clamp(14px, 1.2vw, 18px);
@@ -348,7 +358,7 @@
 .sidebar-content,
 .main-section-text-wrapper {
   scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none;  /* IE and Edge */
+  -ms-overflow-style: none; /* IE and Edge */
 }
 
 .sidebar-content::-webkit-scrollbar,
