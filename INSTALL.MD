@@ -5,20 +5,24 @@ This guide walks you through setting up a complete development environment for T
 ## System Requirements
 
 ### Windows
+
 - Windows 10/11
 - PowerShell or Command Prompt with administrator privileges
 
 ### macOS
+
 - macOS 10.15 or later
 - Terminal access
 - Homebrew (recommended)
 
 ## Step 1: Install Node.js
+
 Download and install Node.js LTS version from https://nodejs.org/
 
 ## Step 2: Install Rust
 
 ### Windows
+
 1. Download the Rust installer:
    - Visit https://rustup.rs/
    - Download and run `rustup-init.exe`
@@ -33,11 +37,15 @@ Download and install Node.js LTS version from https://nodejs.org/
    - Download from: https://developer.microsoft.com/en-us/microsoft-edge/webview2/
 
 ### macOS
+
 1. Open Terminal and run:
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
+
 2. Install Xcode Command Line Tools:
+
 ```bash
 xcode-select --install
 ```
@@ -59,11 +67,13 @@ npm --version
 ## Step 4: Create a New Tauri Project
 
 1. Create a new project:
+
 ```bash
 npm create tauri-app
 ```
 
 2. Follow the prompts:
+
 - ✔ Project name · balance-toolkit-app
 - ✔ Identifier · React
 - ✔ Choose which language to use for your frontend · TypeScript / JavaScript - (pnpm, yarn, npm, deno, bun)
@@ -72,6 +82,7 @@ npm create tauri-app
 - ✔ Choose your UI flavor · TypeScript
 
 3. Navigate to the project and install dependencies:
+
 ```bash
 cd balance-toolkit-app
 npm install
@@ -80,11 +91,13 @@ npm install
 ## Running Your Application
 
 Development mode:
+
 ```bash
 npm run tauri dev
 ```
 
 Build for production:
+
 ```bash
 npm run tauri build
 ```

@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, FC } from 'react';
+import React, { useState, useEffect, useRef, FC } from "react";
 import "./Home.css";
-import clockIcon from '@/assets/clock-counter-clockwise-icon.svg';
-import fileIcon from '@/assets/file-icon.svg';
-import bookBookmarkIcon from '@/assets/book-bookmark-icon.svg';
-import questionMarkIcon from '@/assets/question-mark-icon.svg';
-import githubIcon from '@/assets/github-icon.svg';
-import {commands} from "@/utils/requests.ts";
+import clockIcon from "@/assets/clock-counter-clockwise-icon.svg";
+import fileIcon from "@/assets/file-icon.svg";
+import bookBookmarkIcon from "@/assets/book-bookmark-icon.svg";
+import questionMarkIcon from "@/assets/question-mark-icon.svg";
+import githubIcon from "@/assets/github-icon.svg";
+import { commands } from "@/utils/requests.ts";
 
 interface RecentFile {
   id: string;
@@ -19,8 +19,15 @@ declare global {
   interface Window {
     showDirectoryPicker?: (options?: {
       id?: string;
-      mode?: 'read' | 'readwrite';
-      startIn?: 'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos' | FileSystemHandle;
+      mode?: "read" | "readwrite";
+      startIn?:
+        | "desktop"
+        | "documents"
+        | "downloads"
+        | "music"
+        | "pictures"
+        | "videos"
+        | FileSystemHandle;
     }) => Promise<FileSystemDirectoryHandle>;
   }
 }
@@ -30,14 +37,22 @@ interface MainSectionProps {
   className?: string;
   icon: string;
   alt: string;
-  title:string;
+  title: string;
   text: string;
   linkText: string;
   onLinkClick: () => void;
 }
 
-const MainSection: FC<MainSectionProps> = ({ className, icon, alt, title, text, linkText, onLinkClick }) => (
-  <div className={`main-area-section ${className || ''}`}>
+const MainSection: FC<MainSectionProps> = ({
+  className,
+  icon,
+  alt,
+  title,
+  text,
+  linkText,
+  onLinkClick,
+}) => (
+  <div className={`main-area-section ${className || ""}`}>
     <div className="main-section-icon-panel">
       <img src={icon} alt={alt} className="main-section-icon" />
     </div>
@@ -88,7 +103,14 @@ interface ContactItemProps {
   iconClassName: string;
 }
 
-const ContactItem: FC<ContactItemProps> = ({ label, href, ariaLabel, icon, alt, iconClassName }) => (
+const ContactItem: FC<ContactItemProps> = ({
+  label,
+  href,
+  ariaLabel,
+  icon,
+  alt,
+  iconClassName,
+}) => (
   <div className="contact-item">
     <span className="contact-label">{label}</span>
     <a
@@ -117,7 +139,7 @@ function Home() {
         const dateB = new Date(b.lastUpdated);
 
         return dateB.getTime() - dateA.getTime();
-      })
+      });
       setRecentFiles(recentFiles);
     };
     void sortedFiles();
@@ -126,7 +148,7 @@ function Home() {
   useEffect(() => {
     const handleScroll = () => {
       if (!listContentRef.current) return;
-      const {scrollTop, scrollHeight, clientHeight} = listContentRef.current;
+      const { scrollTop, scrollHeight, clientHeight } = listContentRef.current;
       const maxFade = 50; // Adjust this value to control fade sensitivity
 
       // Top fade
@@ -135,19 +157,22 @@ function Home() {
 
       // Bottom fade
       const scrollBottom = scrollHeight - clientHeight - scrollTop;
-      const calculatedBottomOpacity = Math.max(0, Math.min(scrollBottom / maxFade, 1));
+      const calculatedBottomOpacity = Math.max(
+        0,
+        Math.min(scrollBottom / maxFade, 1),
+      );
       setBottomFadeOpacity(calculatedBottomOpacity);
     };
 
     const listElement = listContentRef.current;
     if (listElement) {
-      listElement.addEventListener('scroll', handleScroll);
+      listElement.addEventListener("scroll", handleScroll);
       handleScroll(); // Initial check
     }
 
     return () => {
       if (listElement) {
-        listElement.removeEventListener('scroll', handleScroll);
+        listElement.removeEventListener("scroll", handleScroll);
       }
     };
   }, [recentFiles]); // Re-run if recentFiles changes, affecting scrollHeight
@@ -155,10 +180,12 @@ function Home() {
   const handleMoreFilesClick = async () => {
     if (window.showDirectoryPicker) {
       try {
-        const directoryHandle = await window.showDirectoryPicker({startIn: 'documents'});
+        const directoryHandle = await window.showDirectoryPicker({
+          startIn: "documents",
+        });
         console.log("Selected directory:", directoryHandle.name);
       } catch (err) {
-        if ((err as Error).name === 'AbortError') {
+        if ((err as Error).name === "AbortError") {
           console.log("User cancelled the directory selection.");
         } else {
           console.error("Error picking directory:", err);
@@ -179,16 +206,25 @@ function Home() {
       <div className="home-content">
         <div className="home-left-sidebar">
           <div className="sidebar-header">
-            <img src={clockIcon} alt="Recent" className="sidebar-header-icon"/>
+            <img src={clockIcon} alt="Recent" className="sidebar-header-icon" />
             <h2 className="sidebar-header-title">Recent</h2>
           </div>
           <div className="sidebar-list-container">
-            <div className="sidebar-fade sidebar-fade-top" style={{opacity: topFadeOpacity}}/>
+            <div
+              className="sidebar-fade sidebar-fade-top"
+              style={{ opacity: topFadeOpacity }}
+            />
             <div className="sidebar-content" ref={listContentRef}>
               <div className="recent-files-header">
-                <div className="recent-files-column-header file-column">File</div>
-                <div className="recent-files-column-header user-column">User</div>
-                <div className="recent-files-column-header updated-column">Updated</div>
+                <div className="recent-files-column-header file-column">
+                  File
+                </div>
+                <div className="recent-files-column-header user-column">
+                  User
+                </div>
+                <div className="recent-files-column-header updated-column">
+                  Updated
+                </div>
               </div>
               {recentFiles.length > 0 ? (
                 <ul className="recent-files-list">
@@ -200,7 +236,10 @@ function Home() {
                 <p className="no-recent-files">No recent files to display.</p>
               )}
             </div>
-            <div className="sidebar-fade sidebar-fade-bottom" style={{opacity: bottomFadeOpacity}}/>
+            <div
+              className="sidebar-fade sidebar-fade-bottom"
+              style={{ opacity: bottomFadeOpacity }}
+            />
           </div>
           <div className="link-footer">
             <div className="more-files-link" onClick={handleMoreFilesClick}>
@@ -216,7 +255,7 @@ function Home() {
             title="Documentation"
             text="Read through the documentation for a seamless experience of using the balance toolkit with your wii balance board"
             linkText="View documentation"
-            onLinkClick={() => console.log('View documentation clicked')}
+            onLinkClick={() => console.log("View documentation clicked")}
           />
           <MainSection
             className="placeholder-section"
@@ -225,7 +264,7 @@ function Home() {
             title="Placeholder"
             text="Placeholder Content"
             linkText="Placeholder"
-            onLinkClick={() => console.log('Placeholder action clicked')}
+            onLinkClick={() => console.log("Placeholder action clicked")}
           />
           <MainSection
             className="help-section"
@@ -234,9 +273,9 @@ function Home() {
             title="Help & Support"
             text="Go through a quick tutorial and see how you can make the most of The Balance Toolkit"
             linkText="Go to tutorial"
-            onLinkClick={() => console.log('Go to tutorial clicked')}
+            onLinkClick={() => console.log("Go to tutorial clicked")}
           />
-          
+
           <div className="main-area-section contact-section">
             <div className="main-section-details-column">
               <div className="contact-item-list">
@@ -259,8 +298,6 @@ function Home() {
               </div>
             </div>
           </div>
-
-
         </div>
       </div>
     </div>

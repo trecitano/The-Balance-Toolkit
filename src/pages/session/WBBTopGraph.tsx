@@ -16,7 +16,11 @@ interface WBBTopGraphProps {
 
 const CIRCLE_DIAMETER = 5;
 
-const WBBTopGraph: React.FC<WBBTopGraphProps> = ({ trail, current, bounds }) => {
+const WBBTopGraph: React.FC<WBBTopGraphProps> = ({
+  trail,
+  current,
+  bounds,
+}) => {
   const ref = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
@@ -30,14 +34,14 @@ const WBBTopGraph: React.FC<WBBTopGraphProps> = ({ trail, current, bounds }) => 
     const svg = d3.select(ref.current);
     svg.selectAll("*").remove();
 
-    
     if (trail.length > 1) {
-      const points = trail.map(p => [
-        (p.x + 1) / 2 * bounds.width,
-        (1 - p.y) / 2 * bounds.height,
+      const points = trail.map((p) => [
+        ((p.x + 1) / 2) * bounds.width,
+        ((1 - p.y) / 2) * bounds.height,
       ]);
-      svg.append("polyline")
-        .attr("points", points.map(p => p.join(",")).join(" "))
+      svg
+        .append("polyline")
+        .attr("points", points.map((p) => p.join(",")).join(" "))
         .attr("fill", "none")
         .attr("stroke", "rgba(0, 100, 255, 0.6)")
         .attr("stroke-width", 2.5)
@@ -45,11 +49,11 @@ const WBBTopGraph: React.FC<WBBTopGraphProps> = ({ trail, current, bounds }) => 
         .attr("stroke-linejoin", "round");
     }
 
-    
     if (current) {
-      const cx = (current.x + 1) / 2 * bounds.width;
-      const cy = (1 - current.y) / 2 * bounds.height;
-      svg.append("circle")
+      const cx = ((current.x + 1) / 2) * bounds.width;
+      const cy = ((1 - current.y) / 2) * bounds.height;
+      svg
+        .append("circle")
         .attr("cx", cx)
         .attr("cy", cy)
         .attr("r", CIRCLE_DIAMETER)
