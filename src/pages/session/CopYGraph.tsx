@@ -14,8 +14,8 @@ const CopYGraph: React.FC<CopYGraphProps> = ({ data }) => {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const observer = new ResizeObserver(entries => {
-      for (let entry of entries) {
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
         const { width, height } = entry.contentRect;
         setSize({ width, height });
       }
@@ -29,29 +29,28 @@ const CopYGraph: React.FC<CopYGraphProps> = ({ data }) => {
     const svg = d3.select(ref.current);
     svg.selectAll("*").remove();
 
-    const padding = { top: 1, right: 30, bottom: 1, left: 40 }; 
+    const padding = { top: 1, right: 30, bottom: 1, left: 40 };
     const graphWidth = size.width - padding.left - padding.right;
     const graphHeight = size.height - padding.top - padding.bottom;
     const MAX_POINTS = 200;
 
-    
     const paddedData =
       data.length < MAX_POINTS
         ? data.concat(Array(MAX_POINTS - data.length).fill(0))
         : data.slice(-MAX_POINTS);
 
-    
-    const y = d3.scaleLinear()
+    const y = d3
+      .scaleLinear()
       .domain([-1, 1])
       .range([padding.top + graphHeight, padding.top]);
 
-    
-    const x = d3.scaleLinear()
+    const x = d3
+      .scaleLinear()
       .domain([0, MAX_POINTS - 1])
       .range([padding.left, padding.left + graphWidth]);
 
-    
-    svg.append("line")
+    svg
+      .append("line")
       .attr("x1", padding.left)
       .attr("y1", padding.top)
       .attr("x2", padding.left)
@@ -59,8 +58,8 @@ const CopYGraph: React.FC<CopYGraphProps> = ({ data }) => {
       .attr("stroke", "#222")
       .attr("stroke-width", 1);
 
-    
-    svg.append("line")
+    svg
+      .append("line")
       .attr("x1", padding.left)
       .attr("y1", y(0))
       .attr("x2", padding.left + graphWidth)
@@ -68,14 +67,14 @@ const CopYGraph: React.FC<CopYGraphProps> = ({ data }) => {
       .attr("stroke", "#222")
       .attr("stroke-width", 1);
 
-    
     const yTicks = [-1, 0, 1];
     const yLabels = { "-1": "Back", "0": "CoPy", "1": "Front" };
-    yTicks.forEach(val => {
+    yTicks.forEach((val) => {
       let baseline = "middle";
-      if (val === 1) baseline = "hanging";      
-      if (val === -1) baseline = "baseline";    
-      svg.append("text")
+      if (val === 1) baseline = "hanging";
+      if (val === -1) baseline = "baseline";
+      svg
+        .append("text")
         .attr("x", padding.left - 8)
         .attr("y", y(val))
         .attr("text-anchor", "end")
@@ -83,8 +82,9 @@ const CopYGraph: React.FC<CopYGraphProps> = ({ data }) => {
         .attr("fill", "#222")
         .attr("dominant-baseline", baseline)
         .text(yLabels[val]);
-      svg.append("line")
-        .attr("x1", padding.left -  5)
+      svg
+        .append("line")
+        .attr("x1", padding.left - 5)
         .attr("y1", y(val))
         .attr("x2", padding.left)
         .attr("y2", y(val))
@@ -92,14 +92,15 @@ const CopYGraph: React.FC<CopYGraphProps> = ({ data }) => {
         .attr("stroke-width", 1);
     });
 
-    
     if (data.length > 1) {
-      const line = d3.line<number>()
+      const line = d3
+        .line<number>()
         .x((_, i) => x(i))
-        .y(d => y(d))
+        .y((d) => y(d))
         .curve(d3.curveMonotoneX);
 
-      svg.append("path")
+      svg
+        .append("path")
         .datum(data)
         .attr("fill", "none")
         .attr("stroke", "#007bff")
@@ -107,10 +108,10 @@ const CopYGraph: React.FC<CopYGraphProps> = ({ data }) => {
         .attr("d", line);
     }
 
-    
     if (data.length > 0) {
       const lastIdx = data.length - 1;
-      svg.append("circle")
+      svg
+        .append("circle")
         .attr("cx", x(lastIdx))
         .attr("cy", y(data[lastIdx]))
         .attr("r", CIRCLE_RADIUS)

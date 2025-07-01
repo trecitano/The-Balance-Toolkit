@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-html, body {
+html,
+body {
   height: 100vh;
   margin: 0;
   padding: 0;
@@ -10,7 +11,7 @@ html, body {
 }
 
 body {
-  font-family: 'Segoe UI', 'Inter', 'Roboto', Arial, sans-serif;
+  font-family: "Segoe UI", "Inter", "Roboto", Arial, sans-serif;
 }
 
 .app {
@@ -21,23 +22,23 @@ body {
   background: #fff;
   border: 12px solid #e6e6e6;
   box-sizing: border-box;
-  box-shadow: 0 4px 32px 0 rgba(0,0,0,0.12);
+  box-shadow: 0 4px 32px 0 rgba(0, 0, 0, 0.12);
   border-radius: 22px;
-  font-size: 0.85em; 
+  font-size: 0.85em;
 }
 
 .menu-bar {
   height: 100vh;
   width: 6.5vw;
   min-width: 50px;
-  background: #e50012 !important; 
+  background: #e50012;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 0;
   box-sizing: border-box;
   border-right: 1px solid #e5e7eb;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.04);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.04);
 }
 
 .menu-bar.menu-bar--active {
@@ -51,21 +52,21 @@ body {
   align-items: center;
   justify-content: center;
   margin-bottom: 8px;
-  background: transparent !important;
+  background: transparent;
   box-sizing: border-box;
   padding: 0;
 }
 
 .logo-placeholder img,
 .logo-placeholder svg {
-  width: 100% !important;
-  height: auto !important;      
-  max-width: 100% !important;
-  max-height: 100% !important;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
   display: block;
   object-fit: contain;
-  padding: 0 !important;
-  margin: 0 !important;
+  padding: 0;
+  margin: 0;
   box-sizing: border-box;
 }
 
@@ -88,64 +89,66 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  
+
   width: 100%;
   border-radius: 8px;
-  padding: 0.6vw 0px;   
+  padding: 0.6vw 0px;
   background: transparent;
-  color: #fff !important;
-  font-size: 0.9em;  
+  color: #fff;
+  font-size: 0.9em;
   font-weight: 500;
   cursor: pointer;
   border: none;
-  margin-bottom: 4px; 
-  transition: background 0.2s, color 0.2s;
+  margin-bottom: 4px;
+  transition:
+    background 0.2s,
+    color 0.2s;
 }
 
 .menu-item-text {
   margin-right: 0;
   display: block;
   text-align: center;
-  color: #fff !important; 
+  color: #fff;
   font-size: clamp(5px, 1vw, 18px);
 }
 
 .menu-item.active {
-  background: #b71c1c !important; 
-  color: #fff !important;
+  background: #b71c1c;
+  color: #fff;
 }
 
 .menu-item:hover:not(.active) {
-  background: #b71c1c !important; 
-  color: #fff !important;
+  background: #b71c1c;
+  color: #fff;
 }
 
 .menu-item-icon {
-  width: 2vw; 
-  
+  width: 2vw;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;           
-  margin: 0;            
-  margin-bottom: 1px; 
+  padding: 0;
+  margin: 0;
+  margin-bottom: 1px;
 }
 
 .menu-item-icon img,
 .menu-item-icon svg {
-  width: 1.5vw;          
-  height: 1.5vvw; 
+  width: 1.5vw;
+  height: 1.5vw;
   display: block;
   margin: 0 auto;
   padding: 0;
-  filter: brightness(0) invert(1); 
-  object-fit: contain;  
+  filter: brightness(0) invert(1);
+  object-fit: contain;
 }
 
 .menu-bottom {
   display: flex;
   flex-direction: column;
-  gap: 0px; 
+  gap: 0px;
   margin-bottom: 32px;
   align-items: flex-start;
   width: 100%;
@@ -181,7 +184,7 @@ body {
 }
 
 .page-title {
-  font-size: 1.7rem; 
+  font-size: 1.7rem;
   font-weight: bold;
   margin-bottom: 0px;
   color: #222;
