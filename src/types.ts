@@ -51,3 +51,11 @@ export interface Device {
   temperature?: number;
   lastConnected: string; // ISO date string
 }
+
+export type BalanceBoardEvent =
+  | {
+  event: 'reading'
+  data: {
+    record: number;
+  };
+};

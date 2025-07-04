@@ -26,7 +26,7 @@ function AppContent() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
   const [editingDeviceName, setEditingDeviceName] = useState<string>("");
-  const [connectingDeviceIds, setConnectingDeviceIds] = useState<number[]>([]);
+  const [connectingDeviceMacAddresses, setConnectingDeviceMacAddresses] = useState<number[]>([]);
   const [disconnectingDeviceIds, setDisconnectingDeviceIds] = useState<
     number[]
   >([]);
@@ -59,13 +59,15 @@ function AppContent() {
     .filter((device) => device.status === "Connected")
     .map((device) => device.name);
 
-  const handleConnectDevice = async (deviceId: number) => {
-    setConnectingDeviceIds((prev) => [...prev, deviceId]);
+  const handleConnectDevice = async (macAddress: string) => {
+    setConnectingDeviceMacAddresses((prev) => [...prev, macAddress]);
+
+    await commands.devices.connectDevice(macAddress);
 
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setDevices((prevDevices) =>
       prevDevices.map((device) =>
-        device.id === deviceId
+        device.macAddress === macAddress
           ? {
               ...device,
               status: "Connected",
@@ -74,7 +76,7 @@ function AppContent() {
           : device,
       ),
     );
-    setConnectingDeviceIds((prev) => prev.filter((id) => id !== deviceId));
+    setConnectingDeviceMacAddresses((prev) => prev.filter((id) => id !== macAddress));
   };
 
   const handleDisconnectDevice = async (deviceId: number) => {
@@ -161,8 +163,8 @@ function AppContent() {
                 setEditingDeviceId={setEditingDeviceId}
                 editingDeviceName={editingDeviceName}
                 setEditingDeviceName={setEditingDeviceName}
-                connectingDeviceIds={connectingDeviceIds}
-                setConnectingDeviceIds={setConnectingDeviceIds}
+                connectingDeviceMacAddresses={connectingDeviceMacAddresses}
+                setConnectingDeviceMacAddresses={setConnectingDeviceMacAddresses}
                 disconnectingDeviceIds={disconnectingDeviceIds}
                 setDisconnectingDeviceIds={setDisconnectingDeviceIds}
                 onConnectDevice={handleConnectDevice}

@@ -48,11 +48,17 @@ impl From<BluetoothPeripheral> for NintendoDevice {
 
         NintendoDevice {
             name: p.name,
-            status: "Connected".to_string(),
+            status: "Active".to_string(),
             mac_address: mac_str,
             pin: pin_hex_str.clone(),
             last_connected: None,
         }
+    }
+}
+
+enum BalanceBoardEvent {
+    Reading {
+        record: usize
     }
 }
 

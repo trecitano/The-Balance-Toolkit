@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::ipc::Channel;
 use crate::file_system::{DeviceFileSystem, UserFileSystem};
-use crate::types::{NintendoDevice, User};
+use crate::types::{BalanceBoardEvent, NintendoDevice, User};
 use tauri_plugin_fs::FsExt;
 use tokio::sync::{Mutex, watch};
 use crate::bluetooth::bluetooth_communication;
-use crate::{file_system};
+use crate::{balance_board_com, file_system};
 
 #[derive(Default)]
 pub struct AppState {
@@ -31,7 +32,8 @@ pub fn run() {
             user_delete,
             devices_fetch_all,
             devices_scan_without_timeout,
-            devices_cancel_scan
+            devices_cancel_scan,
+            devices_connect
         ])
         .manage(AppState::default())
         .run(tauri::generate_context!())
@@ -145,6 +147,13 @@ async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
         let _ = cancel_tx.send(());
     }
     Ok(())
+}
+
+#[tauri::command]
+async fn devices_connect(mac_address: String, channel: Channel<BalanceBoardEvent>) -> Result<(), String> {
+    println!("Connecting to device: {}", mac_address);
+    let transformed_address = mac_address.replace(":", "").trim().to_lowercase();
+    balance_board_com::connect(transformed_address).await.map_err(|e| e.to_string())
 }
 
 

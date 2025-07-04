@@ -1,5 +1,5 @@
 // When using the Tauri API npm package:
-import { invoke } from "@tauri-apps/api/core";
+import {Channel, invoke} from "@tauri-apps/api/core";
 
 import {
   mockUsersData,
@@ -7,7 +7,7 @@ import {
   mockRecentFiles,
   mockScanDeviceData,
 } from "@/utils/mocks.ts";
-import { Device, ErrorMessage, RecentFile, UserType } from "@/types.ts";
+import {BalanceBoardEvent, Device, ErrorMessage, RecentFile, UserType} from "@/types.ts";
 
 const useFileMocks = true;
 const useUserMocks = false;
@@ -106,6 +106,20 @@ export const commands = {
       console.log("Invoking devices_scan_without_timeout");
       return invoke("devices_scan_without_timeout");
     },
+    async connectDevice(macAddress: String): Promise<void> {
+      if (useDeviceMocks) {
+        return;
+      }
+
+      const channel = new Channel<BalanceBoardEvent>();
+      channel.onmessage = (message) => {
+        console.log(`got download event ${message.event}`);
+      };
+
+      console.log("Connecting to device ", macAddress);
+      return invoke("devices_connect", { macAddress: macAddress, channel: channel});
+    },
+
     async cancelScanDevices(): Promise<void | ErrorMessage> {
       if (useDeviceMocks) {
         return;
