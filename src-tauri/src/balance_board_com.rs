@@ -1,4 +1,3 @@
-use crate::HID_NINTENDO_BOARD_ID;
 use crate::balance_board_com::UserAction::Tare;
 use anyhow::Result;
 use anyhow::anyhow;
@@ -165,25 +164,28 @@ impl BalanceBoardSensorReading {
 // Requirements:
 // Ensure the user can access the hid device.
 // Linux: https://github.com/libusb/hidapi/blob/master/udev/69-hid.rules
-pub async fn connect() -> Result<()> {
+pub async fn connect(device_id: String) -> Result<()> {
     let api = hidapi::HidApi::new()?;
     // Print out information about all connected devices
     for device in api.device_list() {
-        println!("{:?}", device.product_string());
+        println!("Serial: {:?}", device.serial_number());
+        println!("---");
     }
 
-    let nintendo_device = api
+    // The serial number of a nintendo balance board is the string version of a mac address.
+    // If the mac address is "00:23:31:87:B1:16", its serial number is "0023    3187B116".
+    let balance_board = api
         .device_list()
         .find(|device| {
-            if let Some(product_string) = device.product_string() {
-                product_string == crate::NINTENDO_BOARD_ID
-                    || product_string == HID_NINTENDO_BOARD_ID
+            if let Some(serial_number) = device.serial_number() {
+                serial_number == device_id
             } else {
                 false
             }
         })
         .ok_or(anyhow!("Board not found"))?;
-    let open = nintendo_device.open_device(&api)?;
+
+    let open = balance_board.open_device(&api)?;
 
     // First, let's read the calibration data.
     let calibration_data = read_memory_data(&open)?;

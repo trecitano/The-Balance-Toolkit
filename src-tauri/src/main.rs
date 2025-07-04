@@ -8,7 +8,6 @@ mod types;
 mod requests;
 
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
-pub static HID_NINTENDO_BOARD_ID: &str = "Nintendo RVL-CNT-01";
 
 #[tokio::main]
 async fn main() {

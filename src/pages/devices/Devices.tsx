@@ -25,11 +25,11 @@ interface DevicesProps {
   setEditingDeviceId: (id: number | null) => void;
   editingDeviceName: string;
   setEditingDeviceName: (name: string) => void;
-  connectingDeviceIds: number[];
-  setConnectingDeviceIds: (ids: number[]) => void;
+  connectingDeviceMacAddresses: number[];
+  setConnectingDeviceMacAddresses: (ids: number[]) => void;
   disconnectingDeviceIds: number[];
   setDisconnectingDeviceIds: (ids: number[]) => void;
-  onConnectDevice: (deviceId: number) => Promise<void>;
+  onConnectDevice: (deviceId: string) => Promise<void>;
   onDisconnectDevice: (deviceId: number) => Promise<void>;
   onSaveDeviceName: (deviceId: number, newName: string) => void;
   onRemoveDevice: (deviceId: number) => void;
@@ -43,8 +43,8 @@ export default function Devices({
   setEditingDeviceId,
   editingDeviceName,
   setEditingDeviceName,
-  connectingDeviceIds,
-  setConnectingDeviceIds,
+  connectingDeviceMacAddresses,
+  setConnectingDeviceMacAddresses,
   disconnectingDeviceIds,
   setDisconnectingDeviceIds,
   onConnectDevice,
@@ -209,7 +209,7 @@ export default function Devices({
     return (
       isScanning ||
       disconnectingDeviceIds.includes(device.id) ||
-      connectingDeviceIds.includes(device.id)
+      connectingDeviceMacAddresses.includes(device.id)
     );
   };
 
@@ -404,12 +404,12 @@ export default function Devices({
                       </button>
                     ) : (
                       <button
-                        onClick={() => onConnectDevice(device.id)}
+                        onClick={() => onConnectDevice(device.macAddress)}
                         className="device-action-btn connect"
                         disabled={isConnectDisabled}
                         title={connectTooltip}
                       >
-                        {connectingDeviceIds.includes(device.id)
+                        {connectingDeviceMacAddresses.includes(device.id)
                           ? "Wait..."
                           : "Connect"}
                       </button>
