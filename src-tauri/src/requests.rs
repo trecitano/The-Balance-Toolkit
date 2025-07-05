@@ -7,10 +7,12 @@ use tauri_plugin_fs::FsExt;
 use tokio::sync::{Mutex, watch};
 use crate::bluetooth::bluetooth_communication;
 use crate::{balance_board_com, file_system};
+use crate::balance_board_com::WiiBalanceBoard;
 
 #[derive(Default)]
 pub struct AppState {
     pub cancel_tx: Arc<Mutex<Option<watch::Sender<()>>>>,
+    pub connected_devices: Arc<Mutex<Vec<WiiBalanceBoard>>>,
 }
 
 pub fn run() {
@@ -149,11 +151,11 @@ async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-async fn devices_connect(mac_address: String, channel: Channel<BalanceBoardEvent>) -> Result<(), String> {
+#[tauri::command(async)]
+fn devices_connect(mac_address: String, channel: Channel<BalanceBoardEvent>) -> Result<(), String> {
     println!("Connecting to device: {}", mac_address);
     let transformed_address = mac_address.replace(":", "").trim().to_lowercase();
-    balance_board_com::connect(transformed_address).await.map_err(|e| e.to_string())
+    balance_board_com::connect(transformed_address).map_err(|e| e.to_string())
 }
 
 
