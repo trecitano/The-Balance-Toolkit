@@ -55,8 +55,7 @@ impl From<BluetoothPeripheral> for NintendoDevice {
         }
     }
 }
-
-enum BalanceBoardEvent {
+pub enum BalanceBoardEvent {
     Reading {
         record: usize
     }
