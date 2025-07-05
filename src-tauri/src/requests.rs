@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 use tauri::ipc::Channel;
 use crate::file_system::{DeviceFileSystem, UserFileSystem};
 use crate::types::{BalanceBoardEvent, NintendoDevice, User};
@@ -152,7 +152,7 @@ async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command(async)]
-fn devices_connect(mac_address: String, channel: Channel<BalanceBoardEvent>) -> Result<(), String> {
+fn devices_connect(mac_address: String, _channel: Channel<BalanceBoardEvent>) -> Result<(), String> {
     println!("Connecting to device: {}", mac_address);
     let transformed_address = mac_address.replace(":", "").trim().to_lowercase();
     balance_board_com::connect(transformed_address).map_err(|e| e.to_string())
