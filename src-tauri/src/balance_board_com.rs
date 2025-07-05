@@ -5,17 +5,12 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-// --- Constants for Wii Balance Board Communication ---
-const VENDOR_ID: u16 = 0x057e;
-const PRODUCT_ID: u16 = 0x0306;
-
 // --- HID Command Constants ---
 const HID_CMD_SET_REPORT_TYPE: u8 = 0x12;
 const HID_CMD_DATA_REPORT_MODE: u8 = 0x34; // Core Buttons with 8 Extension bytes
 
 // --- Memory and Calibration Constants ---
-const CALIBRATION_MEM_ADDR: u32 = 0x00A40020;
-const CALIBRATION_MEM_SIZE: u16 = 32;
+const CALIBRATION_DATA_SIZE: usize = 32;
 
 // --- Data Packet Constants ---
 const DATA_REPORT_READ_EVENT: u8 = 0x21;
@@ -72,13 +67,16 @@ impl WiiBalanceBoard {
     }
 
     pub fn run(&mut self) -> Result<()> {
+        println!("Start!");
         let (raw_reading_tx, raw_reading_rx) = mpsc::channel::<BalanceBoardSensorReading>();
         let (processed_data_tx, processed_data_rx) = mpsc::channel::<[f32; 4]>();
         let (user_action_tx, user_action_rx) = mpsc::channel::<UserAction>();
         self.user_action_tx = user_action_tx;
 
         // --- 1. HID Reading Thread ---
-        let device_clone = self.device.try_clone()?;
+        let api = HidApi::new()?;
+        let device_path = self.device.get_device_info()?.path().to_owned();
+        let device_clone = api.open_path(&device_path)?;
         let read_handle = thread::spawn(move || {
             Self::hid_read_loop(device_clone, raw_reading_tx)
         });
@@ -141,6 +139,7 @@ impl WiiBalanceBoard {
                     top_left: i16::from_be_bytes([buf[7], buf[8]]),
                     bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
                 };
+                println!("Raw reading: {:?}", reading);
                 if tx.send(reading).is_err() {
                     break; // Receiver has disconnected
                 }
@@ -176,6 +175,7 @@ impl WiiBalanceBoard {
                 Ok(raw_reading) => {
                     let tared_reading = raw_reading.apply_tare(&tare_offset);
                     let weights = tared_reading.calculate_weights(&calibration);
+                    println!("Tared reading: {:?}", weights);
                     if processed_tx.send(weights).is_err() {
                         break; // Receiver has disconnected
                     }
@@ -200,12 +200,11 @@ impl WiiBalanceBoard {
                 "Total: {:.2}kg | TR: {:.2}, BR: {:.2}, TL: {:.2}, BL: {:.2}",
                 total_weight, weights[0], weights[1], weights[2], weights[3]
             );
-            outlet.push_sample(&weights)?;
+            outlet.push_sample(&weights.to_vec())?;
         }
         Err(anyhow!("LSL stream loop terminated."))
     }
 
-    const CALIBRATION_MEM_SIZE: u16 = 32;
     fn read_calibration_data(device: &HidDevice) -> Result<BalanceBoardCalibrationData> {
         // https://wiibrew.org/wiki/Wiimote#Reading_and_Writing
         // Example: (a2) 17 MM FF FF FF SS SS
@@ -215,29 +214,44 @@ impl WiiBalanceBoard {
         // 04 (Address Space) 
         // a40020 (Memory Address)
         // 20 (Bytes to Read)
+        // We need to read at least 2 packets, as each packet is not large enough to contain
+        // all of the calibration data.
         let cmd: [u8; 7] = [0x17, 0x04, 0xA4, 0x00, 0x20, 0x00, 0x20];
         device.write(&cmd)?;
 
-        let mut calibration_buf = [0u8; CALIBRATION_MEM_SIZE as usize];
-        let mut bytes_read = 0;
+        let mut calibration_buf = [0u8; CALIBRATION_DATA_SIZE];
+        let mut bytes_read: usize = 0;
 
-        while bytes_read < CALIBRATION_MEM_SIZE {
+        while bytes_read < CALIBRATION_DATA_SIZE {
             let mut buf = [0u8; 32];
             let len = device.read_timeout(&mut buf, 1000)?;
 
             if len == 0 { return Err(anyhow!("Timeout reading calibration data.")); }
+            // We ignore everything that isn't what we want.
+            // When we send a request for this specific data, we receive a data reading through
+            // Input Report 0x21
             if buf[0] != DATA_REPORT_READ_EVENT { continue; }
 
-            let size = (buf[3] >> 4) as u16 + 1;
+            println!("Reading is: {:?}", buf);
+            for byte in buf {
+                // Print each byte as a 2-digit lowercase hex number, followed by a space
+                print!("{:02x} ", byte);
+            }
+            println!();
+
+            let packet_data_size  = ((buf[3] >> 4) + 1) as usize;
             let error_code = buf[3] & 0x0F;
-            let offset = u16::from_be_bytes([buf[4], buf[5]]);
-
+            
             if error_code != 0 { return Err(anyhow!("Error reading board memory: code {}", error_code)); }
-            if offset as u16 + size > CALIBRATION_MEM_SIZE { return Err(anyhow!("Calibration data overflow.")); }
+            if bytes_read + packet_data_size > CALIBRATION_DATA_SIZE { return Err(anyhow!("Calibration data overflow.")); }
 
-            let data_chunk = &buf[6..(6 + size as usize)];
-            calibration_buf[offset as usize..(offset as usize + size as usize)].copy_from_slice(data_chunk);
-            bytes_read += size;
+            let data_chunk = &buf[6..(6 + packet_data_size)];
+            calibration_buf[bytes_read..(bytes_read + packet_data_size)].copy_from_slice(data_chunk);
+            bytes_read += packet_data_size;
+
+            if bytes_read == CALIBRATION_DATA_SIZE {
+                break;
+            }
         }
 
         BalanceBoardCalibrationData::from_bytes(calibration_buf)
