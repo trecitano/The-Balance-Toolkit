@@ -12,7 +12,7 @@ use crate::NINTENDO_BOARD_ID;
 use crate::bluetooth::bluetooth_communication::{
     BluetoothAdapterInfo, BluetoothPeripheral, mac_address_to_wii_pin,
 };
-use windows::Devices::Enumeration::{DeviceInformationUpdate, DevicePairingResultStatus};
+use windows::Devices::Enumeration::{DeviceInformationUpdate, DevicePairingResultStatus, DeviceUnpairingResultStatus};
 use windows::Foundation::IPropertyValue;
 use windows::core::HSTRING;
 use windows_core::Interface;
@@ -201,6 +201,52 @@ async fn try_pair_with_board(device_id: HSTRING, pin: [u8; 6]) -> Result<()> {
     }
 }
 
+pub async fn turn_off_device(mac_address: MacAddress) -> Result<()> {
+    // Convert the MAC address array to the u64 format used by the Windows API.
+    let u64_address = mac_address_to_u64(mac_address);
+
+    // Find the Bluetooth device object from its address.
+    // This might return an error if the device is not found/known by the system.
+    let device = match BluetoothDevice::FromBluetoothAddressAsync(u64_address)?.await {
+        Ok(d) => d,
+        Err(e) => {
+            return Err(anyhow!(
+                "Device with MAC {:?} not found. Error: {}",
+                mac_address,
+                e
+            ))
+        }
+    };
+
+    // To unpair, we need the DeviceInformation object associated with the device.
+    // We can get this using the device's ID.
+    let device_info =
+        DeviceInformation::CreateFromIdAsync(&device.DeviceId()?)?.await?;
+
+    // Get the pairing information object.
+    let pairing = device_info.Pairing()?;
+
+    // Attempt to unpair the device.
+    println!("Attempting to unpair device with MAC: {:?}", mac_address);
+    let unpairing_result = pairing.UnpairAsync()?.await?;
+
+    // Check the status of the unpairing operation.
+    match unpairing_result.Status()? {
+        DeviceUnpairingResultStatus::Unpaired
+        | DeviceUnpairingResultStatus::AlreadyUnpaired => {
+            println!("Successfully unpaired device.");
+            Ok(())
+        }
+        status => {
+            // The status is an enum, its debug representation is informative.
+            Err(anyhow!(
+                "Failed to unpair device. Status: {:?}",
+                status
+            ))
+        }
+    }
+}
+
 fn properties_has_matching_name(
     properties: &windows_collections::IMapView<HSTRING, windows_core::IInspectable>,
     target: &str,
@@ -221,6 +267,14 @@ fn properties_has_matching_name(
     };
 
     value == HSTRING::from(target)
+}
+
+fn mac_address_to_u64(mac_address: MacAddress) -> u64 {
+    let mut u64_address: u64 = 0;
+    for (i, &byte) in mac_address.iter().enumerate() {
+        u64_address |= (byte as u64) << (8 * (5 - i));
+    }
+    u64_address
 }
 
 // Windows RT stores the mac address in a u64, but we only want the relevant 48 bits

@@ -73,7 +73,9 @@ fn user_delete(user_id: String) -> Result<(), String> {
     UserFileSystem::remove_user(user_id).map_err(|e| e.to_string())
 }
 
+// *********************************************************************
 // DEVICES
+// *********************************************************************
 
 #[tauri::command(async)]
 pub async fn devices_fetch_all() -> Result<Vec<NintendoDevice>, String> {
@@ -158,20 +160,10 @@ fn devices_connect(mac_address: String, _channel: Channel<BalanceBoardEvent>) ->
     balance_board_com::connect(transformed_address).map_err(|e| e.to_string())
 }
 
-
 /*
-#[tauri::command]
-pub async fn cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
-    let mut scan_state = state.scan_state.lock().await;
-
-    if let Some(handle) = scan_state.handle.take() {
-        println!("Cancelling scan...");
-        handle.abort();
-        println!("Scan cancelled.");
-        Ok(())
-    } else {
-        Err("No scan is currently in progress.".to_string())
-    }
+#[tauri::command(async)]
+fn devices_turn_off_device(mac_address: String) -> Result<(), String> {
+    
 }
 */
 
