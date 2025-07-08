@@ -8,17 +8,6 @@ use crate::bluetooth::windows_bluetooth_handler as handler;
 use crate::types::MacAddress;
 
 #[derive(Debug)]
-enum BluetoothState {
-    BluetoothError(String),
-    BluetoothIsOff,
-    NoAdaptersActive,
-    BoardNotFound,
-    BoardNotPaired,
-    BoardNotConnected,
-    BoardConnected,
-}
-
-#[derive(Debug)]
 pub struct BluetoothAdapterInfo {
     pub id: String,
     pub name: String,
@@ -93,33 +82,11 @@ pub async fn connect_new_balance_board() -> Result<MacAddress> {
     }
 }
 
-fn bluetooth_system_state(state: &Result<Vec<Result<BluetoothAdapterInfo>>>) -> BluetoothState {
-    let all_bluetooth_view = match state {
-        Ok(view) => view,
-        Err(e) => {
-            eprintln!("Failed to get Bluetooth adapters info: {:?}", e);
-            return BluetoothState::BluetoothError(e.to_string());
-        }
-    };
-    let bluetooth_view: Vec<&BluetoothAdapterInfo> = all_bluetooth_view
-        .iter() // Borrow the original Vec
-        .filter_map(|result| result.as_ref().ok())
-        .collect();
-
-    let nintendo_board_opt = find_nintendo_balance_board(&bluetooth_view);
-    match nintendo_board_opt {
-        Some(nintendo_board) => {
-            if !nintendo_board.is_paired {
-                BluetoothState::BoardNotPaired
-            } else if !nintendo_board.is_connected {
-                BluetoothState::BoardNotConnected
-            } else {
-                BluetoothState::BoardConnected
-            }
-        }
-        None => BluetoothState::BoardNotFound,
-    }
+/*
+pub fn turn_off_device(mac_address: MacAddress) -> Result<()> {
+    handler::turn_off_device(mac_address)
 }
+*/
 
 pub fn mac_address_to_wii_pin(mac_address: [u8; 6]) -> [u8; 6] {
     let mut pin = [0u8; 6];
@@ -130,20 +97,4 @@ pub fn mac_address_to_wii_pin(mac_address: [u8; 6]) -> [u8; 6] {
     }
 
     pin
-}
-
-// Given a bluetooth detailed view, check if the nintendo board exists.
-pub fn find_nintendo_balance_board<'a>(
-    bluetooth_view: &'a Vec<&'a BluetoothAdapterInfo>,
-) -> Option<&'a BluetoothPeripheral> {
-    for adapter in bluetooth_view {
-        for device_result in &adapter.devices {
-            if let Ok(device) = device_result {
-                if device.name == NINTENDO_BOARD_ID {
-                    return Some(device);
-                }
-            }
-        }
-    }
-    None
 }
