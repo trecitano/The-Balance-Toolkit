@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 import "./Activities.css";
 import ActivityCard from "./ActivityCard";
@@ -23,6 +23,8 @@ export interface ActivityData {
 }
 
 export default function Activities() {
+  const [maximizedId, setMaximizedId] = useState<number | null>(null);
+
   const activitiesData: ActivityData[] = [
     {
       id: 1,
@@ -86,10 +88,17 @@ export default function Activities() {
       <div className="page-header">
         <span className="page-title">Activities</span>
       </div>
-      <div className="main-content">
+      <div className="main-content" style={{ position: "relative" }}>
         <div className="activities-grid">
-          {activitiesData.map((activity) => (
-            <ActivityCard key={activity.id} activity={activity} />
+          {activitiesData.map((activity, idx) => (
+            <ActivityCard
+              key={activity.id}
+              activity={activity}
+              maximized={maximizedId === activity.id}
+              onMaximize={() => setMaximizedId(activity.id)}
+              onMinimize={() => setMaximizedId(null)}
+              index={idx}
+            />
           ))}
         </div>
       </div>

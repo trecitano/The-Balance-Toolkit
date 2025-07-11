@@ -1,55 +1,102 @@
-
-
-
 .activities-grid {
   flex-grow: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 20px;
-  padding: 10px 0;
+  grid-template-rows: 50% 50%; 
+  gap: 3%;
+  padding: 1vh 1vw;
   box-sizing: border-box;
-  min-height: 0;
-  overflow: hidden;
 }
 
 .activity-card {
-  background: #f5f5f5;
-  border-radius: 8px;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-  padding: clamp(15px, 2vw, 25px);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-light);
+  padding: var(--space-xl) var(--space-lg) var(--space-lg) var(--space-lg);
   display: flex;
   flex-direction: column;
   text-align: left;
   box-sizing: border-box;
-  gap: clamp(10px, 1.5vw, 20px);
-  overflow: hidden;
+  gap: var(--space-xs);
   height: 100%;
+  border: var(--border-primary);
+  position: relative;
+  transition:
+    box-shadow var(--transition),
+    transform var(--transition),
+    top 0.4s cubic-bezier(0.4,0,0.2,1),
+    left 0.4s cubic-bezier(0.4,0,0.2,1),
+    width 0.4s cubic-bezier(0.4,0,0.2,1),
+    height 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+
+.activity-card:hover {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px) scale(1.02);
 }
 
 .activity-title {
-  font-size: clamp(1em, 1.3vw, 1.5em);
+  font-size: var(--text-lg);
   font-weight: bold;
-  color: #333;
-  text-align: center;
-  margin: 0 0 clamp(8px, 1vw, 15px) 0;
+  color: var(--text-dark);
+  text-align: left;
+  margin: 0 0 var(--space-sm) 0;
   flex-shrink: 0;
 }
 
 .activity-body {
   display: flex;
   align-items: stretch;
-  gap: clamp(10px, 1.5vw, 20px);
+  gap: var(--space-lg);
   flex-grow: 1;
-  min-height: 0;
+}
+
+.activity-card.maximized {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  transform: none;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding-top: 2%;
+  transition:
+    box-shadow var(--transition),
+    transform var(--transition),
+    top 0.4s cubic-bezier(0.4,0,0.2,1),
+    left 0.4s cubic-bezier(0.4,0,0.2,1),
+    width 0.4s cubic-bezier(0.4,0,0.2,1),
+    height 0.4s cubic-bezier(0.4,0,0.2,1);
+  /* Optional: add a background for focus */
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.activity-card.maximized .activity-image-container {
+  display: none;
+}
+
+.activity-card.maximized .activity-title {
+  font-size: var(--text-lg);
 }
 
 .activity-image-container {
-  width: 40%;
-  background-color: #e0e0e0;
+  width: 100%;
+  height: 55%; 
+  flex: none;
+  border-radius: var(--radius-md); 
+  background: var(--bg-light);
+  box-shadow: var(--shadow-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-primary);
+  margin: 0 auto var(--space-sm) auto; 
+  position: static; 
   overflow: hidden;
-  flex-shrink: 0;
-  position: relative;
 }
 
 .activity-image {
@@ -57,52 +104,64 @@
   height: 100%;
   object-fit: cover;
   display: block;
-}
-
-.activity-card:hover .activity-image-container {
+  border: var(--border-primary);
 }
 
 .activity-details {
-  flex: 1;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  margin-left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .activity-description {
   flex: 1;
-  font-size: clamp(0.8em, 1.1vw, 1.7em);
-  color: #555;
-  line-height: 1.4;
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+  line-height: 1.5;
   margin: 0;
   overflow-y: auto;
   box-sizing: border-box;
-  min-height: 0;
 }
 
 .activity-footer {
-  margin-top: 0;
+  margin-top: auto; 
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   flex-shrink: 0;
-  padding-top: clamp(10px, 1.5vw, 20px);
+  padding-top: var(--space-xs);
+  padding-bottom: var(--space-xs);
 }
 
 .activity-start-btn {
-  padding: clamp(6px, 0.8vw, 10px) clamp(12px, 1.5vw, 20px);
-  font-size: clamp(0.8em, 1vw, 1.1em);
+  padding: clamp(0.4em, 0.5vw, 1em) clamp(0.8em, 1.5vw, 1.8em);
+  font-size: clamp(0.8em, 1vw, 1.2em);
   font-weight: 600;
-  color: #fff;
-  background-color: #397aac;
+  color: var(--white);
+  background-color: var(--primary);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition);
+  width: auto;
+  box-sizing: border-box;
 }
 
 .activity-start-btn:hover {
-  background-color: #285a8c;
+  background-color: var(--primary-dark);
 }
 
-.activity-card p {
+.close-btn {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+}
+
+.activity-card,
+.activity-card.maximized {
+  transform-origin: center center;
 }
