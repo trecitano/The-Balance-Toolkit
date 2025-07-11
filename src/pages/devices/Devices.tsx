@@ -216,8 +216,8 @@ export default function Devices({
   const noDevices = sortedDevices.length === 0;
 
   return (
-    <div className = "devices-page" >
-      <div className = "devices-header" >
+    <div className = "inside-page" >
+      <div className = "page-header" >
         <span className = "page-title" > Devices </span>
         <button
           onClick = {
@@ -248,7 +248,7 @@ export default function Devices({
         }
       </div>
 
-      <div className = "devices-list-wrapper" >
+      <div className = "main-content" >
         <div
           className = "devices-list-fade-top"
           style = {

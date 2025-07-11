@@ -193,39 +193,13 @@
   font-size: var(--space-lg);
 }
 
-.devices-page {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  padding: 0px 40px;
-  height: 100%;
-  width: 100%;
-  background: var(--white);
-  box-sizing: border-box;
-}
 .page-title {
   font-size: var(--text-xl);
   font-weight: bold;
   color: var(--text);
   margin-right: var(--space-lg);
 }
-.devices-header {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: var(--space-xxl);
-  margin-bottom: 1.8vw;
-}
 
-.devices-list-wrapper {
-  position: relative;
-  width: 100%;
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  gap: 2rem;
-  box-sizing: border-box;
-}
 .devices-list {
   overflow-y: auto;
   padding-right: 0.5rem;

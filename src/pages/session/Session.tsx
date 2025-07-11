@@ -1014,8 +1014,8 @@ function Session({
     "Select User";
 
   return (
-    <div className="session-page">
-      <header className="session-header">
+    <div className="inside-page">
+      <header className="page-header">
         <h1 className="page-title">Session</h1>
         <div className="settings-container">
           <div className="control-group control-group--wide">
@@ -1378,7 +1378,7 @@ function Session({
         </div>
       </header>
 
-      <main className="session-main">
+      <main className="main-content">
         <div className="column column--narrow">
           <div className="wbb-container" ref={wbbTopdownContainerRef}>
             <img

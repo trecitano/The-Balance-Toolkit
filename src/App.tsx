@@ -150,7 +150,7 @@ function AppContent() {
         activeView={location.pathname.substring(1) || "home"}
         onViewChange={handleViewChange}
       />
-      <main className="main-content">
+      <main className="main-page">
         <Routes>
           <Route path="/" element={<Home onViewChange={handleViewChange} />} />
           <Route

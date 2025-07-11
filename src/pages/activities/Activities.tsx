@@ -82,11 +82,11 @@ export default function Activities() {
   ];
 
   return (
-    <div className="activities-page">
-      <div className="activities-header">
+    <div className="inside-page">
+      <div className="page-header">
         <span className="page-title">Activities</span>
       </div>
-      <div className="activities-content">
+      <div className="main-content">
         <div className="activities-grid">
           {activitiesData.map((activity) => (
             <ActivityCard key={activity.id} activity={activity} />
