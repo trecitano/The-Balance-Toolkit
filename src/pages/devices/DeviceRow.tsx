@@ -2,7 +2,7 @@ import React from 'react';
 import { Device } from '@/types';
 import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
-import "./Devices.css";
+import "./DeviceRow.css";
 
 interface DeviceRowProps {
     device: Device;

@@ -6,7 +6,7 @@ import rippleIcon from "@/assets/ripple-icon.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import signalIcon from "@/assets/bluetooth-connected-icon.svg";
 import temperatureIcon from "@/assets/temperature.svg";
-import "./Devices.css";
+import "./DeviceSessionList.css";
 
 interface DeviceSessionListProps {
   connectedDevicesForPanel: Device[];
