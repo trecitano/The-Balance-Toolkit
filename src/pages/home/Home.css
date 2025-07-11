@@ -35,7 +35,8 @@
   box-sizing: border-box;
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-light);
-  position: relative;
+  position: relative;  
+  border: var(--border-primary);
 }
 
 .sidebar-header {
@@ -211,6 +212,7 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  border: var(--border-primary);
 }
 
 .main-section-details-column {
