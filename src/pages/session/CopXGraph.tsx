@@ -14,8 +14,8 @@ const CopXGraph: React.FC<CopXGraphProps> = ({ data }) => {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const observer = new ResizeObserver(entries => {
-      for (let entry of entries) {
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
         const { width, height } = entry.contentRect;
         setSize({ width, height });
       }
@@ -29,21 +29,23 @@ const CopXGraph: React.FC<CopXGraphProps> = ({ data }) => {
     const svg = d3.select(ref.current);
     svg.selectAll("*").remove();
 
-    
     const padding = { top: 40, right: 10, bottom: 15, left: 10 };
     const graphWidth = size.width - padding.left - padding.right;
     const graphHeight = size.height - padding.top - padding.bottom;
 
-    const x = d3.scaleLinear()
+    const x = d3
+      .scaleLinear()
       .domain([-1, 1])
       .range([padding.left, padding.left + graphWidth]);
-    const MAX_POINTS = 200; 
+    const MAX_POINTS = 200;
 
-    const y = d3.scaleLinear()
+    const y = d3
+      .scaleLinear()
       .domain([0, MAX_POINTS - 1])
       .range([padding.top, size.height - padding.bottom]);
 
-    svg.append("line")
+    svg
+      .append("line")
       .attr("x1", padding.left)
       .attr("y1", padding.top)
       .attr("x2", padding.left + graphWidth)
@@ -52,25 +54,28 @@ const CopXGraph: React.FC<CopXGraphProps> = ({ data }) => {
       .attr("stroke-width", 1);
 
     const centerX = x(0);
-    svg.append("line")
+    svg
+      .append("line")
       .attr("x1", centerX)
-      .attr("y1", padding.top) 
+      .attr("y1", padding.top)
       .attr("x2", centerX)
-      .attr("y2", size.height - padding.bottom) 
+      .attr("y2", size.height - padding.bottom)
       .attr("stroke", "#222")
       .attr("stroke-width", 1);
 
     const xTicks = [-1, 0, 1];
     const xLabels = { "-1": "Left", "0": "CoPx", "1": "Right" };
-    xTicks.forEach(val => {
-      svg.append("text")
+    xTicks.forEach((val) => {
+      svg
+        .append("text")
         .attr("x", x(val))
         .attr("y", padding.top - 8)
-        .attr("text-anchor", val === 0 ? "middle" : (val < 0 ? "start" : "end"))
+        .attr("text-anchor", val === 0 ? "middle" : val < 0 ? "start" : "end")
         .attr("font-size", 10)
         .attr("fill", "#222")
         .text(xLabels[val]);
-      svg.append("line")
+      svg
+        .append("line")
         .attr("x1", x(val))
         .attr("y1", padding.top)
         .attr("x2", x(val))
@@ -80,12 +85,14 @@ const CopXGraph: React.FC<CopXGraphProps> = ({ data }) => {
     });
 
     if (data.length > 1) {
-      const line = d3.line<number>()
-        .x(d => x(d))
+      const line = d3
+        .line<number>()
+        .x((d) => x(d))
         .y((_, i) => y(i))
         .curve(d3.curveMonotoneY);
 
-      svg.append("path")
+      svg
+        .append("path")
         .datum(data)
         .attr("fill", "none")
         .attr("stroke", "#007bff")
@@ -95,7 +102,8 @@ const CopXGraph: React.FC<CopXGraphProps> = ({ data }) => {
 
     if (data.length > 0) {
       const lastIdx = data.length - 1;
-      svg.append("circle")
+      svg
+        .append("circle")
         .attr("cx", x(data[lastIdx]))
         .attr("cy", y(lastIdx))
         .attr("r", CIRCLE_RADIUS)

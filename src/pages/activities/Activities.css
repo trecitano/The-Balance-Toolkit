@@ -13,7 +13,7 @@
 .activities-header {
   display: flex;
   align-items: center;
-  justify-content: flex-start; 
+  justify-content: flex-start;
   gap: 2vw;
   margin-bottom: 1.8vw;
 }
@@ -27,12 +27,12 @@
 }
 
 .activities-grid {
-  flex-grow: 1; 
+  flex-grow: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr); 
-  gap: 20px; 
-  padding: 10px 0; 
+  grid-template-rows: repeat(2, 1fr);
+  gap: 20px;
+  padding: 10px 0;
   box-sizing: border-box;
   min-height: 0;
   overflow: hidden;
@@ -42,13 +42,13 @@
   background: #f5f5f5;
   border-radius: 8px;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-  padding: clamp(15px, 2vw, 25px); 
+  padding: clamp(15px, 2vw, 25px);
   display: flex;
-  flex-direction: column; 
-  text-align: left; 
+  flex-direction: column;
+  text-align: left;
   box-sizing: border-box;
-  gap: clamp(10px, 1.5vw, 20px); 
-  overflow: hidden; 
+  gap: clamp(10px, 1.5vw, 20px);
+  overflow: hidden;
   height: 100%;
 }
 
@@ -56,13 +56,13 @@
   font-size: clamp(1em, 1.3vw, 1.5em);
   font-weight: bold;
   color: #333;
-  text-align: center; 
+  text-align: center;
   margin: 0 0 clamp(8px, 1vw, 15px) 0;
   flex-shrink: 0;
 }
 
 .activity-body {
-  display: flex; 
+  display: flex;
   align-items: stretch;
   gap: clamp(10px, 1.5vw, 20px);
   flex-grow: 1;
@@ -71,10 +71,10 @@
 
 .activity-image-container {
   width: 40%;
-  background-color: #e0e0e0; 
-  overflow: hidden; 
-  flex-shrink: 0; 
-  position: relative; 
+  background-color: #e0e0e0;
+  overflow: hidden;
+  flex-shrink: 0;
+  position: relative;
 }
 
 .activity-image {
@@ -85,7 +85,6 @@
 }
 
 .activity-card:hover .activity-image-container {
-
 }
 
 .activity-details {
@@ -131,6 +130,4 @@
 }
 
 .activity-card p {
-
 }
-

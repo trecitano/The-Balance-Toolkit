@@ -1,69 +1,273 @@
-use crate::HID_NINTENDO_BOARD_ID;
-use crate::balance_board_com::Event::BoardReading;
-use crate::balance_board_com::UserAction::Tare;
-use anyhow::Result;
-use anyhow::anyhow;
-use futures::executor::block_on;
-use hidapi::HidDevice;
+use anyhow::{anyhow, Result};
+use hidapi::{HidApi, HidDevice};
 use lsl::Pushable;
-use std::thread;
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::thread::{self, JoinHandle};
 use std::time::Duration;
-use tokio::time::sleep;
 
+// --- HID Command Constants ---
+const HID_CMD_SET_REPORT_TYPE: u8 = 0x12;
+const HID_CMD_DATA_REPORT_MODE: u8 = 0x34; // Core Buttons with 8 Extension bytes
+
+// --- Memory and Calibration Constants ---
+const CALIBRATION_DATA_SIZE: usize = 32;
+
+// --- Data Packet Constants ---
+const DATA_REPORT_READ_EVENT: u8 = 0x21;
+const DATA_PACKET_MIN_LEN: usize = 10; // Minimum expected data packet size
+
+// --- Main Struct to Manage the Balance Board ---
+
+pub struct WiiBalanceBoard {
+    device: HidDevice,
+    calibration: BalanceBoardCalibrationData,
+    thread_handles: Vec<JoinHandle<Result<()>>>,
+    user_action_tx: Sender<UserAction>,
+}
+
+impl WiiBalanceBoard {
+    pub fn new(device_id: &str) -> Result<Self> {
+        let api = HidApi::new()?;
+        // The serial number of a nintendo balance board is the string version of a mac address.
+        // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
+        let balance_board_info = api
+            .device_list()
+            .find(|device| {
+                if let Some(serial_number) = device.serial_number() {
+                    serial_number == device_id
+                } else {
+                    false
+                }
+            })
+            .ok_or(anyhow!("Device with the specified device_id was not found."))?;
+
+        let device = balance_board_info.open_device(&api)?;
+        println!("Successfully opened connection to the Wii Balance Board.");
+
+        let calibration = Self::read_calibration_data(&device)?;
+        println!("Successfully read calibration data.");
+
+        // Configure report: https://wiibrew.org/wiki/Wiimote#Data_Reporting
+        // We can change the report by sending 2 bytes to report 0x12.
+        // The first byte can be 0x00 or 0x04. (Decides how often we receive data)
+        // The second byte can be between 0x30 and 0x3f (Chooses the mode)
+        // Recommended data report for Wii Balance Board: https://wiibrew.org/wiki/Wii_Balance_Board#Data_Reporting
+        // "Since the weight data is in the first 8 bytes, report 0x32 'Core Buttons with 8 Extension bytes'"
+        let set_report_cmd: [u8; 3] = [HID_CMD_SET_REPORT_TYPE, 0x00, HID_CMD_DATA_REPORT_MODE];
+        device.write(&set_report_cmd)?;
+
+        let (user_action_tx, _) = mpsc::channel(); // Will be cloned for use
+
+        Ok(Self {
+            device,
+            calibration,
+            thread_handles: Vec::new(),
+            user_action_tx,
+        })
+    }
+
+    pub fn run(&mut self) -> Result<()> {
+        println!("Start!");
+        let (raw_reading_tx, raw_reading_rx) = mpsc::channel::<BalanceBoardSensorReading>();
+        let (processed_data_tx, processed_data_rx) = mpsc::channel::<[f32; 4]>();
+        let (user_action_tx, user_action_rx) = mpsc::channel::<UserAction>();
+        self.user_action_tx = user_action_tx;
+
+        // --- 1. HID Reading Thread ---
+        let api = HidApi::new()?;
+        let device_path = self.device.get_device_info()?.path().to_owned();
+        let device_clone = api.open_path(&device_path)?;
+        let read_handle = thread::spawn(move || {
+            Self::hid_read_loop(device_clone, raw_reading_tx)
+        });
+        self.thread_handles.push(read_handle);
+
+        // --- 2. Data Processing Thread ---
+        let calibration_clone = self.calibration.clone();
+        let process_handle = thread::spawn(move || {
+            Self::data_process_loop(calibration_clone, raw_reading_rx, processed_data_tx, user_action_rx)
+        });
+        self.thread_handles.push(process_handle);
+
+        // --- 3. LSL Streaming Thread ---
+        let lsl_handle = thread::spawn(move || {
+            Self::lsl_stream_loop(processed_data_rx)
+        });
+        self.thread_handles.push(lsl_handle);
+
+        println!("All systems running. Enter 'tare' to zero the scale or 'exit' to quit.");
+        self.handle_user_input()?;
+
+        Ok(())
+    }
+
+    pub fn tare(&self) -> Result<()> {
+        self.user_action_tx.send(UserAction::Tare)?;
+        Ok(())
+    }
+
+    fn handle_user_input(&self) -> Result<()> {
+        loop {
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            match input.trim() {
+                "tare" => {
+                    println!("Taring the board...");
+                    self.tare()?;
+                }
+                "exit" => {
+                    println!("Exiting...");
+                    break;
+                }
+                _ => println!("Unknown command. Available commands: 'tare', 'exit'"),
+            }
+        }
+        Ok(())
+    }
+
+    fn hid_read_loop(device: HidDevice, tx: Sender<BalanceBoardSensorReading>) -> Result<()> {
+        loop {
+            let mut buf = [0u8; 32]; // Buffer large enough for expected reports
+            let len = device.read_timeout(&mut buf, 1000)?;
+
+            if len == 0 { continue; } // Timeout, just continue
+
+            if len >= DATA_PACKET_MIN_LEN {
+                let reading = BalanceBoardSensorReading {
+                    top_right: i16::from_be_bytes([buf[3], buf[4]]),
+                    bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
+                    top_left: i16::from_be_bytes([buf[7], buf[8]]),
+                    bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
+                };
+                println!("Raw reading: {:?}", reading);
+                if tx.send(reading).is_err() {
+                    break; // Receiver has disconnected
+                }
+            }
+        }
+        Err(anyhow!("HID read loop terminated."))
+    }
+
+    fn data_process_loop(
+        calibration: BalanceBoardCalibrationData,
+        raw_rx: Receiver<BalanceBoardSensorReading>,
+        processed_tx: Sender<[f32; 4]>,
+        user_action_rx: Receiver<UserAction>,
+    ) -> Result<()> {
+        let mut tare_offset = BalanceBoardSensorReading::default();
+
+        loop {
+            // Non-blocking check for user actions
+            if let Ok(action) = user_action_rx.try_recv() {
+                match action {
+                    UserAction::Tare => {
+                        // To tare, we need the *next* stable reading.
+                        // This is a simplification; a real implementation might average a few readings.
+                        if let Ok(latest_reading) = raw_rx.recv_timeout(Duration::from_secs(1)) {
+                            tare_offset = latest_reading;
+                            println!("Tare offset captured.");
+                        }
+                    }
+                }
+            }
+
+            match raw_rx.recv() {
+                Ok(raw_reading) => {
+                    let tared_reading = raw_reading.apply_tare(&tare_offset);
+                    let weights = tared_reading.calculate_weights(&calibration);
+                    println!("Tared reading: {:?}", weights);
+                    if processed_tx.send(weights).is_err() {
+                        break; // Receiver has disconnected
+                    }
+                }
+                Err(_) => break, // Sender has disconnected
+            }
+        }
+        Err(anyhow!("Data processing loop terminated."))
+    }
+
+    fn lsl_stream_loop(processed_rx: Receiver<[f32; 4]>) -> Result<()> {
+        let info = lsl::StreamInfo::new(
+            "TheBalanceToolkit", "Weight", 4, 100.0,
+            lsl::ChannelFormat::Float32, "BalanceBoard",
+        )?;
+        let outlet = lsl::StreamOutlet::new(&info, 0, 360)?;
+
+        println!("LSL stream started.");
+        while let Ok(weights) = processed_rx.recv() {
+            let total_weight: f32 = weights.iter().sum();
+            println!(
+                "Total: {:.2}kg | TR: {:.2}, BR: {:.2}, TL: {:.2}, BL: {:.2}",
+                total_weight, weights[0], weights[1], weights[2], weights[3]
+            );
+            outlet.push_sample(&weights.to_vec())?;
+        }
+        Err(anyhow!("LSL stream loop terminated."))
+    }
+
+    fn read_calibration_data(device: &HidDevice) -> Result<BalanceBoardCalibrationData> {
+        // https://wiibrew.org/wiki/Wiimote#Reading_and_Writing
+        // Example: (a2) 17 MM FF FF FF SS SS
+        // https://wiibrew.org/wiki/Wii_Balance_Board#Calibration_Data
+        // Read calibration data:
+        // 17 (Output Control)
+        // 04 (Address Space) 
+        // a40020 (Memory Address)
+        // 20 (Bytes to Read)
+        // We need to read at least 2 packets, as each packet is not large enough to contain
+        // all of the calibration data.
+        let cmd: [u8; 7] = [0x17, 0x04, 0xA4, 0x00, 0x20, 0x00, 0x20];
+        device.write(&cmd)?;
+
+        let mut calibration_buf = [0u8; CALIBRATION_DATA_SIZE];
+        let mut bytes_read: usize = 0;
+
+        while bytes_read < CALIBRATION_DATA_SIZE {
+            let mut buf = [0u8; 32];
+            let len = device.read_timeout(&mut buf, 1000)?;
+
+            if len == 0 { return Err(anyhow!("Timeout reading calibration data.")); }
+            // We ignore everything that isn't what we want.
+            // When we send a request for this specific data, we receive a data reading through
+            // Input Report 0x21
+            if buf[0] != DATA_REPORT_READ_EVENT { continue; }
+
+            println!("Reading is: {:?}", buf);
+            for byte in buf {
+                // Print each byte as a 2-digit lowercase hex number, followed by a space
+                print!("{:02x} ", byte);
+            }
+            println!();
+
+            let packet_data_size  = ((buf[3] >> 4) + 1) as usize;
+            let error_code = buf[3] & 0x0F;
+            
+            if error_code != 0 { return Err(anyhow!("Error reading board memory: code {}", error_code)); }
+            if bytes_read + packet_data_size > CALIBRATION_DATA_SIZE { return Err(anyhow!("Calibration data overflow.")); }
+
+            let data_chunk = &buf[6..(6 + packet_data_size)];
+            calibration_buf[bytes_read..(bytes_read + packet_data_size)].copy_from_slice(data_chunk);
+            bytes_read += packet_data_size;
+
+            if bytes_read == CALIBRATION_DATA_SIZE {
+                break;
+            }
+        }
+
+        BalanceBoardCalibrationData::from_bytes(calibration_buf)
+    }
+}
+
+// --- Enums for Actions and Events ---
+#[derive(Debug, Clone, Copy)]
 enum UserAction {
     Tare,
 }
 
-enum Event {
-    BoardReading(BalanceBoardSensorReading),
-    UserAction(UserAction),
-}
-
-#[derive(Debug, Clone)]
-struct BalanceBoardCalibrationData {
-    kilos_0: BalanceBoardSensorReading,
-    kilos_17: BalanceBoardSensorReading,
-    kilos_34: BalanceBoardSensorReading,
-}
-
-impl BalanceBoardCalibrationData {
-    fn from_memory_reading(buf: [u8; 32]) -> Result<BalanceBoardCalibrationData> {
-        // Ensure buf has the expected initial data
-        if buf[1] != 0x69 || buf[2] != 0 || buf[3] != 0 {
-            return Err(anyhow!("Received incorrect data from the board!"));
-        }
-
-        let kilos_0 = BalanceBoardSensorReading {
-            top_right: i16::from_be_bytes([buf[4], buf[5]]),
-            bottom_right: i16::from_be_bytes([buf[6], buf[7]]),
-            top_left: i16::from_be_bytes([buf[8], buf[9]]),
-            bottom_left: i16::from_be_bytes([buf[10], buf[11]]),
-        };
-
-        let kilos_17 = BalanceBoardSensorReading {
-            top_right: i16::from_be_bytes([buf[12], buf[13]]),
-            bottom_right: i16::from_be_bytes([buf[14], buf[15]]),
-            top_left: i16::from_be_bytes([buf[16], buf[17]]),
-            bottom_left: i16::from_be_bytes([buf[18], buf[19]]),
-        };
-
-        let kilos_34 = BalanceBoardSensorReading {
-            top_right: i16::from_be_bytes([buf[20], buf[21]]),
-            bottom_right: i16::from_be_bytes([buf[22], buf[23]]),
-            top_left: i16::from_be_bytes([buf[24], buf[25]]),
-            bottom_left: i16::from_be_bytes([buf[26], buf[27]]),
-        };
-
-        Ok(BalanceBoardCalibrationData {
-            kilos_0,
-            kilos_17,
-            kilos_34,
-        })
-    }
-}
+// --- Data Structures for Balance Board Readings ---
 
 #[derive(Debug, Clone, Default)]
-struct BalanceBoardSensorReading {
+struct  BalanceBoardSensorReading {
     top_right: i16,
     bottom_right: i16,
     top_left: i16,
@@ -71,338 +275,80 @@ struct BalanceBoardSensorReading {
 }
 
 impl BalanceBoardSensorReading {
-    fn top_right_weight(&self, calibration: &BalanceBoardCalibrationData) -> f32 {
-        self.get_balance_board_sensor_value(
-            self.top_right,
-            calibration.kilos_0.top_right,
-            calibration.kilos_17.top_right,
-            calibration.kilos_34.top_right,
-        )
+    fn apply_tare(&self, tare_offset: &BalanceBoardSensorReading) -> Self {
+        Self {
+            top_right: self.top_right.saturating_sub(tare_offset.top_right),
+            bottom_right: self.bottom_right.saturating_sub(tare_offset.bottom_right),
+            top_left: self.top_left.saturating_sub(tare_offset.top_left),
+            bottom_left: self.bottom_left.saturating_sub(tare_offset.bottom_left),
+        }
     }
 
-    fn bottom_right_weight(&self, calibration: &BalanceBoardCalibrationData) -> f32 {
-        self.get_balance_board_sensor_value(
-            self.bottom_right,
-            calibration.kilos_0.bottom_right,
-            calibration.kilos_17.bottom_right,
-            calibration.kilos_34.bottom_right,
-        )
+    fn calculate_weights(&self, cal: &BalanceBoardCalibrationData) -> [f32; 4] {
+        [
+            self.calculate_single_weight(self.top_right, &cal.top_right),
+            self.calculate_single_weight(self.bottom_right, &cal.bottom_right),
+            self.calculate_single_weight(self.top_left, &cal.top_left),
+            self.calculate_single_weight(self.bottom_left, &cal.bottom_left),
+        ]
     }
 
-    fn top_left_weight(&self, calibration: &BalanceBoardCalibrationData) -> f32 {
-        self.get_balance_board_sensor_value(
-            self.top_left,
-            calibration.kilos_0.top_left,
-            calibration.kilos_17.top_left,
-            calibration.kilos_34.top_left,
-        )
-    }
-
-    fn bottom_left_weight(&self, calibration: &BalanceBoardCalibrationData) -> f32 {
-        self.get_balance_board_sensor_value(
-            self.bottom_left,
-            calibration.kilos_0.bottom_left,
-            calibration.kilos_17.bottom_left,
-            calibration.kilos_34.bottom_left,
-        )
-    }
-
-    fn total_weight(&self, calibration: &BalanceBoardCalibrationData) -> f32 {
-        let top_right_weight = self.top_right_weight(calibration);
-        let bottom_right_weight = self.bottom_right_weight(calibration);
-        let top_left_weight = self.top_left_weight(calibration);
-        let bottom_left_weight = self.bottom_left_weight(calibration);
-
-        top_right_weight + bottom_right_weight + top_left_weight + bottom_left_weight
-    }
-
-    fn center_of_gravity_x(&self, calibration: &BalanceBoardCalibrationData) -> f32 {
-        let top_right_weight = self.top_right_weight(calibration);
-        let bottom_right_weight = self.bottom_right_weight(calibration);
-        let top_left_weight = self.top_left_weight(calibration);
-        let bottom_left_weight = self.bottom_left_weight(calibration);
-        let total_weight = self.total_weight(calibration);
-
-        if total_weight > 0.0 {
-            ((top_right_weight + bottom_right_weight) - (top_left_weight + bottom_left_weight))
-                / total_weight
+    fn calculate_single_weight(&self, sensor_val: i16, cal_pt: &CalibrationPoint) -> f32 {
+        if sensor_val < cal_pt.mid {
+            17.0 * (sensor_val - cal_pt.min) as f32 / (cal_pt.mid - cal_pt.min).max(1) as f32
         } else {
-            0.0
+            17.0 + 17.0 * (sensor_val - cal_pt.mid) as f32 / (cal_pt.max - cal_pt.mid).max(1) as f32
         }
-    }
-
-    fn center_of_gravity_y(&self, calibration: &BalanceBoardCalibrationData) -> f32 {
-        let top_right_weight = self.top_right_weight(calibration);
-        let bottom_right_weight = self.bottom_right_weight(calibration);
-        let top_left_weight = self.top_left_weight(calibration);
-        let bottom_left_weight = self.bottom_left_weight(calibration);
-        let total_weight = self.total_weight(calibration);
-
-        if total_weight > 0.0 {
-            ((top_left_weight + top_right_weight) - (bottom_left_weight + bottom_right_weight))
-                / total_weight
-        } else {
-            0.0
-        }
-    }
-
-    fn get_balance_board_sensor_value(&self, sensor: i16, min: i16, mid: i16, max: i16) -> f32 {
-        if max == mid || mid == min {
-            return 0.0;
-        }
-
-        if sensor < mid {
-            17.0 * ((sensor - min) as f32 / (mid - min) as f32)
-        } else {
-            17.0 * ((sensor - mid) as f32 / (max - mid) as f32) + 17.0
-        }
-    }
-
-    // This function would need proper calibration data from the balance board
-    fn convert_to_weight(raw_value: i16) -> f32 {
-        // Placeholder conversion - you'll need to implement proper calibration
-        // based on the balance board's calibration data
-        raw_value as f32 * 0.01
     }
 }
 
-// Requirements:
-// Ensure the user can access the hid device.
-// Linux: https://github.com/libusb/hidapi/blob/master/udev/69-hid.rules
-pub async fn connect() -> Result<()> {
-    let api = hidapi::HidApi::new()?;
-    // Print out information about all connected devices
-    for device in api.device_list() {
-        println!("{:?}", device.product_string());
-    }
+#[derive(Debug, Clone, Default)]
+struct CalibrationPoint {
+    min: i16, // 0kg
+    mid: i16, // 17kg
+    max: i16, // 34kg
+}
 
-    let nintendo_device = api
-        .device_list()
-        .find(|device| {
-            if let Some(product_string) = device.product_string() {
-                product_string == crate::NINTENDO_BOARD_ID
-                    || product_string == HID_NINTENDO_BOARD_ID
-            } else {
-                false
-            }
+#[derive(Debug, Clone, Default)]
+struct BalanceBoardCalibrationData {
+    top_right: CalibrationPoint,
+    bottom_right: CalibrationPoint,
+    top_left: CalibrationPoint,
+    bottom_left: CalibrationPoint,
+}
+
+impl BalanceBoardCalibrationData {
+    fn from_bytes(buf: [u8; 32]) -> Result<Self> {
+        Ok(Self {
+            top_right: CalibrationPoint {
+                min: i16::from_be_bytes([buf[4], buf[5]]),
+                mid: i16::from_be_bytes([buf[12], buf[13]]),
+                max: i16::from_be_bytes([buf[20], buf[21]]),
+            },
+            bottom_right: CalibrationPoint {
+                min: i16::from_be_bytes([buf[6], buf[7]]),
+                mid: i16::from_be_bytes([buf[14], buf[15]]),
+                max: i16::from_be_bytes([buf[22], buf[23]]),
+            },
+            top_left: CalibrationPoint {
+                min: i16::from_be_bytes([buf[8], buf[9]]),
+                mid: i16::from_be_bytes([buf[16], buf[17]]),
+                max: i16::from_be_bytes([buf[24], buf[25]]),
+            },
+            bottom_left: CalibrationPoint {
+                min: i16::from_be_bytes([buf[10], buf[11]]),
+                mid: i16::from_be_bytes([buf[18], buf[19]]),
+                max: i16::from_be_bytes([buf[26], buf[27]]),
+            },
         })
-        .ok_or(anyhow!("Board not found"))?;
-    let open = nintendo_device.open_device(&api)?;
-
-    // First, let's read the calibration data.
-    let calibration_data = read_memory_data(&open)?;
-
-    // Configure report: https://wiibrew.org/wiki/Wiimote#Data_Reporting
-    // We can change the report by sending 2 bytes to report 0x12.
-    // The first byte can be 0x00 or 0x04. (Decides how often we receive data)
-    // The second byte can be between 0x30 and 0x3f (Chooses the mode)
-    // Recommended data report for Wii Balance Board: https://wiibrew.org/wiki/Wii_Balance_Board#Data_Reporting
-    // "Since the weight data is in the first 8 bytes, report 0x32 'Core Buttons with 8 Extension bytes'"
-    let ir: [u8; 3] = [0x12, 0x00, 0x34];
-    open.write(&ir)?;
-
-    let (board_tx, mut processor_rx) = std::sync::mpsc::channel();
-    let board_tx_inputs = board_tx.clone();
-    let (processor_tx, mut lsl_rx) = std::sync::mpsc::channel();
-
-    thread::spawn(move || {
-        println!("Reading data from device ...\n");
-        loop {
-            let mut buf = vec![0; 100];
-            let len = open.read(&mut buf)?;
-            // Check if we have enough data
-            if len < 21 {
-                return Err(anyhow!("Data packet too small"));
-            }
-
-            // 32 BB BB EE EE EE EE EE EE EE EE
-            // BBBB is the core Buttons data
-            // The 8 EE bytes are from the Extension Controller currently connected to the Wii Remote.
-            let top_right = i16::from_be_bytes([buf[3], buf[4]]);
-            let bottom_right = i16::from_be_bytes([buf[5], buf[6]]);
-            let top_left = i16::from_be_bytes([buf[7], buf[8]]);
-            let bottom_left = i16::from_be_bytes([buf[9], buf[10]]);
-
-            let reading = BalanceBoardSensorReading {
-                top_right,
-                bottom_right,
-                top_left,
-                bottom_left,
-            };
-
-            board_tx.send(Event::BoardReading(reading))?
-        }
-        Ok(())
-    });
-
-    thread::spawn(move || {
-        let mut last_reading = BalanceBoardSensorReading {
-            ..Default::default()
-        };
-        let mut tare = BalanceBoardSensorReading {
-            ..Default::default()
-        };
-
-        // Start receiving messages
-        while let Ok(event) = processor_rx.recv() {
-            match event {
-                Event::UserAction(action) => {
-                    tare = last_reading.clone();
-                }
-                Event::BoardReading(reading) => {
-                    let top_right = reading.top_right_weight(&calibration_data)
-                        - tare.top_right_weight(&calibration_data);
-                    let bottom_right = reading.bottom_right_weight(&calibration_data)
-                        - tare.bottom_right_weight(&calibration_data);
-                    let top_left = reading.top_left_weight(&calibration_data)
-                        - tare.top_left_weight(&calibration_data);
-                    let bottom_left = reading.bottom_left_weight(&calibration_data)
-                        - tare.bottom_left_weight(&calibration_data);
-
-                    let total_weight = reading.total_weight(&calibration_data)
-                        - tare.total_weight(&calibration_data);
-                    println!(
-                        "Good Total?: {}. UR: {}, BR: {}, TL: {}, BL: {}",
-                        total_weight, top_right, bottom_right, top_left, bottom_left
-                    );
-                    last_reading = reading;
-                    let reading_after_tare = BalanceBoardSensorReading {
-                        top_right: last_reading.top_right - tare.top_right,
-                        bottom_right: last_reading.bottom_right - tare.bottom_right,
-                        top_left: last_reading.top_left - tare.top_left,
-                        bottom_left: last_reading.bottom_left - tare.bottom_left,
-                    };
-
-                    processor_tx.send([
-                        reading_after_tare.top_right_weight(&calibration_data),
-                        reading_after_tare.bottom_right_weight(&calibration_data),
-                        reading_after_tare.top_left_weight(&calibration_data),
-                        reading_after_tare.bottom_left_weight(&calibration_data),
-                    ]);
-                }
-            }
-        }
-    });
-
-    thread::spawn(move || {
-        let info = lsl::StreamInfo::new(
-            "the-balance-toolkit",
-            "EEG",
-            4,
-            100.0,
-            lsl::ChannelFormat::Float32,
-            "myid234365",
-        )
-        .unwrap();
-        let outlet = lsl::StreamOutlet::new(&info, 0, 360).unwrap();
-
-        while let Ok([tr, br, tl, bl]) = lsl_rx.recv() {
-            let total_weight = tr + br + tl + bl;
-            println!(
-                "Total: {}. UR: {}, BR: {}, TL: {}, BL: {}",
-                total_weight, tr, br, tl, bl
-            );
-
-            outlet.push_sample(&vec![tr, br, tl, bl]).unwrap();
-        }
-    });
-
-    /*
-    while let Some(event) = rx.recv().await {
-        println!("Beep!");
-
-        match event {
-            Event::UserAction(action) => {
-
-            }
-            Event::BoardReading(reading) => {
-                println!("{:?}", reading);
-            }
-        }
     }
-    */
-
-    loop {
-        // Create a mutable String to store the input
-        let mut input = String::new();
-        println!("Please enter a command: (1)");
-
-        // Read input from the keyboard
-        std::io::stdin().read_line(&mut input)?;
-
-        // Remove the trailing newline character
-        let input = input.trim();
-
-        println!("You entered: {}", input);
-
-        board_tx_inputs.send(Event::UserAction(Tare));
-    }
-
-    Ok(())
 }
 
-fn read_memory_data(hid_device: &HidDevice) -> Result<BalanceBoardCalibrationData> {
-    // https://wiibrew.org/wiki/Wiimote#Reading_and_Writing
-    // Example: (a2) 17 MM FF FF FF SS SS
-    // Read calibration data 0x04  a4  00  20
-    let ir2: [u8; 7] = [0x17, 0x04, 0xA4, 0x00, 0x20, 0x00, 0x20];
-    println!("Writing !");
-    hid_device.write(&ir2)?;
+// --- Public-Facing API ---
 
-    let mut buf = vec![0; 25];
-    let mut calibration_data_buf: [u8; 32] = [0; 32];
-    println!("Reading data from device ...\n");
-
-    let mut current_read = 0;
-
-    loop {
-        // (a1) 21 BB BB SE FF FF DD DD DD DD DD DD DD DD DD DD DD DD DD DD DD DD
-        // BB BB is the button state, so we ignore
-        // SE - S is the size of bytes to read (1 to 16), E is an error value (0 means its ok)
-        // FF FF is the offset of memory that has been read
-        // DD is data to read
-        let len = hid_device.read(&mut buf)?;
-
-        // Print each value as uppercase hexadecimal
-        for value in &buf[..len] {
-            print!("{:02X} ", value);
-        }
-        println!(); // Add a newline at the end
-
-        // We ignore everything that isn't what we want.
-        if buf[0] != 0x21 {
-            continue;
-        }
-
-        let size = (buf[3] >> 4) + 1;
-        let error_flag = buf[3] << 4;
-        let _offset = u16::from_be_bytes([buf[4], buf[5]]);
-
-        println!("Read {} bytes", size);
-
-        if size == 1 {
-            return Err(anyhow!("Trying to read 0 bytes from memory?"));
-        }
-        if error_flag != 0 {
-            return Err(anyhow!("Error while reading memory: {}", error_flag));
-        }
-
-        // TODO check this in a better way
-        if current_read <= 32 {
-            calibration_data_buf[current_read as usize..(current_read + size) as usize]
-                .copy_from_slice(&buf[6..6 + (size as usize)]);
-        } else {
-            return Err(anyhow!("Trying to read more bytes than expected."));
-        }
-
-        current_read += size;
-
-        // if we've read it all, return the result
-        // THIS IS VERY HARDCODED!
-        if current_read >= 32 {
-            break;
-        }
-    }
-
-    BalanceBoardCalibrationData::from_memory_reading(calibration_data_buf)
+// This function is now a simple wrapper around the struct.
+// In a real Tauri app, you might manage the WiiBalanceBoard instance in your AppState.
+pub fn connect(device_id: String) -> Result<()> {
+    let mut board = WiiBalanceBoard::new(&device_id)?;
+    board.run()
 }

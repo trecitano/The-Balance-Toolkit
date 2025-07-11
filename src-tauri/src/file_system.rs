@@ -1,10 +1,10 @@
-use crate::user::User;
+use crate::types::{NintendoDevice, User};
 use serde::Serialize;
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
-use anyhow::Context;
+use anyhow::{Context, Result};
 
 #[derive(Serialize)]
 pub struct FileMetadata {
@@ -15,11 +15,10 @@ pub struct FileMetadata {
 }
 
 const USERS_FILE: &str = "users.json";
-
-pub struct FileSystem;
-impl FileSystem {
-    pub fn get_users() -> anyhow::Result<Vec<User>> {
-        let file_path = Self::app_dir().join(USERS_FILE);
+pub struct UserFileSystem;
+impl UserFileSystem {
+    pub fn get_users() -> Result<Vec<User>> {
+        let file_path = app_dir().join(USERS_FILE);
 
         if !file_path.exists() {
             return Ok(Vec::new());
@@ -38,63 +37,89 @@ impl FileSystem {
         Ok(users)
     }
 
-    pub fn add_user(new_user: User) -> anyhow::Result<()> {
+    pub fn add_user(new_user: User) -> Result<()> {
         let mut users = Self::get_users()?;
 
         users.push(new_user);
 
-        Self::save_into_file(USERS_FILE, &users)
+        save_into_file(USERS_FILE, &users)
     }
 
-    pub fn update_user(updated_user: User) -> anyhow::Result<()> {
+    pub fn update_user(updated_user: User) -> Result<()> {
         let mut users = Self::get_users()?;
 
         users.retain(|user| user.id != updated_user.id);
         users.push(updated_user);
 
-        Self::save_into_file(USERS_FILE, &users)
+        save_into_file(USERS_FILE, &users)
     }
 
-    pub fn remove_user(user_id: String) -> anyhow::Result<()> {
+    pub fn remove_user(user_id: String) -> Result<()> {
         let mut users = Self::get_users()?;
 
         users.retain(|user| user.id != user_id);
 
-        Self::save_into_file(USERS_FILE, &users)
+        save_into_file(USERS_FILE, &users)
     }
+}
 
-    // PRIMITIVES
 
-    pub fn initialize_app_dir() -> anyhow::Result<()> {
-        let app_dir = Self::app_dir();
+const NINTENDO_DEVICES_FILE: &str = "nintendo_devices.json";
+pub struct DeviceFileSystem;
+impl DeviceFileSystem {
+    pub fn get_stored_devices() -> Result<Vec<NintendoDevice>> {
+        let file_path = app_dir().join(NINTENDO_DEVICES_FILE);
 
-        if !app_dir.exists() {
-            fs::create_dir_all(&app_dir)?;
+        if !file_path.exists() {
+            return Ok(Vec::new());
         }
-        
-        Ok(())
+
+        let file = File::open(&file_path)
+            .with_context(|| format!("Failed to open file for reading: {:?}", file_path))?;
+
+        let reader = BufReader::new(file);
+        let users = match serde_json::from_reader(reader) {
+            Ok(users) => users,
+            Err(e) if e.is_eof() => Vec::new(),
+            Err(e) => return Err(e.into()),
+        };
+
+        Ok(users)
+    }
+}
+
+
+// PRIMITIVES
+
+pub fn initialize_app_dir() -> anyhow::Result<()> {
+    let app_dir = app_dir();
+
+    if !app_dir.exists() {
+        fs::create_dir_all(&app_dir)?;
     }
 
-    fn app_dir_file(file_name: &str) -> anyhow::Result<File> {
-        let file_path = Self::app_dir().join(file_name);
+    Ok(())
+}
 
-        let file = File::create(file_path)
-            .with_context(|| format!("Failed to open file: {}", file_name))?;
-        Ok(file)
-    }
+fn app_dir_file(file_name: &str) -> anyhow::Result<File> {
+    let file_path = app_dir().join(file_name);
 
-    pub fn app_dir() -> PathBuf {
-        dirs::document_dir()
-            .map(|path| path.join("the-balance-toolkit"))
-            .expect("Could not access dir file")
-    }
+    let file = File::create(file_path)
+        .with_context(|| format!("Failed to open file: {}", file_name))?;
+    Ok(file)
+}
 
-    fn save_into_file<T: Serialize>(file_name: &str, data: T) -> anyhow::Result<()> {
-        let file = Self::app_dir_file(file_name)?;
+pub fn app_dir() -> PathBuf {
+    dirs::document_dir()
+        .map(|path| path.join("the-balance-toolkit"))
+        .expect("Could not access dir file")
+}
 
-        serde_json::to_writer_pretty(file, &data)
-            .with_context(|| format!("Failed to save file: {}", file_name))?;
+fn save_into_file<T: Serialize>(file_name: &str, data: T) -> anyhow::Result<()> {
+    let file = app_dir_file(file_name)?;
 
-        Ok(())
-    }
+    serde_json::to_writer_pretty(file, &data)
+        .with_context(|| format!("Failed to save file: {}", file_name))?;
+
+    Ok(())
 }

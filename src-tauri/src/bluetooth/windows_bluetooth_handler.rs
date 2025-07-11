@@ -4,7 +4,6 @@ use windows::{
     Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothDevice},
     Devices::Enumeration::{
         DeviceInformation, DevicePairingKinds, DevicePairingRequestedEventArgs, DeviceWatcher,
-        DeviceWatcherStatus,
     },
     Foundation::TypedEventHandler,
 };
@@ -13,74 +12,80 @@ use crate::NINTENDO_BOARD_ID;
 use crate::bluetooth::bluetooth_communication::{
     BluetoothAdapterInfo, BluetoothPeripheral, mac_address_to_wii_pin,
 };
-use tokio::time::{Duration, Instant, sleep};
-use windows::Devices::Enumeration::{DeviceInformationUpdate, DevicePairingResultStatus};
+use windows::Devices::Enumeration::{DeviceInformationUpdate, DevicePairingResultStatus, DeviceUnpairingResultStatus};
 use windows::Foundation::IPropertyValue;
 use windows::core::HSTRING;
 use windows_core::Interface;
+use crate::types::MacAddress;
 
 // In Windows, we can only use a single bluetooth adapter. (This is an assumption).
 // Regardless of the assumption, it is extremely complicated to associate the adapters to the devices.
 // As such, we assume that every connected device is directly connected to the default adapter.
 pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAdapterInfo>>> {
-    // Get list of all Bluetooth Adapters
-    let adapter_selector = BluetoothAdapter::GetDeviceSelector()?;
-    let adapter_collection = DeviceInformation::FindAllAsyncAqsFilter(&adapter_selector)?.await?;
-    let adapter_futures = adapter_collection.into_iter().map(|info| async move {
-        let adapter_id = info.Id()?;
-        let adapter_name = info.Name()?;
-        let is_active = info.IsEnabled()?;
+    tokio::task::spawn_blocking(move || {
+        futures::executor::block_on(async {
+            // Get list of all Bluetooth Adapters
+            let adapter_selector = BluetoothAdapter::GetDeviceSelector()?;
+            let adapter_collection =
+                DeviceInformation::FindAllAsyncAqsFilter(&adapter_selector)?.await?;
+            let adapter_futures = adapter_collection.into_iter().map(|info| async move {
+                let adapter_id = info.Id()?;
+                let adapter_name = info.Name()?;
+                let is_active = info.IsEnabled()?;
 
-        let adapter = BluetoothAdapter::FromIdAsync(&adapter_id)?.await?;
+                let adapter = BluetoothAdapter::FromIdAsync(&adapter_id)?.await?;
 
-        let mac_address = convert_u64_to_mac_address(adapter.BluetoothAddress()?);
+                let mac_address = convert_u64_to_mac_address(adapter.BluetoothAddress()?);
 
-        Ok(BluetoothAdapterInfo {
-            id: adapter_id.to_string(),
-            name: adapter_name.to_string(),
-            mac_address,
-            is_active,
-            devices: vec![],
-        })
-    });
+                Ok(BluetoothAdapterInfo {
+                    id: adapter_id.to_string(),
+                    name: adapter_name.to_string(),
+                    mac_address,
+                    is_active,
+                    devices: vec![],
+                })
+            });
 
-    // Get list of all Bluetooth Devices
-    let devices_selector = BluetoothDevice::GetDeviceSelector()?;
-    let device_collection = DeviceInformation::FindAllAsyncAqsFilter(&devices_selector)?.await?;
-    let device_futures = device_collection.into_iter().map(|info| async move {
-        let device_id = info.Id()?;
-        let device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
-        // In windows, the BluetoothDevice::GetDeviceSelector query only returns the bluetooth devices
-        // that have been paired.
-        let is_paired = true;
-        let is_connected = device.ConnectionStatus()? == BluetoothConnectionStatus::Connected;
-        let mac_address = convert_u64_to_mac_address(device.BluetoothAddress()?);
+            // Get list of all Bluetooth Devices
+            let devices_selector = BluetoothDevice::GetDeviceSelector()?;
+            let device_collection = DeviceInformation::FindAllAsyncAqsFilter(&devices_selector)?.await?;
+            let device_futures = device_collection.into_iter().map(|info| async move {
+                let device_id = info.Id()?;
+                let device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
+                // In windows, the BluetoothDevice::GetDeviceSelector query only returns the bluetooth devices
+                // that have been paired.
+                let is_paired = true;
+                let is_connected = device.ConnectionStatus()? == BluetoothConnectionStatus::Connected;
+                let mac_address = convert_u64_to_mac_address(device.BluetoothAddress()?);
 
-        Ok(BluetoothPeripheral {
-            id: device.BluetoothDeviceId()?.Id()?.to_string(),
-            name: device.Name()?.to_string(),
-            mac_address,
-            is_paired,
-            is_connected,
-        })
-    });
+                Ok(BluetoothPeripheral {
+                    id: device.BluetoothDeviceId()?.Id()?.to_string(),
+                    name: device.Name()?.to_string(),
+                    mac_address,
+                    is_paired,
+                    is_connected,
+                })
+            });
 
-    let mut adapter_list = futures::future::join_all(adapter_futures).await;
-    let device_list = futures::future::join_all(device_futures).await;
+            let mut adapter_list = futures::future::join_all(adapter_futures).await;
+            let device_list = futures::future::join_all(device_futures).await;
 
-    // Add the device list to the default adapter
-    let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
-    let default_adapter_id = default_adapter.DeviceId()?;
-    for entry in adapter_list.iter_mut() {
-        if let Ok(adapter) = entry {
-            if adapter.id == default_adapter_id {
-                adapter.devices = device_list;
-                break;
+            // Add the device list to the default adapter
+            let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
+            let default_adapter_id = default_adapter.DeviceId()?;
+            for entry in adapter_list.iter_mut() {
+                if let Ok(adapter) = entry {
+                    if adapter.id == default_adapter_id {
+                        adapter.devices = device_list;
+                        break;
+                    }
+                }
             }
-        }
-    }
 
-    Ok(adapter_list)
+            Ok(adapter_list)
+        })
+    })
+    .await?
 }
 
 //
@@ -88,102 +93,84 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
 // that does not have the name. This name is later added via an "Updated" event, that updates the
 // "System.ItemNameDisplay" device property.
 // As such, we need to pay attention to both "Added" and "Updated" events.
-pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<()> {
-    let selector = BluetoothDevice::GetDeviceSelectorFromPairingState(false)?;
-    let watcher = DeviceInformation::CreateWatcherAqsFilter(&selector)?;
-    let pin = mac_address_to_wii_pin(adapter.mac_address);
+pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<MacAddress> {
+    let adapter_mac_address = adapter.mac_address.clone();
+    tokio::task::spawn_blocking(move || {
+        futures::executor::block_on(async {
+            let selector = BluetoothDevice::GetDeviceSelectorFromPairingState(false)?;
+            let watcher = DeviceInformation::CreateWatcherAqsFilter(&selector)?;
+            let pin = mac_address_to_wii_pin(adapter_mac_address);
 
-    let added = TypedEventHandler::new(
-        move |watcher: windows::core::Ref<DeviceWatcher>,
-              info: windows::core::Ref<DeviceInformation>| {
-            let device_info: &DeviceInformation = info.unwrap();
-            let device_id = device_info.Id()?;
-            let device_name = device_info.Name().unwrap();
-            let device_properties = device_info.Properties()?;
+            let (tx, mut rx) = tokio::sync::mpsc::channel(1);
 
-            println!("Found device {}, {}", device_id, device_name);
+            let added_tx = tx.clone();
+            let added = TypedEventHandler::new(
+                move |watcher: windows::core::Ref<DeviceWatcher>,
+                      info: windows::core::Ref<DeviceInformation>| {
+                    let device_info: &DeviceInformation = info.unwrap();
+                    let device_id = device_info.Id()?;
+                    let device_name = device_info.Name().unwrap();
+                    let device_properties = device_info.Properties()?;
 
-            let device_name_matches = device_name == NINTENDO_BOARD_ID;
-            let properties_matches =
-                properties_has_matching_name(&device_properties, NINTENDO_BOARD_ID);
+                    println!("Found device {}, {}", device_id, device_name);
 
-            if device_name_matches || properties_matches {
-                println!("Found the balance (in an add)! Pairing...");
+                    let device_name_matches = device_name == NINTENDO_BOARD_ID;
+                    let properties_matches =
+                        properties_has_matching_name(&device_properties, NINTENDO_BOARD_ID);
 
-                let _ = tokio::runtime::Runtime::new()?.block_on(async move {
-                    match try_pair_with_board(device_id, pin).await {
-                        Ok(_) => {
-                            println!("Balance paired successfully!");
-                            if let Err(e) = watcher.as_ref().unwrap().Stop() {
-                                eprintln!("Failed to stop watcher: {:?}", e);
-                            }
-                        }
-                        Err(e) => println!("{}", e.to_string()),
+                    if device_name_matches || properties_matches {
+                        println!("Found the balance (in an add)! Pairing...");
+                        let _ = watcher.as_ref().unwrap().Stop();
+                        added_tx.try_send(device_id).unwrap();
                     }
-                });
+
+                    Ok(())
+                },
+            );
+
+            let updated_tx = tx.clone();
+            let updated = TypedEventHandler::new(
+                move |watcher: windows::core::Ref<DeviceWatcher>,
+                      info: windows::core::Ref<DeviceInformationUpdate>| {
+                    let device_update_info = match info.as_ref() {
+                        Some(info) => info,
+                        None => return Ok(()),
+                    };
+                    let device_id = device_update_info.Id()?;
+
+                    let properties = device_update_info.Properties()?;
+                    let properties_matches =
+                        properties_has_matching_name(&properties, NINTENDO_BOARD_ID);
+
+                    if properties_matches {
+                        println!("Found the balance (in an update)! Pairing...");
+                        let _ = watcher.as_ref().unwrap().Stop();
+                        updated_tx.try_send(device_id).unwrap();
+                    }
+
+                    Ok(())
+                },
+            );
+
+            watcher.Added(&added)?;
+            watcher.Updated(&updated)?;
+
+            // Start the watcher
+            println!("Starting device watcher...");
+            watcher.Start()?;
+
+            if let Some(device_id) = rx.recv().await {
+                try_pair_with_board(device_id.clone(), pin).await?;
+                let bluetooth_device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
+                let mac_address =
+                    convert_u64_to_mac_address(bluetooth_device.BluetoothAddress()?);
+                return Ok(mac_address);
             }
 
-            Ok(())
-        },
-    );
-
-    // Create the event handler for device discovery
-    // If we receive an update that contains the device name, we must check if it is the board.
-    // If it is the board, then we can stop the search and check it.
-    let updated = TypedEventHandler::new(
-        move |watcher: windows::core::Ref<DeviceWatcher>,
-              info: windows::core::Ref<DeviceInformationUpdate>| {
-            let device_update_info = match info.as_ref() {
-                Some(info) => info,
-                None => return Ok(()),
-            };
-            let device_id = device_update_info.Id()?;
-
-            let properties = device_update_info.Properties()?;
-            let properties_matches = properties_has_matching_name(&properties, NINTENDO_BOARD_ID);
-
-            if properties_matches {
-                let _ = tokio::runtime::Runtime::new()?.block_on(async move {
-                    match try_pair_with_board(device_id, pin).await {
-                        Ok(_) => {
-                            println!("Balance paired successfully!");
-                            if let Err(e) = watcher.as_ref().unwrap().Stop() {
-                                eprintln!("Failed to stop watcher: {:?}", e);
-                            }
-                        }
-                        Err(e) => println!("{}", e.to_string()),
-                    }
-                });
-            }
-
-            Ok(())
-        },
-    );
-
-    watcher.Added(&added)?;
-    watcher.Updated(&updated)?;
-
-    // Start the watcher
-    println!("Starting device watcher...");
-    watcher.Start()?;
-
-    let timeout = Duration::from_secs(30); // Total duration to loop
-    let interval = Duration::from_secs(1); // Wait time between checks
-    let start = Instant::now(); // Record the start time
-    while start.elapsed() < timeout {
-        // Check if something has happened
-        let watcher_status = watcher.Status()?;
-
-        if watcher_status == DeviceWatcherStatus::Stopped
-            || watcher_status == DeviceWatcherStatus::Aborted
-        {
-            break;
-        }
-
-        sleep(interval).await; // Wait for 2 seconds
-    }
-
-    Ok(())
+            Err(anyhow!("Failed to find a device to pair with."))
+        })
+    })
+    .await?
 }
 
 async fn try_pair_with_board(device_id: HSTRING, pin: [u8; 6]) -> Result<()> {
@@ -204,12 +191,59 @@ async fn try_pair_with_board(device_id: HSTRING, pin: [u8; 6]) -> Result<()> {
 
     let pairing_result = pairing.PairAsync(DevicePairingKinds::ProvidePin)?.await?;
     if pairing_result.Status()? == DevicePairingResultStatus::Paired {
+        println!("Successfully paired with device {}!", device_id);
         Ok(())
     } else {
         Err(anyhow!(
             "Pairing failed with status: {}",
             pairing_result.Status()?.0
         ))
+    }
+}
+
+pub async fn turn_off_device(mac_address: MacAddress) -> Result<()> {
+    // Convert the MAC address array to the u64 format used by the Windows API.
+    let u64_address = mac_address_to_u64(mac_address);
+
+    // Find the Bluetooth device object from its address.
+    // This might return an error if the device is not found/known by the system.
+    let device = match BluetoothDevice::FromBluetoothAddressAsync(u64_address)?.await {
+        Ok(d) => d,
+        Err(e) => {
+            return Err(anyhow!(
+                "Device with MAC {:?} not found. Error: {}",
+                mac_address,
+                e
+            ))
+        }
+    };
+
+    // To unpair, we need the DeviceInformation object associated with the device.
+    // We can get this using the device's ID.
+    let device_info =
+        DeviceInformation::CreateFromIdAsync(&device.DeviceId()?)?.await?;
+
+    // Get the pairing information object.
+    let pairing = device_info.Pairing()?;
+
+    // Attempt to unpair the device.
+    println!("Attempting to unpair device with MAC: {:?}", mac_address);
+    let unpairing_result = pairing.UnpairAsync()?.await?;
+
+    // Check the status of the unpairing operation.
+    match unpairing_result.Status()? {
+        DeviceUnpairingResultStatus::Unpaired
+        | DeviceUnpairingResultStatus::AlreadyUnpaired => {
+            println!("Successfully unpaired device.");
+            Ok(())
+        }
+        status => {
+            // The status is an enum, its debug representation is informative.
+            Err(anyhow!(
+                "Failed to unpair device. Status: {:?}",
+                status
+            ))
+        }
     }
 }
 
@@ -233,6 +267,14 @@ fn properties_has_matching_name(
     };
 
     value == HSTRING::from(target)
+}
+
+fn mac_address_to_u64(mac_address: MacAddress) -> u64 {
+    let mut u64_address: u64 = 0;
+    for (i, &byte) in mac_address.iter().enumerate() {
+        u64_address |= (byte as u64) << (8 * (5 - i));
+    }
+    u64_address
 }
 
 // Windows RT stores the mac address in a u64, but we only want the relevant 48 bits

@@ -1,4 +1,4 @@
-export type ErrorMessage = String;
+export type ErrorMessage = string;
 
 export interface UserType {
   id: string;
@@ -10,7 +10,7 @@ export interface UserType {
   heightMetric?: string; // New field for height unit (cm/in)
   weight?: number;
   weightMetric?: string; // Weight unit (kg/lb)
-  handedness?: 'Right' | 'Left' | 'Ambidextrous';
+  handedness?: "Right" | "Left" | "Ambidextrous";
   color?: string;
   createdAt: string;
   updatedAt: string;
@@ -26,30 +26,36 @@ export interface RecentFile {
 }
 
 export const defaultUser: UserType = {
-  id: '',
-  name: '',
+  id: "",
+  name: "",
   age: undefined,
-  gender: '',
-  customGender: '',
+  gender: "",
+  customGender: "",
   height: undefined,
-  heightMetric: 'cm', // Default to centimeters
+  heightMetric: "cm", // Default to centimeters
   weight: undefined,
-  weightMetric: 'kg', // Default to kilograms
-  handedness: 'Right',
-  color: '#397aac',
+  weightMetric: "kg", // Default to kilograms
+  handedness: "Right",
+  color: "#397aac",
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
-  submitted: false
+  submitted: false,
 };
 
 export interface Device {
   id: number;
   name: string;
   status: "Connected" | "Active" | "Disconnected" | string;
-  mac: string;
-  battery: number;
-  temperature: number;
-  firmware: string;
+  macAddress: string;
+  battery?: number;
+  temperature?: number;
   lastConnected: string; // ISO date string
-  [key: string]: any;
 }
+
+export type BalanceBoardEvent =
+  | {
+  event: 'reading'
+  data: {
+    record: number;
+  };
+};

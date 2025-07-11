@@ -17,13 +17,11 @@ export const SessionGraph: React.FC = () => {
       .enter()
       .append("rect")
       .attr("x", (_, i) => i * 35)
-      .attr("y", d => 120 - d * 10)
+      .attr("y", (d) => 120 - d * 10)
       .attr("width", 30)
-      .attr("height", d => d * 10)
+      .attr("height", (d) => d * 10)
       .attr("fill", "#007bff");
   }, []);
 
-  return (
-    <svg ref={ref} width={220} height={130} />
-  );
+  return <svg ref={ref} width={220} height={130} />;
 };

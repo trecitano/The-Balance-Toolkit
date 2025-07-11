@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ActivityData } from './Activities';
-import './Activities.css';
+import React, { useState, useEffect, useRef } from "react";
+import { ActivityData } from "./Activities";
+import "./Activities.css";
 
 interface ActivityCardProps {
   activity: ActivityData;
 }
 
 const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
-  const [currentImageSrc, setCurrentImageSrc] = useState<string>(activity.staticImage);
+  const [currentImageSrc, setCurrentImageSrc] = useState<string>(
+    activity.staticImage,
+  );
   const [isHovering, setIsHovering] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const imageIndexRef = useRef<number>(0);
@@ -19,16 +21,20 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
   useEffect(() => {
     if (isHovering && activity.hoverImages && activity.hoverImages.length > 0) {
       let startIndex = 0;
-      if (activity.hoverImages[0] === activity.staticImage && activity.hoverImages.length > 1) {
+      if (
+        activity.hoverImages[0] === activity.staticImage &&
+        activity.hoverImages.length > 1
+      ) {
         startIndex = 1;
       }
-      
+
       imageIndexRef.current = startIndex;
       setCurrentImageSrc(activity.hoverImages[imageIndexRef.current]);
 
       if (activity.hoverImages.length > 1) {
         intervalRef.current = setInterval(() => {
-          imageIndexRef.current = (imageIndexRef.current + 1) % activity.hoverImages.length;
+          imageIndexRef.current =
+            (imageIndexRef.current + 1) % activity.hoverImages.length;
           setCurrentImageSrc(activity.hoverImages[imageIndexRef.current]);
         }, 700);
       }
@@ -38,7 +44,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity }) => {
         intervalRef.current = null;
       }
       if (!isHovering) {
-        setCurrentImageSrc(activity.staticImage); 
+        setCurrentImageSrc(activity.staticImage);
       }
     }
 

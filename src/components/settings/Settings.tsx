@@ -1,5 +1,5 @@
-import { useRef, useEffect, useState } from 'react';
-import './Settings.css';
+import React, { useRef, useEffect, useState } from "react";
+import "./Settings.css";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -17,62 +17,60 @@ interface SettingsState {
 
 function Settings({ isOpen, onClose }: SettingsProps) {
   const settingsRef = useRef<HTMLDivElement>(null);
-  
-  
+
   const [settings, setSettings] = useState<SettingsState>({
-    theme: 'light',
+    theme: "light",
     showTooltips: true,
     deviceAlerts: true,
     sessionNotifications: true,
-    saveLocation: 'C:/Users/Documents/The-Balance-Toolkit',
-    autoBackup: true
+    saveLocation: "C:/Users/Documents/The-Balance-Toolkit",
+    autoBackup: true,
   });
-  
-  
-  const [tempSettings, setTempSettings] = useState<SettingsState>({...settings});
-  
-  
+
+  const [tempSettings, setTempSettings] = useState<SettingsState>({
+    ...settings,
+  });
+
   useEffect(() => {
     if (isOpen) {
-      setTempSettings({...settings});
+      setTempSettings({ ...settings });
     }
   }, [isOpen, settings]);
 
   useEffect(() => {
-    
     const handleClickOutside = (event: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+      if (
+        settingsRef.current &&
+        !settingsRef.current.contains(event.target as Node)
+      ) {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
-    
+
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen, onClose]);
 
-  
   const handleChange = (field: keyof SettingsState, value: any) => {
     setTempSettings({
       ...tempSettings,
-      [field]: value
+      [field]: value,
     });
   };
 
-  
   const saveChanges = () => {
-    
-    setSettings({...tempSettings});
-    
-    
-    localStorage.setItem('balanceToolkitSettings', JSON.stringify(tempSettings));
-    
-    
-    
+    setSettings({ ...tempSettings });
+
+    localStorage.setItem(
+      "balanceToolkitSettings",
+      JSON.stringify(tempSettings),
+    );
+
     onClose();
   };
 
@@ -83,18 +81,20 @@ function Settings({ isOpen, onClose }: SettingsProps) {
       <div className="settings-popup" ref={settingsRef}>
         <div className="settings-header">
           <h2>Settings</h2>
-          <button className="settings-close-btn" onClick={onClose}>×</button>
+          <button className="settings-close-btn" onClick={onClose}>
+            ×
+          </button>
         </div>
-        
+
         <div className="settings-content">
           <div className="settings-section">
             <h3>Display</h3>
             <div className="setting-item">
               <label>
                 <span>Theme</span>
-                <select 
+                <select
                   value={tempSettings.theme}
-                  onChange={(e) => handleChange('theme', e.target.value)}
+                  onChange={(e) => handleChange("theme", e.target.value)}
                 >
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
@@ -104,10 +104,12 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             </div>
             <div className="setting-item">
               <label>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={tempSettings.showTooltips}
-                  onChange={(e) => handleChange('showTooltips', e.target.checked)}
+                  onChange={(e) =>
+                    handleChange("showTooltips", e.target.checked)
+                  }
                 />
                 <span>Show tooltips</span>
               </label>
@@ -118,20 +120,24 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             <h3>Notifications</h3>
             <div className="setting-item">
               <label>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={tempSettings.deviceAlerts}
-                  onChange={(e) => handleChange('deviceAlerts', e.target.checked)}
+                  onChange={(e) =>
+                    handleChange("deviceAlerts", e.target.checked)
+                  }
                 />
                 <span>Device connection alerts</span>
               </label>
             </div>
             <div className="setting-item">
               <label>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={tempSettings.sessionNotifications}
-                  onChange={(e) => handleChange('sessionNotifications', e.target.checked)}
+                  onChange={(e) =>
+                    handleChange("sessionNotifications", e.target.checked)
+                  }
                 />
                 <span>Session completion notifications</span>
               </label>
@@ -144,14 +150,18 @@ function Settings({ isOpen, onClose }: SettingsProps) {
               <label>
                 <span>Default save location</span>
                 <div>
-                  <span className="location-text">{tempSettings.saveLocation}</span>
-                  <button 
+                  <span className="location-text">
+                    {tempSettings.saveLocation}
+                  </span>
+                  <button
                     className="browse-btn"
                     onClick={() => {
-                      
-                      const newLocation = prompt('Enter save location:', tempSettings.saveLocation);
+                      const newLocation = prompt(
+                        "Enter save location:",
+                        tempSettings.saveLocation,
+                      );
                       if (newLocation) {
-                        handleChange('saveLocation', newLocation);
+                        handleChange("saveLocation", newLocation);
                       }
                     }}
                   >
@@ -162,22 +172,19 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             </div>
             <div className="setting-item">
               <label>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={tempSettings.autoBackup}
-                  onChange={(e) => handleChange('autoBackup', e.target.checked)}
+                  onChange={(e) => handleChange("autoBackup", e.target.checked)}
                 />
                 <span>Auto-backup sessions</span>
               </label>
             </div>
           </div>
         </div>
-        
+
         <div className="settings-footer">
-          <button 
-            className="settings-save-btn"
-            onClick={saveChanges}
-          >
+          <button className="settings-save-btn" onClick={saveChanges}>
             Save Changes
           </button>
         </div>
