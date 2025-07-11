@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import "./Session.css";
 import wbbIconLineBlue from "../../assets/wbb-icon-line-blue.svg";
 import userIcon from "../../assets/user-icon.svg";
-import folderIcon from '../../assets/folder-icon.svg';
-import wbbTopdownIcon from '../../assets/wbb-topdown.svg';
+import folderIcon from "../../assets/folder-icon.svg";
+import wbbTopdownIcon from "../../assets/wbb-topdown.svg";
 
 import CopXGraph from "./CopXGraph";
 import CopYGraph from "./CopYGraph";
@@ -32,19 +32,19 @@ interface StabilityGaugeProps {
 const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   const drawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
     const rect = container.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    
+
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
@@ -53,21 +53,21 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
     const height = rect.height;
     const centerX = width / 2;
     const centerY = height / 2;
-    const radius = Math.min(width, height) / 2 * 0.85;
+    const radius = (Math.min(width, height) / 2) * 0.85;
 
     ctx.clearRect(0, 0, width, height);
 
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+    ctx.shadowColor = "rgba(0, 0, 0, 0.15)";
     ctx.shadowBlur = 3;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 3;
 
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    ctx.fillStyle = '#f3f4f6'; 
+    ctx.fillStyle = "#f3f4f6";
     ctx.fill();
 
-    ctx.shadowColor = 'transparent';
+    ctx.shadowColor = "transparent";
     ctx.shadowBlur = 0;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
@@ -88,11 +88,11 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
       ctx.lineTo(radius, 0);
       ctx.lineWidth = radius * 0.1;
       if (ratio <= 0.3) {
-        ctx.strokeStyle = '#b71c1c'; 
+        ctx.strokeStyle = "#b71c1c";
       } else if (ratio <= 0.6) {
-        ctx.strokeStyle = '#ffc107'; 
+        ctx.strokeStyle = "#ffc107";
       } else {
-        ctx.strokeStyle = '#28a745'; 
+        ctx.strokeStyle = "#28a745";
       }
       ctx.stroke();
       ctx.restore();
@@ -107,19 +107,19 @@ const StabilityGauge: React.FC<StabilityGaugeProps> = ({ value, maxValue }) => {
     ctx.moveTo(-radius * 0.15, 0);
     ctx.lineTo(radius * 0.75, 0);
     ctx.lineWidth = Math.max(2, radius * 0.07);
-    ctx.strokeStyle = '#b71c1c'; 
+    ctx.strokeStyle = "#b71c1c";
     ctx.stroke();
     ctx.restore();
 
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius * 0.1, 0, 2 * Math.PI);
-    ctx.fillStyle = '#990000'; 
+    ctx.fillStyle = "#990000";
     ctx.fill();
 
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = "black";
     ctx.font = `bold ${radius * 0.25}px Arial`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.fillText(value.toFixed(2), centerX, centerY + radius * 0.5);
   }, [value, maxValue]);
 
@@ -148,49 +148,58 @@ const DEFAULT_SAVE_LOCATION = "Documents\\TheBalanceToolkit";
 const COPY_GRAPH_MAX_POINTS = 200;
 
 const formatDisplayPath = (path: string, maxLength: number): string => {
-  const parts = path.replace(/\\/g, '/').split('/').filter(part => part.length > 0);
+  const parts = path
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter((part) => part.length > 0);
   let displayString: string;
 
   if (parts.length === 0) {
-    displayString = path; 
+    displayString = path;
   } else if (parts.length === 1) {
     displayString = `.../${parts[0]}`;
-  } else { 
-    displayString = parts.slice(-2).join('/');
+  } else {
+    displayString = parts.slice(-2).join("/");
   }
 
   if (displayString.length > maxLength) {
-    const lastSlash = displayString.lastIndexOf('/');
-    if (lastSlash !== -1 && lastSlash > 0 && lastSlash < displayString.length -1) { 
+    const lastSlash = displayString.lastIndexOf("/");
+    if (
+      lastSlash !== -1 &&
+      lastSlash > 0 &&
+      lastSlash < displayString.length - 1
+    ) {
       let firstPart = displayString.substring(0, lastSlash);
       const lastPart = displayString.substring(lastSlash + 1);
 
-      const availableForFirstPart = maxLength - lastPart.length - 4; 
+      const availableForFirstPart = maxLength - lastPart.length - 4;
 
-      if (lastPart.length >= maxLength - 4) { 
+      if (lastPart.length >= maxLength - 4) {
         if (maxLength <= 4) displayString = "...";
-        else displayString = "..." + displayString.substring(displayString.length - maxLength + 3);
-
+        else
+          displayString =
+            "..." +
+            displayString.substring(displayString.length - maxLength + 3);
       } else if (firstPart.length > availableForFirstPart) {
-        if (availableForFirstPart < 0) { 
-             if (lastPart.length > maxLength -3 ) { 
-                displayString = "..." + lastPart.substring(lastPart.length - (maxLength-3));
-             } else if (lastPart.length > 0 && maxLength > 3) { 
-                displayString = "..." + lastPart;
-             }
-             else { 
-                displayString = "...";
-             }
+        if (availableForFirstPart < 0) {
+          if (lastPart.length > maxLength - 3) {
+            displayString =
+              "..." + lastPart.substring(lastPart.length - (maxLength - 3));
+          } else if (lastPart.length > 0 && maxLength > 3) {
+            displayString = "..." + lastPart;
+          } else {
+            displayString = "...";
+          }
         } else {
-            firstPart = firstPart.substring(0, availableForFirstPart);
-            displayString = firstPart + ".../" + lastPart;
+          firstPart = firstPart.substring(0, availableForFirstPart);
+          displayString = firstPart + ".../" + lastPart;
         }
-
       }
-    } else { 
-      if (displayString.length > maxLength) { 
-        if (maxLength >=3) displayString = displayString.substring(0, maxLength - 3) + "...";
-        else if (maxLength > 0) displayString = ".".repeat(maxLength); 
+    } else {
+      if (displayString.length > maxLength) {
+        if (maxLength >= 3)
+          displayString = displayString.substring(0, maxLength - 3) + "...";
+        else if (maxLength > 0) displayString = ".".repeat(maxLength);
         else displayString = "";
       }
     }
@@ -209,11 +218,9 @@ interface SessionProps {
 
 let lastStabilityIndex = 5.0;
 const getStabilityIndexFromBackend = (): number => {
-  
-  const change = (Math.random() - 0.5) * 0.2; 
+  const change = (Math.random() - 0.5) * 0.2;
   let newIndex = lastStabilityIndex + change;
 
-  
   newIndex = Math.max(0, Math.min(10, newIndex));
 
   lastStabilityIndex = newIndex;
@@ -223,15 +230,14 @@ const getStabilityIndexFromBackend = (): number => {
 let lastVCopX = 0;
 let lastVCopY = 0;
 const getMockStabilityData = () => {
-  
   const changeX = (Math.random() - 0.5) * 0.2;
   let newVCopX = lastVCopX + changeX;
-  newVCopX = Math.max(-1, Math.min(1, newVCopX)); 
+  newVCopX = Math.max(-1, Math.min(1, newVCopX));
   lastVCopX = newVCopX;
 
   const changeY = (Math.random() - 0.5) * 0.2;
   let newVCopY = lastVCopY + changeY;
-  newVCopY = Math.max(-1, Math.min(1, newVCopY)); 
+  newVCopY = Math.max(-1, Math.min(1, newVCopY));
   lastVCopY = newVCopY;
 
   return { vCopX: newVCopX, vCopY: newVCopY };
@@ -243,13 +249,19 @@ function Session({
   onInitialBoardConsumed,
   usersForDropdown,
   currentSelectedUserId,
-  onSelectUserInSession
+  onSelectUserInSession,
 }: SessionProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const initialSelectedBoardFromRoute = location.state?.initialSelectedBoard as string | null || null;
+  const initialSelectedBoardFromRoute =
+    (location.state?.initialSelectedBoard as string | null) || null;
 
-  console.log("[Session.tsx] Component rendered. availableBoards prop:", availableBoards, "initialSelectedBoardFromRoute:", initialSelectedBoardFromRoute);
+  console.log(
+    "[Session.tsx] Component rendered. availableBoards prop:",
+    availableBoards,
+    "initialSelectedBoardFromRoute:",
+    initialSelectedBoardFromRoute,
+  );
 
   const boardDropdownRef = useRef<HTMLDivElement>(null);
   const boardToggleRef = useRef<HTMLButtonElement>(null);
@@ -268,22 +280,36 @@ function Session({
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [saveLocation, setSaveLocation] = useState<string>(DEFAULT_SAVE_LOCATION);
+  const [saveLocation, setSaveLocation] = useState<string>(
+    DEFAULT_SAVE_LOCATION,
+  );
   const [stopAfterEnabled, setStopAfterEnabled] = useState(false);
-  const [stopAfterTime, setStopAfterTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [stopAfterTime, setStopAfterTime] = useState({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
   const [showStopAfterDropdown, setShowStopAfterDropdown] = useState(false);
   const [inputHours, setInputHours] = useState(0);
   const [inputMinutes, setInputMinutes] = useState(0);
   const [inputSeconds, setInputSeconds] = useState(0);
   const [lslStreamEnabled, setLslStreamEnabled] = useState(false);
-  const [lslStreamNameInput, setLslStreamNameInput] = useState("the-balance-toolkit"); 
-  const [activeLslStreamName, setActiveLslStreamName] = useState<string | null>(null); 
+  const [lslStreamNameInput, setLslStreamNameInput] = useState(
+    "the-balance-toolkit",
+  );
+  const [activeLslStreamName, setActiveLslStreamName] = useState<string | null>(
+    null,
+  );
   const [lslStreamType, setLslStreamType] = useState("BalanceData");
-  const [lslSourceId, setLslSourceId] = useState(`tbt-${Date.now().toString().slice(-6)}`);
+  const [lslSourceId, setLslSourceId] = useState(
+    `tbt-${Date.now().toString().slice(-6)}`,
+  );
   const [tcpStreamEnabled, setTcpStreamEnabled] = useState(false);
   const [tcpIpAddressInput, setTcpIpAddressInput] = useState("127.0.0.1");
   const [tcpPortInput, setTcpPortInput] = useState("12345");
-  const [activeTcpIpAddress, setActiveTcpIpAddress] = useState<string | null>(null);
+  const [activeTcpIpAddress, setActiveTcpIpAddress] = useState<string | null>(
+    null,
+  );
   const [activeTcpPort, setActiveTcpPort] = useState<string | null>(null);
   const [showLslDropdown, setShowLslDropdown] = useState(false);
   const [showTcpDropdown, setShowTcpDropdown] = useState(false);
@@ -292,26 +318,41 @@ function Session({
   const canvasRef2 = useRef<HTMLCanvasElement>(null);
   const copyGraphContainerRef = useRef<HTMLDivElement>(null);
   const copxGraphContainerRef = useRef<HTMLDivElement>(null);
-  const vCopXGraphContainerRef = useRef<HTMLDivElement>(null); 
-  const vCopYGraphContainerRef = useRef<HTMLDivElement>(null); 
+  const vCopXGraphContainerRef = useRef<HTMLDivElement>(null);
+  const vCopYGraphContainerRef = useRef<HTMLDivElement>(null);
 
   const [copYDataSeries, setCopYDataSeries] = useState<number[]>([]);
   const [copXDataSeries, setCopXDataSeries] = useState<number[]>([]);
-  const [vCopXDataSeries, setVCopXDataSeries] = useState<number[]>([]); 
-  const [vCopYDataSeries, setVCopYDataSeries] = useState<number[]>([]); 
+  const [vCopXDataSeries, setVCopXDataSeries] = useState<number[]>([]);
+  const [vCopYDataSeries, setVCopYDataSeries] = useState<number[]>([]);
   const wbbTopdownContainerRef = useRef<HTMLDivElement>(null);
   const wbbTopdownImageRef = useRef<HTMLImageElement>(null);
-  const [svgRenderedBounds, setSvgRenderedBounds] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [svgRenderedBounds, setSvgRenderedBounds] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [copYCanvasSize, setCopYCanvasSize] = useState({ width: 0, height: 0 });
   const [copXCanvasSize, setCopXCanvasSize] = useState({ width: 0, height: 0 });
-  const [vCopXCanvasSize, setVCopXCanvasSize] = useState({ width: 0, height: 0 }); 
-  const [vCopYCanvasSize, setVCopYCanvasSize] = useState({ width: 0, height: 0 }); 
+  const [vCopXCanvasSize, setVCopXCanvasSize] = useState({
+    width: 0,
+    height: 0,
+  });
+  const [vCopYCanvasSize, setVCopYCanvasSize] = useState({
+    width: 0,
+    height: 0,
+  });
 
   const [stabilityIndex, setStabilityIndex] = useState(0);
-  const MAX_STABILITY_INDEX = 10; 
+  const MAX_STABILITY_INDEX = 10;
 
-  const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(null);
-  const [actualCopTrail, setActualCopTrail] = useState<Array<{ x: number; y: number; id: number; timestamp: number }>>([]);
+  const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [actualCopTrail, setActualCopTrail] = useState<
+    Array<{ x: number; y: number; id: number; timestamp: number }>
+  >([]);
   const lastActualCopTrailPointIdRef = useRef(0);
   const actualCopVelocityRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -321,10 +362,14 @@ function Session({
     if (initialSelectedBoardFromRoute && !initialBoardProcessed) {
       if (availableBoards.length > 0) {
         if (availableBoards.includes(initialSelectedBoardFromRoute)) {
-          console.log(`[Session.tsx] Initial board from route: ${initialSelectedBoardFromRoute}. Setting as selected.`);
+          console.log(
+            `[Session.tsx] Initial board from route: ${initialSelectedBoardFromRoute}. Setting as selected.`,
+          );
           setSelectedBoard(initialSelectedBoardFromRoute);
         } else {
-          console.warn(`[Session.tsx] Initial board from route "${initialSelectedBoardFromRoute}" not found in available boards. Will attempt to select default.`);
+          console.warn(
+            `[Session.tsx] Initial board from route "${initialSelectedBoardFromRoute}" not found in available boards. Will attempt to select default.`,
+          );
           if (!selectedBoard && availableBoards.length > 0) {
             setSelectedBoard(availableBoards[0]);
           } else if (!selectedBoard && availableBoards.length === 0) {
@@ -338,11 +383,18 @@ function Session({
       }
     } else if (initialBoardProcessed || !initialSelectedBoardFromRoute) {
       if (!selectedBoard && availableBoards.length > 0) {
-        console.log("[Session.tsx] No board selected or initial processed, selecting first available board:", availableBoards[0]);
+        console.log(
+          "[Session.tsx] No board selected or initial processed, selecting first available board:",
+          availableBoards[0],
+        );
         setSelectedBoard(availableBoards[0]);
       } else if (selectedBoard && !availableBoards.includes(selectedBoard)) {
-        console.warn(`[Session.tsx] Selected board "${selectedBoard}" no longer available. Reselecting.`);
-        setSelectedBoard(availableBoards.length > 0 ? availableBoards[0] : null);
+        console.warn(
+          `[Session.tsx] Selected board "${selectedBoard}" no longer available. Reselecting.`,
+        );
+        setSelectedBoard(
+          availableBoards.length > 0 ? availableBoards[0] : null,
+        );
       } else if (availableBoards.length === 0 && selectedBoard !== null) {
         setSelectedBoard(null);
       }
@@ -362,7 +414,6 @@ function Session({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      
       if (
         boardDropdownRef.current &&
         !boardDropdownRef.current.contains(event.target as Node) &&
@@ -372,7 +423,6 @@ function Session({
         setShowBoardDropdown(false);
       }
 
-      
       if (
         userDropdownRef.current &&
         !userDropdownRef.current.contains(event.target as Node) &&
@@ -382,7 +432,6 @@ function Session({
         setShowUserDropdown(false);
       }
 
-      
       if (
         lslDropdownRef.current &&
         !lslDropdownRef.current.contains(event.target as Node) &&
@@ -392,7 +441,6 @@ function Session({
         setShowLslDropdown(false);
       }
 
-      
       if (
         tcpDropdownRef.current &&
         !tcpDropdownRef.current.contains(event.target as Node) &&
@@ -402,18 +450,25 @@ function Session({
         setShowTcpDropdown(false);
       }
 
-      
       if (
         stopAfterDropdownRef.current &&
         !stopAfterDropdownRef.current.contains(event.target as Node) &&
-        (!stopAfterToggleRef.current || !stopAfterToggleRef.current.contains(event.target as Node)) &&
-        (!stopAfterTimeTextRef.current || !stopAfterTimeTextRef.current.contains(event.target as Node))
+        (!stopAfterToggleRef.current ||
+          !stopAfterToggleRef.current.contains(event.target as Node)) &&
+        (!stopAfterTimeTextRef.current ||
+          !stopAfterTimeTextRef.current.contains(event.target as Node))
       ) {
         setShowStopAfterDropdown(false);
       }
     };
 
-    if (showBoardDropdown || showUserDropdown || showLslDropdown || showTcpDropdown || showStopAfterDropdown) {
+    if (
+      showBoardDropdown ||
+      showUserDropdown ||
+      showLslDropdown ||
+      showTcpDropdown ||
+      showStopAfterDropdown
+    ) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -421,18 +476,36 @@ function Session({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showBoardDropdown, showUserDropdown, showLslDropdown, showTcpDropdown, showStopAfterDropdown]);
+  }, [
+    showBoardDropdown,
+    showUserDropdown,
+    showLslDropdown,
+    showTcpDropdown,
+    showStopAfterDropdown,
+  ]);
 
   useEffect(() => {
     const calculateBounds = () => {
-      if (wbbTopdownContainerRef.current && wbbTopdownImageRef.current && wbbTopdownImageRef.current.complete) {
+      if (
+        wbbTopdownContainerRef.current &&
+        wbbTopdownImageRef.current &&
+        wbbTopdownImageRef.current.complete
+      ) {
         const img = wbbTopdownImageRef.current;
         const containerWidth = img.offsetWidth;
         const containerHeight = img.offsetHeight;
 
-        const { naturalWidth: imageNaturalWidth, naturalHeight: imageNaturalHeight } = img;
+        const {
+          naturalWidth: imageNaturalWidth,
+          naturalHeight: imageNaturalHeight,
+        } = img;
 
-        if (containerWidth === 0 || containerHeight === 0 || imageNaturalWidth === 0 || imageNaturalHeight === 0) {
+        if (
+          containerWidth === 0 ||
+          containerHeight === 0 ||
+          imageNaturalWidth === 0 ||
+          imageNaturalHeight === 0
+        ) {
           setSvgRenderedBounds(null);
           return;
         }
@@ -469,13 +542,14 @@ function Session({
     calculateBounds();
 
     const imgElement = wbbTopdownImageRef.current;
-    if (imgElement) imgElement.addEventListener('load', calculateBounds);
+    if (imgElement) imgElement.addEventListener("load", calculateBounds);
 
     const resizeObserver = new ResizeObserver(calculateBounds);
-    if (wbbTopdownContainerRef.current) resizeObserver.observe(wbbTopdownContainerRef.current);
+    if (wbbTopdownContainerRef.current)
+      resizeObserver.observe(wbbTopdownContainerRef.current);
 
     return () => {
-      if (imgElement) imgElement.removeEventListener('load', calculateBounds);
+      if (imgElement) imgElement.removeEventListener("load", calculateBounds);
       resizeObserver.disconnect();
     };
   }, []);
@@ -484,8 +558,8 @@ function Session({
     const container = copyGraphContainerRef.current;
     if (!container) return;
 
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
         const { width, height } = entry.contentRect;
         setCopYCanvasSize({ width, height });
       }
@@ -495,8 +569,13 @@ function Session({
 
     const initialWidth = container.offsetWidth;
     const initialHeight = container.offsetHeight;
-    if (initialWidth > 0 && initialHeight > 0 && (copYCanvasSize.width !== initialWidth || copYCanvasSize.height !== initialHeight)) {
-        setCopYCanvasSize({ width: initialWidth, height: initialHeight });
+    if (
+      initialWidth > 0 &&
+      initialHeight > 0 &&
+      (copYCanvasSize.width !== initialWidth ||
+        copYCanvasSize.height !== initialHeight)
+    ) {
+      setCopYCanvasSize({ width: initialWidth, height: initialHeight });
     }
 
     return () => {
@@ -508,8 +587,8 @@ function Session({
     const container = copxGraphContainerRef.current;
     if (!container) return;
 
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
         const { width, height } = entry.contentRect;
         setCopXCanvasSize({ width, height });
       }
@@ -519,8 +598,13 @@ function Session({
 
     const initialWidth = container.offsetWidth;
     const initialHeight = container.offsetHeight;
-    if (initialWidth > 0 && initialHeight > 0 && (copXCanvasSize.width !== initialWidth || copXCanvasSize.height !== initialHeight)) {
-        setCopXCanvasSize({ width: initialWidth, height: initialHeight });
+    if (
+      initialWidth > 0 &&
+      initialHeight > 0 &&
+      (copXCanvasSize.width !== initialWidth ||
+        copXCanvasSize.height !== initialHeight)
+    ) {
+      setCopXCanvasSize({ width: initialWidth, height: initialHeight });
     }
 
     return () => {
@@ -528,13 +612,12 @@ function Session({
     };
   }, []);
 
-  
   useEffect(() => {
     const container = vCopXGraphContainerRef.current;
     if (!container) return;
 
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
         const { width, height } = entry.contentRect;
         setVCopXCanvasSize({ width, height });
       }
@@ -544,8 +627,13 @@ function Session({
 
     const initialWidth = container.offsetWidth;
     const initialHeight = container.offsetHeight;
-    if (initialWidth > 0 && initialHeight > 0 && (vCopXCanvasSize.width !== initialWidth || vCopXCanvasSize.height !== initialHeight)) {
-        setVCopXCanvasSize({ width: initialWidth, height: initialHeight });
+    if (
+      initialWidth > 0 &&
+      initialHeight > 0 &&
+      (vCopXCanvasSize.width !== initialWidth ||
+        vCopXCanvasSize.height !== initialHeight)
+    ) {
+      setVCopXCanvasSize({ width: initialWidth, height: initialHeight });
     }
 
     return () => {
@@ -557,8 +645,8 @@ function Session({
     const container = vCopYGraphContainerRef.current;
     if (!container) return;
 
-    const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
         const { width, height } = entry.contentRect;
         setVCopYCanvasSize({ width, height });
       }
@@ -568,8 +656,13 @@ function Session({
 
     const initialWidth = container.offsetWidth;
     const initialHeight = container.offsetHeight;
-    if (initialWidth > 0 && initialHeight > 0 && (vCopYCanvasSize.width !== initialWidth || vCopYCanvasSize.height !== initialHeight)) {
-        setVCopYCanvasSize({ width: initialWidth, height: initialHeight });
+    if (
+      initialWidth > 0 &&
+      initialHeight > 0 &&
+      (vCopYCanvasSize.width !== initialWidth ||
+        vCopYCanvasSize.height !== initialHeight)
+    ) {
+      setVCopYCanvasSize({ width: initialWidth, height: initialHeight });
     }
 
     return () => {
@@ -586,7 +679,12 @@ function Session({
     }
 
     const updateSvgPosition = () => {
-      const { x, y, width, height } = svgRenderedBounds || { x: 0, y: 0, width: 0, height: 0 };
+      const { x, y, width, height } = svgRenderedBounds || {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      };
 
       svgElement.setAttribute("x", `${x}px`);
       svgElement.setAttribute("y", `${y}px`);
@@ -615,7 +713,7 @@ function Session({
       const BOUNDARY_LIMIT = 1.0;
 
       const intervalId = setInterval(() => {
-        setActualCop(prevActualCop => {
+        setActualCop((prevActualCop) => {
           let currentX = 0;
           let currentY = 0;
 
@@ -644,32 +742,57 @@ function Session({
           if (newCOPx > BOUNDARY_LIMIT || newCOPx < -BOUNDARY_LIMIT) {
             vx *= -0.5;
             actualCopVelocityRef.current.x = vx;
-            newCOPx = Math.max(-BOUNDARY_LIMIT, Math.min(BOUNDARY_LIMIT, newCOPx));
+            newCOPx = Math.max(
+              -BOUNDARY_LIMIT,
+              Math.min(BOUNDARY_LIMIT, newCOPx),
+            );
           }
           if (newCOPy > BOUNDARY_LIMIT || newCOPy < -BOUNDARY_LIMIT) {
             vy *= -0.5;
             actualCopVelocityRef.current.y = vy;
-            newCOPy = Math.max(-BOUNDARY_LIMIT, Math.min(BOUNDARY_LIMIT, newCOPy));
+            newCOPy = Math.max(
+              -BOUNDARY_LIMIT,
+              Math.min(BOUNDARY_LIMIT, newCOPy),
+            );
           }
 
           const newCopData = { x: newCOPx, y: newCOPy };
           const { vCopX, vCopY } = getMockStabilityData();
 
-          const instability = Math.sqrt(vCopX**2 + vCopY**2);
-          const maxInstability = Math.sqrt(2); 
-          const currentStabilityIndex = Math.max(0, (1 - instability / maxInstability) * MAX_STABILITY_INDEX);
+          const instability = Math.sqrt(vCopX ** 2 + vCopY ** 2);
+          const maxInstability = Math.sqrt(2);
+          const currentStabilityIndex = Math.max(
+            0,
+            (1 - instability / maxInstability) * MAX_STABILITY_INDEX,
+          );
           setStabilityIndex(currentStabilityIndex);
 
-          setCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.y]);
-          setCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), newCopData.x]);
-          setVCopXDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), vCopX]);
-          setVCopYDataSeries(prevData => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), vCopY]);
+          setCopYDataSeries((prevData) => [
+            ...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1),
+            newCopData.y,
+          ]);
+          setCopXDataSeries((prevData) => [
+            ...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1),
+            newCopData.x,
+          ]);
+          setVCopXDataSeries((prevData) => [
+            ...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1),
+            vCopX,
+          ]);
+          setVCopYDataSeries((prevData) => [
+            ...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1),
+            vCopY,
+          ]);
 
-          setActualCopTrail(currentTrail => {
+          setActualCopTrail((currentTrail) => {
             const now = Date.now();
-            const newPoint = { ...newCopData, id: lastActualCopTrailPointIdRef.current++, timestamp: now };
+            const newPoint = {
+              ...newCopData,
+              id: lastActualCopTrailPointIdRef.current++,
+              timestamp: now,
+            };
             const updatedTrail = [...currentTrail, newPoint]
-              .filter(p => now - p.timestamp < TRAIL_MAX_AGE)
+              .filter((p) => now - p.timestamp < TRAIL_MAX_AGE)
               .slice(-MAX_TRAIL_POINTS);
             return updatedTrail;
           });
@@ -689,8 +812,8 @@ function Session({
     setRecording(true);
     setCopYDataSeries([]);
     setCopXDataSeries([]);
-    setVCopXDataSeries([]); 
-    setVCopYDataSeries([]); 
+    setVCopXDataSeries([]);
+    setVCopYDataSeries([]);
 
     setActualCop(null);
     actualCopVelocityRef.current = { x: 0, y: 0 };
@@ -718,7 +841,11 @@ function Session({
   const handleSubmitStopAfter = () => {
     const totalSeconds = inputHours * 3600 + inputMinutes * 60 + inputSeconds;
     if (totalSeconds > 0) {
-      setStopAfterTime({ hours: inputHours, minutes: inputMinutes, seconds: inputSeconds });
+      setStopAfterTime({
+        hours: inputHours,
+        minutes: inputMinutes,
+        seconds: inputSeconds,
+      });
       setStopAfterEnabled(true);
     } else {
       setStopAfterTime({ hours: 0, minutes: 0, seconds: 0 });
@@ -739,7 +866,10 @@ function Session({
   useEffect(() => {
     let timerId: ReturnType<typeof setTimeout> | undefined;
     if (recording && stopAfterEnabled) {
-      const totalDurationInSeconds = stopAfterTime.hours * 3600 + stopAfterTime.minutes * 60 + stopAfterTime.seconds;
+      const totalDurationInSeconds =
+        stopAfterTime.hours * 3600 +
+        stopAfterTime.minutes * 60 +
+        stopAfterTime.seconds;
       if (totalDurationInSeconds > 0) {
         timerId = setTimeout(() => {
           handleStop();
@@ -757,7 +887,12 @@ function Session({
     setInputSeconds(0);
   };
 
-  const handleNumericInputChange = (setter: React.Dispatch<React.SetStateAction<number>>, value: string, min: number, max?: number) => {
+  const handleNumericInputChange = (
+    setter: React.Dispatch<React.SetStateAction<number>>,
+    value: string,
+    min: number,
+    max?: number,
+  ) => {
     let num = parseInt(value, 10);
     if (isNaN(num)) {
       setter(min);
@@ -774,7 +909,7 @@ function Session({
     setter: React.Dispatch<React.SetStateAction<number>>,
     delta: number,
     min: number,
-    max?: number
+    max?: number,
   ) => {
     setter((prev) => {
       let newValue = prev + delta;
@@ -787,38 +922,47 @@ function Session({
   };
 
   const handleLslToggleClick = () => {
-    if (!lslStreamEnabled && !showLslDropdown) { 
-      
+    if (!lslStreamEnabled && !showLslDropdown) {
       setLslSourceId(`tbt-${Date.now().toString().slice(-6)}`);
     }
-    setShowLslDropdown(prev => !prev);
+    setShowLslDropdown((prev) => !prev);
   };
 
   const handleEnableLslStream = () => {
-    console.log("Enabling LSL Stream with:", { streamName: lslStreamNameInput, streamType: lslStreamType, sourceId: lslSourceId });
+    console.log("Enabling LSL Stream with:", {
+      streamName: lslStreamNameInput,
+      streamType: lslStreamType,
+      sourceId: lslSourceId,
+    });
     setLslStreamEnabled(true);
-    setActiveLslStreamName(lslStreamNameInput); 
+    setActiveLslStreamName(lslStreamNameInput);
     setShowLslDropdown(false);
   };
 
   const handleDisableLslStream = () => {
     console.log("Disabling LSL Stream");
     setLslStreamEnabled(false);
-    setActiveLslStreamName(null); 
+    setActiveLslStreamName(null);
     setShowLslDropdown(false);
   };
 
   const handleTcpToggleClick = () => {
-    setShowTcpDropdown(prev => !prev);
+    setShowTcpDropdown((prev) => !prev);
   };
 
   const handleEnableTcpStream = () => {
-    
-    if (!tcpIpAddressInput.trim() || !tcpPortInput.trim() || isNaN(parseInt(tcpPortInput))) {
+    if (
+      !tcpIpAddressInput.trim() ||
+      !tcpPortInput.trim() ||
+      isNaN(parseInt(tcpPortInput))
+    ) {
       alert("Please enter a valid IP Address and Port.");
       return;
     }
-    console.log("Enabling TCP Stream with:", { ip: tcpIpAddressInput, port: tcpPortInput });
+    console.log("Enabling TCP Stream with:", {
+      ip: tcpIpAddressInput,
+      port: tcpPortInput,
+    });
     setTcpStreamEnabled(true);
     setActiveTcpIpAddress(tcpIpAddressInput);
     setActiveTcpPort(tcpPortInput);
@@ -839,7 +983,7 @@ function Session({
   };
 
   const handleGoToUsers = () => {
-    onViewChange('users');
+    onViewChange("users");
     setShowUserDropdown(false);
   };
 
@@ -852,14 +996,22 @@ function Session({
         console.error("Error picking directory:", err);
       }
     } else {
-      const newPath = prompt("Enter new save location (showDirectoryPicker not supported):", saveLocation);
+      const newPath = prompt(
+        "Enter new save location (showDirectoryPicker not supported):",
+        saveLocation,
+      );
       if (newPath !== null) {
-        setSaveLocation(newPath.trim() === "" ? DEFAULT_SAVE_LOCATION : newPath);
+        setSaveLocation(
+          newPath.trim() === "" ? DEFAULT_SAVE_LOCATION : newPath,
+        );
       }
     }
   };
 
-  const selectedUserName = usersForDropdown.find(u => u.id === currentSelectedUserId)?.name || currentSelectedUserId || "Select User";
+  const selectedUserName =
+    usersForDropdown.find((u) => u.id === currentSelectedUserId)?.name ||
+    currentSelectedUserId ||
+    "Select User";
 
   return (
     <div className="session-page">
@@ -872,14 +1024,19 @@ function Session({
               <button
                 ref={boardToggleRef}
                 className="control-toggle control-toggle--full-width"
-                onClick={() => !recording && setShowBoardDropdown(!showBoardDropdown)}
+                onClick={() =>
+                  !recording && setShowBoardDropdown(!showBoardDropdown)
+                }
                 aria-haspopup="true"
                 aria-expanded={showBoardDropdown}
                 disabled={recording}
                 title={
                   recording
                     ? "Settings cannot be changed during recording."
-                    : selectedBoard || (availableBoards.length === 0 ? "No boards available" : "Select Board")
+                    : selectedBoard ||
+                      (availableBoards.length === 0
+                        ? "No boards available"
+                        : "Select Board")
                 }
               >
                 <img src={wbbIconLineBlue} alt="Board Icon" className="icon" />
@@ -906,9 +1063,14 @@ function Session({
                   ) : (
                     <p className="dropdown-message">No boards available.</p>
                   )}
-                  <button className="btn btn--secondary" onClick={() => onViewChange('devices')}>
+                  <button
+                    className="btn btn--secondary"
+                    onClick={() => onViewChange("devices")}
+                  >
                     Go to Devices
-                    <span className="go-to-devices-icon" aria-hidden="true">→</span>
+                    <span className="go-to-devices-icon" aria-hidden="true">
+                      →
+                    </span>
                   </button>
                 </div>
               )}
@@ -921,7 +1083,9 @@ function Session({
               <button
                 ref={userToggleRef}
                 className="control-toggle control-toggle--full-width"
-                onClick={() => !recording && setShowUserDropdown(!showUserDropdown)}
+                onClick={() =>
+                  !recording && setShowUserDropdown(!showUserDropdown)
+                }
                 aria-haspopup="true"
                 aria-expanded={showUserDropdown}
                 disabled={recording}
@@ -942,7 +1106,9 @@ function Session({
                         <li
                           key={user.id}
                           className={`list-item ${
-                            user.id === currentSelectedUserId ? "list-item--selected" : ""
+                            user.id === currentSelectedUserId
+                              ? "list-item--selected"
+                              : ""
                           }`}
                           onClick={() => handleUserSelect(user.id)}
                         >
@@ -957,9 +1123,14 @@ function Session({
                   ) : (
                     <p className="dropdown-message">No users available.</p>
                   )}
-                  <button className="btn btn--secondary" onClick={handleGoToUsers}>
+                  <button
+                    className="btn btn--secondary"
+                    onClick={handleGoToUsers}
+                  >
                     Go to Users
-                    <span className="go-to-users-icon" aria-hidden="true">→</span>
+                    <span className="go-to-users-icon" aria-hidden="true">
+                      →
+                    </span>
                   </button>
                 </div>
               )}
@@ -972,7 +1143,11 @@ function Session({
               className="control-toggle control-toggle--full-width"
               onClick={handleChangeSaveLocation}
               disabled={recording}
-              title={recording ? "Settings cannot be changed during recording." : saveLocation}
+              title={
+                recording
+                  ? "Settings cannot be changed during recording."
+                  : saveLocation
+              }
             >
               <img src={folderIcon} alt="Folder Icon" className="icon" />
               <span className="control-name">{saveLocation}</span>
@@ -989,21 +1164,50 @@ function Session({
                 aria-haspopup="true"
                 aria-expanded={showLslDropdown}
                 disabled={recording}
-                title={recording ? "Settings cannot be changed during recording." : (lslStreamEnabled ? "LSL Stream is ON. Click to manage." : "LSL Stream is OFF. Click to configure.")}
+                title={
+                  recording
+                    ? "Settings cannot be changed during recording."
+                    : lslStreamEnabled
+                      ? "LSL Stream is ON. Click to manage."
+                      : "LSL Stream is OFF. Click to configure."
+                }
               >
                 {lslStreamEnabled ? "ON" : "OFF"}
               </button>
               {showLslDropdown && !recording && (
-                <div ref={lslDropdownRef} className="dropdown dropdown--right dropdown--medium">
+                <div
+                  ref={lslDropdownRef}
+                  className="dropdown dropdown--right dropdown--medium"
+                >
                   {lslStreamEnabled ? (
                     <>
                       <div className="form-group">
-                        <label htmlFor="activeLslStreamNameDisplay" className="form-label">Stream Name:</label>
-                        <span id="activeLslStreamNameDisplay" className="form-display">{activeLslStreamName || "N/A"}</span>
+                        <label
+                          htmlFor="activeLslStreamNameDisplay"
+                          className="form-label"
+                        >
+                          Stream Name:
+                        </label>
+                        <span
+                          id="activeLslStreamNameDisplay"
+                          className="form-display"
+                        >
+                          {activeLslStreamName || "N/A"}
+                        </span>
                       </div>
                       <div className="form-group">
-                        <label htmlFor="lslSourceIdDisplayWhenOn" className="form-label">Source ID:</label>
-                        <span id="lslSourceIdDisplayWhenOn" className="form-display">{lslSourceId}</span>
+                        <label
+                          htmlFor="lslSourceIdDisplayWhenOn"
+                          className="form-label"
+                        >
+                          Source ID:
+                        </label>
+                        <span
+                          id="lslSourceIdDisplayWhenOn"
+                          className="form-display"
+                        >
+                          {lslSourceId}
+                        </span>
                       </div>
                       <button
                         onClick={handleDisableLslStream}
@@ -1016,20 +1220,37 @@ function Session({
                   ) : (
                     <>
                       <div className="form-group">
-                        <label htmlFor="lslStreamNameInputControl" className="form-label">Stream Name:</label>
+                        <label
+                          htmlFor="lslStreamNameInputControl"
+                          className="form-label"
+                        >
+                          Stream Name:
+                        </label>
                         <input
                           type="text"
                           id="lslStreamNameInputControl"
                           className="input"
                           value={lslStreamNameInput}
-                          onChange={(e) => setLslStreamNameInput(e.target.value)}
+                          onChange={(e) =>
+                            setLslStreamNameInput(e.target.value)
+                          }
                           placeholder="e.g., MyBalanceStream"
                           disabled={recording}
                         />
                       </div>
                       <div className="form-group">
-                        <label htmlFor="lslSourceIdDisplayWhenOff" className="form-label">Source ID:</label>
-                        <span id="lslSourceIdDisplayWhenOff" className="form-display">{lslSourceId}</span>
+                        <label
+                          htmlFor="lslSourceIdDisplayWhenOff"
+                          className="form-label"
+                        >
+                          Source ID:
+                        </label>
+                        <span
+                          id="lslSourceIdDisplayWhenOff"
+                          className="form-display"
+                        >
+                          {lslSourceId}
+                        </span>
                       </div>
                       <button
                         onClick={handleEnableLslStream}
@@ -1055,21 +1276,47 @@ function Session({
                 aria-haspopup="true"
                 aria-expanded={showTcpDropdown}
                 disabled={recording}
-                title={recording ? "Settings cannot be changed during recording." : (tcpStreamEnabled ? "TCP Stream is ON" : "TCP Stream is OFF")}
+                title={
+                  recording
+                    ? "Settings cannot be changed during recording."
+                    : tcpStreamEnabled
+                      ? "TCP Stream is ON"
+                      : "TCP Stream is OFF"
+                }
               >
                 {tcpStreamEnabled ? "ON" : "OFF"}
               </button>
               {showTcpDropdown && !recording && (
-                <div ref={tcpDropdownRef} className="dropdown dropdown--right dropdown--small">
+                <div
+                  ref={tcpDropdownRef}
+                  className="dropdown dropdown--right dropdown--small"
+                >
                   {tcpStreamEnabled ? (
                     <>
                       <div className="form-group">
-                        <label htmlFor="activeTcpIpDisplay" className="form-label">IP Address:</label>
-                        <span id="activeTcpIpDisplay" className="form-display">{activeTcpIpAddress || "N/A"}</span>
+                        <label
+                          htmlFor="activeTcpIpDisplay"
+                          className="form-label"
+                        >
+                          IP Address:
+                        </label>
+                        <span id="activeTcpIpDisplay" className="form-display">
+                          {activeTcpIpAddress || "N/A"}
+                        </span>
                       </div>
                       <div className="form-group">
-                        <label htmlFor="activeTcpPortDisplay" className="form-label">Port:</label>
-                        <span id="activeTcpPortDisplay" className="form-display">{activeTcpPort || "N/A"}</span>
+                        <label
+                          htmlFor="activeTcpPortDisplay"
+                          className="form-label"
+                        >
+                          Port:
+                        </label>
+                        <span
+                          id="activeTcpPortDisplay"
+                          className="form-display"
+                        >
+                          {activeTcpPort || "N/A"}
+                        </span>
                       </div>
                       <button
                         onClick={handleDisableTcpStream}
@@ -1082,7 +1329,12 @@ function Session({
                   ) : (
                     <>
                       <div className="form-group">
-                        <label htmlFor="tcpIpInputControl" className="form-label">IP Address:</label>
+                        <label
+                          htmlFor="tcpIpInputControl"
+                          className="form-label"
+                        >
+                          IP Address:
+                        </label>
                         <input
                           type="text"
                           id="tcpIpInputControl"
@@ -1094,9 +1346,14 @@ function Session({
                         />
                       </div>
                       <div className="form-group">
-                        <label htmlFor="tcpPortInputControl" className="form-label">Port:</label>
+                        <label
+                          htmlFor="tcpPortInputControl"
+                          className="form-label"
+                        >
+                          Port:
+                        </label>
                         <input
-                          type="text" 
+                          type="text"
                           id="tcpPortInputControl"
                           className="input"
                           value={tcpPortInput}
@@ -1135,14 +1392,23 @@ function Session({
                   const containerWidth = img.offsetWidth;
                   const containerHeight = img.offsetHeight;
 
-                  const { naturalWidth: imageNaturalWidth, naturalHeight: imageNaturalHeight } = img;
+                  const {
+                    naturalWidth: imageNaturalWidth,
+                    naturalHeight: imageNaturalHeight,
+                  } = img;
 
-                  if (containerWidth === 0 || containerHeight === 0 || imageNaturalWidth === 0 || imageNaturalHeight === 0) {
+                  if (
+                    containerWidth === 0 ||
+                    containerHeight === 0 ||
+                    imageNaturalWidth === 0 ||
+                    imageNaturalHeight === 0
+                  ) {
                     setSvgRenderedBounds(null);
                     return;
                   }
 
-                  const imageAspectRatio = imageNaturalWidth / imageNaturalHeight;
+                  const imageAspectRatio =
+                    imageNaturalWidth / imageNaturalHeight;
                   const containerAspectRatio = containerWidth / containerHeight;
 
                   let renderedImageWidth = containerWidth;
@@ -1178,23 +1444,23 @@ function Session({
               />
             )}
           </div>
-          <div className="graph-container graph-container--large">
+          <div className="w-full box-border h-4/10">
             <CopXGraph data={copXDataSeries} />
           </div>
-          <div className="graph-container graph-container--medium">
+          <div className="w-full box-border h-3/10 min-h-[60px]">
             <VCopXGraph data={vCopXDataSeries} />
           </div>
         </div>
 
         <div className="column column--narrow">
-          <div className="graph-container graph-container--small" ref={copyGraphContainerRef}>
+          <div className="w-full box-border h-1/4" ref={copyGraphContainerRef}>
             <CopYGraph data={copYDataSeries} />
           </div>
         </div>
 
         <div className="column column--narrow">
-          <div className="graph-container graph-container--small">
-             <VCopYGraph data={vCopYDataSeries} /> 
+          <div className="w-full box-border h-1/4">
+            <VCopYGraph data={vCopYDataSeries} />
           </div>
         </div>
 
@@ -1202,7 +1468,10 @@ function Session({
           <div className="column--quarter h-full">
             <div className="gauge-wrapper">
               <div className="gauge-title">Stability Index</div>
-              <StabilityGauge value={stabilityIndex} maxValue={MAX_STABILITY_INDEX} />
+              <StabilityGauge
+                value={stabilityIndex}
+                maxValue={MAX_STABILITY_INDEX}
+              />
             </div>
           </div>
         </div>
@@ -1216,7 +1485,11 @@ function Session({
             onClick={!recording ? handleOpenStopAfterDropdown : undefined}
             className="stop-after-toggle"
             disabled={recording}
-            title={recording ? "Settings cannot be changed during recording." : "Configure automatic stop time"}
+            title={
+              recording
+                ? "Settings cannot be changed during recording."
+                : "Configure automatic stop time"
+            }
           >
             OFF
           </button>
@@ -1225,12 +1498,18 @@ function Session({
             <span
               ref={stopAfterTimeTextRef}
               onClick={!recording ? handleOpenStopAfterDropdown : undefined}
-              className={`stop-after-time ${recording ? 'stop-after-time--disabled' : ''}`}
+              className={`stop-after-time ${recording ? "stop-after-time--disabled" : ""}`}
               role="button"
               tabIndex={recording ? -1 : 0}
-              onKeyDown={(e) => !recording && e.key === 'Enter' && handleOpenStopAfterDropdown()}
+              onKeyDown={(e) =>
+                !recording && e.key === "Enter" && handleOpenStopAfterDropdown()
+              }
               aria-disabled={recording}
-              title={recording ? "Settings cannot be changed during recording." : "Edit automatic stop time"}
+              title={
+                recording
+                  ? "Settings cannot be changed during recording."
+                  : "Edit automatic stop time"
+              }
             >
               {`${stopAfterTime.hours}h ${stopAfterTime.minutes}min ${stopAfterTime.seconds}sec`}
             </span>
@@ -1239,7 +1518,11 @@ function Session({
               className="stop-after-reset"
               aria-label="Reset stop after time"
               disabled={recording}
-              title={recording ? "Settings cannot be changed during recording." : "Reset automatic stop time"}
+              title={
+                recording
+                  ? "Settings cannot be changed during recording."
+                  : "Reset automatic stop time"
+              }
             >
               &times;
             </button>
@@ -1251,54 +1534,127 @@ function Session({
               <label>
                 <span>Hours:</span>
                 <div className="number-input">
-                  <button type="button" onClick={() => adjustTimeValue(setInputHours, -1, 0)} className="number-btn number-btn--decrement" aria-label="Decrement hours">-</button>
+                  <button
+                    type="button"
+                    onClick={() => adjustTimeValue(setInputHours, -1, 0)}
+                    className="number-btn number-btn--decrement"
+                    aria-label="Decrement hours"
+                  >
+                    -
+                  </button>
                   <input
                     type="number"
                     min="0"
                     value={inputHours}
-                    onChange={(e) => handleNumericInputChange(setInputHours, e.target.value, 0)}
+                    onChange={(e) =>
+                      handleNumericInputChange(setInputHours, e.target.value, 0)
+                    }
                     aria-label="Input hours for stop after"
                   />
-                  <button type="button" onClick={() => adjustTimeValue(setInputHours, 1, 0)} className="number-btn number-btn--increment" aria-label="Increment hours">+</button>
+                  <button
+                    type="button"
+                    onClick={() => adjustTimeValue(setInputHours, 1, 0)}
+                    className="number-btn number-btn--increment"
+                    aria-label="Increment hours"
+                  >
+                    +
+                  </button>
                 </div>
               </label>
               <label>
                 <span>Minutes:</span>
                 <div className="number-input">
-                  <button type="button" onClick={() => adjustTimeValue(setInputMinutes, -1, 0, 59)} className="number-btn number-btn--decrement" aria-label="Decrement minutes">-</button>
+                  <button
+                    type="button"
+                    onClick={() => adjustTimeValue(setInputMinutes, -1, 0, 59)}
+                    className="number-btn number-btn--decrement"
+                    aria-label="Decrement minutes"
+                  >
+                    -
+                  </button>
                   <input
                     type="number"
                     min="0"
                     max="59"
                     value={inputMinutes}
-                    onChange={(e) => handleNumericInputChange(setInputMinutes, e.target.value, 0, 59)}
+                    onChange={(e) =>
+                      handleNumericInputChange(
+                        setInputMinutes,
+                        e.target.value,
+                        0,
+                        59,
+                      )
+                    }
                     aria-label="Input minutes for stop after"
                   />
-                  <button type="button" onClick={() => adjustTimeValue(setInputMinutes, 1, 0, 59)} className="number-btn number-btn--increment" aria-label="Increment minutes">+</button>
+                  <button
+                    type="button"
+                    onClick={() => adjustTimeValue(setInputMinutes, 1, 0, 59)}
+                    className="number-btn number-btn--increment"
+                    aria-label="Increment minutes"
+                  >
+                    +
+                  </button>
                 </div>
               </label>
               <label>
                 <span>Seconds:</span>
                 <div className="number-input">
-                  <button type="button" onClick={() => adjustTimeValue(setInputSeconds, -1, 0, 59)} className="number-btn number-btn--decrement" aria-label="Decrement seconds">-</button>
+                  <button
+                    type="button"
+                    onClick={() => adjustTimeValue(setInputSeconds, -1, 0, 59)}
+                    className="number-btn number-btn--decrement"
+                    aria-label="Decrement seconds"
+                  >
+                    -
+                  </button>
                   <input
                     type="number"
                     min="0"
                     max="59"
                     value={inputSeconds}
-                    onChange={(e) => handleNumericInputChange(setInputSeconds, e.target.value, 0, 59)}
+                    onChange={(e) =>
+                      handleNumericInputChange(
+                        setInputSeconds,
+                        e.target.value,
+                        0,
+                        59,
+                      )
+                    }
                     aria-label="Input seconds for stop after"
                   />
-                  <button type="button" onClick={() => adjustTimeValue(setInputSeconds, 1, 0, 59)} className="number-btn number-btn--increment" aria-label="Increment seconds">+</button>
+                  <button
+                    type="button"
+                    onClick={() => adjustTimeValue(setInputSeconds, 1, 0, 59)}
+                    className="number-btn number-btn--increment"
+                    aria-label="Increment seconds"
+                  >
+                    +
+                  </button>
                 </div>
               </label>
             </div>
             <div className="stop-after-dropdown-buttons">
-              <button type="button" onClick={handleResetInputs} className="btn btn--secondary" aria-label="Reset time inputs">
+              <button
+                type="button"
+                onClick={handleResetInputs}
+                className="btn btn--secondary"
+                aria-label="Reset time inputs"
+              >
                 &#x21BA;
               </button>
-              <button onClick={handleSubmitStopAfter} className="btn btn--primary">Submit</button>
-              <button onClick={() => setShowStopAfterDropdown(false)} className="btn btn--secondary">Cancel</button>
+              <button
+                onClick={handleSubmitStopAfter}
+                className="btn btn--primary"
+              >
+                Submit
+              </button>
+              <button
+                onClick={() => setShowStopAfterDropdown(false)}
+                className="btn btn--secondary"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         )}
@@ -1306,8 +1662,18 @@ function Session({
 
       <div className="timeline-bar">
         <div className="timeline-canvases">
-          <canvas ref={canvasRef} width={400} height={100} className="timeline-canvas" />
-          <canvas ref={canvasRef2} width={400} height={100} className="timeline-canvas" />
+          <canvas
+            ref={canvasRef}
+            width={400}
+            height={100}
+            className="timeline-canvas"
+          />
+          <canvas
+            ref={canvasRef2}
+            width={400}
+            height={100}
+            className="timeline-canvas"
+          />
         </div>
         <button
           className={`record-btn ${recording ? "record-btn--stop" : "record-btn--record"}`}
