@@ -14,6 +14,7 @@ import { Device } from "@/types";
 import { commands } from "@/utils/requests.ts";
 import { listen } from '@tauri-apps/api/event';
 import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
+import "./Devices.css";
 
 interface DevicesProps {
   devices: Device[];
@@ -224,7 +225,7 @@ export default function Devices({
             isScanning ? handleCancelScan : handleScanDevices
           }
           className = {
-            `scan-btn ${noDevices ? "scan-button-highlight" : ""}`
+            `scan-btn ${noDevices ? "TODO FIX THIS" : ""}`
           }
           disabled = {
             isScanning
