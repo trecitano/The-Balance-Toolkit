@@ -569,9 +569,9 @@ export default function Users({
   };
 
   return (
-    <div className="users-page">
+    <div className="inside-page">
       {}
-      <header className="users-page-header">
+      <header className="page-header">
         <h1 className="page-title">Users</h1>
 
         <div className="search-container">

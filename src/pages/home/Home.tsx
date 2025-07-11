@@ -199,11 +199,11 @@ function Home() {
   };
 
   return (
-    <div className="home-page">
-      <div className="home-header">
+    <div className="inside-page">
+      <div className="page-header">
         <span className="page-title">Home</span>
       </div>
-      <div className="home-content">
+      <div className="main-content">
         <div className="home-left-sidebar">
           <div className="sidebar-header">
             <img src={clockIcon} alt="Recent" className="sidebar-header-icon" />

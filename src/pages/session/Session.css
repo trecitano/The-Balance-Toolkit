@@ -182,23 +182,7 @@
 }
 
 /* === LAYOUT COMPONENTS === */
-.session-page {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  padding: 0 40px;
-  height: 100%;
-  background: var(--white);
-  justify-content: flex-start;
-}
 
-.session-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-light);
-}
 
 .page-title {
   margin: 0;
@@ -525,18 +509,6 @@
   height: 20px;
   border-radius: 3px;
   background: var(--white);
-}
-
-/* Layout Grid */
-.session-main {
-  height: 60vh;
-  min-height: 400px;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: row;
-  gap: 0.8vw;
-  align-items: stretch;
-  flex: 1;
 }
 
 .column {

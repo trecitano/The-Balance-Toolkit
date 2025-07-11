@@ -5,24 +5,6 @@
 .w-full { width: 100%; }
 .h-full { height: 100%; }
 
-
-.users-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  background: var(--white);
-  padding: 0px 40px;
-  box-sizing: border-box;
-}
-
-.users-page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.8vw;
-}
-
 .page-title {
   margin: 0;
   font-size: var(--text-xl);
@@ -890,9 +872,6 @@
 }
 
 @media (max-width: 768px) {
-  .users-page {
-    padding: 0 20px;
-  }
   .user-carousel-item {
     width: 150px;
   }
