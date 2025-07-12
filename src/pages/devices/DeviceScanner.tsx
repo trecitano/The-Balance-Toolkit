@@ -3,7 +3,7 @@ interface DeviceScannerProps {
   handleCancelScan: () => void;
 }
 
-export default function DeviceScanner({foundDevicesCount, handleCancelScan}: DeviceScannerProps) {
+export default function DeviceScanner({ foundDevicesCount, handleCancelScan }: DeviceScannerProps) {
   return (
     <div className="scan-overlay">
       <div className="scan-overlay-spinner">
@@ -11,9 +11,7 @@ export default function DeviceScanner({foundDevicesCount, handleCancelScan}: Dev
         <span className="scan-overlay-text">Scanning...</span>
 
         {foundDevicesCount > 0 && (
-          <p className="scan-overlay-count">
-            Found {foundDevicesCount} devices so far...
-          </p>
+          <p className="scan-overlay-count">Found {foundDevicesCount} devices so far...</p>
         )}
 
         <button

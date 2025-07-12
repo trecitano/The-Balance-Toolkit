@@ -43,11 +43,7 @@ export default function DeviceSessionList({
             {device ? (
               <>
                 <div className="side-panel-header">
-                  <img
-                    src={bluetoothIcon}
-                    alt="Bluetooth"
-                    className="side-panel-bt-icon"
-                  />
+                  <img src={bluetoothIcon} alt="Bluetooth" className="side-panel-bt-icon" />
                   <div className="side-panel-header-info">
                     {"editingDeviceId" === device.id ? (
                       <div className="device-name-edit-container">
@@ -65,26 +61,17 @@ export default function DeviceSessionList({
                       </div>
                     ) : (
                       <div className="side-panel-device-name-container">
-                        <span
-                          className="side-panel-device-name-text"
-                          title={device.name}
-                        >
+                        <span className="side-panel-device-name-text" title={device.name}>
                           {device.name}
                         </span>
                       </div>
                     )}
-                    <span className="side-panel-device-mac">
-                      {device.macAddress}
-                    </span>
+                    <span className="side-panel-device-mac">{device.macAddress}</span>
                   </div>
                 </div>
 
                 <div className="side-panel-icon-container">
-                  <img
-                    src={rippleIcon}
-                    alt="Ripple effect"
-                    className="side-panel-ripple-icon"
-                  />
+                  <img src={rippleIcon} alt="Ripple effect" className="side-panel-ripple-icon" />
                   <img
                     src={wbbIconBlue}
                     alt={`${device.name} icon`}
@@ -108,9 +95,7 @@ export default function DeviceSessionList({
                     </div>
                   </div>
                   <div className="info-square">
-                    <span className="info-square-value">
-                      {device.temperature}°C
-                    </span>
+                    <span className="info-square-value">{device.temperature}°C</span>
                     <div className="info-square-label">
                       <img src={temperatureIcon} alt="Temperature" />
                       <span>Temp</span>
