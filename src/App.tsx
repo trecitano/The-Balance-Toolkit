@@ -24,12 +24,6 @@ function AppContent() {
   const [users, setUsers] = useState<UserType[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
-  const [editingDeviceName, setEditingDeviceName] = useState<string>("");
-  const [connectingDeviceMacAddresses, setConnectingDeviceMacAddresses] = useState<number[]>([]);
-  const [disconnectingDeviceIds, setDisconnectingDeviceIds] = useState<
-    number[]
-  >([]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -76,7 +70,9 @@ function AppContent() {
           : device,
       ),
     );
-    setConnectingDeviceMacAddresses((prev) => prev.filter((id) => id !== macAddress));
+    setConnectingDeviceMacAddresses((prev) =>
+      prev.filter((id) => id !== macAddress),
+    );
   };
 
   const handleDisconnectDevice = async (deviceId: number) => {
@@ -159,18 +155,7 @@ function AppContent() {
               <DevicesPage
                 devices={devices}
                 setDevices={setDevices}
-                editingDeviceId={editingDeviceId}
-                setEditingDeviceId={setEditingDeviceId}
-                editingDeviceName={editingDeviceName}
-                setEditingDeviceName={setEditingDeviceName}
-                connectingDeviceMacAddresses={connectingDeviceMacAddresses}
-                setConnectingDeviceMacAddresses={setConnectingDeviceMacAddresses}
-                disconnectingDeviceIds={disconnectingDeviceIds}
-                setDisconnectingDeviceIds={setDisconnectingDeviceIds}
-                onConnectDevice={handleConnectDevice}
-                onDisconnectDevice={handleDisconnectDevice}
-                onSaveDeviceName={handleSaveDeviceName}
-                onRemoveDevice={handleRemoveDevice}
+                devicesWithActiveSessions={[]}
                 onScanResults={handleScanResults}
               />
             }

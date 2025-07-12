@@ -52,9 +52,8 @@ export interface Device {
   lastConnected: string; // ISO date string
 }
 
-export type BalanceBoardEvent =
-  | {
-  event: 'reading'
+export type BalanceBoardEvent = {
+  event: "reading";
   data: {
     record: number;
   };
