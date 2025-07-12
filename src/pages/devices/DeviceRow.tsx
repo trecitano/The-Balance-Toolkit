@@ -6,14 +6,14 @@ import "./DeviceRow.css";
 
 interface DeviceRowProps {
   device: Device;
-  handleIdentifyClick: (macAddress: String) => Promise<void>;
+  handleIdentifyClick: (macAddress: string) => Promise<void>;
   handleSaveDeviceName: (
-    macAddress: String,
-    deviceName: String,
+    macAddress: string,
+    deviceName: string,
   ) => Promise<void>;
-  handleRemoveDevice: (macAddress: String) => Promise<void>;
-  handleDisconnectDevice: (macAddress: String) => Promise<void>;
-  handleConnectDevice: (macAddress: String) => Promise<void>;
+  handleRemoveDevice: (macAddress: string) => Promise<void>;
+  handleDisconnectDevice: (macAddress: string) => Promise<void>;
+  handleConnectDevice: (macAddress: string) => Promise<void>;
 }
 
 export default function DeviceRow({

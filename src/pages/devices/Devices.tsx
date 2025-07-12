@@ -19,13 +19,13 @@ export default function Devices({ devices, setDevices }: DevicesProps) {
   );
   const [isScanning, setIsScanning] = useState(false);
 
-  const handleIdentifyClick = async (macAddress: String) => {
+  const handleIdentifyClick = async (macAddress: string) => {
     await commands.devices.identifyDevice(macAddress);
   };
 
   const handleSaveDeviceName = async (
-    macAddress: String,
-    deviceName: String,
+    macAddress: string,
+    deviceName: string,
   ) => {
     await commands.devices.updateDeviceName(macAddress, deviceName);
 
@@ -33,21 +33,21 @@ export default function Devices({ devices, setDevices }: DevicesProps) {
     setDevices(devices);
   };
 
-  const handleRemoveDevice = async (macAddress: String) => {
+  const handleRemoveDevice = async (macAddress: string) => {
     await commands.devices.removeDevice(macAddress);
 
     const devices = await commands.devices.fetchDevices();
     setDevices(devices);
   };
 
-  const handleDisconnectDevice = async (macAddress: String) => {
+  const handleDisconnectDevice = async (macAddress: string) => {
     await commands.devices.disconnectDevice(macAddress);
 
     const devices = await commands.devices.fetchDevices();
     setDevices(devices);
   };
 
-  const handleConnectDevice = async (macAddress: String) => {
+  const handleConnectDevice = async (macAddress: string) => {
     await commands.devices.connectDevice(macAddress);
 
     const devices = await commands.devices.fetchDevices();

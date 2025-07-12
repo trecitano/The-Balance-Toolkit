@@ -15,7 +15,7 @@ import battery100Icon from "@/assets/battery-100-icon.svg";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
-  handleDisconnectDevice: (macAddress: String) => Promise<void>;
+  handleDisconnectDevice: (macAddress: string) => Promise<void>;
 }
 
 export default function DeviceSessionList({

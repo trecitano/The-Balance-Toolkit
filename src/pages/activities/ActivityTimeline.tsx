@@ -114,7 +114,7 @@ export default function ActivityTimeline({
       document.querySelectorAll(".timeline-block"),
     ) as HTMLElement[];
 
-    let positions: number[] = [0];
+    const positions: number[] = [0];
     let accWidth = 0;
     for (let i = 0; i < timelineBlocks.length; i++) {
       accWidth += timelineBlocks[i].offsetWidth;

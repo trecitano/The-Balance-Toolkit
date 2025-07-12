@@ -251,8 +251,8 @@
 
 /* === CONTACT SECTION === */
 .contact-section {
-  background-color: transparent !important;
-  box-shadow: none !important;
+  background-color: transparent;
+  box-shadow: none;
   flex: 0 0 auto;
   padding: 15px 0;
 }
