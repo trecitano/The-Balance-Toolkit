@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect, useRef } from "react";
 import { ActivityData } from "./Activities";
 import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
+
 
 interface ActivityCardProps {
   activity: ActivityData;
@@ -10,25 +12,32 @@ interface ActivityCardProps {
   onMinimize?: () => void;
 }
 
+
 const ActivityCard: React.FC<ActivityCardProps> = ({
   activity,
   maximized = false,
   onMaximize,
   onMinimize,
 }) => {
-  const [currentImageSrc, setCurrentImageSrc] = useState<string>(
-    activity.staticImage,
-  );
+  // --- State and refs ---
+  const [currentImageSrc, setCurrentImageSrc] = useState<string>(activity.staticImage);
   const [isHovering, setIsHovering] = useState(false);
   const [maxStyle, setMaxStyle] = useState<React.CSSProperties | undefined>();
   const [showMaximizedClass, setShowMaximizedClass] = useState(false);
+  const [timelineBlocks, setTimelineBlocks] = useState(() => getDefaultBlocks(activity));
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newActionName, setNewActionName] = useState("");
+  const [newActionDuration, setNewActionDuration] = useState(10);
   const cardRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const imageIndexRef = useRef<number>(0);
 
+
+  // --- Image hover effect ---
   useEffect(() => {
     setCurrentImageSrc(activity.staticImage);
   }, [activity.staticImage]);
+
 
   useEffect(() => {
     if (isHovering && activity.hoverImages && activity.hoverImages.length > 0) {
@@ -39,10 +48,8 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       ) {
         startIndex = 1;
       }
-
       imageIndexRef.current = startIndex;
       setCurrentImageSrc(activity.hoverImages[imageIndexRef.current]);
-
       if (activity.hoverImages.length > 1) {
         intervalRef.current = setInterval(() => {
           imageIndexRef.current =
@@ -59,7 +66,6 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         setCurrentImageSrc(activity.staticImage);
       }
     }
-
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -67,18 +73,17 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     };
   }, [isHovering, activity.hoverImages, activity.staticImage]);
 
-  // Animate from original position/size to maximized
+
+  // --- Animate from original position/size to maximized ---
   useEffect(() => {
     if (maximized && cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
       const parentRect = cardRef.current.parentElement?.getBoundingClientRect();
       if (parentRect) {
         setShowMaximizedClass(false);
-
         // Calculate the card's position relative to its parent
         const initialLeft = rect.left - parentRect.left;
         const initialTop = rect.top - parentRect.top;
-
         setMaxStyle({
           position: "absolute",
           top: initialTop,
@@ -87,7 +92,6 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
           height: rect.height,
           zIndex: 10,
         });
-
         setTimeout(() => {
           setShowMaximizedClass(true);
           setMaxStyle({
@@ -108,26 +112,77 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     }
   }, [maximized]);
 
+
+  // --- Handlers ---
   const handleStartClick = () => {
     if (onMaximize) onMaximize();
   };
 
-  // Timeline state for maximized mode
-  const initialBlocks = [
-    { id: 1, label: "Start", start: 0, duration: 10 },
-    { id: 2, label: "Action 1", start: 10, duration: 15 },
-    { id: 3, label: "Action 2", start: 25, duration: 20 },
-    { id: 4, label: "End", start: 45, duration: 15 },
-  ];
-  const [timelineBlocks, setTimelineBlocks] = useState(() => initialBlocks);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newActionName, setNewActionName] = useState("");
-  const [newActionDuration, setNewActionDuration] = useState(10);
 
-  // Add a new action to the timeline
+  // --- Timeline state for maximized mode ---
+  function getDefaultBlocks(activity: ActivityData) {
+    // Match activity titles from Activities.tsx
+    switch (activity.title) {
+      case "Quiet standing (eyes-close + eyes-open)":
+        return [
+          { id: 1, label: "Tare", start: 0, duration: 5 },
+          { id: 2, label: "Step onto board", start: 5, duration: 5 },
+          { id: 3, label: "Stand - Eyes Open", start: 10, duration: 20 },
+          { id: 4, label: "Stand - Eyes Closed", start: 30, duration: 20 },
+        ];
+      case "Timed Up and Go (TUG)":
+        return [
+          { id: 1, label: "Tare", start: 0, duration: 5 },
+          { id: 2, label: "Step onto board", start: 5, duration: 5 },
+          { id: 3, label: "Stand Up", start: 10, duration: 5 },
+          { id: 4, label: "Walk Forward", start: 15, duration: 10 },
+          { id: 5, label: "Turn Around", start: 25, duration: 5 },
+          { id: 6, label: "Walk Back", start: 30, duration: 10 },
+          { id: 7, label: "Sit Down", start: 40, duration: 5 },
+        ];
+      case "Single leg stance":
+        return [
+          { id: 1, label: "Tare", start: 0, duration: 5 },
+          { id: 2, label: "Step onto board", start: 5, duration: 5 },
+          { id: 3, label: "Stand on One Leg", start: 10, duration: 20 },
+        ];
+      case "Tandem stance":
+        return [
+          { id: 1, label: "Tare", start: 0, duration: 5 },
+          { id: 2, label: "Step onto board", start: 5, duration: 5 },
+          { id: 3, label: "Tandem Stand", start: 10, duration: 20 },
+        ];
+      case "Functional Reach Test":
+        return [
+          { id: 1, label: "Tare", start: 0, duration: 5 },
+          { id: 2, label: "Step onto board", start: 5, duration: 5 },
+          { id: 3, label: "Reach Forward", start: 10, duration: 10 },
+          { id: 4, label: "Return to Start", start: 20, duration: 5 },
+        ];
+      case "Dynamic weight shifting":
+        return [
+          { id: 1, label: "Tare", start: 0, duration: 5 },
+          { id: 2, label: "Step onto board", start: 5, duration: 5 },
+          { id: 3, label: "Shift Weight", start: 10, duration: 20 },
+        ];
+      default:
+        return [
+          { id: 1, label: "Tare", start: 0, duration: 5 },
+          { id: 2, label: "Step onto board", start: 5, duration: 5 },
+          { id: 3, label: "Main Action", start: 10, duration: 20 },
+        ];
+    }
+  }
+
+
+  // --- Reset timeline actions if the activity changes ---
+  useEffect(() => {
+    setTimelineBlocks(getDefaultBlocks(activity));
+  }, [activity]);
+
+  // --- Add a new action to the timeline ---
   const handleAddAction = () => {
     if (!newActionName.trim()) return;
-    // Find the last block's end
     let lastEnd = 0;
     if (timelineBlocks.length > 0) {
       const last = timelineBlocks[timelineBlocks.length - 1];
@@ -145,18 +200,19 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     setShowAddForm(false);
   };
 
+  // --- Cancel add action form ---
   const handleCancelAdd = () => {
     setShowAddForm(false);
     setNewActionName("");
     setNewActionDuration(10);
   };
 
+
+  // --- Render ---
   return (
     <div
       ref={cardRef}
-      className={`activity-card${
-        maximized && showMaximizedClass ? " maximized" : ""
-      }`}
+      className={`activity-card${maximized && showMaximizedClass ? " maximized" : ""}`}
       style={maximized ? maxStyle : undefined}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
@@ -234,5 +290,6 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     </div>
   );
 };
+
 
 export default ActivityCard;
