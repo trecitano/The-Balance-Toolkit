@@ -157,10 +157,7 @@ function Home() {
 
       // Bottom fade
       const scrollBottom = scrollHeight - clientHeight - scrollTop;
-      const calculatedBottomOpacity = Math.max(
-        0,
-        Math.min(scrollBottom / maxFade, 1),
-      );
+      const calculatedBottomOpacity = Math.max(0, Math.min(scrollBottom / maxFade, 1));
       setBottomFadeOpacity(calculatedBottomOpacity);
     };
 
@@ -210,21 +207,12 @@ function Home() {
             <h2 className="sidebar-header-title">Recent</h2>
           </div>
           <div className="sidebar-list-container">
-            <div
-              className="sidebar-fade sidebar-fade-top"
-              style={{ opacity: topFadeOpacity }}
-            />
+            <div className="sidebar-fade sidebar-fade-top" style={{ opacity: topFadeOpacity }} />
             <div className="sidebar-content" ref={listContentRef}>
               <div className="recent-files-header">
-                <div className="recent-files-column-header file-column">
-                  File
-                </div>
-                <div className="recent-files-column-header user-column">
-                  User
-                </div>
-                <div className="recent-files-column-header updated-column">
-                  Updated
-                </div>
+                <div className="recent-files-column-header file-column">File</div>
+                <div className="recent-files-column-header user-column">User</div>
+                <div className="recent-files-column-header updated-column">Updated</div>
               </div>
               {recentFiles.length > 0 ? (
                 <ul className="recent-files-list">

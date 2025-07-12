@@ -20,10 +20,7 @@ export default defineConfig(
     },
     ...tseslint.config({
       files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-      extends: [
-        ...tseslint.configs.recommended,
-        pluginReact.configs.flat.recommended,
-      ],
+      extends: [...tseslint.configs.recommended, pluginReact.configs.flat.recommended],
     }),
     {
       files: ["**/*.md"],

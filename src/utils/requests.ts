@@ -7,13 +7,7 @@ import {
   mockRecentFiles,
   mockScanDeviceData,
 } from "@/utils/mocks.ts";
-import {
-  BalanceBoardEvent,
-  Device,
-  ErrorMessage,
-  RecentFile,
-  UserType,
-} from "@/types.ts";
+import { BalanceBoardEvent, Device, RecentFile, UserType } from "@/types.ts";
 
 const useFileMocks = true;
 const useUserMocks = false;
@@ -38,9 +32,7 @@ export const commands = {
     },
     async updateUser(user: UserType): Promise<void> {
       if (useUserMocks) {
-        const indexToUpdate = mockUsersData.findIndex(
-          (user) => user.id === user.id,
-        );
+        const indexToUpdate = mockUsersData.findIndex((user) => user.id === user.id);
         if (indexToUpdate > -1) {
           mockUsersData[indexToUpdate] = user;
         }
@@ -51,16 +43,14 @@ export const commands = {
     },
     async deleteUser(userId: string): Promise<void> {
       if (useUserMocks) {
-        const indexToRemove = mockUsersData.findIndex(
-          (user) => user.id === userId,
-        );
+        const indexToRemove = mockUsersData.findIndex((user) => user.id === userId);
         if (indexToRemove > -1) {
           mockUsersData.splice(indexToRemove, 1);
         }
         return;
       }
 
-      return invoke("user_delete", { user_id: userId });
+      return invoke("user_delete", { userId: userId });
     },
   },
 
@@ -77,7 +67,7 @@ export const commands = {
         return;
       }
 
-      return invoke("load_file", { file_path: filePath });
+      return invoke("load_file", { filePath: filePath });
     },
   },
 
@@ -90,22 +80,13 @@ export const commands = {
       return invoke("devices_fetch_all_devices");
     },
     async scanDevices(): Promise<Device[]> {
-      if (useDeviceMocks) {
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            resolve(mockScanDeviceData);
-          }, 3000);
-        });
-      }
-
       return invoke("devices_scan_without_timeout");
     },
     async cancelScanDevices(): Promise<void> {
-      if (useDeviceMocks) {
-        return;
-      }
-
       return invoke("devices_cancel_scan");
+    },
+    async isScanning(): Promise<boolean> {
+      return invoke("devices_is_scanning");
     },
 
     async connectDevice(macAddress: string): Promise<void> {
@@ -129,26 +110,23 @@ export const commands = {
         return;
       }
 
-      return invoke("devices_remove_device", { mac_address: macAddress });
+      return invoke("devices_remove_device", { macAddress: macAddress });
     },
     async disconnectDevice(macAddress: string): Promise<void> {
       if (useDeviceMocks) {
         return;
       }
 
-      return invoke("devices_disconnect_device", { mac_address: macAddress });
+      return invoke("devices_disconnect_device", { macAddress: macAddress });
     },
-    async updateDeviceName(
-      macAddress: string,
-      deviceName: string,
-    ): Promise<void | ErrorMessage> {
+    async updateDeviceName(macAddress: string, deviceName: string): Promise<void | ErrorMessage> {
       return invoke("devices_update_device_name", {
         mac_address: macAddress,
         device_name: deviceName,
       });
     },
     async identifyDevice(macAddress: string): Promise<void> {
-      return invoke("devices_identify_device", { mac_address: macAddress });
+      return invoke("devices_identify_device", { macAddress: macAddress });
     },
   },
 };

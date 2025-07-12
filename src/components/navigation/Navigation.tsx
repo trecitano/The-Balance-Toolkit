@@ -69,10 +69,7 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
           <span className="menu-item-text">Settings</span>
         </button>
         {/* Help & Support */}
-        <button
-          className="menu-item help unstyled-button"
-          title="Help & Support"
-        >
+        <button className="menu-item help unstyled-button" title="Help & Support">
           <span className="menu-item-icon">
             <img src={helpIcon} alt="Help & Support" className="nav-icon-sm" />
           </span>
