@@ -34,7 +34,21 @@ export default function ActivityTimeline({
   const dragOverIdxRef = useRef<number | null>(null);
   const dragBlockIdx = useRef<number | null>(null);
 
-  // --- Resize Handlers ---
+  
+  const handleDeleteBlock = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newBlocks = blocks.filter((b) => b.id !== id);
+    
+    let currentStart = 0;
+    const contiguousBlocks = newBlocks.map((b) => {
+      const updated = { ...b, start: currentStart };
+      currentStart += b.duration;
+      return updated;
+    });
+    onChange(contiguousBlocks);
+  };
+
+  
   const onResizeStart = (id: number, direction: "left" | "right", e: React.MouseEvent) => {
     setResizeInfo({
       id,
@@ -79,7 +93,7 @@ export default function ActivityTimeline({
     };
   }, [resizeInfo]);
 
-  // --- Drag Handlers ---
+  
   const handleBlockMouseDown = (idx: number, e: React.MouseEvent) => {
     if (resizeInfo || (e.target as HTMLElement).classList.contains("resize-handle")) return;
     dragBlockIdx.current = idx;
@@ -195,6 +209,17 @@ export default function ActivityTimeline({
               boxSizing: "border-box",
             }}
           >
+            {}
+            <button
+              className="delete-block-btn"
+              onClick={(e) => handleDeleteBlock(block.id, e)}
+              title="Delete block"
+              tabIndex={-1}
+              aria-label="Delete block"
+              type="button"
+            >
+              ×
+            </button>
             <div
               className="resize-handle left"
               onMouseDown={(e) => onResizeStart(block.id, "left", e)}
