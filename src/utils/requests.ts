@@ -1,5 +1,5 @@
 // When using the Tauri API npm package:
-import {Channel, invoke} from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 import {
   mockUsersData,
@@ -7,11 +7,17 @@ import {
   mockRecentFiles,
   mockScanDeviceData,
 } from "@/utils/mocks.ts";
-import {BalanceBoardEvent, Device, ErrorMessage, RecentFile, UserType} from "@/types.ts";
+import {
+  BalanceBoardEvent,
+  Device,
+  ErrorMessage,
+  RecentFile,
+  UserType,
+} from "@/types.ts";
 
 const useFileMocks = true;
 const useUserMocks = false;
-const useDeviceMocks = true;
+const useDeviceMocks = false;
 
 export const commands = {
   users: {
@@ -80,19 +86,12 @@ export const commands = {
   },
 
   devices: {
-    async fetchDevices(): Promise<Device[] | ErrorMessage> {
+    async fetchDevices(): Promise<Device[]> {
       if (useDeviceMocks) {
         return mockDeviceData;
       }
 
       return invoke("devices_fetch_all");
-    },
-    async removeDevice(): Promise<void | ErrorMessage> {
-      if (useDeviceMocks) {
-        return;
-      }
-
-      return invoke("devices_remove");
     },
     async scanDevices(): Promise<Device[] | ErrorMessage> {
       if (useDeviceMocks) {
@@ -106,7 +105,16 @@ export const commands = {
       console.log("Invoking devices_scan_without_timeout");
       return invoke("devices_scan_without_timeout");
     },
-    async connectDevice(macAddress: String): Promise<void> {
+    async cancelScanDevices(): Promise<void | ErrorMessage> {
+      if (useDeviceMocks) {
+        return;
+      }
+
+      console.log("Invoking devices_cancel_scan");
+      return invoke("devices_cancel_scan");
+    },
+
+    async connectDevice(macAddress: string): Promise<void> {
       if (useDeviceMocks) {
         return;
       }
@@ -117,16 +125,36 @@ export const commands = {
       };
 
       console.log("Connecting to device ", macAddress);
-      return invoke("devices_connect", { macAddress: macAddress, channel: channel});
+      return invoke("devices_connect_device", {
+        macAddress: macAddress,
+        channel: channel,
+      });
     },
-
-    async cancelScanDevices(): Promise<void | ErrorMessage> {
+    async removeDevice(macAddress: string): Promise<void | ErrorMessage> {
       if (useDeviceMocks) {
         return;
       }
 
-      console.log("Invoking devices_cancel_scan");
-      return invoke("devices_cancel_scan");
+      return invoke("devices_remove_device", { mac_address: macAddress });
+    },
+    async disconnectDevice(macAddress: string): Promise<void | ErrorMessage> {
+      if (useDeviceMocks) {
+        return;
+      }
+
+      return invoke("devices_disconnect_device", { mac_address: macAddress });
+    },
+    async updateDeviceName(
+      macAddress: string,
+      deviceName: string,
+    ): Promise<void | ErrorMessage> {
+      return invoke("devices_update_device_name", {
+        mac_address: macAddress,
+        device_name: deviceName,
+      });
+    },
+    async identifyDevice(macAddress: string): Promise<void | ErrorMessage> {
+      return invoke("devices_identify_device", { mac_address: macAddress });
     },
   },
 };

@@ -7,33 +7,39 @@ import css from "@eslint/css";
 import { defineConfig } from "eslint/config";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 
-export default defineConfig([
-  {
-    files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    plugins: { js },
-    extends: ["js/recommended"],
-  },
-  {
-    files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    languageOptions: { globals: globals.browser },
-  },
-  ...tseslint.config({
-    files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-    extends: [...tseslint.configs.recommended, pluginReact.configs.flat.recommended],
-  }),
-  {
-    files: ["**/*.md"],
-    plugins: { markdown },
-    language: "markdown/gfm",
-    extends: ["markdown/recommended"],
-  },
-  {
-    files: ["**/*.css"],
-    plugins: { css },
-    language: "css/css",
-    extends: ["css/recommended"],
-    rules: {
-      "css/no-invalid-properties": "off",
+export default defineConfig(
+  [
+    {
+      files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+      plugins: { js },
+      extends: ["js/recommended"],
     },
-  },
-], eslintConfigPrettier);
+    {
+      files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+      languageOptions: { globals: globals.browser },
+    },
+    ...tseslint.config({
+      files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
+      extends: [
+        ...tseslint.configs.recommended,
+        pluginReact.configs.flat.recommended,
+      ],
+    }),
+    {
+      files: ["**/*.md"],
+      plugins: { markdown },
+      language: "markdown/gfm",
+      extends: ["markdown/recommended"],
+    },
+    {
+      files: ["**/*.css"],
+      plugins: { css },
+      language: "css/css",
+      extends: ["css/recommended"],
+      rules: {
+        "css/no-invalid-properties": "off",
+      },
+    },
+  ],
+  eslintConfigPrettier,
+);

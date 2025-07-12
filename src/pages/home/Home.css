@@ -35,7 +35,7 @@
   box-sizing: border-box;
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-light);
-  position: relative;  
+  position: relative;
   border: var(--border-primary);
 }
 
@@ -251,8 +251,8 @@
 
 /* === CONTACT SECTION === */
 .contact-section {
-  background-color: transparent !important;
-  box-shadow: none !important;
+  background-color: transparent;
+  box-shadow: none;
   flex: 0 0 auto;
   padding: 15px 0;
 }
