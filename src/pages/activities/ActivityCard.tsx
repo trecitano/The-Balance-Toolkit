@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { ActivityData } from "./Activities";
+import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
 
 interface ActivityCardProps {
@@ -111,6 +112,15 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     if (onMaximize) onMaximize();
   };
 
+  // Timeline state for maximized mode
+  const initialBlocks = [
+    { id: 1, label: "Start", start: 0, duration: 10 },
+    { id: 2, label: "Action 1", start: 10, duration: 15 },
+    { id: 3, label: "Action 2", start: 25, duration: 20 },
+    { id: 4, label: "End", start: 45, duration: 15 },
+  ];
+  const [timelineBlocks, setTimelineBlocks] = useState(() => initialBlocks);
+
   return (
     <div
       ref={cardRef}
@@ -131,9 +141,13 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         </div>
       )}
       <div className="activity-details" style={{ marginLeft: 0 }}>
-        
         <h3 className="activity-title">{activity.title}</h3>
         {/* <p className="activity-description">{activity.description}</p> */}
+        {maximized && (
+          <div style={{ margin: "24px 0" }}>
+            <ActivityTimeline blocks={timelineBlocks} onChange={setTimelineBlocks} />
+          </div>
+        )}
         <div className="activity-footer">
           {!maximized ? (
             <button className="activity-start-btn" onClick={handleStartClick}>
