@@ -78,10 +78,10 @@
   box-shadow: var(--shadow-neumorphic);
   border-radius: var(--radius-md);
   transition:
-          box-shadow var(--transition),
-          background var(--transition),
-          color var(--transition),
-          transform var(--transition-fast);
+    box-shadow var(--transition),
+    background var(--transition),
+    color var(--transition),
+    transform var(--transition-fast);
   padding: 0.6vw var(--space-lg);
   font-size: var(--text-sm);
   border-radius: var(--radius-md);

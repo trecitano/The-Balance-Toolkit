@@ -21,7 +21,7 @@ import heightIcon from "../../assets/measure-icon.svg";
 import weightIcon from "../../assets/weight-icon.svg";
 import handIcon from "../../assets/hand-icon.svg";
 import searchIcon from "../../assets/search-icon.svg";
-import {commands} from "@/utils/requests.ts";
+import { commands } from "@/utils/requests.ts";
 
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   let timeout: ReturnType<typeof setTimeout> | null = null;

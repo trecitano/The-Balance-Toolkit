@@ -1,51 +1,42 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Device } from '@/types';
+import React from "react";
+import { Link } from "react-router-dom";
+import { Device } from "@/types";
 import bluetoothIcon from "@/assets/bluetooth-connected-icon.svg";
 import rippleIcon from "@/assets/ripple-icon.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import signalIcon from "@/assets/bluetooth-connected-icon.svg";
 import temperatureIcon from "@/assets/temperature.svg";
 import "./DeviceSessionList.css";
+import battery0Icon from "@/assets/battery-0-icon.svg";
+import battery25Icon from "@/assets/battery-25-icon.svg";
+import battery50Icon from "@/assets/battery-50-icon.svg";
+import battery75Icon from "@/assets/battery-75-icon.svg";
+import battery100Icon from "@/assets/battery-100-icon.svg";
 
 interface DeviceSessionListProps {
-  connectedDevicesForPanel: Device[];
-  editingDeviceId: number | null;
-  editingDeviceName: string;
-  isScanning: boolean;
-  disconnectingDeviceIds: number[];
-  connectingDeviceMacAddresses: number[];
-  handleNameInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  handleSaveName: () => void;
-  handleCancelEditName: () => void;
-  handleStartEditName: (deviceId: number, currentName: string) => void;
-  onDisconnectDevice: (deviceId: number) => Promise<void>;
-  getBatteryIcon: (batteryLevel: number) => string;
+  connectedDevices: Device[];
+  handleDisconnectDevice: (macAddress: string) => Promise<void>;
 }
 
 export default function DeviceSessionList({
-                                            connectedDevicesForPanel,
-                                            editingDeviceId,
-                                            editingDeviceName,
-                                            isScanning,
-                                            disconnectingDeviceIds,
-                                            connectingDeviceMacAddresses,
-                                            handleNameInputChange,
-                                            handleSaveName,
-                                            handleCancelEditName,
-                                            handleStartEditName,
-                                            onDisconnectDevice,
-                                            getBatteryIcon,
-                                          }: DeviceSessionListProps) {
+  connectedDevices,
+  handleDisconnectDevice,
+}: DeviceSessionListProps) {
+  const getBatteryIcon = (batteryLevel: number) => {
+    if (batteryLevel <= 12) return battery0Icon;
+    if (batteryLevel <= 37) return battery25Icon;
+    if (batteryLevel <= 62) return battery50Icon;
+    if (batteryLevel <= 87) return battery75Icon;
+    return battery100Icon;
+  };
+
+  const isScanning = false;
+
   return (
     <div className="static-side-panel">
       {[0, 1].map((index) => {
-        const device = connectedDevicesForPanel[index];
-        const isPanelDisabled = device && (
-          isScanning ||
-          disconnectingDeviceIds.includes(device.id) ||
-          connectingDeviceMacAddresses.includes(device.id)
-        );
+        const device = connectedDevices[index];
+        const isPanelDisabled = device && isScanning;
 
         return (
           <div className="side-panel-square" key={`side-panel-${index}`}>
@@ -58,7 +49,7 @@ export default function DeviceSessionList({
                     className="side-panel-bt-icon"
                   />
                   <div className="side-panel-header-info">
-                    {editingDeviceId === device.id ? (
+                    {"editingDeviceId" === device.id ? (
                       <div className="device-name-edit-container">
                         <input
                           type="text"
@@ -74,28 +65,17 @@ export default function DeviceSessionList({
                       </div>
                     ) : (
                       <div className="side-panel-device-name-container">
-                                                <span
-                                                  className="side-panel-device-name-text"
-                                                  title={device.name}
-                                                >
-                                                    {device.name}
-                                                </span>
-                        {!isPanelDisabled && (
-                          <button
-                            onClick={() =>
-                              handleStartEditName(device.id, device.name)
-                            }
-                            className="device-edit-name-btn side-panel-edit-btn"
-                            title="Edit name"
-                          >
-                            ✎
-                          </button>
-                        )}
+                        <span
+                          className="side-panel-device-name-text"
+                          title={device.name}
+                        >
+                          {device.name}
+                        </span>
                       </div>
                     )}
                     <span className="side-panel-device-mac">
-                                            {device.macAddress}
-                                        </span>
+                      {device.macAddress}
+                    </span>
                   </div>
                 </div>
 
@@ -114,30 +94,23 @@ export default function DeviceSessionList({
 
                 <div className="side-panel-info-squares">
                   <div className="info-square">
-                                        <span className="info-square-value">
-                                            {device.firmware}
-                                        </span>
+                    <span className="info-square-value">{device.firmware}</span>
                     <div className="info-square-label">
                       <img src={signalIcon} alt="Connectivity" />
                       <span>Firmware</span>
                     </div>
                   </div>
                   <div className="info-square">
-                                        <span className="info-square-value">
-                                            {device.battery}%
-                                        </span>
+                    <span className="info-square-value">{device.battery}%</span>
                     <div className="info-square-label">
-                      <img
-                        src={getBatteryIcon(device.battery)}
-                        alt="Battery"
-                      />
+                      <img src={getBatteryIcon(device.battery)} alt="Battery" />
                       <span>Battery</span>
                     </div>
                   </div>
                   <div className="info-square">
-                                        <span className="info-square-value">
-                                            {device.temperature}°C
-                                        </span>
+                    <span className="info-square-value">
+                      {device.temperature}°C
+                    </span>
                     <div className="info-square-label">
                       <img src={temperatureIcon} alt="Temperature" />
                       <span>Temp</span>
@@ -147,13 +120,12 @@ export default function DeviceSessionList({
 
                 <div className="side-panel-actions">
                   <button
-                    onClick={() => onDisconnectDevice(device.id)}
+                    onClick={() => handleDisconnectDevice(device.macAddress)}
                     className="side-panel-btn disconnect"
                     disabled={!!isPanelDisabled}
                   >
-                    {disconnectingDeviceIds.includes(device.id)
-                      ? "Wait..."
-                      : "Disconnect"}
+                    {" "}
+                    Disconnect
                   </button>
                   <Link
                     to="/session"

@@ -18,7 +18,10 @@ interface ActivityTimelineProps {
 
 const MIN_DURATION = 1;
 
-export default function ActivityTimeline({ blocks, onChange }: ActivityTimelineProps) {
+export default function ActivityTimeline({
+  blocks,
+  onChange,
+}: ActivityTimelineProps) {
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
@@ -48,9 +51,15 @@ export default function ActivityTimeline({ blocks, onChange }: ActivityTimelineP
     const scale = 2;
     let newDuration = startDuration;
     if (direction === "right") {
-      newDuration = Math.max(MIN_DURATION, startDuration + Math.round(delta / scale));
+      newDuration = Math.max(
+        MIN_DURATION,
+        startDuration + Math.round(delta / scale),
+      );
     } else {
-      newDuration = Math.max(MIN_DURATION, startDuration - Math.round(delta / scale));
+      newDuration = Math.max(
+        MIN_DURATION,
+        startDuration - Math.round(delta / scale),
+      );
     }
     onChange(
       blocks.map((b) => (b.id === id ? { ...b, duration: newDuration } : b))
