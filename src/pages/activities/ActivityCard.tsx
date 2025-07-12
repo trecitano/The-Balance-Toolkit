@@ -28,8 +28,9 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   const [showAddForm, setShowAddForm] = useState(false);
   const [newActionName, setNewActionName] = useState("");
   const [newActionDuration, setNewActionDuration] = useState(10);
+  const defaultBlocksRef = useRef(getDefaultBlocks(activity));
   const cardRef = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<number | null>(null);
   const imageIndexRef = useRef<number>(0);
 
 
@@ -176,8 +177,11 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
 
 
   
+
   useEffect(() => {
-    setTimelineBlocks(getDefaultBlocks(activity));
+    const defaults = getDefaultBlocks(activity);
+    setTimelineBlocks(defaults);
+    defaultBlocksRef.current = defaults;
   }, [activity]);
 
   
@@ -227,10 +231,17 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         </div>
       )}
       <div className="activity-details" style={{ marginLeft: 0 }}>
-        <h3 className="activity-title">{activity.title}</h3>
-        {}
+        {/* Always show the title in the same place, but use header style if maximized */}
+        {maximized ? (
+          <div className="activity-details-header">
+            <h3>{activity.title}</h3>
+          </div>
+        ) : (
+          <h3 className="activity-title">{activity.title}</h3>
+        )}
         {maximized && (
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
+            {/* Add Action Row */}
             <div className="add-action-row">
               {!showAddForm ? (
                 <button
@@ -274,22 +285,61 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
                 </>
               )}
             </div>
-            <ActivityTimeline
-              blocks={timelineBlocks}
-              onChange={setTimelineBlocks}
-              onDeleteBlock={blockId => setTimelineBlocks(blocks => blocks.filter(b => b.id !== blockId))}
-            />
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+              <ActivityTimeline
+                blocks={timelineBlocks}
+                onChange={setTimelineBlocks}
+              />
+              {/* Activity settings panel below timeline */}
+              <div className="activity-details-panel">
+                {/* Activity settings fields below timeline */}
+                <div className="activity-details-fields">
+                  <div className="activity-details-field">
+                    <label htmlFor="activity-loops">Number of loops</label>
+                    <input id="activity-loops" type="number" min={1} defaultValue={1} />
+                  </div>
+                  <div className="activity-details-field">
+                    <label htmlFor="activity-sound">Sound</label>
+                    <select id="activity-sound" defaultValue="none">
+                      <option value="none">None</option>
+                      <option value="bell">Bell</option>
+                      <option value="voice">Voice</option>
+                    </select>
+                  </div>
+                  <div className="activity-details-field">
+                    <label htmlFor="activity-notes">Notes</label>
+                    <input id="activity-notes" type="text" placeholder="Optional notes..." />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-        <div className="activity-footer">
+        <div className="activity-footer" style={{ display: 'flex', flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
           {!maximized ? (
             <button className="activity-start-btn" onClick={handleStartClick}>
               Start
             </button>
           ) : (
-            <button className="activity-start-btn" onClick={onMinimize}>
-              Close
-            </button>
+            <>
+              <button
+                className="add-action-btn"
+                style={{ background: 'var(--primary)', color: 'var(--white)' }}
+                onClick={() => {/* Save logic placeholder */}}
+              >
+                Save
+              </button>
+              <button
+                className="add-action-btn add-action-cancel"
+                style={{ background: 'var(--bg-light)', color: 'var(--text-dark)', border: '1px solid var(--border)' }}
+                onClick={() => setTimelineBlocks(defaultBlocksRef.current)}
+              >
+                Reset to Default
+              </button>
+              <button className="activity-start-btn" onClick={onMinimize} style={{ background: '#e5e7eb', color: '#374151' }}>
+                Close
+              </button>
+            </>
           )}
         </div>
       </div>
