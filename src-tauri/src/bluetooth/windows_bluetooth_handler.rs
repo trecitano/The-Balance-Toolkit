@@ -248,7 +248,7 @@ pub async fn remove_device(mac_address: MacAddress) -> Result<()> {
         if device_mac_address == mac_address {
             let connection_status = device.ConnectionStatus()?;
             if connection_status == BluetoothConnectionStatus::Connected{
-                
+
                 // Windows is very weird. If we check the pairing status, it will say that it's not paired.
                 // However, to disconnect it, we must unpair it.
                 let pairing = info.Pairing()?;
