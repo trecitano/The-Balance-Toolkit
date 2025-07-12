@@ -82,11 +82,10 @@ pub async fn connect_new_balance_board() -> Result<MacAddress> {
     }
 }
 
-/*
-pub fn turn_off_device(mac_address: MacAddress) -> Result<()> {
-    handler::turn_off_device(mac_address)
+pub async fn remove_device(mac_address: MacAddress) -> Result<()> {
+    handler::remove_device(mac_address).await
 }
-*/
+
 
 pub fn mac_address_to_wii_pin(mac_address: [u8; 6]) -> [u8; 6] {
     let mut pin = [0u8; 6];

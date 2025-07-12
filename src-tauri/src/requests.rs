@@ -35,7 +35,9 @@ pub fn run() {
             devices_fetch_all_devices,
             devices_scan_without_timeout,
             devices_cancel_scan,
-            devices_connect
+            devices_is_scanning,
+            devices_connect,
+            devices_remove_device
         ])
         .manage(AppState::default())
         .run(tauri::generate_context!())
@@ -123,7 +125,7 @@ pub async fn devices_fetch_all_devices() -> Result<Vec<NintendoDevice>, String> 
         }
     }
 
-    println!("<< (devices_fetch_all_devices): Returning devices: #{:?}", result);
+    println!("<< (devices_fetch_all_devices): Returning devices: #{:?}\n", result);
 
     Ok(result)
 }
@@ -132,41 +134,45 @@ pub async fn devices_fetch_all_devices() -> Result<Vec<NintendoDevice>, String> 
 async fn devices_scan_without_timeout(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
     println!(">> devices_scan_without_timeout");
 
-    let cancel_tx_lock = state.cancel_tx.lock().await.take();
-        if cancel_tx_lock.is_some() {
+    let mut cancel_tx_lock = state.cancel_tx.lock().await;
+    if cancel_tx_lock.is_some() {
         return Err("A scan is already in progress.".to_string());
     }
 
     let (cancel_tx, mut cancel_rx) = watch::channel(());
-    *state.cancel_tx.lock().await = Some(cancel_tx);
+    *cancel_tx_lock = Some(cancel_tx);
     drop(cancel_tx_lock);
 
-    println!("Scanning for devices...");
-    loop {
-        tokio::select! {
-            _ = cancel_rx.changed() => {
-                println!("Scan cancelled.");
-                break;
-            }
-            new_board = bluetooth_communication::connect_new_balance_board() => {
-                if let Ok(mac_address) = new_board {
-                    match bluetooth_communication::get_nintendo_device_by_mac_address(mac_address).await {
-                        Ok(device) => app.emit("new_board", NintendoDevice::from(device)).unwrap(),
-                        Err(e) => (),
+    let app_clone = app.clone();
+    let cancel_tx_arc = state.cancel_tx.clone();
+
+    tokio::spawn(async move {
+        println!("Scanning for devices in background...");
+        loop {
+            tokio::select! {
+                _ = cancel_rx.changed() => {
+                    println!("Scan cancelled.");
+                    break;
+                }
+                new_board = bluetooth_communication::connect_new_balance_board() => {
+                    if let Ok(mac_address) = new_board {
+                        match bluetooth_communication::get_nintendo_device_by_mac_address(mac_address).await {
+                            Ok(device) => app_clone.emit("new_board", NintendoDevice::from(device)).unwrap(),
+                            Err(e) => eprintln!("Error getting device info by mac address: {:?}", e),
+                        }
                     }
                 }
             }
         }
 
-        println!("Looping!");
-    }
+        let mut cancel_tx_lock = cancel_tx_arc.lock().await;
+        *cancel_tx_lock = None;
+        println!("Exiting background scan task.");
+    });
 
-    let mut cancel_tx_lock = state.cancel_tx.lock().await;
-    *cancel_tx_lock = None;
-    println!("Exiting");
+    println!("<< devices_scan_without_timeout: Scan started in background.\n");
     Ok(())
 }
-
 
 #[tauri::command]
 async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
@@ -176,8 +182,19 @@ async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
         let _ = cancel_tx.send(());
     }
 
-    println!("<< cancel_scan");
+    println!("<< cancel_scan\n");
     Ok(())
+}
+
+#[tauri::command]
+async fn devices_is_scanning(state: State<'_, AppState>) -> Result<bool, String> {
+    println!(">> is_scanning");
+
+    let cancel_tx_lock = state.cancel_tx.lock().await;
+    let result = cancel_tx_lock.is_some();
+
+    println!("<< is_scanning: {}\n", result);
+    Ok(result)
 }
 
 #[tauri::command(async)]
@@ -187,19 +204,27 @@ fn devices_connect(mac_address: String, _channel: Channel<BalanceBoardEvent>) ->
     let transformed_address = mac_address.replace(":", "").trim().to_lowercase();
     let result = balance_board_com::connect(transformed_address).map_err(|e| e.to_string());
 
-    println!("<< devices_connect: {:?}", result);
+    println!("<< devices_connect: {:?}\n", result);
     Ok(())
 }
 
-/*
 #[tauri::command(async)]
-fn devices_turn_off_device(mac_address: String) -> Result<(), String> {
-    
-}
-*/
+async fn devices_remove_device(mac_address: String) -> Result<(), String> {
+    println!(">> devices_remove_device: {}", mac_address);
 
-fn devices_remove(device_id: String) -> Result<(), String> {
-    println!("Removing device: {}", device_id);
+    let mac_address_bytes = convert_mac_address_string_to_u8_bytes(mac_address.as_str());
+    let result = bluetooth_communication::remove_device(mac_address_bytes).await
+        .map_err(|e| e.to_string());
+
+    println!("<< devices_remove_device: {:?}\n", result);
     Ok(())
 }
 
+fn convert_mac_address_string_to_u8_bytes(mac_address: &str) -> [u8; 6] {
+    let bytes: Vec<u8> = mac_address
+        .split(':')
+        .map(|part| u8::from_str_radix(part, 16).unwrap())
+        .collect();
+
+    bytes.try_into().unwrap()
+}

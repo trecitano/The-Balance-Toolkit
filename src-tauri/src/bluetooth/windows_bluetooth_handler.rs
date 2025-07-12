@@ -88,7 +88,6 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
     .await?
 }
 
-//
 // In Windows, when we start pairing the board, we get an "Added" event containing a device
 // that does not have the name. This name is later added via an "Updated" event, that updates the
 // "System.ItemNameDisplay" device property.
@@ -201,52 +200,6 @@ async fn try_pair_with_board(device_id: HSTRING, pin: [u8; 6]) -> Result<()> {
     }
 }
 
-pub async fn turn_off_device(mac_address: MacAddress) -> Result<()> {
-    // Convert the MAC address array to the u64 format used by the Windows API.
-    let u64_address = mac_address_to_u64(mac_address);
-
-    // Find the Bluetooth device object from its address.
-    // This might return an error if the device is not found/known by the system.
-    let device = match BluetoothDevice::FromBluetoothAddressAsync(u64_address)?.await {
-        Ok(d) => d,
-        Err(e) => {
-            return Err(anyhow!(
-                "Device with MAC {:?} not found. Error: {}",
-                mac_address,
-                e
-            ))
-        }
-    };
-
-    // To unpair, we need the DeviceInformation object associated with the device.
-    // We can get this using the device's ID.
-    let device_info =
-        DeviceInformation::CreateFromIdAsync(&device.DeviceId()?)?.await?;
-
-    // Get the pairing information object.
-    let pairing = device_info.Pairing()?;
-
-    // Attempt to unpair the device.
-    println!("Attempting to unpair device with MAC: {:?}", mac_address);
-    let unpairing_result = pairing.UnpairAsync()?.await?;
-
-    // Check the status of the unpairing operation.
-    match unpairing_result.Status()? {
-        DeviceUnpairingResultStatus::Unpaired
-        | DeviceUnpairingResultStatus::AlreadyUnpaired => {
-            println!("Successfully unpaired device.");
-            Ok(())
-        }
-        status => {
-            // The status is an enum, its debug representation is informative.
-            Err(anyhow!(
-                "Failed to unpair device. Status: {:?}",
-                status
-            ))
-        }
-    }
-}
-
 fn properties_has_matching_name(
     properties: &windows_collections::IMapView<HSTRING, windows_core::IInspectable>,
     target: &str,
@@ -269,14 +222,6 @@ fn properties_has_matching_name(
     value == HSTRING::from(target)
 }
 
-fn mac_address_to_u64(mac_address: MacAddress) -> u64 {
-    let mut u64_address: u64 = 0;
-    for (i, &byte) in mac_address.iter().enumerate() {
-        u64_address |= (byte as u64) << (8 * (5 - i));
-    }
-    u64_address
-}
-
 // Windows RT stores the mac address in a u64, but we only want the relevant 48 bits
 // Only using the lower 48 bits of the u64
 fn convert_u64_to_mac_address(winrt_mac_address: u64) -> [u8; 6] {
@@ -287,4 +232,42 @@ fn convert_u64_to_mac_address(winrt_mac_address: u64) -> [u8; 6] {
     }
 
     mac_address
+}
+
+pub async fn remove_device(mac_address: MacAddress) -> Result<()> {
+    tokio::task::spawn_blocking(move || {
+        futures::executor::block_on(async {
+    let devices_selector = BluetoothDevice::GetDeviceSelector()?;
+    let device_collection = DeviceInformation::FindAllAsyncAqsFilter(&devices_selector)?.await?;
+
+    for info in device_collection {
+        let device_id = info.Id()?;
+        let device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
+        let device_mac_address = convert_u64_to_mac_address(device.BluetoothAddress()?);
+
+        if device_mac_address == mac_address {
+            let connection_status = device.ConnectionStatus()?;
+            if connection_status == BluetoothConnectionStatus::Connected{
+                
+                // Windows is very weird. If we check the pairing status, it will say that it's not paired.
+                // However, to disconnect it, we must unpair it.
+                let pairing = info.Pairing()?;
+                let unpair_result = pairing.UnpairAsync()?.await?;
+
+                return match unpair_result.Status()? {
+                    DeviceUnpairingResultStatus::Unpaired => {
+                        println!("Device successfully unpaired");
+                        Ok(())
+                    },
+                    _ => {
+                        Err(anyhow!("Failed to unpair: Unknown status: {:?}", unpair_result.Status()))
+                    }
+                }
+            }
+        }
+    };
+
+    Ok(())
+        })
+    }).await?
 }
