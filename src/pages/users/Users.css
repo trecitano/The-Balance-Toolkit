@@ -366,7 +366,7 @@
 
 .user-details-panel {
   flex-grow: 1;
-  background: var(--light);
+  background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-light);
   padding: 1vw 3vw;
@@ -456,7 +456,7 @@
 .form-field input,
 .form-field select {
   padding: var(--input-padding);
-  border: var(--standard-border);
+  border: var(--border-primary);
   border-radius: var(--radius-sm);
   font-size: var(--text-md);
   box-sizing: border-box;
@@ -561,7 +561,7 @@
   height: var(--input-height);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  border: var(--standard-border);
+  border: var(--border-primary);
   transition:
     transform 0.1s ease,
     box-shadow 0.1s ease,
