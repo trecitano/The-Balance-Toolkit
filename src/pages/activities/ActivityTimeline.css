@@ -1,0 +1,65 @@
+.activity-timeline {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 16px 0;
+  gap: 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin: 16px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  min-height: 60px;
+}
+
+.timeline-block {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background: #e0e7ff;
+  border: 2px solid #6366f1;
+  border-radius: 6px;
+  position: relative;
+  min-width: 40px;
+  height: 48px;
+  cursor: grab;
+  transition: box-shadow 0.2s;
+  margin-right: 8px;
+  user-select: auto; 
+}
+.timeline-block:active {
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.block-label {
+  flex: 1;
+  text-align: center;
+  font-weight: 500;
+  color: #3730a3;
+  user-select: none;
+  padding: 0 12px;
+}
+
+.resize-handle {
+  width: 8px;
+  height: 100%;
+  background: #6366f1;
+  opacity: 0.5;
+  cursor: ew-resize;
+  position: absolute;
+  top: 0;
+  z-index: 2;
+}
+.resize-handle.left {
+  left: 0;
+  border-radius: 6px 0 0 6px;
+}
+.resize-handle.right {
+  right: 0;
+  border-radius: 0 6px 6px 0;
+}
+
+.block-content {
+  pointer-events: auto; 
+}
