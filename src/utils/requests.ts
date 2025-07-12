@@ -114,7 +114,7 @@ export const commands = {
       return invoke("devices_cancel_scan");
     },
 
-    async connectDevice(macAddress: String): Promise<void> {
+    async connectDevice(macAddress: string): Promise<void> {
       if (useDeviceMocks) {
         return;
       }
@@ -130,14 +130,14 @@ export const commands = {
         channel: channel,
       });
     },
-    async removeDevice(macAddress: String): Promise<void | ErrorMessage> {
+    async removeDevice(macAddress: string): Promise<void | ErrorMessage> {
       if (useDeviceMocks) {
         return;
       }
 
       return invoke("devices_remove_device", { mac_address: macAddress });
     },
-    async disconnectDevice(macAddress: String): Promise<void | ErrorMessage> {
+    async disconnectDevice(macAddress: string): Promise<void | ErrorMessage> {
       if (useDeviceMocks) {
         return;
       }
@@ -145,15 +145,15 @@ export const commands = {
       return invoke("devices_disconnect_device", { mac_address: macAddress });
     },
     async updateDeviceName(
-      macAddress: String,
-      deviceName: String,
+      macAddress: string,
+      deviceName: string,
     ): Promise<void | ErrorMessage> {
       return invoke("devices_update_device_name", {
         mac_address: macAddress,
         device_name: deviceName,
       });
     },
-    async identifyDevice(macAddress: String): Promise<void | ErrorMessage> {
+    async identifyDevice(macAddress: string): Promise<void | ErrorMessage> {
       return invoke("devices_identify_device", { mac_address: macAddress });
     },
   },
