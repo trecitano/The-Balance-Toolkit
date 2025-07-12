@@ -19,7 +19,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   onMaximize,
   onMinimize,
 }) => {
-  // --- State and refs ---
+  
   const [currentImageSrc, setCurrentImageSrc] = useState<string>(activity.staticImage);
   const [isHovering, setIsHovering] = useState(false);
   const [maxStyle, setMaxStyle] = useState<React.CSSProperties | undefined>();
@@ -33,7 +33,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   const imageIndexRef = useRef<number>(0);
 
 
-  // --- Image hover effect ---
+  
   useEffect(() => {
     setCurrentImageSrc(activity.staticImage);
   }, [activity.staticImage]);
@@ -74,14 +74,14 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   }, [isHovering, activity.hoverImages, activity.staticImage]);
 
 
-  // --- Animate from original position/size to maximized ---
+  
   useEffect(() => {
     if (maximized && cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
       const parentRect = cardRef.current.parentElement?.getBoundingClientRect();
       if (parentRect) {
         setShowMaximizedClass(false);
-        // Calculate the card's position relative to its parent
+        
         const initialLeft = rect.left - parentRect.left;
         const initialTop = rect.top - parentRect.top;
         setMaxStyle({
@@ -113,15 +113,15 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   }, [maximized]);
 
 
-  // --- Handlers ---
+  
   const handleStartClick = () => {
     if (onMaximize) onMaximize();
   };
 
 
-  // --- Timeline state for maximized mode ---
+  
   function getDefaultBlocks(activity: ActivityData) {
-    // Match activity titles from Activities.tsx
+    
     switch (activity.title) {
       case "Quiet standing (eyes-close + eyes-open)":
         return [
@@ -175,12 +175,12 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   }
 
 
-  // --- Reset timeline actions if the activity changes ---
+  
   useEffect(() => {
     setTimelineBlocks(getDefaultBlocks(activity));
   }, [activity]);
 
-  // --- Add a new action to the timeline ---
+  
   const handleAddAction = () => {
     if (!newActionName.trim()) return;
     let lastEnd = 0;
@@ -200,7 +200,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     setShowAddForm(false);
   };
 
-  // --- Cancel add action form ---
+  
   const handleCancelAdd = () => {
     setShowAddForm(false);
     setNewActionName("");
@@ -208,7 +208,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   };
 
 
-  // --- Render ---
+  
   return (
     <div
       ref={cardRef}
@@ -228,7 +228,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       )}
       <div className="activity-details" style={{ marginLeft: 0 }}>
         <h3 className="activity-title">{activity.title}</h3>
-        {/* <p className="activity-description">{activity.description}</p> */}
+        {}
         {maximized && (
           <div>
             <div className="add-action-row">
@@ -272,7 +272,11 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
                 </>
               )}
             </div>
-            <ActivityTimeline blocks={timelineBlocks} onChange={setTimelineBlocks} />
+            <ActivityTimeline
+              blocks={timelineBlocks}
+              onChange={setTimelineBlocks}
+              onDeleteBlock={blockId => setTimelineBlocks(blocks => blocks.filter(b => b.id !== blockId))}
+            />
           </div>
         )}
         <div className="activity-footer">
