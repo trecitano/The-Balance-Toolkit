@@ -26,7 +26,7 @@
   cursor: grab;
   transition: box-shadow 0.2s;
   margin-right: 8px;
-  user-select: auto; 
+  user-select: auto;
 }
 .timeline-block:active {
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
@@ -61,5 +61,5 @@
 }
 
 .block-content {
-  pointer-events: auto; 
+  pointer-events: auto;
 }

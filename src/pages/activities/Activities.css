@@ -2,7 +2,7 @@
   flex-grow: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: 50% 50%; 
+  grid-template-rows: 50% 50%;
   gap: 3%;
   padding: 1vh 1vw;
   box-sizing: border-box;
@@ -24,10 +24,10 @@
   transition:
     box-shadow var(--transition),
     transform var(--transition),
-    top 0.4s cubic-bezier(0.4,0,0.2,1),
-    left 0.4s cubic-bezier(0.4,0,0.2,1),
-    width 0.4s cubic-bezier(0.4,0,0.2,1),
-    height 0.4s cubic-bezier(0.4,0,0.2,1);
+    top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .activity-card:hover {
@@ -66,11 +66,11 @@
   transition:
     box-shadow var(--transition),
     transform var(--transition),
-    top 0.4s cubic-bezier(0.4,0,0.2,1),
-    left 0.4s cubic-bezier(0.4,0,0.2,1),
-    width 0.4s cubic-bezier(0.4,0,0.2,1),
-    height 0.4s cubic-bezier(0.4,0,0.2,1);
-  
+    top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
   background: var(--bg-secondary);
   overflow: hidden;
 }
@@ -85,17 +85,17 @@
 
 .activity-image-container {
   width: 100%;
-  height: 55%; 
+  height: 55%;
   flex: none;
-  border-radius: var(--radius-md); 
+  border-radius: var(--radius-md);
   background: var(--bg-light);
   box-shadow: var(--shadow-light);
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-primary);
-  margin: 0 auto var(--space-sm) auto; 
-  position: static; 
+  margin: 0 auto var(--space-sm) auto;
+  position: static;
   overflow: hidden;
 }
 
@@ -128,7 +128,7 @@
 }
 
 .activity-footer {
-  margin-top: auto; 
+  margin-top: auto;
   display: flex;
   justify-content: flex-end;
   align-items: center;

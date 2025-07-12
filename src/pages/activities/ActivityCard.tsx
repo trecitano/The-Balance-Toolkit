@@ -145,7 +145,10 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         {/* <p className="activity-description">{activity.description}</p> */}
         {maximized && (
           <div style={{ margin: "24px 0" }}>
-            <ActivityTimeline blocks={timelineBlocks} onChange={setTimelineBlocks} />
+            <ActivityTimeline
+              blocks={timelineBlocks}
+              onChange={setTimelineBlocks}
+            />
           </div>
         )}
         <div className="activity-footer">
