@@ -60,10 +60,7 @@ const VCopXGraph: React.FC<VCopXGraphProps> = ({ data, containerHeight }) => {
     const x = d3
       .scaleLinear()
       .domain([0, MAX_POINTS - 1])
-      .range([
-        padding.left,
-        padding.left + graphWidth - dynamicGraphCircleDiameter / 2,
-      ]);
+      .range([padding.left, padding.left + graphWidth - dynamicGraphCircleDiameter / 2]);
 
     svg
       .append("line")
@@ -107,10 +104,7 @@ const VCopXGraph: React.FC<VCopXGraphProps> = ({ data, containerHeight }) => {
         .attr("text-anchor", "end")
         .attr("font-size", 10)
         .attr("fill", "#222")
-        .attr(
-          "dominant-baseline",
-          val === 1 ? "hanging" : val === 0 ? "baseline" : "middle",
-        )
+        .attr("dominant-baseline", val === 1 ? "hanging" : val === 0 ? "baseline" : "middle")
         .text(yLabels[val]);
     });
 

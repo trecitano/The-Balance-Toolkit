@@ -164,11 +164,7 @@ const formatDisplayPath = (path: string, maxLength: number): string => {
 
   if (displayString.length > maxLength) {
     const lastSlash = displayString.lastIndexOf("/");
-    if (
-      lastSlash !== -1 &&
-      lastSlash > 0 &&
-      lastSlash < displayString.length - 1
-    ) {
+    if (lastSlash !== -1 && lastSlash > 0 && lastSlash < displayString.length - 1) {
       let firstPart = displayString.substring(0, lastSlash);
       const lastPart = displayString.substring(lastSlash + 1);
 
@@ -176,15 +172,11 @@ const formatDisplayPath = (path: string, maxLength: number): string => {
 
       if (lastPart.length >= maxLength - 4) {
         if (maxLength <= 4) displayString = "...";
-        else
-          displayString =
-            "..." +
-            displayString.substring(displayString.length - maxLength + 3);
+        else displayString = "..." + displayString.substring(displayString.length - maxLength + 3);
       } else if (firstPart.length > availableForFirstPart) {
         if (availableForFirstPart < 0) {
           if (lastPart.length > maxLength - 3) {
-            displayString =
-              "..." + lastPart.substring(lastPart.length - (maxLength - 3));
+            displayString = "..." + lastPart.substring(lastPart.length - (maxLength - 3));
           } else if (lastPart.length > 0 && maxLength > 3) {
             displayString = "..." + lastPart;
           } else {
@@ -197,8 +189,7 @@ const formatDisplayPath = (path: string, maxLength: number): string => {
       }
     } else {
       if (displayString.length > maxLength) {
-        if (maxLength >= 3)
-          displayString = displayString.substring(0, maxLength - 3) + "...";
+        if (maxLength >= 3) displayString = displayString.substring(0, maxLength - 3) + "...";
         else if (maxLength > 0) displayString = ".".repeat(maxLength);
         else displayString = "";
       }
@@ -280,9 +271,7 @@ function Session({
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [saveLocation, setSaveLocation] = useState<string>(
-    DEFAULT_SAVE_LOCATION,
-  );
+  const [saveLocation, setSaveLocation] = useState<string>(DEFAULT_SAVE_LOCATION);
   const [stopAfterEnabled, setStopAfterEnabled] = useState(false);
   const [stopAfterTime, setStopAfterTime] = useState({
     hours: 0,
@@ -294,22 +283,14 @@ function Session({
   const [inputMinutes, setInputMinutes] = useState(0);
   const [inputSeconds, setInputSeconds] = useState(0);
   const [lslStreamEnabled, setLslStreamEnabled] = useState(false);
-  const [lslStreamNameInput, setLslStreamNameInput] = useState(
-    "the-balance-toolkit",
-  );
-  const [activeLslStreamName, setActiveLslStreamName] = useState<string | null>(
-    null,
-  );
+  const [lslStreamNameInput, setLslStreamNameInput] = useState("the-balance-toolkit");
+  const [activeLslStreamName, setActiveLslStreamName] = useState<string | null>(null);
   const [lslStreamType, setLslStreamType] = useState("BalanceData");
-  const [lslSourceId, setLslSourceId] = useState(
-    `tbt-${Date.now().toString().slice(-6)}`,
-  );
+  const [lslSourceId, setLslSourceId] = useState(`tbt-${Date.now().toString().slice(-6)}`);
   const [tcpStreamEnabled, setTcpStreamEnabled] = useState(false);
   const [tcpIpAddressInput, setTcpIpAddressInput] = useState("127.0.0.1");
   const [tcpPortInput, setTcpPortInput] = useState("12345");
-  const [activeTcpIpAddress, setActiveTcpIpAddress] = useState<string | null>(
-    null,
-  );
+  const [activeTcpIpAddress, setActiveTcpIpAddress] = useState<string | null>(null);
   const [activeTcpPort, setActiveTcpPort] = useState<string | null>(null);
   const [showLslDropdown, setShowLslDropdown] = useState(false);
   const [showTcpDropdown, setShowTcpDropdown] = useState(false);
@@ -347,9 +328,7 @@ function Session({
   const [stabilityIndex, setStabilityIndex] = useState(0);
   const MAX_STABILITY_INDEX = 10;
 
-  const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(
-    null,
-  );
+  const [actualCop, setActualCop] = useState<{ x: number; y: number } | null>(null);
   const [actualCopTrail, setActualCopTrail] = useState<
     Array<{ x: number; y: number; id: number; timestamp: number }>
   >([]);
@@ -392,9 +371,7 @@ function Session({
         console.warn(
           `[Session.tsx] Selected board "${selectedBoard}" no longer available. Reselecting.`,
         );
-        setSelectedBoard(
-          availableBoards.length > 0 ? availableBoards[0] : null,
-        );
+        setSelectedBoard(availableBoards.length > 0 ? availableBoards[0] : null);
       } else if (availableBoards.length === 0 && selectedBoard !== null) {
         setSelectedBoard(null);
       }
@@ -495,10 +472,7 @@ function Session({
         const containerWidth = img.offsetWidth;
         const containerHeight = img.offsetHeight;
 
-        const {
-          naturalWidth: imageNaturalWidth,
-          naturalHeight: imageNaturalHeight,
-        } = img;
+        const { naturalWidth: imageNaturalWidth, naturalHeight: imageNaturalHeight } = img;
 
         if (
           containerWidth === 0 ||
@@ -545,8 +519,7 @@ function Session({
     if (imgElement) imgElement.addEventListener("load", calculateBounds);
 
     const resizeObserver = new ResizeObserver(calculateBounds);
-    if (wbbTopdownContainerRef.current)
-      resizeObserver.observe(wbbTopdownContainerRef.current);
+    if (wbbTopdownContainerRef.current) resizeObserver.observe(wbbTopdownContainerRef.current);
 
     return () => {
       if (imgElement) imgElement.removeEventListener("load", calculateBounds);
@@ -572,8 +545,7 @@ function Session({
     if (
       initialWidth > 0 &&
       initialHeight > 0 &&
-      (copYCanvasSize.width !== initialWidth ||
-        copYCanvasSize.height !== initialHeight)
+      (copYCanvasSize.width !== initialWidth || copYCanvasSize.height !== initialHeight)
     ) {
       setCopYCanvasSize({ width: initialWidth, height: initialHeight });
     }
@@ -601,8 +573,7 @@ function Session({
     if (
       initialWidth > 0 &&
       initialHeight > 0 &&
-      (copXCanvasSize.width !== initialWidth ||
-        copXCanvasSize.height !== initialHeight)
+      (copXCanvasSize.width !== initialWidth || copXCanvasSize.height !== initialHeight)
     ) {
       setCopXCanvasSize({ width: initialWidth, height: initialHeight });
     }
@@ -630,8 +601,7 @@ function Session({
     if (
       initialWidth > 0 &&
       initialHeight > 0 &&
-      (vCopXCanvasSize.width !== initialWidth ||
-        vCopXCanvasSize.height !== initialHeight)
+      (vCopXCanvasSize.width !== initialWidth || vCopXCanvasSize.height !== initialHeight)
     ) {
       setVCopXCanvasSize({ width: initialWidth, height: initialHeight });
     }
@@ -659,8 +629,7 @@ function Session({
     if (
       initialWidth > 0 &&
       initialHeight > 0 &&
-      (vCopYCanvasSize.width !== initialWidth ||
-        vCopYCanvasSize.height !== initialHeight)
+      (vCopYCanvasSize.width !== initialWidth || vCopYCanvasSize.height !== initialHeight)
     ) {
       setVCopYCanvasSize({ width: initialWidth, height: initialHeight });
     }
@@ -742,18 +711,12 @@ function Session({
           if (newCOPx > BOUNDARY_LIMIT || newCOPx < -BOUNDARY_LIMIT) {
             vx *= -0.5;
             actualCopVelocityRef.current.x = vx;
-            newCOPx = Math.max(
-              -BOUNDARY_LIMIT,
-              Math.min(BOUNDARY_LIMIT, newCOPx),
-            );
+            newCOPx = Math.max(-BOUNDARY_LIMIT, Math.min(BOUNDARY_LIMIT, newCOPx));
           }
           if (newCOPy > BOUNDARY_LIMIT || newCOPy < -BOUNDARY_LIMIT) {
             vy *= -0.5;
             actualCopVelocityRef.current.y = vy;
-            newCOPy = Math.max(
-              -BOUNDARY_LIMIT,
-              Math.min(BOUNDARY_LIMIT, newCOPy),
-            );
+            newCOPy = Math.max(-BOUNDARY_LIMIT, Math.min(BOUNDARY_LIMIT, newCOPy));
           }
 
           const newCopData = { x: newCOPx, y: newCOPy };
@@ -775,14 +738,8 @@ function Session({
             ...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1),
             newCopData.x,
           ]);
-          setVCopXDataSeries((prevData) => [
-            ...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1),
-            vCopX,
-          ]);
-          setVCopYDataSeries((prevData) => [
-            ...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1),
-            vCopY,
-          ]);
+          setVCopXDataSeries((prevData) => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), vCopX]);
+          setVCopYDataSeries((prevData) => [...prevData.slice(-COPY_GRAPH_MAX_POINTS + 1), vCopY]);
 
           setActualCopTrail((currentTrail) => {
             const now = Date.now();
@@ -867,9 +824,7 @@ function Session({
     let timerId: ReturnType<typeof setTimeout> | undefined;
     if (recording && stopAfterEnabled) {
       const totalDurationInSeconds =
-        stopAfterTime.hours * 3600 +
-        stopAfterTime.minutes * 60 +
-        stopAfterTime.seconds;
+        stopAfterTime.hours * 3600 + stopAfterTime.minutes * 60 + stopAfterTime.seconds;
       if (totalDurationInSeconds > 0) {
         timerId = setTimeout(() => {
           handleStop();
@@ -951,11 +906,7 @@ function Session({
   };
 
   const handleEnableTcpStream = () => {
-    if (
-      !tcpIpAddressInput.trim() ||
-      !tcpPortInput.trim() ||
-      isNaN(parseInt(tcpPortInput))
-    ) {
+    if (!tcpIpAddressInput.trim() || !tcpPortInput.trim() || isNaN(parseInt(tcpPortInput))) {
       alert("Please enter a valid IP Address and Port.");
       return;
     }
@@ -1001,9 +952,7 @@ function Session({
         saveLocation,
       );
       if (newPath !== null) {
-        setSaveLocation(
-          newPath.trim() === "" ? DEFAULT_SAVE_LOCATION : newPath,
-        );
+        setSaveLocation(newPath.trim() === "" ? DEFAULT_SAVE_LOCATION : newPath);
       }
     }
   };
@@ -1024,9 +973,7 @@ function Session({
               <button
                 ref={boardToggleRef}
                 className="control-toggle control-toggle--full-width"
-                onClick={() =>
-                  !recording && setShowBoardDropdown(!showBoardDropdown)
-                }
+                onClick={() => !recording && setShowBoardDropdown(!showBoardDropdown)}
                 aria-haspopup="true"
                 aria-expanded={showBoardDropdown}
                 disabled={recording}
@@ -1034,15 +981,11 @@ function Session({
                   recording
                     ? "Settings cannot be changed during recording."
                     : selectedBoard ||
-                      (availableBoards.length === 0
-                        ? "No boards available"
-                        : "Select Board")
+                      (availableBoards.length === 0 ? "No boards available" : "Select Board")
                 }
               >
                 <img src={wbbIconLineBlue} alt="Board Icon" className="icon" />
-                <span className="control-name">
-                  {selectedBoard || "Select Board"}
-                </span>
+                <span className="control-name">{selectedBoard || "Select Board"}</span>
               </button>
               {showBoardDropdown && !recording && (
                 <div ref={boardDropdownRef} className="dropdown">
@@ -1063,10 +1006,7 @@ function Session({
                   ) : (
                     <p className="dropdown-message">No boards available.</p>
                   )}
-                  <button
-                    className="btn btn--secondary"
-                    onClick={() => onViewChange("devices")}
-                  >
+                  <button className="btn btn--secondary" onClick={() => onViewChange("devices")}>
                     Go to Devices
                     <span className="go-to-devices-icon" aria-hidden="true">
                       →
@@ -1083,16 +1023,12 @@ function Session({
               <button
                 ref={userToggleRef}
                 className="control-toggle control-toggle--full-width"
-                onClick={() =>
-                  !recording && setShowUserDropdown(!showUserDropdown)
-                }
+                onClick={() => !recording && setShowUserDropdown(!showUserDropdown)}
                 aria-haspopup="true"
                 aria-expanded={showUserDropdown}
                 disabled={recording}
                 title={
-                  recording
-                    ? "Settings cannot be changed during recording."
-                    : selectedUserName
+                  recording ? "Settings cannot be changed during recording." : selectedUserName
                 }
               >
                 <img src={userIcon} alt="User Icon" className="icon" />
@@ -1106,9 +1042,7 @@ function Session({
                         <li
                           key={user.id}
                           className={`list-item ${
-                            user.id === currentSelectedUserId
-                              ? "list-item--selected"
-                              : ""
+                            user.id === currentSelectedUserId ? "list-item--selected" : ""
                           }`}
                           onClick={() => handleUserSelect(user.id)}
                         >
@@ -1123,10 +1057,7 @@ function Session({
                   ) : (
                     <p className="dropdown-message">No users available.</p>
                   )}
-                  <button
-                    className="btn btn--secondary"
-                    onClick={handleGoToUsers}
-                  >
+                  <button className="btn btn--secondary" onClick={handleGoToUsers}>
                     Go to Users
                     <span className="go-to-users-icon" aria-hidden="true">
                       →
@@ -1143,11 +1074,7 @@ function Session({
               className="control-toggle control-toggle--full-width"
               onClick={handleChangeSaveLocation}
               disabled={recording}
-              title={
-                recording
-                  ? "Settings cannot be changed during recording."
-                  : saveLocation
-              }
+              title={recording ? "Settings cannot be changed during recording." : saveLocation}
             >
               <img src={folderIcon} alt="Folder Icon" className="icon" />
               <span className="control-name">{saveLocation}</span>
@@ -1175,37 +1102,22 @@ function Session({
                 {lslStreamEnabled ? "ON" : "OFF"}
               </button>
               {showLslDropdown && !recording && (
-                <div
-                  ref={lslDropdownRef}
-                  className="dropdown dropdown--right dropdown--medium"
-                >
+                <div ref={lslDropdownRef} className="dropdown dropdown--right dropdown--medium">
                   {lslStreamEnabled ? (
                     <>
                       <div className="form-group">
-                        <label
-                          htmlFor="activeLslStreamNameDisplay"
-                          className="form-label"
-                        >
+                        <label htmlFor="activeLslStreamNameDisplay" className="form-label">
                           Stream Name:
                         </label>
-                        <span
-                          id="activeLslStreamNameDisplay"
-                          className="form-display"
-                        >
+                        <span id="activeLslStreamNameDisplay" className="form-display">
                           {activeLslStreamName || "N/A"}
                         </span>
                       </div>
                       <div className="form-group">
-                        <label
-                          htmlFor="lslSourceIdDisplayWhenOn"
-                          className="form-label"
-                        >
+                        <label htmlFor="lslSourceIdDisplayWhenOn" className="form-label">
                           Source ID:
                         </label>
-                        <span
-                          id="lslSourceIdDisplayWhenOn"
-                          className="form-display"
-                        >
+                        <span id="lslSourceIdDisplayWhenOn" className="form-display">
                           {lslSourceId}
                         </span>
                       </div>
@@ -1220,10 +1132,7 @@ function Session({
                   ) : (
                     <>
                       <div className="form-group">
-                        <label
-                          htmlFor="lslStreamNameInputControl"
-                          className="form-label"
-                        >
+                        <label htmlFor="lslStreamNameInputControl" className="form-label">
                           Stream Name:
                         </label>
                         <input
@@ -1231,24 +1140,16 @@ function Session({
                           id="lslStreamNameInputControl"
                           className="input"
                           value={lslStreamNameInput}
-                          onChange={(e) =>
-                            setLslStreamNameInput(e.target.value)
-                          }
+                          onChange={(e) => setLslStreamNameInput(e.target.value)}
                           placeholder="e.g., MyBalanceStream"
                           disabled={recording}
                         />
                       </div>
                       <div className="form-group">
-                        <label
-                          htmlFor="lslSourceIdDisplayWhenOff"
-                          className="form-label"
-                        >
+                        <label htmlFor="lslSourceIdDisplayWhenOff" className="form-label">
                           Source ID:
                         </label>
-                        <span
-                          id="lslSourceIdDisplayWhenOff"
-                          className="form-display"
-                        >
+                        <span id="lslSourceIdDisplayWhenOff" className="form-display">
                           {lslSourceId}
                         </span>
                       </div>
@@ -1287,17 +1188,11 @@ function Session({
                 {tcpStreamEnabled ? "ON" : "OFF"}
               </button>
               {showTcpDropdown && !recording && (
-                <div
-                  ref={tcpDropdownRef}
-                  className="dropdown dropdown--right dropdown--small"
-                >
+                <div ref={tcpDropdownRef} className="dropdown dropdown--right dropdown--small">
                   {tcpStreamEnabled ? (
                     <>
                       <div className="form-group">
-                        <label
-                          htmlFor="activeTcpIpDisplay"
-                          className="form-label"
-                        >
+                        <label htmlFor="activeTcpIpDisplay" className="form-label">
                           IP Address:
                         </label>
                         <span id="activeTcpIpDisplay" className="form-display">
@@ -1305,16 +1200,10 @@ function Session({
                         </span>
                       </div>
                       <div className="form-group">
-                        <label
-                          htmlFor="activeTcpPortDisplay"
-                          className="form-label"
-                        >
+                        <label htmlFor="activeTcpPortDisplay" className="form-label">
                           Port:
                         </label>
-                        <span
-                          id="activeTcpPortDisplay"
-                          className="form-display"
-                        >
+                        <span id="activeTcpPortDisplay" className="form-display">
                           {activeTcpPort || "N/A"}
                         </span>
                       </div>
@@ -1329,10 +1218,7 @@ function Session({
                   ) : (
                     <>
                       <div className="form-group">
-                        <label
-                          htmlFor="tcpIpInputControl"
-                          className="form-label"
-                        >
+                        <label htmlFor="tcpIpInputControl" className="form-label">
                           IP Address:
                         </label>
                         <input
@@ -1346,10 +1232,7 @@ function Session({
                         />
                       </div>
                       <div className="form-group">
-                        <label
-                          htmlFor="tcpPortInputControl"
-                          className="form-label"
-                        >
+                        <label htmlFor="tcpPortInputControl" className="form-label">
                           Port:
                         </label>
                         <input
@@ -1392,10 +1275,8 @@ function Session({
                   const containerWidth = img.offsetWidth;
                   const containerHeight = img.offsetHeight;
 
-                  const {
-                    naturalWidth: imageNaturalWidth,
-                    naturalHeight: imageNaturalHeight,
-                  } = img;
+                  const { naturalWidth: imageNaturalWidth, naturalHeight: imageNaturalHeight } =
+                    img;
 
                   if (
                     containerWidth === 0 ||
@@ -1407,8 +1288,7 @@ function Session({
                     return;
                   }
 
-                  const imageAspectRatio =
-                    imageNaturalWidth / imageNaturalHeight;
+                  const imageAspectRatio = imageNaturalWidth / imageNaturalHeight;
                   const containerAspectRatio = containerWidth / containerHeight;
 
                   let renderedImageWidth = containerWidth;
@@ -1437,11 +1317,7 @@ function Session({
             />
 
             {recording && actualCop && svgRenderedBounds && (
-              <WBBTopGraph
-                trail={actualCopTrail}
-                current={actualCop}
-                bounds={svgRenderedBounds}
-              />
+              <WBBTopGraph trail={actualCopTrail} current={actualCop} bounds={svgRenderedBounds} />
             )}
           </div>
           <div className="w-full box-border h-4/10">
@@ -1468,10 +1344,7 @@ function Session({
           <div className="column--quarter h-full">
             <div className="gauge-wrapper">
               <div className="gauge-title">Stability Index</div>
-              <StabilityGauge
-                value={stabilityIndex}
-                maxValue={MAX_STABILITY_INDEX}
-              />
+              <StabilityGauge value={stabilityIndex} maxValue={MAX_STABILITY_INDEX} />
             </div>
           </div>
         </div>
@@ -1501,9 +1374,7 @@ function Session({
               className={`stop-after-time ${recording ? "stop-after-time--disabled" : ""}`}
               role="button"
               tabIndex={recording ? -1 : 0}
-              onKeyDown={(e) =>
-                !recording && e.key === "Enter" && handleOpenStopAfterDropdown()
-              }
+              onKeyDown={(e) => !recording && e.key === "Enter" && handleOpenStopAfterDropdown()}
               aria-disabled={recording}
               title={
                 recording
@@ -1546,9 +1417,7 @@ function Session({
                     type="number"
                     min="0"
                     value={inputHours}
-                    onChange={(e) =>
-                      handleNumericInputChange(setInputHours, e.target.value, 0)
-                    }
+                    onChange={(e) => handleNumericInputChange(setInputHours, e.target.value, 0)}
                     aria-label="Input hours for stop after"
                   />
                   <button
@@ -1578,12 +1447,7 @@ function Session({
                     max="59"
                     value={inputMinutes}
                     onChange={(e) =>
-                      handleNumericInputChange(
-                        setInputMinutes,
-                        e.target.value,
-                        0,
-                        59,
-                      )
+                      handleNumericInputChange(setInputMinutes, e.target.value, 0, 59)
                     }
                     aria-label="Input minutes for stop after"
                   />
@@ -1614,12 +1478,7 @@ function Session({
                     max="59"
                     value={inputSeconds}
                     onChange={(e) =>
-                      handleNumericInputChange(
-                        setInputSeconds,
-                        e.target.value,
-                        0,
-                        59,
-                      )
+                      handleNumericInputChange(setInputSeconds, e.target.value, 0, 59)
                     }
                     aria-label="Input seconds for stop after"
                   />
@@ -1643,10 +1502,7 @@ function Session({
               >
                 &#x21BA;
               </button>
-              <button
-                onClick={handleSubmitStopAfter}
-                className="btn btn--primary"
-              >
+              <button onClick={handleSubmitStopAfter} className="btn btn--primary">
                 Submit
               </button>
               <button
@@ -1662,18 +1518,8 @@ function Session({
 
       <div className="timeline-bar">
         <div className="timeline-canvases">
-          <canvas
-            ref={canvasRef}
-            width={400}
-            height={100}
-            className="timeline-canvas"
-          />
-          <canvas
-            ref={canvasRef2}
-            width={400}
-            height={100}
-            className="timeline-canvas"
-          />
+          <canvas ref={canvasRef} width={400} height={100} className="timeline-canvas" />
+          <canvas ref={canvasRef2} width={400} height={100} className="timeline-canvas" />
         </div>
         <button
           className={`record-btn ${recording ? "record-btn--stop" : "record-btn--record"}`}

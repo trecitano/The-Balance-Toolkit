@@ -51,13 +51,10 @@ export default function Users({
 }: UsersProps) {
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editingUserData, setEditingUserData] = useState<UserType | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
-    null,
-  );
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [leftFadeOpacity, setLeftFadeOpacity] = useState(0);
   const [rightFadeOpacity, setRightFadeOpacity] = useState(1);
-  const [carouselScrollPosition, setCarouselScrollPosition] =
-    useState<number>(0);
+  const [carouselScrollPosition, setCarouselScrollPosition] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResults, setSearchResults] = useState<UserType[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
@@ -92,8 +89,7 @@ export default function Users({
       const gap = 16;
       const desiredCardCount = 5;
 
-      const idealCardWidth =
-        (containerWidth - gap * (desiredCardCount - 1)) / desiredCardCount;
+      const idealCardWidth = (containerWidth - gap * (desiredCardCount - 1)) / desiredCardCount;
 
       items.forEach((item) => {
         (item as HTMLElement).style.width = `${idealCardWidth}px`;
@@ -167,8 +163,7 @@ export default function Users({
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
 
-      const delta =
-        Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
 
       const items = list.querySelectorAll(".user-carousel-item");
       if (items.length === 0) return;
@@ -208,8 +203,7 @@ export default function Users({
       const listElement = userListRef.current;
       if (!listElement) return;
 
-      const viewportCenter =
-        listElement.getBoundingClientRect().left + listElement.clientWidth / 2;
+      const viewportCenter = listElement.getBoundingClientRect().left + listElement.clientWidth / 2;
       let closestElementId: string | null = null;
       let minDistance = Infinity;
       let minDistancePercent = 100;
@@ -252,10 +246,7 @@ export default function Users({
       const leftOpacity = Math.min(scrollLeft / maxFadeScroll, 1);
       setLeftFadeOpacity(leftOpacity);
       const scrollRight = scrollWidth - clientWidth - scrollLeft;
-      const rightOpacity = Math.max(
-        0,
-        Math.min(scrollRight / maxFadeScroll, 1),
-      );
+      const rightOpacity = Math.max(0, Math.min(scrollRight / maxFadeScroll, 1));
       setRightFadeOpacity(rightOpacity);
 
       debouncedUpdate();
@@ -300,9 +291,7 @@ export default function Users({
   const handleSelectUser = (userId: string, event?: React.MouseEvent) => {
     if (editingIdx !== null) {
       if (
-        window.confirm(
-          "You have unsaved changes. Discard changes and select a different user?",
-        )
+        window.confirm("You have unsaved changes. Discard changes and select a different user?")
       ) {
         setEditingIdx(null);
         setEditingUserData(null);
@@ -377,8 +366,7 @@ export default function Users({
 
   const isDefaultUser = (user: UserType) => {
     return (
-      user.id === defaultUser.id ||
-      (user.name === "Default User" && user.id.startsWith("default"))
+      user.id === defaultUser.id || (user.name === "Default User" && user.id.startsWith("default"))
     );
   };
 
@@ -389,9 +377,7 @@ export default function Users({
     setAllUsers(users);
     if (currentSelectedUserId === userIdToDelete) {
       setCurrentSelectedUserId(
-        allUsers.length > 1
-          ? allUsers.filter((u) => u.id !== userIdToDelete)[0]?.id || null
-          : null,
+        allUsers.length > 1 ? allUsers.filter((u) => u.id !== userIdToDelete)[0]?.id || null : null,
       );
     }
     if (editingUserData?.id === userIdToDelete) {
@@ -404,8 +390,7 @@ export default function Users({
   useEffect(() => {
     const defaultUserExists = allUsers.some(
       (user) =>
-        user.id === defaultUser.id ||
-        (user.name === "Default User" && user.submitted === true),
+        user.id === defaultUser.id || (user.name === "Default User" && user.submitted === true),
     );
 
     if (!defaultUserExists) {
@@ -422,9 +407,7 @@ export default function Users({
       };
 
       setAllUsers((prevUsers) => {
-        const filteredUsers = prevUsers.filter(
-          (user) => user.name !== "Default User",
-        );
+        const filteredUsers = prevUsers.filter((user) => user.name !== "Default User");
         return [...filteredUsers, newDefaultUser];
       });
 
@@ -450,23 +433,17 @@ export default function Users({
   };
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
     if (!editingUserData) return;
     const { name, value, type } = e.target;
 
     if (type === "checkbox") {
       const { checked } = e.target as HTMLInputElement;
-      setEditingUserData((prev) =>
-        prev ? { ...prev, [name]: checked } : null,
-      );
+      setEditingUserData((prev) => (prev ? { ...prev, [name]: checked } : null));
     } else if (type === "number") {
       const numValue = parseFloat(value);
-      setEditingUserData((prev) =>
-        prev ? { ...prev, [name]: numValue } : null,
-      );
+      setEditingUserData((prev) => (prev ? { ...prev, [name]: numValue } : null));
     } else {
       setEditingUserData((prev) => (prev ? { ...prev, [name]: value } : null));
     }
@@ -507,9 +484,7 @@ export default function Users({
     if (!allUsers.length) return null;
 
     const sortedUsers = getSortedUsers();
-    const currentIndex = sortedUsers.findIndex(
-      (user) => user.id === currentSelectedUserId,
-    );
+    const currentIndex = sortedUsers.findIndex((user) => user.id === currentSelectedUserId);
 
     return (
       <div className="carousel-indicators">
@@ -600,9 +575,7 @@ export default function Users({
                     style={{ border: `2px solid ${user.color || "#ccc"}` }}
                   />
                   <span className="search-result-name">{user.name}</span>
-                  <span className="search-result-id">
-                    {user.id.substring(0, 8)}...
-                  </span>
+                  <span className="search-result-id">{user.id.substring(0, 8)}...</span>
                 </div>
               ))}
             </div>
@@ -625,10 +598,7 @@ export default function Users({
       {}
       <div className="users-main-content">
         <div className="users-list-panel">
-          <div
-            className="user-carousel-scroll-container"
-            ref={scrollContainerRef}
-          >
+          <div className="user-carousel-scroll-container" ref={scrollContainerRef}>
             <div
               className="users-list-fade users-list-fade-left"
               style={{ opacity: leftFadeOpacity }}
@@ -696,9 +666,7 @@ export default function Users({
                   <div className="user-metadata">
                     <span className="metadata-item">
                       <span className="metadata-label">ID:</span>
-                      <span className="metadata-value">
-                        {displayUser.id.substring(0, 10)}...
-                      </span>
+                      <span className="metadata-value">{displayUser.id.substring(0, 10)}...</span>
                     </span>
                     <span className="metadata-item">
                       <span className="metadata-label">Created:</span>
@@ -731,9 +699,7 @@ export default function Users({
                             return;
                           }
                           handleSubmit(
-                            new Event(
-                              "submit",
-                            ) as unknown as React.FormEvent<HTMLFormElement>,
+                            new Event("submit") as unknown as React.FormEvent<HTMLFormElement>,
                           );
                         }}
                         className="btn btn--primary"
@@ -747,16 +713,15 @@ export default function Users({
                       >
                         Cancel
                       </button>
-                      {!isDefaultUser(displayUser) &&
-                        displayUser.id !== defaultUser.id && (
-                          <button
-                            type="button"
-                            onClick={() => setShowDeleteConfirm(displayUser.id)}
-                            className="btn btn--delete"
-                          >
-                            <img src={deleteIcon} alt="Delete" /> Delete
-                          </button>
-                        )}
+                      {!isDefaultUser(displayUser) && displayUser.id !== defaultUser.id && (
+                        <button
+                          type="button"
+                          onClick={() => setShowDeleteConfirm(displayUser.id)}
+                          className="btn btn--delete"
+                        >
+                          <img src={deleteIcon} alt="Delete" /> Delete
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>
@@ -813,9 +778,7 @@ export default function Users({
                       onChange={handleChange}
                     />
                   ) : (
-                    <div className="display-value">
-                      {displayUser.age || "N/A"}
-                    </div>
+                    <div className="display-value">{displayUser.age || "N/A"}</div>
                   )}
                 </div>
 
@@ -825,19 +788,13 @@ export default function Users({
                     Gender:
                   </label>
                   {editingUserData ? (
-                    <select
-                      name="gender"
-                      value={editingUserData.gender}
-                      onChange={handleChange}
-                    >
+                    <select name="gender" value={editingUserData.gender} onChange={handleChange}>
                       <option value="">Select...</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                       <option value="Non-binary">Non-binary</option>
                       <option value="Other">Other</option>
-                      <option value="Prefer not to say">
-                        Prefer not to say
-                      </option>
+                      <option value="Prefer not to say">Prefer not to say</option>
                     </select>
                   ) : (
                     <div className="display-value">
@@ -902,9 +859,7 @@ export default function Users({
                   </label>
                   {editingUserData ? (
                     <>
-                      <div
-                        className={`user-weight-row ${!editingUserData.weight ? "error" : ""}`}
-                      >
+                      <div className={`user-weight-row ${!editingUserData.weight ? "error" : ""}`}>
                         <input
                           type="number"
                           name="weight"
@@ -923,9 +878,7 @@ export default function Users({
                         </select>
                       </div>
                       {!editingUserData.weight && (
-                        <div className="validation-error">
-                          Weight is required
-                        </div>
+                        <div className="validation-error">Weight is required</div>
                       )}
                     </>
                   ) : (
@@ -953,9 +906,7 @@ export default function Users({
                       <option value="ambidextrous">Ambidextrous</option>
                     </select>
                   ) : (
-                    <div className="display-value">
-                      {displayUser.handedness || "N/A"}
-                    </div>
+                    <div className="display-value">{displayUser.handedness || "N/A"}</div>
                   )}
                 </div>
 
@@ -965,10 +916,7 @@ export default function Users({
                     Color:
                   </label>
                   {editingUserData ? (
-                    <div
-                      className="color-picker-container"
-                      ref={colorPickerRef}
-                    >
+                    <div className="color-picker-container" ref={colorPickerRef}>
                       <input
                         type="color"
                         id="color"
@@ -1000,10 +948,7 @@ export default function Users({
                       )}
                     </div>
                   ) : (
-                    <div
-                      className="color-display"
-                      style={{ backgroundColor: "white" }}
-                    >
+                    <div className="color-display" style={{ backgroundColor: "white" }}>
                       <div
                         className="color-swatch"
                         style={{ backgroundColor: displayUser.color || "#ccc" }}
@@ -1047,12 +992,8 @@ export default function Users({
               {allUsers.find((u) => u.id === showDeleteConfirm)?.name}"?
             </p>
 
-            {allUsers.find(
-              (u) => u.id === showDeleteConfirm && isDefaultUser(u),
-            ) && (
-              <p className="default-user-warning">
-                Default User cannot be deleted!
-              </p>
+            {allUsers.find((u) => u.id === showDeleteConfirm && isDefaultUser(u)) && (
+              <p className="default-user-warning">Default User cannot be deleted!</p>
             )}
 
             <div className="delete-confirm-actions">
@@ -1060,9 +1001,7 @@ export default function Users({
                 onClick={() => handleDeleteUser(showDeleteConfirm)}
                 className="btn btn--delete btn--medium"
                 disabled={
-                  allUsers.find(
-                    (u) => u.id === showDeleteConfirm && isDefaultUser(u),
-                  ) !== undefined
+                  allUsers.find((u) => u.id === showDeleteConfirm && isDefaultUser(u)) !== undefined
                 }
               >
                 <span className="btn__icon btn__icon--left">

@@ -16,11 +16,7 @@ interface WBBTopGraphProps {
 
 const CIRCLE_DIAMETER = 5;
 
-const WBBTopGraph: React.FC<WBBTopGraphProps> = ({
-  trail,
-  current,
-  bounds,
-}) => {
+const WBBTopGraph: React.FC<WBBTopGraphProps> = ({ trail, current, bounds }) => {
   const ref = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 

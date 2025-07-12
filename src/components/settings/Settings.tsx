@@ -39,10 +39,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        settingsRef.current &&
-        !settingsRef.current.contains(event.target as Node)
-      ) {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
@@ -66,10 +63,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   const saveChanges = () => {
     setSettings({ ...tempSettings });
 
-    localStorage.setItem(
-      "balanceToolkitSettings",
-      JSON.stringify(tempSettings),
-    );
+    localStorage.setItem("balanceToolkitSettings", JSON.stringify(tempSettings));
 
     onClose();
   };
@@ -107,9 +101,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 <input
                   type="checkbox"
                   checked={tempSettings.showTooltips}
-                  onChange={(e) =>
-                    handleChange("showTooltips", e.target.checked)
-                  }
+                  onChange={(e) => handleChange("showTooltips", e.target.checked)}
                 />
                 <span>Show tooltips</span>
               </label>
@@ -123,9 +115,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 <input
                   type="checkbox"
                   checked={tempSettings.deviceAlerts}
-                  onChange={(e) =>
-                    handleChange("deviceAlerts", e.target.checked)
-                  }
+                  onChange={(e) => handleChange("deviceAlerts", e.target.checked)}
                 />
                 <span>Device connection alerts</span>
               </label>
@@ -135,9 +125,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 <input
                   type="checkbox"
                   checked={tempSettings.sessionNotifications}
-                  onChange={(e) =>
-                    handleChange("sessionNotifications", e.target.checked)
-                  }
+                  onChange={(e) => handleChange("sessionNotifications", e.target.checked)}
                 />
                 <span>Session completion notifications</span>
               </label>
@@ -150,16 +138,11 @@ function Settings({ isOpen, onClose }: SettingsProps) {
               <label>
                 <span>Default save location</span>
                 <div>
-                  <span className="location-text">
-                    {tempSettings.saveLocation}
-                  </span>
+                  <span className="location-text">{tempSettings.saveLocation}</span>
                   <button
                     className="browse-btn"
                     onClick={() => {
-                      const newLocation = prompt(
-                        "Enter save location:",
-                        tempSettings.saveLocation,
-                      );
+                      const newLocation = prompt("Enter save location:", tempSettings.saveLocation);
                       if (newLocation) {
                         handleChange("saveLocation", newLocation);
                       }
