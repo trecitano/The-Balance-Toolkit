@@ -255,7 +255,9 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
                     value={newActionDuration}
                     onChange={e => setNewActionDuration(Number(e.target.value))}
                     className="add-action-input add-action-duration"
+                    style={{ width: 50, marginRight: 4 }}
                   />
+                  <span style={{ fontSize: "0.9em", color: "var(--primary-dark, #3730a3)", marginRight: 8 }}>s</span>
                   <button
                     className="add-action-btn"
                     onClick={handleAddAction}

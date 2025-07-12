@@ -31,6 +31,9 @@ export default function ActivityTimeline({
     startX: number;
     startDuration: number;
   } | null>(null);
+  // For editing duration inline
+  const [editingDurationId, setEditingDurationId] = useState<number | null>(null);
+  const [durationInputValue, setDurationInputValue] = useState<string>("");
   const dragOverIdxRef = useRef<number | null>(null);
   const dragBlockIdx = useRef<number | null>(null);
 
@@ -165,13 +168,113 @@ export default function ActivityTimeline({
   };
 
   return (
-    <div
-      className="activity-timeline"
-      style={{ width: "100%", cursor: draggedId !== null ? "grabbing" : "default", position: "relative" }}
-    >
-      {blocks.map((block, idx) => (
-        <React.Fragment key={block.id}>
-          {draggedId !== null && dragOverIdx === idx && (
+    <>
+      <div
+        className="activity-timeline"
+        style={{ width: "100%", cursor: draggedId !== null ? "grabbing" : "default", position: "relative", display: "flex", flexDirection: "column" }}
+      >
+        <div style={{ display: "flex", width: "100%" }}>
+          {blocks.map((block, idx) => (
+            <React.Fragment key={block.id}>
+              {draggedId !== null && dragOverIdx === idx && (
+                <div
+                  style={{
+                    width: 0,
+                    height: 48,
+                    borderLeft: "3px solid var(--primary)",
+                    margin: "0 2px",
+                    position: "relative",
+                    zIndex: 10,
+                    background: "none",
+                    pointerEvents: "none",
+                  }}
+                />
+              )}
+              <div
+                className="timeline-block"
+                tabIndex={0}
+                data-block-id={block.id}
+                onMouseDown={(e) => handleBlockMouseDown(idx, e)}
+                style={{
+                  flex: block.duration,
+                  minWidth: 40,
+                  margin: 0,
+                  opacity: draggedId === block.id ? 0.2 : 1,
+                  cursor: resizeInfo ? "default" : draggedId === block.id ? "grabbing" : "grab",
+                  userSelect: "none",
+                  pointerEvents: "auto",
+                  position: "relative",
+                  zIndex: draggedId === block.id ? 2 : 1,
+                  flexDirection: "column",
+                  justifyContent: "flex-start",
+                  alignItems: "center",
+                  padding: "0.3vw 0.2vw",
+                  height: "100%",
+                  maxHeight: "10vh",
+                  boxSizing: "border-box",
+                }}
+              >
+                <button
+                  className="delete-block-btn"
+                  onClick={(e) => handleDeleteBlock(block.id, e)}
+                  title="Delete block"
+                  tabIndex={-1}
+                  aria-label="Delete block"
+                  type="button"
+                >
+                  ×
+                </button>
+                <div
+                  className="resize-handle left"
+                  onMouseDown={(e) => onResizeStart(block.id, "left", e)}
+                  style={{ cursor: "ew-resize", pointerEvents: "auto" }}
+                />
+                <div
+                  className="block-title"
+                  style={{
+                    width: "100%",
+                    textAlign: "center",
+                    fontWeight: 600,
+                    fontSize: "0.95vw",
+                    marginBottom: "0.2vw",
+                    color: "var(--text-dark)",
+                  }}
+                >
+                  {block.label}
+                </div>
+                <div
+                  className="block-svg"
+                  style={{
+                    flex: 1,
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 0,
+                  }}
+                >
+                  <img
+                    src={balanceIcon}
+                    alt="icon"
+                    style={{
+                      width: "auto",
+                      height: "60%",
+                      maxHeight: "60%",
+                      maxWidth: "80%",
+                      objectFit: "contain",
+                      display: "block",
+                    }}
+                  />
+                </div>
+                <div
+                  className="resize-handle right"
+                  onMouseDown={(e) => onResizeStart(block.id, "right", e)}
+                  style={{ cursor: "ew-resize", pointerEvents: "auto" }}
+                />
+              </div>
+            </React.Fragment>
+          ))}
+          {draggedId !== null && dragOverIdx === blocks.length && (
             <div
               style={{
                 width: 0,
@@ -185,143 +288,129 @@ export default function ActivityTimeline({
               }}
             />
           )}
-          <div
-            className="timeline-block"
-            tabIndex={0}
-            data-block-id={block.id}
-            onMouseDown={(e) => handleBlockMouseDown(idx, e)}
-            style={{
-              flex: block.duration,
-              minWidth: 40,
-              margin: 0,
-              opacity: draggedId === block.id ? 0.2 : 1,
-              cursor: resizeInfo ? "default" : draggedId === block.id ? "grabbing" : "grab",
-              userSelect: "none",
-              pointerEvents: "auto",
-              position: "relative",
-              zIndex: draggedId === block.id ? 2 : 1,
-              flexDirection: "column",
-              justifyContent: "flex-start",
-              alignItems: "center",
-              padding: "0.3vw 0.2vw",
-              height: "100%",
-              maxHeight: "10vh",
-              boxSizing: "border-box",
-            }}
-          >
-            {}
-            <button
-              className="delete-block-btn"
-              onClick={(e) => handleDeleteBlock(block.id, e)}
-              title="Delete block"
-              tabIndex={-1}
-              aria-label="Delete block"
-              type="button"
-            >
-              ×
-            </button>
+          {draggedId !== null && dragPreview && (() => {
+            const block = blocks.find((b) => b.id === draggedId);
+            if (!block) return null;
+            return (
+              <div
+                className="timeline-block drag-preview"
+                style={{
+                  position: "fixed",
+                  left: dragPreview.x + 8,
+                  top: dragPreview.y + 8,
+                  width: 120,
+                  minWidth: 40,
+                  pointerEvents: "none",
+                  opacity: 0.85,
+                  zIndex: 9999,
+                  background: "var(--primary-light, #e0e7ff)",
+                  border: "2px solid var(--primary)",
+                  borderRadius: "var(--radius-lg)",
+                  height: 48,
+                  display: "flex",
+                  alignItems: "center",
+                  boxShadow: "var(--shadow-medium)",
+                }}
+              >
+                <span
+                  className="block-label"
+                  style={{
+                    flex: 1,
+                    textAlign: "center",
+                    color: "var(--primary-dark, #3730a3)",
+                    fontWeight: 500,
+                  }}
+                >
+                  {block.label}
+                </span>
+              </div>
+            );
+          })()}
+        </div>
+        {/* Durations row inside the timeline, below the blocks */}
+        <div
+          className="activity-timeline-durations"
+          style={{
+            display: "flex",
+            width: "100%",
+            marginTop: 4,
+            alignItems: "flex-start",
+            minHeight: 20,
+          }}
+        >
+          {blocks.map((block) => (
             <div
-              className="resize-handle left"
-              onMouseDown={(e) => onResizeStart(block.id, "left", e)}
-              style={{ cursor: "ew-resize", pointerEvents: "auto" }}
-            />
-            <div
-              className="block-title"
+              key={block.id}
               style={{
-                width: "100%",
+                flex: block.duration,
+                minWidth: 40,
                 textAlign: "center",
-                fontWeight: 600,
-                fontSize: "0.95vw",
-                marginBottom: "0.2vw",
-                color: "var(--text-dark)",
-              }}
-            >
-              {block.label}
-            </div>
-            <div
-              className="block-svg"
-              style={{
-                flex: 1,
-                width: "100%",
+                fontSize: "0.85vw",
+                color: "var(--primary-dark, #3730a3)",
+                fontWeight: 500,
+                userSelect: "none",
+                cursor: "pointer",
+                position: "relative",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                minHeight: 0,
+                columnGap: 2,
+              }}
+              onClick={() => {
+                setEditingDurationId(block.id);
+                setDurationInputValue(block.duration.toString());
               }}
             >
-              <img
-                src={balanceIcon}
-                alt="icon"
-                style={{
-                  width: "auto",
-                  height: "60%",
-                  maxHeight: "60%",
-                  maxWidth: "80%",
-                  objectFit: "contain",
-                  display: "block",
-                }}
-              />
+              {editingDurationId === block.id ? (
+                <>
+                  <input
+                    type="number"
+                    min={MIN_DURATION}
+                    value={durationInputValue}
+                    autoFocus
+                    style={{
+                      width: 40,
+                      fontSize: "0.85vw",
+                      textAlign: "center",
+                      border: "1px solid var(--primary)",
+                      borderRadius: 4,
+                      outline: "none",
+                    }}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (/^\d*$/.test(val)) setDurationInputValue(val);
+                    }}
+                    onBlur={() => {
+                      const val = parseInt(durationInputValue, 10);
+                      if (!isNaN(val) && val >= MIN_DURATION) {
+                        onChange(blocks.map(b => b.id === block.id ? { ...b, duration: val } : b));
+                      }
+                      setEditingDurationId(null);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") {
+                        const val = parseInt(durationInputValue, 10);
+                        if (!isNaN(val) && val >= MIN_DURATION) {
+                          onChange(blocks.map(b => b.id === block.id ? { ...b, duration: val } : b));
+                        }
+                        setEditingDurationId(null);
+                      } else if (e.key === "Escape") {
+                        setEditingDurationId(null);
+                      }
+                    }}
+                  />
+                  <span style={{ fontSize: "0.8vw", color: "var(--primary-dark, #3730a3)", marginLeft: 0 }}>s</span>
+                </>
+              ) : (
+                <>
+                  {block.duration}
+                  <span style={{ fontSize: "0.8vw", color: "var(--primary-dark, #3730a3)", marginLeft: 0 }}>s</span>
+                </>
+              )}
             </div>
-            <div
-              className="resize-handle right"
-              onMouseDown={(e) => onResizeStart(block.id, "right", e)}
-              style={{ cursor: "ew-resize", pointerEvents: "auto" }}
-            />
-          </div>
-        </React.Fragment>
-      ))}
-      {draggedId !== null && dragOverIdx === blocks.length && (
-        <div
-          style={{
-            width: 0,
-            height: 48,
-            borderLeft: "3px solid var(--primary)",
-            margin: "0 2px",
-            position: "relative",
-            zIndex: 10,
-            background: "none",
-            pointerEvents: "none",
-          }}
-        />
-      )}
-      {draggedId !== null && dragPreview && (() => {
-        const block = blocks.find((b) => b.id === draggedId);
-        if (!block) return null;
-        return (
-          <div
-            className="timeline-block drag-preview"
-            style={{
-              position: "fixed",
-              left: dragPreview.x + 8,
-              top: dragPreview.y + 8,
-              width: 120,
-              minWidth: 40,
-              pointerEvents: "none",
-              opacity: 0.85,
-              zIndex: 9999,
-              background: "var(--primary-light, #e0e7ff)",
-              border: "2px solid var(--primary)",
-              borderRadius: "var(--radius-lg)",
-              height: 48,
-              display: "flex",
-              alignItems: "center",
-              boxShadow: "var(--shadow-medium)",
-            }}
-          >
-            <span
-              className="block-label"
-              style={{
-                flex: 1,
-                textAlign: "center",
-                color: "var(--primary-dark, #3730a3)",
-                fontWeight: 500,
-              }}
-            >
-              {block.label}
-            </span>
-          </div>
-        );
-      })()}
-    </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
