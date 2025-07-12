@@ -24,10 +24,10 @@
   box-shadow: var(--shadow-neumorphic);
   border-radius: var(--radius-md);
   transition:
-          box-shadow var(--transition),
-          background var(--transition),
-          color var(--transition),
-          transform var(--transition-fast);
+    box-shadow var(--transition),
+    background var(--transition),
+    color var(--transition),
+    transform var(--transition-fast);
   padding: var(--btn-padding);
   font-size: var(--text-sm);
   min-width: var(--btn-min-width);
@@ -250,8 +250,8 @@
   align-items: center;
   justify-content: center;
   transition:
-          background var(--transition),
-          color var(--transition);
+    background var(--transition),
+    color var(--transition);
 }
 
 .remove-device-btn:hover {
