@@ -56,7 +56,7 @@ export default function DeviceRow({
         className={`device-container${device.status === "Disconnected" ? " disconnected" : ""}`}
       >
         <button
-          onClick={() => handleRemoveDevice()}
+          onClick={() => handleRemoveDevice(device.macAddress)}
           className="remove-device-btn"
         >
           ✕
@@ -128,9 +128,6 @@ export default function DeviceRow({
               ? `MAC: ${device.macAddress}`
               : `Last seen: ${formatLastConnected(device.lastConnected)}`}
           </div>
-          {device.status !== "Disconnected" && (
-            <div className="device-mac">Firmware: {device.firmware}</div>
-          )}
         </div>
 
         <div className="device-actions">

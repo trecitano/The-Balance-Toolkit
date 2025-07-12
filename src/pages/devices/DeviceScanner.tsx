@@ -1,38 +1,9 @@
-import { useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { Device } from "@/types";
-import { commands } from "@/utils/requests.ts";
-
 interface DeviceScannerProps {
-  onDeviceFound: () => void;
+  foundDevicesCount: number;
   handleCancelScan: () => void;
 }
 
-export default function DeviceScanner({
-  onDeviceFound,
-  handleCancelScan,
-}: DeviceScannerProps) {
-  const unlistenRef = useRef<(() => void) | null>(null);
-  const [foundDevicesCount, setFoundDevicesCount] = useState(0);
-
-  const setupListener = async () => {
-    unlistenRef.current = await listen<Device>("new_board", (event) => {
-      setFoundDevicesCount(foundDevicesCount + 1);
-      console.log("REACT: Received device-discovered event", event.payload);
-      onDeviceFound(event.payload);
-    });
-    await commands.devices.scanDevices();
-  };
-
-  setupListener();
-
-  const cancelScan = async () => {
-    console.log("clean up!");
-    await commands.devices.cancelScanDevices();
-    unlistenRef.current?.();
-    handleCancelScan();
-  };
-
+export default function DeviceScanner({foundDevicesCount, handleCancelScan}: DeviceScannerProps) {
   return (
     <div className="scan-overlay">
       <div className="scan-overlay-spinner">
@@ -48,7 +19,7 @@ export default function DeviceScanner({
         <button
           className="scan-btn"
           style={{ marginTop: 24, minWidth: 120 }}
-          onClick={cancelScan}
+          onClick={handleCancelScan}
         >
           Cancel
         </button>

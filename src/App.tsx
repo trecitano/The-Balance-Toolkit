@@ -15,33 +15,39 @@ import Activities from "@/pages/activities/Activities";
 import { UserType, Device } from "./types";
 import { commands } from "@/utils/requests";
 import "./App.css";
+import {QueryClient, QueryClientProvider, useQuery} from "@tanstack/react-query";
 
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [users, setUsers] = useState<UserType[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [devices, setDevices] = useState<Device[]>([]);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      const users = await commands.users.fetchUsers();
-      setUsers(users);
-    };
+  const {data, isLoading, error} = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      const [users, devices] = await Promise.all([
+        commands.users.fetchUsers(),
+        commands.devices.fetchDevices()
+      ]);
+      return { users, devices };
+    },
+  });
 
-    void fetchUsers();
-  }, []);
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      const initialDevices = await commands.devices.fetchDevices();
-      setDevices(initialDevices);
-    };
+  if (error) {
+    console.log(error);
+    return <div>Error: {error.message}</div>;
+  }
 
-    void loadInitialData();
-  }, []);
+  if (!data) {
+    return <div>No data found!</div>;
+  }
+
+  const { users, devices } = data ?? {};
 
   useEffect(() => {
     if (selectedUserId) {
@@ -75,29 +81,6 @@ function AppContent() {
     );
   };
 
-  const handleDisconnectDevice = async (deviceId: number) => {
-    setDisconnectingDeviceIds((prev) => [...prev, deviceId]);
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setDevices((prevDevices) =>
-      prevDevices.map((device) =>
-        device.id === deviceId ? { ...device, status: "Active" } : device,
-      ),
-    );
-    setDisconnectingDeviceIds((prev) => prev.filter((id) => id !== deviceId));
-  };
-
-  const handleSaveDeviceName = (deviceId: number, newName: string) => {
-    setDevices((prevDevices) =>
-      prevDevices.map((d) =>
-        d.id === deviceId
-          ? { ...d, name: newName.trim() || `Device ${d.id}` }
-          : d,
-      ),
-    );
-    setEditingDeviceId(null);
-    setEditingDeviceName("");
-  };
 
   const handleRemoveDevice = (deviceId: number) => {
     setDevices((prev) => prev.filter((device) => device.id !== deviceId));
@@ -141,7 +124,7 @@ function AppContent() {
   }));
 
   return (
-    <div className={`app ${theme}-theme`}>
+    <div className={`app`}>
       <Navigation
         activeView={location.pathname.substring(1) || "home"}
         onViewChange={handleViewChange}
@@ -192,11 +175,15 @@ function AppContent() {
   );
 }
 
+const queryClient = new QueryClient()
+
 function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <AppContent />
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 
