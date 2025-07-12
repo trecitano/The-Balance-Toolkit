@@ -36,7 +36,7 @@ pub fn run() {
             devices_scan_without_timeout,
             devices_cancel_scan,
             devices_is_scanning,
-            devices_connect,
+            devices_connect_device,
             devices_remove_device
         ])
         .manage(AppState::default())
@@ -198,7 +198,7 @@ async fn devices_is_scanning(state: State<'_, AppState>) -> Result<bool, String>
 }
 
 #[tauri::command(async)]
-fn devices_connect(mac_address: String, _channel: Channel<BalanceBoardEvent>) -> Result<(), String> {
+fn devices_connect_device(mac_address: String, _channel: Channel<BalanceBoardEvent>) -> Result<(), String> {
     println!(">> devices_connect: {}", mac_address);
 
     let transformed_address = mac_address.replace(":", "").trim().to_lowercase();
