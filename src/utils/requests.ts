@@ -11,7 +11,7 @@ import {BalanceBoardEvent, Device, ErrorMessage, RecentFile, UserType} from "@/t
 
 const useFileMocks = true;
 const useUserMocks = false;
-const useDeviceMocks = false;
+const useDeviceMocks = true;
 
 export const commands = {
   users: {
