@@ -1,5 +1,3 @@
-export type ErrorMessage = string;
-
 export interface UserType {
   id: string;
   name: string;

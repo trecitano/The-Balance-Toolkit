@@ -28,11 +28,11 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            user_fetch_all,
+            user_fetch_all_users,
             user_add,
             user_update,
             user_delete,
-            devices_fetch_all,
+            devices_fetch_all_devices,
             devices_scan_without_timeout,
             devices_cancel_scan,
             devices_connect
@@ -54,23 +54,43 @@ struct FileMetadata {
 // USERS
 
 #[tauri::command]
-fn user_fetch_all() -> Result<Vec<User>, String> {
-    UserFileSystem::get_users().map_err(|e| e.to_string())
+fn user_fetch_all_users() -> Result<Vec<User>, String> {
+    println!(">> fetch_all_users");
+
+    let result = UserFileSystem::get_users().map_err(|e| e.to_string());
+
+    println!("<< fetch_all_users: {:?}", result);
+    result
 }
 
 #[tauri::command]
 fn user_add(user: User) -> Result<(), String> {
-    UserFileSystem::add_user(user).map_err(|e| e.to_string())
+    println!(">> user_add: {:?}", user);
+
+    let result = UserFileSystem::add_user(user).map_err(|e| e.to_string());
+
+    println!("<< user_add: {:?}", result);
+    result
 }
 
 #[tauri::command]
 fn user_update(user: User) -> Result<(), String> {
-    UserFileSystem::update_user(user).map_err(|e| e.to_string())
+    println!(">> user_update: {:?}", user);
+
+    let result = UserFileSystem::update_user(user).map_err(|e| e.to_string());
+
+    println!("<< user_update: {:?}", result);
+    result
 }
 
 #[tauri::command]
 fn user_delete(user_id: String) -> Result<(), String> {
-    UserFileSystem::remove_user(user_id).map_err(|e| e.to_string())
+    println!(">> user_delete: {}", user_id);
+
+    let result = UserFileSystem::remove_user(user_id).map_err(|e| e.to_string());
+
+    println!("<< user_delete: {:?}", result);
+    result
 }
 
 // *********************************************************************
@@ -78,7 +98,9 @@ fn user_delete(user_id: String) -> Result<(), String> {
 // *********************************************************************
 
 #[tauri::command(async)]
-pub async fn devices_fetch_all() -> Result<Vec<NintendoDevice>, String> {
+pub async fn devices_fetch_all_devices() -> Result<Vec<NintendoDevice>, String> {
+    println!(">> devices_fetch_all_devices");
+
     let stored_devices = DeviceFileSystem::get_stored_devices().map_err(|e| e.to_string())?;
     let connected_devices: Vec<NintendoDevice> = tokio::task::spawn_blocking(move || {
         futures::executor::block_on(bluetooth_communication::get_nintendo_devices())
@@ -101,14 +123,15 @@ pub async fn devices_fetch_all() -> Result<Vec<NintendoDevice>, String> {
         }
     }
 
-    println!("Returning devices: #{:?}", result);
+    println!("<< (devices_fetch_all_devices): Returning devices: #{:?}", result);
 
     Ok(result)
 }
 
 #[tauri::command(async)]
 async fn devices_scan_without_timeout(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    println!("Scan START");
+    println!(">> devices_scan_without_timeout");
+
     let cancel_tx_lock = state.cancel_tx.lock().await.take();
         if cancel_tx_lock.is_some() {
         return Err("A scan is already in progress.".to_string());
@@ -147,17 +170,25 @@ async fn devices_scan_without_timeout(app: AppHandle, state: State<'_, AppState>
 
 #[tauri::command]
 async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> cancel_scan");
+
     if let Some(cancel_tx) = state.cancel_tx.lock().await.take() {
         let _ = cancel_tx.send(());
     }
+
+    println!("<< cancel_scan");
     Ok(())
 }
 
 #[tauri::command(async)]
 fn devices_connect(mac_address: String, _channel: Channel<BalanceBoardEvent>) -> Result<(), String> {
-    println!("Connecting to device: {}", mac_address);
+    println!(">> devices_connect: {}", mac_address);
+
     let transformed_address = mac_address.replace(":", "").trim().to_lowercase();
-    balance_board_com::connect(transformed_address).map_err(|e| e.to_string())
+    let result = balance_board_com::connect(transformed_address).map_err(|e| e.to_string());
+
+    println!("<< devices_connect: {:?}", result);
+    Ok(())
 }
 
 /*

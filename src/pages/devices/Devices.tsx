@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, {useState, useCallback, useRef} from "react";
 import bluetoothDisconnectedIcon from "@/assets/bluetooth-disconnected-icon.svg";
 import DeviceRow from "./DeviceRow";
 import { Device } from "@/types";
@@ -6,31 +6,105 @@ import { commands } from "@/utils/requests.ts";
 import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
 import "./Devices.css";
 import DeviceScanner from "@/pages/devices/DeviceScanner.tsx";
+import {listen} from "@tauri-apps/api/event";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
-interface DevicesProps {
-  devices: Device[];
-  setDevices: React.Dispatch<React.SetStateAction<Device[]>>;
-}
+const DEVICES_QUERY_KEY = ["devices"];
 
-export default function Devices({ devices, setDevices }: DevicesProps) {
+export default function Devices() {
   const [showIdentifyPopup, setShowIdentifyPopup] = useState(false);
   const [identifyDeviceName, setIdentifyDeviceName] = useState<string | null>(
     null,
   );
+  const [foundDevicesCount, setFoundDevicesCount] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
+  const unlistenRef = useRef<(() => void) | null>(null);
+  const queryClient = useQueryClient();
+
+  const {
+    data: devices = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: DEVICES_QUERY_KEY,
+    queryFn: commands.devices.fetchDevices,
+    staleTime: 10000,
+  });
 
   const handleIdentifyClick = async (macAddress: string) => {
     await commands.devices.identifyDevice(macAddress);
   };
 
-  const handleSaveDeviceName = async (
-    macAddress: string,
-    deviceName: string,
-  ) => {
-    await commands.devices.updateDeviceName(macAddress, deviceName);
+  const updateDeviceNameMutation = useMutation({
+    mutationFn: ({ macAddress, deviceName }: { macAddress: string; deviceName: string }) =>
+      commands.devices.updateDeviceName(macAddress, deviceName),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
+    },
+    onError: (error) => {
+      console.error("Failed to update device name:", error);
+    },
+  });
 
-    const devices = await commands.devices.fetchDevices();
-    setDevices(devices);
+  const removeDeviceMutation = useMutation({
+    mutationFn: (macAddress: string) => commands.devices.removeDevice(macAddress),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
+    },
+    onError: (error) => {
+      console.error("Failed to remove device:", error);
+    },
+  });
+
+  const disconnectDeviceMutation = useMutation({
+    mutationFn: (macAddress: string) => commands.devices.disconnectDevice(macAddress),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
+    },
+    onError: (error) => {
+      console.error("Failed to disconnect device:", error);
+    },
+  });
+
+  const connectDeviceMutation = useMutation({
+    mutationFn: (macAddress: string) => commands.devices.connectDevice(macAddress),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
+    },
+    onError: (error) => {
+      console.error("Failed to connect device:", error);
+    },
+  });
+
+  const scanDevicesMutation = useMutation({
+    mutationFn: commands.devices.scanDevices,
+    onSuccess: async () => {
+      setIsScanning(true);
+      unlistenRef.current = await listen<Device>("new_board", (event) => {
+        setFoundDevicesCount((prev) => prev + 1);
+        console.log("REACT: Received device-discovered event", event.payload);
+        queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to start device scan:", error);
+    },
+  });
+
+  const cancelScanMutation = useMutation({
+    mutationFn: commands.devices.cancelScanDevices,
+    onSuccess: () => {
+      unlistenRef.current?.();
+      setIsScanning(false);
+      setFoundDevicesCount(0);
+    },
+    onError: (error) => {
+      console.error("Failed to cancel device scan:", error);
+    },
+  });
+
+  const handleSaveDeviceName = (macAddress: string, deviceName: string) => {
+    updateDeviceNameMutation.mutate(macAddress, deviceName);
   };
 
   const handleRemoveDevice = async (macAddress: string) => {
@@ -59,7 +133,7 @@ export default function Devices({ devices, setDevices }: DevicesProps) {
     setDevices(devices);
   };
 
-  const handleGradientDevicesScroll = useCallback((e) => {
+  const handleGradientDevicesScroll = useCallback((e: any) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     const maxFade = 100;
 
@@ -81,10 +155,21 @@ export default function Devices({ devices, setDevices }: DevicesProps) {
 
   const handleScanDevices = async () => {
     setIsScanning(true);
+    await commands.devices.scanDevices();
+
+    unlistenRef.current = await listen<Device>("new_board", (event) => {
+      setFoundDevicesCount(foundDevicesCount + 1);
+      console.log("REACT: Received device-discovered event", event.payload);
+      handleDeviceFound();
+    });
   };
 
   const handleCancelScan = async () => {
+    await commands.devices.cancelScanDevices();
+    unlistenRef.current?.();
+
     setIsScanning(false);
+    setFoundDevicesCount(0);
   };
 
   const getSortedDevices = () => {
@@ -109,6 +194,38 @@ export default function Devices({ devices, setDevices }: DevicesProps) {
     (d) => d.status === "Connected",
   );
   const noDevices = sortedDevices.length === 0;
+
+  if (isLoading) {
+    return (
+      <div className="inside-page">
+        <div className="page-header">
+          <span className="page-title">Devices</span>
+        </div>
+        <div className="main-content">
+          <div className="flex items-center justify-center p-8">
+            <p className="text-gray-600">Loading devices...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="inside-page">
+        <div className="page-header">
+          <span className="page-title">Devices</span>
+        </div>
+        <div className="main-content">
+          <div className="flex items-center justify-center p-8">
+            <p className="text-red-600">
+              Failed to load devices: {error.message}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="inside-page">
@@ -159,7 +276,7 @@ export default function Devices({ devices, setDevices }: DevicesProps) {
       {/* DeviceScanner component - only renders when scanning */}
       {isScanning && (
         <DeviceScanner
-          onDeviceFound={handleDeviceFound}
+          foundDevicesCount={foundDevicesCount}
           handleCancelScan={handleCancelScan}
         />
       )}
