@@ -21,24 +21,22 @@ const useDeviceMocks = false;
 
 export const commands = {
   users: {
-    async fetchUsers(): Promise<UserType[] | ErrorMessage> {
+    async fetchUsers(): Promise<UserType[]> {
       if (useUserMocks) {
         return mockUsersData;
       }
 
-      console.log("user_fetch_all");
-      return invoke("user_fetch_all");
+      return invoke("user_fetch_all_users");
     },
-    async addUser(user: UserType): Promise<void | ErrorMessage> {
+    async addUser(user: UserType): Promise<void> {
       if (useUserMocks) {
         mockUsersData.push(user);
         return;
       }
 
-      console.log("user_add, user:", user);
       return invoke("user_add", { user: user });
     },
-    async updateUser(user: UserType): Promise<void | ErrorMessage> {
+    async updateUser(user: UserType): Promise<void> {
       if (useUserMocks) {
         const indexToUpdate = mockUsersData.findIndex(
           (user) => user.id === user.id,
@@ -49,10 +47,9 @@ export const commands = {
         return;
       }
 
-      console.log("user_update, user:", user);
       return invoke("user_update", { user: user });
     },
-    async deleteUser(userId: string): Promise<void | ErrorMessage> {
+    async deleteUser(userId: string): Promise<void> {
       if (useUserMocks) {
         const indexToRemove = mockUsersData.findIndex(
           (user) => user.id === userId,
@@ -63,13 +60,12 @@ export const commands = {
         return;
       }
 
-      console.log("user_delete, user_id:", userId);
       return invoke("user_delete", { user_id: userId });
     },
   },
 
   files: {
-    async fetchRecentFiles(): Promise<RecentFile[] | ErrorMessage> {
+    async fetchRecentFiles(): Promise<RecentFile[]> {
       if (useFileMocks) {
         return mockRecentFiles;
       }
@@ -91,9 +87,9 @@ export const commands = {
         return mockDeviceData;
       }
 
-      return invoke("devices_fetch_all");
+      return invoke("devices_fetch_all_devices");
     },
-    async scanDevices(): Promise<Device[] | ErrorMessage> {
+    async scanDevices(): Promise<Device[]> {
       if (useDeviceMocks) {
         return new Promise((resolve) => {
           setTimeout(() => {
@@ -102,15 +98,13 @@ export const commands = {
         });
       }
 
-      console.log("Invoking devices_scan_without_timeout");
       return invoke("devices_scan_without_timeout");
     },
-    async cancelScanDevices(): Promise<void | ErrorMessage> {
+    async cancelScanDevices(): Promise<void> {
       if (useDeviceMocks) {
         return;
       }
 
-      console.log("Invoking devices_cancel_scan");
       return invoke("devices_cancel_scan");
     },
 
@@ -130,14 +124,14 @@ export const commands = {
         channel: channel,
       });
     },
-    async removeDevice(macAddress: string): Promise<void | ErrorMessage> {
+    async removeDevice(macAddress: string): Promise<void> {
       if (useDeviceMocks) {
         return;
       }
 
       return invoke("devices_remove_device", { mac_address: macAddress });
     },
-    async disconnectDevice(macAddress: string): Promise<void | ErrorMessage> {
+    async disconnectDevice(macAddress: string): Promise<void> {
       if (useDeviceMocks) {
         return;
       }
@@ -153,7 +147,7 @@ export const commands = {
         device_name: deviceName,
       });
     },
-    async identifyDevice(macAddress: string): Promise<void | ErrorMessage> {
+    async identifyDevice(macAddress: string): Promise<void> {
       return invoke("devices_identify_device", { mac_address: macAddress });
     },
   },
