@@ -120,6 +120,36 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     { id: 4, label: "End", start: 45, duration: 15 },
   ];
   const [timelineBlocks, setTimelineBlocks] = useState(() => initialBlocks);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newActionName, setNewActionName] = useState("");
+  const [newActionDuration, setNewActionDuration] = useState(10);
+
+  // Add a new action to the timeline
+  const handleAddAction = () => {
+    if (!newActionName.trim()) return;
+    // Find the last block's end
+    let lastEnd = 0;
+    if (timelineBlocks.length > 0) {
+      const last = timelineBlocks[timelineBlocks.length - 1];
+      lastEnd = last.start + last.duration;
+    }
+    const newBlock = {
+      id: Date.now(),
+      label: newActionName,
+      start: lastEnd,
+      duration: Math.max(1, Number(newActionDuration) || 10),
+    };
+    setTimelineBlocks([...timelineBlocks, newBlock]);
+    setNewActionName("");
+    setNewActionDuration(10);
+    setShowAddForm(false);
+  };
+
+  const handleCancelAdd = () => {
+    setShowAddForm(false);
+    setNewActionName("");
+    setNewActionDuration(10);
+  };
 
   return (
     <div
@@ -144,7 +174,48 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         <h3 className="activity-title">{activity.title}</h3>
         {/* <p className="activity-description">{activity.description}</p> */}
         {maximized && (
-          <div style={{ margin: "24px 0" }}>
+          <div>
+            <div className="add-action-row">
+              {!showAddForm ? (
+                <button
+                  className="add-action-btn"
+                  onClick={() => setShowAddForm(true)}
+                >
+                  + Add Action
+                </button>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Action name"
+                    value={newActionName}
+                    onChange={e => setNewActionName(e.target.value)}
+                    className="add-action-input"
+                  />
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="Duration"
+                    value={newActionDuration}
+                    onChange={e => setNewActionDuration(Number(e.target.value))}
+                    className="add-action-input add-action-duration"
+                  />
+                  <button
+                    className="add-action-btn"
+                    onClick={handleAddAction}
+                    disabled={!newActionName.trim()}
+                  >
+                    Add
+                  </button>
+                  <button
+                    className="add-action-btn add-action-cancel"
+                    onClick={handleCancelAdd}
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+            </div>
             <ActivityTimeline blocks={timelineBlocks} onChange={setTimelineBlocks} />
           </div>
         )}
