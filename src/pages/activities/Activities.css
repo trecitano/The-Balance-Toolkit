@@ -190,6 +190,30 @@
   flex-shrink: 0;
 }
 
+.activity-board-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: var(--space-xs);
+  gap: clamp(2px, 0.3vw, 6px);
+  font-size: var(--text-xs);
+  color: var(--secondary-dark);
+  font-weight: 500;
+  background-color: var(--bg-light);
+  border-radius: var(--radius-md);
+  padding: clamp(0.2px, 0.01vw, 3px) clamp(4px, 0.4vw, 8px);
+  width: fit-content;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+}
+
+
+.activity-board-tag .board-icon {
+  width: 1.7vw;
+  height: 1.7vw;
+  object-fit: contain;
+}
+
 .activity-body {
   display: flex;
   align-items: stretch;
@@ -225,6 +249,17 @@
   display: none;
 }
 
+.activity-card.maximized .activity-board-tag {
+  font-size: var(--text-xs);
+  padding: clamp(0.2px, 0.01vw, 3px) clamp(4px, 0.4vw, 8px);
+  z-index: 11;
+}
+
+.activity-card.maximized .activity-board-tag .board-icon {
+  width: 1.7vw;
+  height: 1.7vw;
+}
+
 .activity-card.maximized .activity-title {
   font-size: var(--text-lg);
 }
@@ -248,7 +283,7 @@
 .activity-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   border: var(--border-primary);
 }

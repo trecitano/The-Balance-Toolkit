@@ -222,7 +222,7 @@
 .side-panel-square {
   width: 100%;
   flex: 1;
-  background: var(--light);
+  background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-light);
   padding: 1.3vw;
