@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { ActivityData } from "./Activities";
 import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
+import wbbIcon from "../../assets/wbb-icon-line.svg";
 
 
 interface ActivityCardProps {
@@ -10,6 +10,7 @@ interface ActivityCardProps {
   maximized?: boolean;
   onMaximize?: () => void;
   onMinimize?: () => void;
+  index?: number;
 }
 
 
@@ -36,29 +37,43 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
 
   
   useEffect(() => {
-    setCurrentImageSrc(activity.staticImage);
-  }, [activity.staticImage]);
+    // If there's a sequence, use the first image as the static image
+    if (activity.sequenceImages && activity.sequenceImages.length > 0) {
+      setCurrentImageSrc(activity.sequenceImages[0]);
+    } else {
+      setCurrentImageSrc(activity.staticImage);
+    }
+    
+    // Log sequence images for debugging
+    console.log(`Activity ${activity.title} has ${activity.sequenceImages?.length || 0} sequence images`);
+  }, [activity.staticImage, activity.sequenceImages, activity.title]);
 
 
   useEffect(() => {
-    if (isHovering && activity.hoverImages && activity.hoverImages.length > 0) {
-      let startIndex = 0;
-      if (
-        activity.hoverImages[0] === activity.staticImage &&
-        activity.hoverImages.length > 1
-      ) {
-        startIndex = 1;
-      }
-      imageIndexRef.current = startIndex;
-      setCurrentImageSrc(activity.hoverImages[imageIndexRef.current]);
-      if (activity.hoverImages.length > 1) {
-        intervalRef.current = setInterval(() => {
-          imageIndexRef.current =
-            (imageIndexRef.current + 1) % activity.hoverImages.length;
-          setCurrentImageSrc(activity.hoverImages[imageIndexRef.current]);
-        }, 700);
+    // Only show animation when hovering AND not in maximized view
+    if (isHovering && !maximized) {
+      // Use sequenceImages if available and not empty, otherwise fall back to hoverImages
+      const hasSequence = activity.sequenceImages && activity.sequenceImages.length > 0;
+      const images = hasSequence ? activity.sequenceImages : activity.hoverImages;
+      
+      if (images && images.length > 0) {
+        // Start directly with the second image when hovering (if available)
+        let startIndex = images.length > 1 ? 1 : 0;
+        imageIndexRef.current = startIndex;
+        setCurrentImageSrc(images[imageIndexRef.current]);
+        
+        if (images.length > 1) {
+          // For sequence images, use a slightly slower animation (1000ms)
+          // For hover images (fallback), use a faster animation (700ms)
+          const animationSpeed = hasSequence ? 700 : 500;
+          intervalRef.current = setInterval(() => {
+            imageIndexRef.current = (imageIndexRef.current + 1) % images.length;
+            setCurrentImageSrc(images[imageIndexRef.current]);
+          }, animationSpeed);
+        }
       }
     } else {
+      // Stop animation if not hovering or in maximized view
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -67,16 +82,27 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         setCurrentImageSrc(activity.staticImage);
       }
     }
+    
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isHovering, activity.hoverImages, activity.staticImage]);
+  }, [isHovering, activity.hoverImages, activity.sequenceImages, activity.staticImage, maximized]);
 
 
   
   useEffect(() => {
+    // When maximized changes, handle the animation and image
+    if (maximized) {
+      // Stop any running animation and reset to static image
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setCurrentImageSrc(activity.staticImage);
+    }
+    
     if (maximized && cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
       const parentRect = cardRef.current.parentElement?.getBoundingClientRect();
@@ -231,6 +257,16 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         </div>
       )}
       <div className="activity-details" style={{ marginLeft: 0 }}>
+        {/* Board tag above the title */}
+        <div className="activity-board-tag" style={{ 
+          backgroundColor: activity.boardsRequired > 1 ? 'var(--primary-light, #e0e7ff)' : 'var(--bg-light)',
+          position: maximized ? 'absolute' : 'relative',
+          top: maximized ? '1vw' : 'auto',
+          right: maximized ? '1vw' : 'auto'
+        }}>
+          <img src={wbbIcon} alt="Balance Board" className="board-icon" />
+          <span>{activity.boardsRequired} {activity.boardsRequired === 1 ? 'board' : 'boards'}</span>
+        </div>
         {/* Always show the title in the same place, but use header style if maximized */}
         {maximized ? (
           <div className="activity-details-header">
