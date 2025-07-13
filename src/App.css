@@ -59,7 +59,7 @@
 
   /* Typography */
   --text-xs: clamp(0.7em, 0.75vw, 0.85em);
-  --text-sm: clamp(0.75em, 1vw, 1.5em);
+  --text-sm: clamp(0.75em, 1vw, 1em);
   --text-base: clamp(0.85em, 0.9vw, 1em);
   --text-md: clamp(0.8em, 1.2vw, 1.4em);
   --text-lg: clamp(1em, 1vw, 1.6em);
@@ -128,7 +128,7 @@ body {
 
 .menu-bar {
   height: 100vh;
-  width: 6.5vw;
+  width: clamp(40px, 6.5vw, 70px);
   min-width: 50px;
   background: var(--red);
   display: flex;
@@ -193,7 +193,6 @@ body {
   padding: 0.6vw 0px;
   background: transparent;
   color: var(--white);
-  font-size: 0.9em;
   font-weight: 500;
   cursor: pointer;
   border: none;
@@ -208,7 +207,7 @@ body {
   display: block;
   text-align: center;
   color: var(--white);
-  font-size: clamp(5px, 1vw, 18px);
+  font-size: var(--text-sm);
 }
 
 .menu-item.active {
@@ -233,8 +232,8 @@ body {
 
 .menu-item-icon img,
 .menu-item-icon svg {
-  width: 1.5vw;
-  height: 1.5vw;
+  width: clamp(1.5vw, 1.5vw, 2vw);
+  height: clamp(1.5vw, 1.5vw, 2vw);
   display: block;
   margin: 0 auto;
   padding: 0;
