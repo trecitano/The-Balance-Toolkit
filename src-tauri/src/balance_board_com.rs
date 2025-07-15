@@ -2,8 +2,8 @@ use std::net::TcpStream;
 use std::path::PathBuf;
 use anyhow::{anyhow, Result};
 use hidapi::{HidApi, HidDevice};
-use lsl::Pushable;
-use std::sync::mpsc::{self, Receiver, Sender};
+use lsl::{ChannelFormat, Pushable};
+use tokio::sync::mpsc::{self, Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 use crate::types::MacAddress;
@@ -35,27 +35,43 @@ const BOARD_TURN_OFF_LED: [u8; 2] = [HID_INTERFACE_LED_INPUT, 0x00];
 const BOARD_START_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, HID_CMD_DATA_REPORT_MODE];
 const BOARD_STOP_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, 0x00];
 
-
-enum DeviceCommand {
-    SetLed(bool),
+// Board primitives
+#[derive(Debug, Clone)]
+pub enum BoardAction {
+    Tare,
+    TurnOnLed,
+    TurnOffLed,
+    StartRecording {
+        options: BalanceBoardSessionSettings
+    },
+    FinishRecording,
 }
 
+#[derive(Clone, Debug)]
 pub struct BalanceBoardSessionSettings {
     output_file: Option<PathBuf>,
-    lsl_connection: Option<lsl::StreamInfo>,
-    tcp_connection: Option<TcpStream>,
+    lsl_connection: Option<LslConnectionSettings>,
+    tcp_connection_string: Option<String>,
 }
 
-// --- Main Struct to Manage the Balance Board ---
+#[derive(Clone, Debug)]
+pub struct LslConnectionSettings {
+    stream_name: String,
+    stream_type: String,
+    channel_count: u32,
+    nominal_srate: f64,
+    channel_format: ChannelFormat,
+    source_id: String,
+}
 
 pub struct BalanceBoardConnection {
+    device: HidDevice,
     calibration: BalanceBoardCalibrationData,
-    thread_handles: Vec<JoinHandle<Result<()>>>,
-    user_action_tx: Sender<BoardAction>,
+    action_rx: Receiver<BoardAction>,
 }
 
 impl BalanceBoardConnection {
-    pub fn new(device_id: &str) -> Result<Self> {
+    pub fn new(device_id: &str, action_rx: Receiver<BoardAction>) -> Result<Self> {
         let api = HidApi::new()?;
         // The serial number of a nintendo balance board is the string version of a mac address.
         // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
@@ -73,26 +89,130 @@ impl BalanceBoardConnection {
             .ok_or(anyhow!("Device with the specified device_id was not found."))?;
 
         let device = balance_board_info.open_device(&api)?;
-        println!("Successfully opened connection to the Wii Balance Board.");
+        println!("Successfully opened HID connection for {}.", device_id);
 
         let calibration = Self::read_calibration_data(&device)?;
-        println!("Successfully read calibration data.");
+        println!("Successfully read calibration data for {}.", device_id);
 
         device.write(&BOARD_TURN_ON_LED)?;
 
-        let (user_action_tx, _) = mpsc::channel::<BoardAction>(); // Will be cloned for use
-
-        let mut balance_board = Self {
+        Ok(Self {
+            device,
             calibration,
-            thread_handles: Vec::new(),
-            user_action_tx,
-        };
-
-        balance_board.run(device)?;
-
-        Ok(balance_board)
+            action_rx,
+        })
     }
-    
+
+    pub async fn run(mut self) {
+        println!("Board connection task started.");
+        // Since HIDAPI is blocking, we need to run the core device loop in a blocking thread.
+        // We'll use a channel to communicate between the async world and the blocking thread.
+        let (hid_tx, mut hid_rx) = mpsc::channel(10);
+
+        let device = self.device;
+        let calibration = self.calibration.clone();
+
+        // This thread handles all blocking HID communication.
+        let hid_thread = thread::spawn(move || {
+            Self::blocking_hid_loop(device, hid_tx, calibration)
+        });
+
+        loop {
+            tokio::select! {
+                // Received an action from the manager
+                Some(action) = self.action_rx.recv() => {
+                    match action {
+                        BoardAction::Identify => {
+                            // For a simple flash, we can handle it here.
+                            // More complex actions might need to be sent to the hid_thread.
+                            println!("Identifying board...");
+                            // This is a simplification. A real implementation would
+                            // need to send a command to the blocking thread.
+                        },
+                        _ => {
+                            // Forward other actions to the blocking thread if needed.
+                        }
+                    }
+                },
+                // Received data from the HID thread
+                Some(weights) = hid_rx.recv() => {
+                    // For now, we just print the weights.
+                    // This is where you would send data to LSL, websockets, etc.
+                    let total_weight: f32 = weights.iter().sum();
+                    println!(
+                        "Total: {:.2}kg | TR: {:.2}, BR: {:.2}, TL: {:.2}, BL: {:.2}",
+                        total_weight, weights[0], weights[1], weights[2], weights[3]
+                    );
+                },
+                else => {
+                    // The action channel was closed, so we should shut down.
+                    break;
+                }
+            }
+        }
+
+        // Wait for the HID thread to finish.
+        let _ = hid_thread.join();
+        println!("Board connection task finished.");
+    }
+
+    fn blocking_hid_loop(
+        device: HidDevice,
+        data_tx: mpsc::Sender<[f32; 4]>,
+        calibration: BalanceBoardCalibrationData,
+    ) {
+        let mut buf = [0u8; 32];
+        let mut tare_offset = BalanceBoardSensorReading::default();
+
+        // For now, we just start reading immediately.
+        // A more advanced implementation would wait for a StartRecording action.
+        if device.write(&BOARD_START_READING).is_err() {
+            eprintln!("Failed to start reading from board.");
+            return;
+        }
+
+        loop {
+            match device.read_timeout(&mut buf, 100) {
+                Ok(len) if len > 0 => {
+                    if len >= DATA_PACKET_MIN_LEN {
+                        let reading = BalanceBoardSensorReading {
+                            top_right: i16::from_be_bytes([buf[3], buf[4]]),
+                            bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
+                            top_left: i16::from_be_bytes([buf[7], buf[8]]),
+                            bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
+                        };
+
+                        let tared_reading = reading.apply_tare(&tare_offset);
+                        let weights = tared_reading.calculate_weights(&calibration);
+
+                        if data_tx.blocking_send(weights).is_err() {
+                            // Main task has disconnected, shut down.
+                            break;
+                        }
+                    }
+                }
+                Ok(_) => { /* Timeout, continue */ }
+                Err(e) => {
+                    eprintln!("Error reading from HID device: {}", e);
+                    break;
+                }
+            }
+        }
+        let _ = device.write(&BOARD_STOP_READING);
+        println!("Blocking HID loop terminated.");
+    }
+
+
+
+
+
+
+
+
+
+
+
+
     pub fn handle_action(&self, action: BoardAction) -> Result<()> {
         match action {
             BoardAction::Tare => {
@@ -113,14 +233,40 @@ impl BalanceBoardConnection {
         }
         Ok(())
     }
+    
+    fn start_session(&mut self, settings: BalanceBoardSessionSettings) -> Result<()> {
+        let mut session_threads = vec!();
 
-    pub fn identify_board(&self) -> Result<()> {
-        println!("Identifying the board...");
-        self.user_action_tx.send(BoardAction::IdentifyBoard)?;
+        let process_handle = thread::spawn(move || {
+            Self::data_process_loop(calibration_clone, raw_reading_rx, processed_data_tx, user_action_rx2)
+        });
+        session_threads.push(process_handle);;
+        
+        if let Some(output_file) = settings.output_file {
+            let file_write_handle = thread::spawn(move || {
+                Self::file_write_loop(file_data_rx, output_file)
+            });
+            session_threads.push(file_write_handle);
+        }
+        
+        if let Some(lsl_connection) = settings.lsl_connection {
+            let lsl_handle = thread::spawn(move || {
+                Self::lsl_stream_loop(lsl_data_rx, lsl_connection)
+            });
+            session_threads.push(lsl_handle);
+        }
+        
+        if let Some(tcp_connection_string) = settings.tcp_connection_string {
+            let tcp_connection_handle = thread::spawn(move || {
+                Self::tcp_stream_loop(tcp_data_rx, tcp_connection_string)
+            });
+            session_threads.push(tcp_connection_handle);
+        };
+        
         Ok(())
     }
 
-    pub fn run(&mut self, device: HidDevice) -> Result<()> {
+    pub fn run2(&mut self, device: HidDevice) -> Result<()> {
         println!("Start!");
         let (raw_reading_tx, _raw_reading_rx) = mpsc::channel::<BalanceBoardSensorReading>();
         let (_command_reading_tx, raw_reading_rx) = mpsc::channel::<BalanceBoardSensorReading>();
@@ -146,7 +292,7 @@ impl BalanceBoardConnection {
 
         // --- 3. LSL Streaming Thread ---
         let lsl_handle = thread::spawn(move || {
-            Self::lsl_stream_loop(processed_data_rx)
+            Self::lsl_stream_loop(processed_data_rx);
         });
         self.thread_handles.push(lsl_handle);
 
@@ -295,16 +441,25 @@ impl BalanceBoardConnection {
         }
         Err(anyhow!("Data processing loop terminated."))
     }
+    
+    // TODO
+    fn file_write_loop(file_data_rx: Receiver<[f32; 4]>, output_file: String) -> Result<()> {
+        Ok(())
+    }
 
-    fn lsl_stream_loop(processed_rx: Receiver<[f32; 4]>) -> Result<()> {
+    fn lsl_stream_loop(lsl_data_rx: Receiver<[f32; 4]>, settings: LslConnectionSettings) -> Result<()> {
         let info = lsl::StreamInfo::new(
-            "TheBalanceToolkit", "Weight", 4, 100.0,
-            lsl::ChannelFormat::Float32, "BalanceBoard",
+            settings.stream_name.as_str(), 
+            settings.stream_type.as_str(),
+            settings.channel_count, 
+            settings.nominal_srate,
+            lsl::ChannelFormat::Float32,
+            "The-Balance-Toolkit"
         )?;
         let outlet = lsl::StreamOutlet::new(&info, 0, 360)?;
 
         println!("LSL stream started.");
-        while let Ok(weights) = processed_rx.recv() {
+        while let Ok(weights) = lsl_data_rx.recv() {
             let total_weight: f32 = weights.iter().sum();
             println!(
                 "Total: {:.2}kg | TR: {:.2}, BR: {:.2}, TL: {:.2}, BL: {:.2}",
@@ -314,6 +469,19 @@ impl BalanceBoardConnection {
         }
         Err(anyhow!("LSL stream loop terminated."))
     }
+    
+    // TODO
+    fn tcp_stream_loop(tcp_data_rx: Receiver<[f32; 4]>, tcp_connection_string: String) -> Result<()> {
+        Ok(())
+    }
+    
+    
+    
+    
+    
+    
+    
+    
 
     fn read_calibration_data(device: &HidDevice) -> Result<BalanceBoardCalibrationData> {
         // https://wiibrew.org/wiki/Wiimote#Reading_and_Writing
@@ -368,16 +536,6 @@ impl BalanceBoardConnection {
     }
 }
 
-// Board primitives
-#[derive(Debug, Clone, Copy)]
-pub enum BoardAction {
-    Tare,
-    TurnOnLed,
-    TurnOffLed,
-    StartRecording,
-    FinishRecording,
-}
-
 // --- Data Structures for Balance Board Readings ---
 
 #[derive(Debug, Clone, Default)]
@@ -408,10 +566,15 @@ impl BalanceBoardSensorReading {
     }
 
     fn calculate_single_weight(&self, sensor_val: i16, cal_pt: &CalibrationPoint) -> f32 {
-        if sensor_val < cal_pt.mid {
-            17.0 * (sensor_val - cal_pt.min) as f32 / (cal_pt.mid - cal_pt.min).max(1) as f32
+        let val_f = sensor_val as f32;
+        let min_f = cal_pt.min as f32;
+        let mid_f = cal_pt.mid as f32;
+        let max_f = cal_pt.max as f32;
+
+        if val_f < mid_f {
+            17.0 * (val_f - min_f) / (mid_f - min_f).max(1.0)
         } else {
-            17.0 + 17.0 * (sensor_val - cal_pt.mid) as f32 / (cal_pt.max - cal_pt.mid).max(1) as f32
+            17.0 + 17.0 * (val_f - mid_f) / (max_f - mid_f).max(1.0)
         }
     }
 }
@@ -456,19 +619,4 @@ impl BalanceBoardCalibrationData {
             },
         })
     }
-}
-
-// --- Public-Facing API ---
-
-// This function is now a simple wrapper around the struct.
-// In a real Tauri app, you might manage the WiiBalanceBoard instance in your AppState.
-pub fn connect(mac_address: MacAddress) -> Result<BalanceBoardConnection> {
-    // The wii balance board HidDevice ID is the string representation of the MAC address.
-    let device_id = mac_address
-        .iter()
-        .map(|b| format!("{:02x}", b))
-        .collect::<Vec<String>>()
-        .join("");
-
-    BalanceBoardConnection::new(&device_id)
 }

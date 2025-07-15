@@ -5,40 +5,26 @@ mod balance_board_com;
 mod bluetooth;
 mod file_system;
 mod types;
-mod requests;
+mod tauri_frontend;
 mod service;
+
+use tokio::sync::mpsc;
+use crate::service::{ConnectionManager};
 
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 
 #[tokio::main]
 async fn main() {
-    file_system::initialize_app_dir();
-    /*
-    loop {
-        let connected_balance_boards = bluetooth_communication::get_connected_balance_boards().await;
-
-        if connected_balance_boards.is_empty() {
-            bluetooth_communication::connect_to_new_balance_board(&connected_balance_boards).await;
-        }
-
-        println!("The following balance boards are connected:");
-        for (idx, board) in connected_balance_boards.iter().enumerate() {
-            println!("Board {}: MAC ({}), name: {}", idx + 1, board.mac_address, board.name);
-        }
-
-        println!("Should we start capturing the inputs (1), or wait for more boards? (2)");
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input).unwrap();
-
-        if input == "2" {
-            match balance_board_com::connect().await {
-                Ok(_) => {}
-                Err(e) => { println!("{}", e) }
-            };
-        } else {
-            bluetooth_communication::connect_to_new_balance_board(connected_balance_boards)
-        }
-    }
-    */
-    requests::run()
+    // Startup: We initialize a single manager that holds all of the state, and runs in the background.
+    // The architecture of the app is that the commandline or web/tauri send messages to this manager,
+    // and the manager responds via a oneshot channel.
+    let (manager_tx, manager_rx) = mpsc::channel(100);
+    let manager = ConnectionManager::new(manager_rx);
+    tokio::spawn(async move {
+        manager.run().await;
+    });
+    
+    file_system::initialize_app_dir().unwrap();
+    
+    tauri_frontend::initialize(manager_tx)
 }
