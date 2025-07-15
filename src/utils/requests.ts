@@ -119,7 +119,7 @@ export const commands = {
 
       return invoke("devices_disconnect_device", { macAddress: macAddress });
     },
-    async updateDeviceName(macAddress: string, deviceName: string): Promise<void | ErrorMessage> {
+    async updateDeviceName(macAddress: string, deviceName: string): Promise<void> {
       return invoke("devices_update_device_name", {
         mac_address: macAddress,
         device_name: deviceName,

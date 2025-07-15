@@ -6,6 +6,7 @@ mod bluetooth;
 mod file_system;
 mod types;
 mod requests;
+mod service;
 
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 
