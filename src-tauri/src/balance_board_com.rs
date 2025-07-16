@@ -1,17 +1,14 @@
-use tokio::net::TcpStream;
-use tokio::io::AsyncWriteExt;
-use std::path::PathBuf;
 use anyhow::{anyhow, Result};
+use chrono::Utc;
 use hidapi::{HidApi, HidDevice};
 use lsl::{ChannelFormat, Pushable};
+use std::thread;
+use tokio::fs::OpenOptions;
+use tokio::io::AsyncWriteExt;
+use tokio::net::TcpStream;
+use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tokio::task;
-use std::thread;
-use std::time::Duration;
-use chrono::Utc;
-use tokio::fs::OpenOptions;
-use tokio::sync::broadcast;
-use crate::types::MacAddress;
 
 // --- HID Command Constants ---
 const HID_INTERFACE_LED_INPUT: u8 = 0x11;
@@ -124,7 +121,7 @@ impl BalanceBoardConnection {
         });
 
         let mut session: Option<SessionHandles> = None;
-        
+
         loop {
             tokio::select! {
                 // Received an action from the manager
@@ -204,7 +201,7 @@ impl BalanceBoardConnection {
                             top_left: i16::from_be_bytes([buf[7], buf[8]]),
                             bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
                         };
-                        
+
                         let calibrated_reading = reading.calculate_weights(&calibration);
 
                         //let tared_reading = reading.apply_tare(&tare_offset);
@@ -236,59 +233,67 @@ impl BalanceBoardConnection {
 
         if let Some(output_file) = settings.output_file {
             let file_sender = processed_data_tx.clone();
-            let file_write_handle = tokio::spawn(async move {
+            let handle = tokio::spawn(async move {
                 let rx = file_sender.subscribe();
                 Self::file_write_loop(rx, output_file).await
             });
-            task_handles.push(file_write_handle);
+            task_handles.push(handle);
         }
 
         if let Some(lsl_connection) = settings.lsl_connection {
             let lsl_sender = processed_data_tx.clone();
-            let lsl_handle = thread::spawn(move || {
+            let handle = thread::spawn(move || {
                 let rx = lsl_sender.subscribe();
                 Self::lsl_stream_loop(rx, lsl_connection)
             });
-            thread_handles.push(lsl_handle);
+            thread_handles.push(handle);
         }
 
         if let Some(tcp_connection_string) = settings.tcp_connection_string {
             let tcp_sender = processed_data_tx.clone();
-            let tcp_connection_handle = tokio::spawn(async move {
+            let handle = tokio::spawn(async move {
                 let rx = tcp_sender.subscribe();
                 Self::tcp_stream_loop(rx, tcp_connection_string).await
             });
-            task_handles.push(tcp_connection_handle);
+            task_handles.push(handle);
         };
 
         let (data_process_tx, data_process_rx) = mpsc::channel(100);
-        let process_handle = thread::spawn(move || {
-            Self::data_process_loop(data_process_rx, processed_data_tx)
+        let handle = tokio::spawn(async move {
+            Self::data_process_loop(data_process_rx, processed_data_tx).await
         });
-        thread_handles.push(process_handle);;
+        task_handles.push(handle);
 
         Ok(SessionHandles { thread_handles, task_handles, receiver_channel: data_process_tx })
     }
 
-    fn data_process_loop(
+    async fn data_process_loop(
         mut rx: mpsc::Receiver<BalanceBoardSensorReading>,
         tx: broadcast::Sender<ProcessedBoardData>,
     ) -> Result<()> {
         loop {
-            match rx.recv() {
-                Ok(reading) => {
-                    println!("Tared reading: {:?}", weights);
-                    if tx.send(weights).is_err() {
+            match rx.recv().await {
+                Some(data) => {
+                    let timestamp = Utc::now();
+                    let reading: [f32; 4] = [
+                        data.top_right,
+                        data.bottom_right,
+                        data.top_left,
+                        data.bottom_left,
+                    ];
+
+                    if tx.send(ProcessedBoardData { timestamp, reading} ).is_err() {
                         break; // Receiver has disconnected
                     }
                 }
-                Err(_) => break, // Sender has disconnected
+                None => break
             }
         }
-        Err(anyhow!("Data processing loop terminated."))
+        println!("Data processing loop terminated.");
+        Ok(())
     }
-    
-    async fn file_write_loop(mut file_data_rx: broadcast::Receiver<ProcessedBoardData>, output_file: String) -> Result<()> {
+
+    async fn file_write_loop(mut rx: broadcast::Receiver<ProcessedBoardData>, output_file: String) -> Result<()> {
         let mut file = OpenOptions::new()
             .create(true)
             .write(true)
@@ -301,7 +306,7 @@ impl BalanceBoardConnection {
 
         // Process incoming data
         loop {
-            match file_data_rx.recv().await {
+            match rx.recv().await {
                 Ok(data) => {
                     // Format data as CSV row
                     let csv_line = format!(
