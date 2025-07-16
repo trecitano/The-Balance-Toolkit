@@ -35,7 +35,7 @@ impl From<BluetoothPeripheral> for NintendoDevice {
     fn from(p: BluetoothPeripheral) -> Self {
         let mac_str = p.mac_address
             .iter()
-            .map(|b| format!("{:02X}", b))
+            .map(|b| format!("{:02x}", b))
             .collect::<Vec<String>>()
             .join(":");
 

@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
-use crate::types::NintendoDevice;
+use crate::types::{MacAddress, NintendoDevice};
 
 // Commands that can be sent to the ConnectionManager
 #[derive(Debug)]
@@ -39,6 +39,7 @@ pub enum ManagerCommand {
 }
 
 pub struct ConnectionManager {
+    manager_tx: mpsc::Sender<ManagerCommand>,
     manager_rx: mpsc::Receiver<ManagerCommand>,
     connections: HashMap<String, mpsc::Sender<BoardAction>>,
     selected_boards: HashSet<String>,
@@ -46,17 +47,19 @@ pub struct ConnectionManager {
 }
 
 impl ConnectionManager {
-    pub fn new(manager_rx: mpsc::Receiver<ManagerCommand>) -> Self {
+    pub fn new(manager_tx: mpsc::Sender<ManagerCommand>, manager_rx: mpsc::Receiver<ManagerCommand>) -> Self {
         Self {
+            manager_tx,
+            manager_rx,
             connections: HashMap::new(),
             selected_boards: HashSet::new(),
-            manager_rx,
             scan_cancel_tx: None,
         }
     }
 
     pub async fn run(mut self) {
         println!("Connection manager started.");
+        
         while let Some(command) = self.manager_rx.recv().await {
             match command {
                 ManagerCommand::StartScan { device_found_channel } => {
@@ -88,6 +91,7 @@ impl ConnectionManager {
                 }
             }
         }
+        
         println!("Connection manager stopped.");
     }
 
@@ -101,18 +105,16 @@ impl ConnectionManager {
         let (cancel_tx, mut cancel_rx) = oneshot::channel();
         self.scan_cancel_tx = Some(cancel_tx);
 
+        let manager_tx = self.manager_tx.clone();
         tokio::spawn(async move {
             println!("Scanning for devices in background...");
             loop {
                 tokio::select! {
-                    _ = &mut cancel_rx => {
-                        println!("Scan cancelled.");
-                        break;
-                    }
-
                     new_board_bluetooth = bluetooth_communication::connect_new_balance_board() => {
                         if let Ok(mac_address) = new_board_bluetooth {
                             tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
+                            let device_id = convert_mac_address_to_string(mac_address);
+                            manager_tx.send(ManagerCommand::Connect { device_id }).await.unwrap();
                             //self.connect("potato".to_string()).await;
 
                             match bluetooth_communication::get_nintendo_device_by_mac_address(mac_address).await {
@@ -120,6 +122,10 @@ impl ConnectionManager {
                                 Err(e) => eprintln!("Error getting device info by mac address: {:?}", e),
                             }
                         }
+                    },
+                    _ = &mut cancel_rx => {
+                        println!("Scan cancelled.");
+                        break;
                     }
                 }
             }
@@ -181,13 +187,12 @@ impl ConnectionManager {
             let mut is_on = true;
             board_channel_clone.send(BoardAction::TurnOnLed).await;
 
-            for _ in 0..100 {
-                tokio::time::sleep(Duration::from_millis(50));
-
+            for _ in 0..30 {
+                tokio::time::sleep(Duration::from_millis(500)).await;
                 if is_on {
                     board_channel_clone.send(BoardAction::TurnOffLed).await;
                 } else {
-                    board_channel_clone.send(BoardAction::TurnOffLed).await;
+                    board_channel_clone.send(BoardAction::TurnOnLed).await;
                 }
 
                 is_on = !is_on;
@@ -210,4 +215,12 @@ impl ConnectionManager {
             eprintln!("Failed to forward action to device {}: {}", device_id, e);
         }
     }
+}
+
+fn convert_mac_address_to_string(mac_address: MacAddress) -> String {
+    mac_address
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<Vec<String>>()
+        .join("")
 }
