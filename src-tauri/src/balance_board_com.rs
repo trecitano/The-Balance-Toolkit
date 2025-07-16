@@ -1,11 +1,16 @@
-use std::net::TcpStream;
+use tokio::net::TcpStream;
+use tokio::io::AsyncWriteExt;
 use std::path::PathBuf;
 use anyhow::{anyhow, Result};
 use hidapi::{HidApi, HidDevice};
 use lsl::{ChannelFormat, Pushable};
-use tokio::sync::mpsc::{self, Receiver, Sender};
-use std::thread::{self, JoinHandle};
+use tokio::sync::mpsc;
+use tokio::task;
+use std::thread;
 use std::time::Duration;
+use chrono::Utc;
+use tokio::fs::OpenOptions;
+use tokio::sync::broadcast;
 use crate::types::MacAddress;
 
 // --- HID Command Constants ---
@@ -47,9 +52,17 @@ pub enum BoardAction {
     FinishRecording,
 }
 
+pub enum BalanceBoardCommands {
+    TurnOnLed,
+    TurnOffLed,
+    StartRecording,
+    FinishRecording
+}
+
 #[derive(Clone, Debug)]
 pub struct BalanceBoardSessionSettings {
-    output_file: Option<PathBuf>,
+    output_file: Option<String>,
+    output_channel: Option<mpsc::Sender<ProcessedBoardData>>,
     lsl_connection: Option<LslConnectionSettings>,
     tcp_connection_string: Option<String>,
 }
@@ -66,12 +79,11 @@ pub struct LslConnectionSettings {
 
 pub struct BalanceBoardConnection {
     device: HidDevice,
-    calibration: BalanceBoardCalibrationData,
-    action_rx: Receiver<BoardAction>,
+    action_rx: mpsc::Receiver<BoardAction>
 }
 
 impl BalanceBoardConnection {
-    pub fn new(device_id: &str, action_rx: Receiver<BoardAction>) -> Result<Self> {
+    pub fn new(device_id: &str, action_rx: mpsc::Receiver<BoardAction>) -> Result<Self> {
         let api = HidApi::new()?;
         // The serial number of a nintendo balance board is the string version of a mac address.
         // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
@@ -91,61 +103,63 @@ impl BalanceBoardConnection {
         let device = balance_board_info.open_device(&api)?;
         println!("Successfully opened HID connection for {}.", device_id);
 
-        let calibration = Self::read_calibration_data(&device)?;
-        println!("Successfully read calibration data for {}.", device_id);
-
         device.write(&BOARD_TURN_ON_LED)?;
 
         Ok(Self {
             device,
-            calibration,
             action_rx,
         })
     }
 
-    pub async fn run(mut self) {
+    pub async fn run(mut self) -> Result<()> {
         println!("Board connection task started.");
-        // Since HIDAPI is blocking, we need to run the core device loop in a blocking thread.
-        // We'll use a channel to communicate between the async world and the blocking thread.
-        let (hid_tx, mut hid_rx) = mpsc::channel(10);
-
         let device = self.device;
-        let calibration = self.calibration.clone();
 
-        // This thread handles all blocking HID communication.
+        let (hid_control_tx, hid_control_rx) = mpsc::channel(10);
+        let (hid_data_tx, mut hid_data_rx) = mpsc::channel(10);
+
+        // Since HIDAPI is blocking, we need to run the core device loop in a blocking thread.
         let hid_thread = thread::spawn(move || {
-            Self::blocking_hid_loop(device, hid_tx, calibration)
+            Self::blocking_hid_loop(device, hid_control_rx, hid_data_tx)
         });
 
+        let mut session: Option<SessionHandles> = None;
+        
         loop {
             tokio::select! {
                 // Received an action from the manager
                 Some(action) = self.action_rx.recv() => {
                     match action {
-                        BoardAction::Identify => {
-                            // For a simple flash, we can handle it here.
-                            // More complex actions might need to be sent to the hid_thread.
-                            println!("Identifying board...");
-                            // This is a simplification. A real implementation would
-                            // need to send a command to the blocking thread.
-                        },
-                        _ => {
-                            // Forward other actions to the blocking thread if needed.
+                        BoardAction::Tare => {
+                            // TODO
+                            //hid_control_tx.send(BalanceBoardCommands::Tare).await?;
                         }
+                        BoardAction::TurnOnLed => {
+                            hid_control_tx.send(BalanceBoardCommands::TurnOnLed).await?;
+                        },
+                        BoardAction::TurnOffLed => {
+                            hid_control_tx.send(BalanceBoardCommands::TurnOffLed).await?;
+                        },
+                        BoardAction::StartRecording { options } => {
+                            session = Some(Self::start_session(options)?);
+                            hid_control_tx.send(BalanceBoardCommands::StartRecording).await?;
+                        },
+                        BoardAction::FinishRecording => {
+                            session = None;
+                            hid_control_tx.send(BalanceBoardCommands::FinishRecording).await?;
+                        },
                     }
                 },
+
                 // Received data from the HID thread
-                Some(weights) = hid_rx.recv() => {
-                    // For now, we just print the weights.
-                    // This is where you would send data to LSL, websockets, etc.
-                    let total_weight: f32 = weights.iter().sum();
-                    println!(
-                        "Total: {:.2}kg | TR: {:.2}, BR: {:.2}, TL: {:.2}, BL: {:.2}",
-                        total_weight, weights[0], weights[1], weights[2], weights[3]
-                    );
+                Some(data) = hid_data_rx.recv() => {
+                    // If there's a session, we forward the data to it.
+                    if let Some(session) = &mut session {
+                        session.receiver_channel.send(data).await?;
+                    }
                 },
                 else => {
-                    // The action channel was closed, so we should shut down.
+                    // Channels closed
                     break;
                 }
             }
@@ -154,38 +168,49 @@ impl BalanceBoardConnection {
         // Wait for the HID thread to finish.
         let _ = hid_thread.join();
         println!("Board connection task finished.");
+        Ok(())
     }
 
     fn blocking_hid_loop(
         device: HidDevice,
-        data_tx: mpsc::Sender<[f32; 4]>,
-        calibration: BalanceBoardCalibrationData,
-    ) {
+        mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>,
+        hid_data_tx: mpsc::Sender<BalanceBoardSensorReading>,
+    ) -> Result<()> {
         let mut buf = [0u8; 32];
-        let mut tare_offset = BalanceBoardSensorReading::default();
-
-        // For now, we just start reading immediately.
-        // A more advanced implementation would wait for a StartRecording action.
-        if device.write(&BOARD_START_READING).is_err() {
-            eprintln!("Failed to start reading from board.");
-            return;
-        }
+        let calibration = Self::read_calibration_data(&device)?;
 
         loop {
+            match hid_control_rx.try_recv() {
+                Ok(command) => match command {
+                    BalanceBoardCommands::TurnOnLed => { device.write(&BOARD_TURN_ON_LED)?; }
+                    BalanceBoardCommands::TurnOffLed => { device.write(&BOARD_TURN_OFF_LED)?; }
+                    BalanceBoardCommands::StartRecording => { device.write(&BOARD_START_READING)?; },
+                    BalanceBoardCommands::FinishRecording => { device.write(&BOARD_STOP_READING)?; },
+                },
+                Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ },
+                Err(mpsc::error::TryRecvError::Disconnected) => {
+                    // The async part has shut down. We must exit.
+                    println!("HID Loop: Control channel disconnected. Shutting down.");
+                    break;
+                }
+            }
+
             match device.read_timeout(&mut buf, 100) {
                 Ok(len) if len > 0 => {
                     if len >= DATA_PACKET_MIN_LEN {
-                        let reading = BalanceBoardSensorReading {
+                        let reading = BalanceBoardSensorRawReading {
                             top_right: i16::from_be_bytes([buf[3], buf[4]]),
                             bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
                             top_left: i16::from_be_bytes([buf[7], buf[8]]),
                             bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
                         };
+                        
+                        let calibrated_reading = reading.calculate_weights(&calibration);
 
-                        let tared_reading = reading.apply_tare(&tare_offset);
-                        let weights = tared_reading.calculate_weights(&calibration);
+                        //let tared_reading = reading.apply_tare(&tare_offset);
+                        //let weights = tared_reading.calculate_weights(&calibration);
 
-                        if data_tx.blocking_send(weights).is_err() {
+                        if hid_data_tx.blocking_send(calibrated_reading).is_err() {
                             // Main task has disconnected, shut down.
                             break;
                         }
@@ -200,239 +225,60 @@ impl BalanceBoardConnection {
         }
         let _ = device.write(&BOARD_STOP_READING);
         println!("Blocking HID loop terminated.");
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-    pub fn handle_action(&self, action: BoardAction) -> Result<()> {
-        match action {
-            BoardAction::Tare => {
-                self.user_action_tx.send(BoardAction::Tare)?;
-            }
-            BoardAction::TurnOnLed => {
-                self.user_action_tx.send(BoardAction::TurnOnLed)?;
-            },
-            BoardAction::TurnOffLed => {
-                self.user_action_tx.send(BoardAction::TurnOffLed)?;
-            },
-            BoardAction::StartRecording => {
-                self.user_action_tx.send(BoardAction::StartRecording)?;
-            },
-            BoardAction::FinishRecording => {
-                self.user_action_tx.send(BoardAction::FinishRecording)?;
-            },
-        }
         Ok(())
     }
-    
-    fn start_session(&mut self, settings: BalanceBoardSessionSettings) -> Result<()> {
-        let mut session_threads = vec!();
 
-        let process_handle = thread::spawn(move || {
-            Self::data_process_loop(calibration_clone, raw_reading_rx, processed_data_tx, user_action_rx2)
-        });
-        session_threads.push(process_handle);;
-        
+    fn start_session(settings: BalanceBoardSessionSettings) -> Result<SessionHandles> {
+        let mut thread_handles: Vec<thread::JoinHandle<Result<()>>> = vec!();
+        let mut task_handles: Vec<task::JoinHandle<Result<()>>> = vec!();
+
+        let (processed_data_tx, _) = broadcast::channel::<ProcessedBoardData>(100);
+
         if let Some(output_file) = settings.output_file {
-            let file_write_handle = thread::spawn(move || {
-                Self::file_write_loop(file_data_rx, output_file)
+            let file_sender = processed_data_tx.clone();
+            let file_write_handle = tokio::spawn(async move {
+                let rx = file_sender.subscribe();
+                Self::file_write_loop(rx, output_file).await
             });
-            session_threads.push(file_write_handle);
+            task_handles.push(file_write_handle);
         }
-        
+
         if let Some(lsl_connection) = settings.lsl_connection {
+            let lsl_sender = processed_data_tx.clone();
             let lsl_handle = thread::spawn(move || {
-                Self::lsl_stream_loop(lsl_data_rx, lsl_connection)
+                let rx = lsl_sender.subscribe();
+                Self::lsl_stream_loop(rx, lsl_connection)
             });
-            session_threads.push(lsl_handle);
+            thread_handles.push(lsl_handle);
         }
-        
+
         if let Some(tcp_connection_string) = settings.tcp_connection_string {
-            let tcp_connection_handle = thread::spawn(move || {
-                Self::tcp_stream_loop(tcp_data_rx, tcp_connection_string)
+            let tcp_sender = processed_data_tx.clone();
+            let tcp_connection_handle = tokio::spawn(async move {
+                let rx = tcp_sender.subscribe();
+                Self::tcp_stream_loop(rx, tcp_connection_string).await
             });
-            session_threads.push(tcp_connection_handle);
+            task_handles.push(tcp_connection_handle);
         };
-        
-        Ok(())
-    }
 
-    pub fn run2(&mut self, device: HidDevice) -> Result<()> {
-        println!("Start!");
-        let (raw_reading_tx, _raw_reading_rx) = mpsc::channel::<BalanceBoardSensorReading>();
-        let (_command_reading_tx, raw_reading_rx) = mpsc::channel::<BalanceBoardSensorReading>();
-        let (processed_data_tx, processed_data_rx) = mpsc::channel::<[f32; 4]>();
-        let (user_action_tx, user_action_rx) = mpsc::channel::<BoardAction>();
-        // THIS IS A GIGANTIC HACK
-        let (_user_action_tx2, user_action_rx2) = mpsc::channel::<BoardAction>();
-        self.user_action_tx = user_action_tx;
-
-        // --- 1. HID Reading Thread ---
-        let read_handle = thread::spawn(move || {
-            Self::device_thread_with_select(device, raw_reading_tx, user_action_rx)
-        });
-        self.thread_handles.push(read_handle);
-
-
-        // --- 2. Data Processing Thread ---
-        let calibration_clone = self.calibration.clone();
+        let (data_process_tx, data_process_rx) = mpsc::channel(100);
         let process_handle = thread::spawn(move || {
-            Self::data_process_loop(calibration_clone, raw_reading_rx, processed_data_tx, user_action_rx2)
+            Self::data_process_loop(data_process_rx, processed_data_tx)
         });
-        self.thread_handles.push(process_handle);
+        thread_handles.push(process_handle);;
 
-        // --- 3. LSL Streaming Thread ---
-        let lsl_handle = thread::spawn(move || {
-            Self::lsl_stream_loop(processed_data_rx);
-        });
-        self.thread_handles.push(lsl_handle);
-
-        println!("All systems running. Enter 'tare' to zero the scale or 'exit' to quit.");
-        //self.handle_user_input()?;
-
-        Ok(())
-    }
-
-    pub fn tare(&self) -> Result<()> {
-        self.user_action_tx.send(BoardAction::Tare)?;
-        Ok(())
-    }
-
-    fn handle_user_input(&self) -> Result<()> {
-        loop {
-            let mut input = String::new();
-            std::io::stdin().read_line(&mut input)?;
-            match input.trim() {
-                "tare" => {
-                    println!("Taring the board...");
-                    self.tare()?;
-                }
-                "exit" => {
-                    println!("Exiting...");
-                    break;
-                }
-                _ => println!("Unknown command. Available commands: 'tare', 'exit'"),
-            }
-        }
-        Ok(())
-    }
-
-    fn device_thread_with_select(
-        device: HidDevice,
-        data_tx: Sender<BalanceBoardSensorReading>,
-        command_rx: Receiver<BoardAction>,
-    ) -> Result<()> {
-        let mut buf = [0u8; 32];
-
-        loop {
-            match command_rx.try_recv() {
-                Ok(cmd) => {
-                    match cmd {
-                        BoardAction::Tare => {},
-                        BoardAction::TurnOnLed => { device.write(&BOARD_TURN_ON_LED)?; }
-                        BoardAction::TurnOffLed => { device.write(&BOARD_TURN_OFF_LED)?; }
-                        BoardAction::StartRecording => { device.write(&BOARD_START_READING)?; },
-                        BoardAction::FinishRecording => { device.write(&BOARD_STOP_READING)?; },
-                    }
-                }
-                Err(_) => (),
-            }
-
-            let len = device.read_timeout(&mut buf, 1000)?;
-
-            if len == 0 { continue; } // Timeout, just continue
-
-            match buf[0] {
-                HID_CMD_DATA_REPORT_MODE => println!("Data report!"),
-                _ => (),
-            };
-
-            if len >= DATA_PACKET_MIN_LEN {
-                let reading = BalanceBoardSensorReading {
-                    top_right: i16::from_be_bytes([buf[3], buf[4]]),
-                    bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
-                    top_left: i16::from_be_bytes([buf[7], buf[8]]),
-                    bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
-                };
-                println!("buf: {:x?}", buf);
-                println!("Raw reading: {:?}", reading);
-                if data_tx.send(reading).is_err() {
-                    break; // Receiver has disconnected
-                }
-            }
-        }
-        Err(anyhow!("HID read loop terminated."))
-    }
-
-
-    fn hid_read_loop(device: HidDevice, tx: Sender<BalanceBoardSensorReading>) -> Result<()> {
-        loop {
-            let mut buf = [0u8; 32]; // Buffer large enough for expected reports
-            let len = device.read_timeout(&mut buf, 1000)?;
-
-            if len == 0 { continue; } // Timeout, just continue
-
-            match buf[0] {
-                HID_CMD_DATA_REPORT_MODE => println!("Data report!"),
-                _ => (),
-            };
-
-            if len >= DATA_PACKET_MIN_LEN {
-                let reading = BalanceBoardSensorReading {
-                    top_right: i16::from_be_bytes([buf[3], buf[4]]),
-                    bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
-                    top_left: i16::from_be_bytes([buf[7], buf[8]]),
-                    bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
-                };
-                println!("buf: {:x?}", buf);
-                println!("Raw reading: {:?}", reading);
-                if tx.send(reading).is_err() {
-                    break; // Receiver has disconnected
-                }
-            }
-        }
-        Err(anyhow!("HID read loop terminated."))
+        Ok(SessionHandles { thread_handles, task_handles, receiver_channel: data_process_tx })
     }
 
     fn data_process_loop(
-        calibration: BalanceBoardCalibrationData,
-        raw_rx: Receiver<BalanceBoardSensorReading>,
-        processed_tx: Sender<[f32; 4]>,
-        user_action_rx: Receiver<BoardAction>,
+        mut rx: mpsc::Receiver<BalanceBoardSensorReading>,
+        tx: broadcast::Sender<ProcessedBoardData>,
     ) -> Result<()> {
-        let mut tare_offset = BalanceBoardSensorReading::default();
-
         loop {
-            // Non-blocking check for user actions
-            if let Ok(action) = user_action_rx.try_recv() {
-                match action {
-                    BoardAction::Tare => {
-                        // To tare, we need the *next* stable reading.
-                        // This is a simplification; a real implementation might average a few readings.
-                        if let Ok(latest_reading) = raw_rx.recv_timeout(Duration::from_secs(1)) {
-                            tare_offset = latest_reading;
-                            println!("Tare offset captured.");
-                        }
-                    },
-                    _ => {}, // TODO FIX THIS
-                }
-            }
-
-            match raw_rx.recv() {
-                Ok(raw_reading) => {
-                    let tared_reading = raw_reading.apply_tare(&tare_offset);
-                    let weights = tared_reading.calculate_weights(&calibration);
+            match rx.recv() {
+                Ok(reading) => {
                     println!("Tared reading: {:?}", weights);
-                    if processed_tx.send(weights).is_err() {
+                    if tx.send(weights).is_err() {
                         break; // Receiver has disconnected
                     }
                 }
@@ -442,46 +288,79 @@ impl BalanceBoardConnection {
         Err(anyhow!("Data processing loop terminated."))
     }
     
-    // TODO
-    fn file_write_loop(file_data_rx: Receiver<[f32; 4]>, output_file: String) -> Result<()> {
+    async fn file_write_loop(mut file_data_rx: broadcast::Receiver<ProcessedBoardData>, output_file: String) -> Result<()> {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(output_file)
+            .await?;
+
+        // Write CSV header
+        file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n").await?;
+
+        // Process incoming data
+        loop {
+            match file_data_rx.recv().await {
+                Ok(data) => {
+                    // Format data as CSV row
+                    let csv_line = format!(
+                        "{},{},{},{},{}\n",
+                        data.timestamp.to_rfc3339(),
+                        data.reading[0],  // top_right
+                        data.reading[1],  // bottom_right
+                        data.reading[2],  // top_left
+                        data.reading[3]   // bottom_left
+                    );
+
+                    // Write and flush
+                    file.write_all(csv_line.as_bytes()).await?;
+                    file.flush().await?;
+                }
+                Err(broadcast::error::RecvError::Closed) => {
+                    // Channel closed, exit gracefully
+                    break;
+                }
+                Err(broadcast::error::RecvError::Lagged(_)) => {
+                    // We've missed some messages due to slow file writing
+                    eprintln!("Warning: File writing lagged behind data stream");
+                    continue;
+                }
+            }
+        }
+
+        println!("File writing loop terminated.");
         Ok(())
     }
 
-    fn lsl_stream_loop(lsl_data_rx: Receiver<[f32; 4]>, settings: LslConnectionSettings) -> Result<()> {
+    fn lsl_stream_loop(mut lsl_data_rx: broadcast::Receiver<ProcessedBoardData>, settings: LslConnectionSettings) -> Result<()> {
         let info = lsl::StreamInfo::new(
-            settings.stream_name.as_str(), 
+            settings.stream_name.as_str(),
             settings.stream_type.as_str(),
-            settings.channel_count, 
+            settings.channel_count,
             settings.nominal_srate,
-            lsl::ChannelFormat::Float32,
+            ChannelFormat::Double64,
             "The-Balance-Toolkit"
         )?;
         let outlet = lsl::StreamOutlet::new(&info, 0, 360)?;
 
-        println!("LSL stream started.");
-        while let Ok(weights) = lsl_data_rx.recv() {
-            let total_weight: f32 = weights.iter().sum();
-            println!(
-                "Total: {:.2}kg | TR: {:.2}, BR: {:.2}, TL: {:.2}, BL: {:.2}",
-                total_weight, weights[0], weights[1], weights[2], weights[3]
-            );
-            outlet.push_sample(&weights.to_vec())?;
+        while let Ok(data) = lsl_data_rx.blocking_recv() {
+            let byte_array = data.to_byte_array();
+            let byte_slices: Vec<&[u8]> = vec![&byte_array];
+            outlet.push_sample(&byte_slices)?;
         }
-        Err(anyhow!("LSL stream loop terminated."))
-    }
-    
-    // TODO
-    fn tcp_stream_loop(tcp_data_rx: Receiver<[f32; 4]>, tcp_connection_string: String) -> Result<()> {
+
         Ok(())
     }
-    
-    
-    
-    
-    
-    
-    
-    
+
+    async fn tcp_stream_loop(mut tcp_data_rx: broadcast::Receiver<ProcessedBoardData>, tcp_connection_string: String) -> Result<()> {
+        let mut stream = TcpStream::connect(tcp_connection_string).await?;
+
+        while let Ok(data) = tcp_data_rx.recv().await {
+            stream.write_all(&data.to_byte_array()).await?
+        }
+        Ok(())
+    }
 
     fn read_calibration_data(device: &HidDevice) -> Result<BalanceBoardCalibrationData> {
         // https://wiibrew.org/wiki/Wiimote#Reading_and_Writing
@@ -489,7 +368,7 @@ impl BalanceBoardConnection {
         // https://wiibrew.org/wiki/Wii_Balance_Board#Calibration_Data
         // Read calibration data:
         // 17 (Output Control)
-        // 04 (Address Space) 
+        // 04 (Address Space)
         // a40020 (Memory Address)
         // 20 (Bytes to Read)
         // We need to read at least 2 packets, as each packet is not large enough to contain
@@ -536,18 +415,31 @@ impl BalanceBoardConnection {
     }
 }
 
+struct SessionHandles {
+    thread_handles: Vec<thread::JoinHandle<Result<()>>>,
+    task_handles: Vec<task::JoinHandle<Result<()>>>,
+    receiver_channel: mpsc::Sender<BalanceBoardSensorReading>,
+}
+
 // --- Data Structures for Balance Board Readings ---
 
 #[derive(Debug, Clone, Default)]
-struct BalanceBoardSensorReading {
+struct BalanceBoardSensorRawReading {
     top_right: i16,
     bottom_right: i16,
     top_left: i16,
     bottom_left: i16,
 }
 
-impl BalanceBoardSensorReading {
-    fn apply_tare(&self, tare_offset: &BalanceBoardSensorReading) -> Self {
+struct BalanceBoardSensorReading {
+    top_right: f32,
+    bottom_right: f32,
+    top_left: f32,
+    bottom_left: f32,
+}
+
+impl BalanceBoardSensorRawReading {
+    fn apply_tare(&self, tare_offset: &BalanceBoardSensorRawReading) -> Self {
         Self {
             top_right: self.top_right.saturating_sub(tare_offset.top_right),
             bottom_right: self.bottom_right.saturating_sub(tare_offset.bottom_right),
@@ -556,13 +448,13 @@ impl BalanceBoardSensorReading {
         }
     }
 
-    fn calculate_weights(&self, cal: &BalanceBoardCalibrationData) -> [f32; 4] {
-        [
-            self.calculate_single_weight(self.top_right, &cal.top_right),
-            self.calculate_single_weight(self.bottom_right, &cal.bottom_right),
-            self.calculate_single_weight(self.top_left, &cal.top_left),
-            self.calculate_single_weight(self.bottom_left, &cal.bottom_left),
-        ]
+    fn calculate_weights(&self, cal: &BalanceBoardCalibrationData) -> BalanceBoardSensorReading {
+        BalanceBoardSensorReading {
+            top_right: self.calculate_single_weight(self.top_right, &cal.top_right),
+            bottom_right: self.calculate_single_weight(self.bottom_right, &cal.bottom_right),
+            top_left: self.calculate_single_weight(self.top_left, &cal.top_left),
+            bottom_left: self.calculate_single_weight(self.bottom_left, &cal.bottom_left),
+        }
     }
 
     fn calculate_single_weight(&self, sensor_val: i16, cal_pt: &CalibrationPoint) -> f32 {
@@ -576,6 +468,31 @@ impl BalanceBoardSensorReading {
         } else {
             17.0 + 17.0 * (val_f - mid_f) / (max_f - mid_f).max(1.0)
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ProcessedBoardData {
+    timestamp: chrono::DateTime<Utc>,
+    reading: [f32; 4],
+}
+
+impl ProcessedBoardData {
+    pub fn to_byte_array(&self) -> [u8; 24] {
+        let mut buf = [0u8; 24];
+
+        // 1. Serialize the timestamp (8 bytes)
+        let timestamp_nanos = self.timestamp.timestamp_nanos_opt().unwrap_or(0);
+        buf[0..8].copy_from_slice(&timestamp_nanos.to_be_bytes());
+
+        // 2. Serialize the f32 readings (16 bytes)
+        let mut offset = 8;
+        for &value in self.reading.iter() {
+            buf[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
+            offset += 4;
+        }
+
+        buf
     }
 }
 
