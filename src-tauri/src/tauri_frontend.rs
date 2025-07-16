@@ -74,26 +74,14 @@ pub fn user_delete(user_id: String) -> Result<(), String> {
 // --- DEVICE COMMANDS ---
 
 #[tauri::command(async)]
-pub async fn devices_fetch_all_devices() -> Result<Vec<NintendoDevice>, String> {
+pub async fn devices_fetch_all_devices(state: State<'_, AppState>) -> Result<Vec<NintendoDevice>, String> {
     println!(">> devices_fetch_all_devices");
 
-    let stored_devices = DeviceFileSystem::get_stored_devices().map_err(|e| e.to_string())?;
-    let connected_devices: Vec<NintendoDevice> =
-        bluetooth_communication::get_nintendo_devices()
-            .await
-            .map_err(|e| e.to_string())?
-            .into_iter()
-            .map(|p| p.into())
-            .collect();
+    let (response_tx, mut response_rx) = oneshot::channel();
+    let command = ManagerCommand::GetBoardsSystemView { responder: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
-    let mut result = stored_devices;
-    for device in connected_devices {
-        if let Some(found) = result.iter_mut().find(|d| d.mac_address == device.mac_address) {
-            found.last_connected = None; // Or update with new connection time
-        } else {
-            result.push(device);
-        }
-    }
+    let result = response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< devices_fetch_all_devices: {:?}", result);
     Ok(result)

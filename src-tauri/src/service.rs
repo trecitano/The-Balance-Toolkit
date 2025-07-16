@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
+use crate::file_system::DeviceFileSystem;
 use crate::types::{MacAddress, NintendoDevice};
 
 // Commands that can be sent to the ConnectionManager
@@ -19,6 +20,9 @@ pub enum ManagerCommand {
         responder: oneshot::Sender<bool>,
     },
 
+    GetBoardsSystemView {
+        responder: oneshot::Sender<Vec<NintendoDevice>>,
+    },
     ConnectedBoards {
         responder: oneshot::Sender<Vec<String>>,
     },
@@ -31,6 +35,19 @@ pub enum ManagerCommand {
     IdentifyBoard {
         device_id: String,
     },
+
+    SelectBoardForSession {
+        device_id: String,
+    },
+    UnselectBoardForSession {
+        device_id: String,
+    },
+    SelectedBoardsForSession {
+        responder: oneshot::Sender<Vec<String>>,
+    },
+
+    StartSession,
+    StopSession,
 
     BoardAction {
         device_id: String,
@@ -62,6 +79,9 @@ impl ConnectionManager {
         
         while let Some(command) = self.manager_rx.recv().await {
             match command {
+                // --------------------
+                // SCANNING COMMANDS
+                // --------------------
                 ManagerCommand::StartScan { device_found_channel } => {
                     self.scan(device_found_channel).await;
                 },
@@ -71,7 +91,10 @@ impl ConnectionManager {
                 ManagerCommand::IsScanning { responder } => {
                     responder.send(self.scan_cancel_tx.is_some()).unwrap();
                 },
-                
+
+                ManagerCommand::GetBoardsSystemView { responder } => {
+                    responder.send(self.boards_system_view().await.unwrap()).unwrap();
+                },
                 ManagerCommand::ConnectedBoards { responder } => {
                     responder
                         .send(self.connections.keys().cloned().collect())
@@ -86,13 +109,64 @@ impl ConnectionManager {
                 ManagerCommand::IdentifyBoard { device_id } => {
                     self.identify_board(device_id);
                 }
+
+
+                ManagerCommand::SelectBoardForSession { device_id } => {
+                    self.selected_boards.insert(device_id);
+                }
+                ManagerCommand::UnselectBoardForSession { device_id } => {
+                    self.selected_boards.remove(&device_id);
+                }
+                ManagerCommand::SelectedBoardsForSession { responder } => {
+                    responder.send(self.selected_boards.iter().cloned().collect()).unwrap();
+                }
+
+
                 ManagerCommand::BoardAction { device_id, action } => {
                     self.board_action(device_id, action).await;
                 }
+
+                _ => {}
             }
         }
         
         println!("Connection manager stopped.");
+    }
+
+
+    // Returns a list of both previous and connected devices.
+    // If a device is found to be connected to the Operating System, but the manager doesn't know about it,
+    // then the manager automatically connects to it.
+    pub async fn boards_system_view(&mut self) -> Result<Vec<NintendoDevice>, String> {
+        let stored_devices = DeviceFileSystem::get_stored_devices().map_err(|e| e.to_string())?;
+        let os_connected_devices: Vec<NintendoDevice> =
+            bluetooth_communication::get_nintendo_devices()
+                .await
+                .map_err(|e| e.to_string())?
+                .into_iter()
+                .map(|p| p.into())
+                .collect();
+
+        // Connect the manager to any missing devices.
+        for device in &os_connected_devices {
+            let device_id = device.mac_address.replace(":", "");
+            println!("Checking if device {} is connected.", device_id);
+            if !self.connections.contains_key(&device_id) {
+                println!("NEED TO CONNECT {}", device_id);
+                self.connect(device_id).await;
+            }
+        }
+
+        let mut result = stored_devices;
+        for device in os_connected_devices {
+            if let Some(found) = result.iter_mut().find(|d| d.mac_address == device.mac_address) {
+                found.last_connected = None; // Or update with new connection time
+            } else {
+                result.push(device);
+            }
+        }
+
+        Ok(result)
     }
 
     // This is a long action, so we execute this in a background task
@@ -110,12 +184,15 @@ impl ConnectionManager {
             println!("Scanning for devices in background...");
             loop {
                 tokio::select! {
+                    _ = &mut cancel_rx => {
+                        println!("Scan cancelled.");
+                        break;
+                    }
                     new_board_bluetooth = bluetooth_communication::connect_new_balance_board() => {
                         if let Ok(mac_address) = new_board_bluetooth {
                             tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
                             let device_id = convert_mac_address_to_string(mac_address);
                             manager_tx.send(ManagerCommand::Connect { device_id }).await.unwrap();
-                            //self.connect("potato".to_string()).await;
 
                             match bluetooth_communication::get_nintendo_device_by_mac_address(mac_address).await {
                                 Ok(device) => emitter.emit("new_board", NintendoDevice::from(device)).unwrap(),
@@ -123,10 +200,6 @@ impl ConnectionManager {
                             }
                         }
                     },
-                    _ = &mut cancel_rx => {
-                        println!("Scan cancelled.");
-                        break;
-                    }
                 }
             }
 
@@ -185,17 +258,17 @@ impl ConnectionManager {
         let board_channel_clone = board.clone();
         tokio::spawn(async move {
             let mut is_on = true;
-            board_channel_clone.send(BoardAction::TurnOnLed).await;
+            board_channel_clone.send(BoardAction::TurnOffLed).await;
 
-            for _ in 0..30 {
-                tokio::time::sleep(Duration::from_millis(500)).await;
-                if is_on {
-                    board_channel_clone.send(BoardAction::TurnOffLed).await;
-                } else {
-                    board_channel_clone.send(BoardAction::TurnOnLed).await;
-                }
-
-                is_on = !is_on;
+            for _ in 0..10 {
+                board_channel_clone.send(BoardAction::TurnOnLed).await;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                board_channel_clone.send(BoardAction::TurnOffLed).await;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                board_channel_clone.send(BoardAction::TurnOnLed).await;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                board_channel_clone.send(BoardAction::TurnOffLed).await;
+                tokio::time::sleep(Duration::from_millis(800)).await;
             }
 
             board_channel_clone.send(BoardAction::TurnOnLed).await;
