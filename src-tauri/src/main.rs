@@ -19,7 +19,7 @@ async fn main() {
     // The architecture of the app is that the commandline or web/tauri send messages to this manager,
     // and the manager responds via a oneshot channel.
     let (manager_tx, manager_rx) = mpsc::channel(100);
-    let manager = ConnectionManager::new(manager_rx);
+    let manager = ConnectionManager::new(manager_tx.clone(), manager_rx);
     tokio::spawn(async move {
         manager.run().await;
     });
