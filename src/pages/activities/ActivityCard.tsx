@@ -1,15 +1,21 @@
-
 import React, { useState, useEffect, useRef } from "react";
-import { ActivityData } from "./Activities";
+import { ActivityData, getActionImages, getActionImage } from "./Activities";
 import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
+import wbbIcon from "../../assets/wbb-icon-line.svg";
+import { getDefaultBlocksByTitle } from "../../config/activities.config";
 
 
+/**
+ * ActivityCard component displays an activity with its details
+ * Supports two modes: compact (in list) and maximized (detailed view)
+ */
 interface ActivityCardProps {
   activity: ActivityData;
   maximized?: boolean;
   onMaximize?: () => void;
   onMinimize?: () => void;
+  index?: number;
 }
 
 
@@ -19,64 +25,133 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   onMaximize,
   onMinimize,
 }) => {
-  
+  // Image and animation state
   const [currentImageSrc, setCurrentImageSrc] = useState<string>(activity.staticImage);
   const [isHovering, setIsHovering] = useState(false);
+  const intervalRef = useRef<number | null>(null);
+  const imageIndexRef = useRef<number>(0);
+  
+  // Timeline and actions state
+  const [currentActionLabel, setCurrentActionLabel] = useState<string | null>(null);
+  const [timelineBlocks, setTimelineBlocks] = useState(() => getDefaultBlocks(activity));
+  const defaultBlocksRef = useRef(getDefaultBlocks(activity));
+  
+  // UI state
   const [maxStyle, setMaxStyle] = useState<React.CSSProperties | undefined>();
   const [showMaximizedClass, setShowMaximizedClass] = useState(false);
-  const [timelineBlocks, setTimelineBlocks] = useState(() => getDefaultBlocks(activity));
   const [showAddForm, setShowAddForm] = useState(false);
   const [newActionName, setNewActionName] = useState("");
   const [newActionDuration, setNewActionDuration] = useState(10);
-  const defaultBlocksRef = useRef(getDefaultBlocks(activity));
   const cardRef = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<number | null>(null);
-  const imageIndexRef = useRef<number>(0);
 
 
   
+  /**
+   * Loads the appropriate image based on the current action label
+   * Uses action-specific images when available, otherwise falls back to static image
+   */
   useEffect(() => {
-    setCurrentImageSrc(activity.staticImage);
-  }, [activity.staticImage]);
-
-
-  useEffect(() => {
-    if (isHovering && activity.hoverImages && activity.hoverImages.length > 0) {
-      let startIndex = 0;
-      if (
-        activity.hoverImages[0] === activity.staticImage &&
-        activity.hoverImages.length > 1
-      ) {
-        startIndex = 1;
+    // If we have an active action block selected, try to get its specific image
+    if (currentActionLabel && activity.activityName) {
+      const actionImage = getActionImage(activity.activityName, currentActionLabel);
+      if (actionImage) {
+        setCurrentImageSrc(actionImage);
+        return;
       }
-      imageIndexRef.current = startIndex;
-      setCurrentImageSrc(activity.hoverImages[imageIndexRef.current]);
-      if (activity.hoverImages.length > 1) {
-        intervalRef.current = setInterval(() => {
-          imageIndexRef.current =
-            (imageIndexRef.current + 1) % activity.hoverImages.length;
-          setCurrentImageSrc(activity.hoverImages[imageIndexRef.current]);
-        }, 700);
+    }
+    
+    // Otherwise, fall back to sequence images or static image
+    if (activity.sequenceImages && activity.sequenceImages.length > 0) {
+      setCurrentImageSrc(activity.sequenceImages[0]);
+    } else {
+      setCurrentImageSrc(activity.staticImage);
+    }
+  }, [activity.staticImage, activity.sequenceImages, activity.title, activity.activityName, currentActionLabel]);
+
+
+  /**
+   * Handles animation when hovering over the activity card
+   * Plays sequence images when hovering and not maximized
+   */
+  useEffect(() => {
+    // Only show animation when hovering AND not in maximized view
+    if (isHovering && !maximized) {
+      // If we have a current action selected and the activity has a name, get action-specific images
+      let animationImages: string[] = [];
+      
+      if (currentActionLabel && activity.activityName) {
+        // This will now include both action-specific and general sequence images
+        animationImages = getActionImages(activity.activityName, currentActionLabel);
+      }
+      
+      // If no action-specific images found or no action selected, fall back to default sequence
+      if (animationImages.length === 0) {
+        const hasSequence = activity.sequenceImages && activity.sequenceImages.length > 0;
+        animationImages = hasSequence && activity.sequenceImages ? 
+          activity.sequenceImages : 
+          (activity.hoverImages || []);
+      }
+      
+      // Now use the determined images for animation
+      if (animationImages && animationImages.length > 0) {
+        // Start directly with the second image when hovering (if available)
+        let startIndex = animationImages.length > 1 ? 1 : 0;
+        imageIndexRef.current = startIndex;
+        setCurrentImageSrc(animationImages[imageIndexRef.current]);
+        
+        if (animationImages.length > 1) {
+          // Use a consistent animation speed of 700ms for sequences
+          const animationSpeed = 700;
+          intervalRef.current = setInterval(() => {
+            imageIndexRef.current = (imageIndexRef.current + 1) % animationImages.length;
+            setCurrentImageSrc(animationImages[imageIndexRef.current]);
+          }, animationSpeed);
+        }
       }
     } else {
+      // Stop animation if not hovering or in maximized view
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      
       if (!isHovering) {
+        // If we have a current action selected, try to get its specific image
+        if (currentActionLabel && activity.activityName) {
+          const actionImage = getActionImage(activity.activityName, currentActionLabel);
+          if (actionImage) {
+            setCurrentImageSrc(actionImage);
+            return;
+          }
+        }
+        
+        // Otherwise fall back to static image
         setCurrentImageSrc(activity.staticImage);
       }
     }
+    
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isHovering, activity.hoverImages, activity.staticImage]);
+  }, [isHovering, activity.hoverImages, activity.sequenceImages, activity.staticImage, activity.activityName, currentActionLabel, maximized]);
 
 
-  
+  /**
+   * Handles animation and positioning when the card is maximized
+   */
   useEffect(() => {
+    // When maximized changes, handle the animation and image
+    if (maximized) {
+      // Stop any running animation and reset to static image
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setCurrentImageSrc(activity.staticImage);
+    }
+    
     if (maximized && cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
       const parentRect = cardRef.current.parentElement?.getBoundingClientRect();
@@ -111,80 +186,36 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       setShowMaximizedClass(false);
       setMaxStyle(undefined);
     }
-  }, [maximized]);
+  }, [maximized, activity.staticImage]);
 
 
   
+  /**
+   * Handler for the start button click
+   */
   const handleStartClick = () => {
     if (onMaximize) onMaximize();
   };
 
-
-  
+  /**
+   * Gets the default action blocks for an activity
+   */
   function getDefaultBlocks(activity: ActivityData) {
-    
-    switch (activity.title) {
-      case "Quiet standing (eyes-close + eyes-open)":
-        return [
-          { id: 1, label: "Tare", start: 0, duration: 5 },
-          { id: 2, label: "Step onto board", start: 5, duration: 5 },
-          { id: 3, label: "Stand - Eyes Open", start: 10, duration: 20 },
-          { id: 4, label: "Stand - Eyes Closed", start: 30, duration: 20 },
-        ];
-      case "Timed Up and Go (TUG)":
-        return [
-          { id: 1, label: "Tare", start: 0, duration: 5 },
-          { id: 2, label: "Step onto board", start: 5, duration: 5 },
-          { id: 3, label: "Stand Up", start: 10, duration: 5 },
-          { id: 4, label: "Walk Forward", start: 15, duration: 10 },
-          { id: 5, label: "Turn Around", start: 25, duration: 5 },
-          { id: 6, label: "Walk Back", start: 30, duration: 10 },
-          { id: 7, label: "Sit Down", start: 40, duration: 5 },
-        ];
-      case "Single leg stance":
-        return [
-          { id: 1, label: "Tare", start: 0, duration: 5 },
-          { id: 2, label: "Step onto board", start: 5, duration: 5 },
-          { id: 3, label: "Stand on One Leg", start: 10, duration: 20 },
-        ];
-      case "Tandem stance":
-        return [
-          { id: 1, label: "Tare", start: 0, duration: 5 },
-          { id: 2, label: "Step onto board", start: 5, duration: 5 },
-          { id: 3, label: "Tandem Stand", start: 10, duration: 20 },
-        ];
-      case "Functional Reach Test":
-        return [
-          { id: 1, label: "Tare", start: 0, duration: 5 },
-          { id: 2, label: "Step onto board", start: 5, duration: 5 },
-          { id: 3, label: "Reach Forward", start: 10, duration: 10 },
-          { id: 4, label: "Return to Start", start: 20, duration: 5 },
-        ];
-      case "Dynamic weight shifting":
-        return [
-          { id: 1, label: "Tare", start: 0, duration: 5 },
-          { id: 2, label: "Step onto board", start: 5, duration: 5 },
-          { id: 3, label: "Shift Weight", start: 10, duration: 20 },
-        ];
-      default:
-        return [
-          { id: 1, label: "Tare", start: 0, duration: 5 },
-          { id: 2, label: "Step onto board", start: 5, duration: 5 },
-          { id: 3, label: "Main Action", start: 10, duration: 20 },
-        ];
-    }
+    return getDefaultBlocksByTitle(activity.title);
   }
 
-
-  
-
+  /**
+   * Updates timeline blocks when activity changes
+   */
   useEffect(() => {
     const defaults = getDefaultBlocks(activity);
     setTimelineBlocks(defaults);
     defaultBlocksRef.current = defaults;
   }, [activity]);
 
-  
+  /**
+   * Adds a new action to the timeline
+   */
   const handleAddAction = () => {
     if (!newActionName.trim()) return;
     let lastEnd = 0;
@@ -194,7 +225,8 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     }
     const newBlock = {
       id: Date.now(),
-      label: newActionName,
+      title: newActionName,
+      label: newActionName.toLowerCase().replace(/\s+/g, '-'),
       start: lastEnd,
       duration: Math.max(1, Number(newActionDuration) || 10),
     };
@@ -204,14 +236,15 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     setShowAddForm(false);
   };
 
-  
+  /**
+   * Cancels the add action form
+   */
   const handleCancelAdd = () => {
     setShowAddForm(false);
     setNewActionName("");
     setNewActionDuration(10);
   };
-
-
+  
   
   return (
     <div
@@ -231,6 +264,16 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         </div>
       )}
       <div className="activity-details" style={{ marginLeft: 0 }}>
+        {/* Board tag above the title */}
+        <div className="activity-board-tag" style={{ 
+          backgroundColor: activity.boardsRequired > 1 ? 'var(--primary-light, #e0e7ff)' : 'var(--bg-light)',
+          position: maximized ? 'absolute' : 'relative',
+          top: maximized ? '1vw' : 'auto',
+          right: maximized ? '1vw' : 'auto'
+        }}>
+          <img src={wbbIcon} alt="Balance Board" className="board-icon" />
+          <span>{activity.boardsRequired} {activity.boardsRequired === 1 ? 'board' : 'boards'}</span>
+        </div>
         {/* Always show the title in the same place, but use header style if maximized */}
         {maximized ? (
           <div className="activity-details-header">
@@ -289,6 +332,8 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
               <ActivityTimeline
                 blocks={timelineBlocks}
                 onChange={setTimelineBlocks}
+                onBlockSelect={(block) => setCurrentActionLabel(block.label)}
+                activityName={activity.activityName}
               />
               {/* Activity settings panel below timeline */}
               <div className="activity-details-panel">
