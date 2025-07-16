@@ -63,7 +63,7 @@ impl ConnectionManager {
                     self.scan(device_found_channel).await;
                 },
                 ManagerCommand::StopScan => {
-
+                    self.scan_cancel_tx = None;
                 },
                 ManagerCommand::IsScanning { responder } => {
                     responder.send(self.scan_cancel_tx.is_some()).unwrap();
