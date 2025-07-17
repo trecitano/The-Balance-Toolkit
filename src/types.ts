@@ -12,6 +12,8 @@ export interface UserType {
   color?: string;
   createdAt: string;
   updatedAt: string;
+  isDefault: boolean;
+  isSelected: boolean
   submitted?: boolean;
 }
 
@@ -43,7 +45,7 @@ export const defaultUser: UserType = {
 export interface Device {
   id: number;
   name: string;
-  status: "Connected" | "Active" | "Disconnected" | string;
+  isConnected: boolean;
   macAddress: string;
   battery?: number;
   temperature?: number;

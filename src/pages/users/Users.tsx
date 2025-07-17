@@ -1,11 +1,3 @@
-/**
- * @file User.tsx
- * @description User management page for the Balance Toolkit App.
- * Allows creating, editing, deleting, and viewing user profiles.
- * Each user has fields for ID, name, sex, age, height, handedness, weight, and color.
- * Includes UI for scrolling, editing, and selecting users.
- */
-
 import React, { useState, useEffect, useRef } from "react";
 import { UserType, defaultUser } from "../../types";
 import "./Users.css";
@@ -17,11 +9,12 @@ import personIcon from "../../assets/user-icon.svg";
 import paletteIcon from "../../assets/palette-icon.svg";
 import calendarIcon from "../../assets/calendar-icon.svg";
 import sexIcon from "../../assets/sex-icon.svg";
-import heightIcon from "../../assets/measure-icon.svg";
+import heightIcon from  "../../assets/measure-icon.svg";
 import weightIcon from "../../assets/weight-icon.svg";
 import handIcon from "../../assets/hand-icon.svg";
 import searchIcon from "../../assets/search-icon.svg";
 import { commands } from "@/utils/requests.ts";
+import {useQuery} from "@tanstack/react-query";
 
 function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   let timeout: ReturnType<typeof setTimeout> | null = null;
@@ -36,25 +29,15 @@ function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
   return debounced;
 }
 
-interface UsersProps {
-  allUsers: UserType[];
-  setAllUsers: React.Dispatch<React.SetStateAction<UserType[]>>;
-  currentSelectedUserId: string | null;
-  setCurrentSelectedUserId: (userId: string | null) => void;
-}
+const USERS_QUERY_KEY = ["users"];
 
-export default function Users({
-  allUsers,
-  setAllUsers,
-  currentSelectedUserId,
-  setCurrentSelectedUserId,
-}: UsersProps) {
+export default function Users() {
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editingUserData, setEditingUserData] = useState<UserType | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [leftFadeOpacity, setLeftFadeOpacity] = useState(0);
   const [rightFadeOpacity, setRightFadeOpacity] = useState(1);
-  const [carouselScrollPosition, setCarouselScrollPosition] = useState<number>(0);
+      const [carouselScrollPosition, setCarouselScrollPosition] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResults, setSearchResults] = useState<UserType[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
@@ -66,6 +49,8 @@ export default function Users({
   const isAutoScrolling = useRef<boolean>(false);
   const colorPickerRef = useRef<HTMLDivElement>(null);
 
+  const selectedUser = useRef(null);
+
   const fixedColors = [
     "#e55d82",
     "#409edb",
@@ -76,6 +61,19 @@ export default function Users({
     "#989898",
     "#9bbc0f",
   ];
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: USERS_QUERY_KEY,
+    queryFn: async () => {
+      const users = await commands.users.fetchUsers();
+
+      console.log("result: ", users);
+
+      return users;
+    },
+  });
+
+  let users: UserType[] = [];
 
   useEffect(() => {
     const adjustCardWidths = () => {
@@ -115,12 +113,12 @@ export default function Users({
     return () => {
       window.removeEventListener("resize", adjustCardWidths);
     };
-  }, [allUsers.length, currentSelectedUserId]);
+  }, [users.length, selectedUser]);
 
   useEffect(() => {
-    if (userListRef.current && currentSelectedUserId) {
+    if (userListRef.current && selectedUser) {
       const selectedUserElement = userListRef.current.querySelector(
-        `[data-userid="${currentSelectedUserId}"]`,
+        `[data-userid="${selectedUser}"]`,
       ) as HTMLLIElement;
 
       if (selectedUserElement) {
@@ -152,7 +150,7 @@ export default function Users({
         }, 50);
       }
     }
-  }, [currentSelectedUserId, allUsers]);
+  }, [selectedUser, users]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -195,7 +193,7 @@ export default function Users({
     const listElement = userListRef.current;
     if (!listElement) return;
 
-    const stableSetCurrentUser = setCurrentSelectedUserId;
+    const stableSetCurrentUser = selectedUser;
 
     const updateSelectionOnScroll = () => {
       if (isAutoScrolling.current) return;
@@ -225,7 +223,7 @@ export default function Users({
 
       if (
         closestElementId &&
-        closestElementId !== currentSelectedUserId &&
+        closestElementId !== selectedUser &&
         minDistancePercent < 30
       ) {
         stableSetCurrentUser(closestElementId);
@@ -258,7 +256,7 @@ export default function Users({
     return () => {
       listElement.removeEventListener("scroll", handleScroll);
     };
-  }, [allUsers, currentSelectedUserId, setCurrentSelectedUserId]);
+  }, [users, selectedUser]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
@@ -272,7 +270,7 @@ export default function Users({
 
     setIsSearching(true);
 
-    const filtered = allUsers.filter(
+    const filtered = users.filter(
       (user) =>
         user.name.toLowerCase().includes(term.toLowerCase()) ||
         user.id.toLowerCase().includes(term.toLowerCase()),
@@ -300,7 +298,7 @@ export default function Users({
       }
     }
 
-    setCurrentSelectedUserId(userId);
+    selectedUser.current = userId;
 
     if (event) {
       event.stopPropagation();
@@ -345,7 +343,7 @@ export default function Users({
     const newUser: UserType = {
       ...defaultUser,
       id: uuidv4(),
-      name: `New User ${allUsers.filter((u) => u.name.startsWith("New User")).length + 1}`,
+      name: `New User ${users.filter((u) => u.name.startsWith("New User")).length + 1}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       color: `#${Math.floor(Math.random() * 16777215)
@@ -356,9 +354,8 @@ export default function Users({
     await commands.users.addUser(newUser);
     const users = await commands.users.fetchUsers();
 
-    setAllUsers(users);
-    setCurrentSelectedUserId(newUser.id);
-    const newIndex = allUsers.length;
+    selectedUser.current = newUser.id;
+    const newIndex = users.length;
     setEditingIdx(newIndex);
     setEditingUserData({ ...newUser });
     if (formRef.current) formRef.current.reset();
@@ -374,11 +371,10 @@ export default function Users({
     await commands.users.deleteUser(userIdToDelete);
     const users = await commands.users.fetchUsers();
 
-    setAllUsers(users);
-    if (currentSelectedUserId === userIdToDelete) {
-      setCurrentSelectedUserId(
-        allUsers.length > 1 ? allUsers.filter((u) => u.id !== userIdToDelete)[0]?.id || null : null,
-      );
+    if (selectedUser.current === userIdToDelete) {
+      selectedUser.current = users.length > 1
+        ? users.filter((u) => u.id !== userIdToDelete)[0]?.id || null
+        : null;
     }
     if (editingUserData?.id === userIdToDelete) {
       setEditingIdx(null);
@@ -387,8 +383,9 @@ export default function Users({
     setShowDeleteConfirm(null);
   };
 
+  /*
   useEffect(() => {
-    const defaultUserExists = allUsers.some(
+    const defaultUserExists = users.some(
       (user) =>
         user.id === defaultUser.id || (user.name === "Default User" && user.submitted === true),
     );
@@ -406,24 +403,38 @@ export default function Users({
         submitted: true,
       };
 
-      setAllUsers((prevUsers) => {
+      users((prevUsers) => {
         const filteredUsers = prevUsers.filter((user) => user.name !== "Default User");
         return [...filteredUsers, newDefaultUser];
       });
 
-      if (!currentSelectedUserId) {
-        setCurrentSelectedUserId(defaultUserId);
+      if (!selectedUser.current) {
+        selectedUser.current = defaultUserId;
       }
     }
   }, []);
+  */
+
+  if (isLoading) {
+    return <div></div>;
+  }
+
+  if (error) {
+    return (
+      <div>
+      </div>
+    );
+  }
+
+  users = data ?? {};
 
   const handleEditUser = (userId: string) => {
-    const userToEdit = allUsers.find((user) => user.id === userId);
-    const userIndex = allUsers.findIndex((user) => user.id === userId);
+    const userToEdit = users.find((user) => user.id === userId);
+    const userIndex = users.findIndex((user) => user.id === userId);
     if (userToEdit && userIndex !== -1) {
       setEditingUserData({ ...userToEdit });
       setEditingIdx(userIndex);
-      setCurrentSelectedUserId(userId);
+      selectedUser.current = userId;
     }
   };
 
@@ -467,24 +478,25 @@ export default function Users({
 
     await commands.users.updateUser(updatedUser);
     const users = await commands.users.fetchUsers();
-
-    setAllUsers(users);
-    setCurrentSelectedUserId(updatedUser.id);
+    selectedUser.current = updatedUser.id;
     setEditingIdx(null);
     setEditingUserData(null);
   };
 
+  console.log("test");
+  console.log(users);
+
   const currentUserData =
-    allUsers.find((user) => user.id === currentSelectedUserId) ||
+    users.find((user) => user.id === selectedUser.current) ||
     editingUserData ||
-    (allUsers.length > 0 ? allUsers[0] : null);
+    (users.length > 0 ? users[0] : null);
   const displayUser = editingUserData || currentUserData;
 
   const renderCarouselIndicators = () => {
-    if (!allUsers.length) return null;
+    if (!users.length) return null;
 
     const sortedUsers = getSortedUsers();
-    const currentIndex = sortedUsers.findIndex((user) => user.id === currentSelectedUserId);
+    const currentIndex = sortedUsers.findIndex((user) => user.id === selectedUser.current);
 
     return (
       <div className="carousel-indicators">
@@ -492,7 +504,7 @@ export default function Users({
           const distance = Math.abs(index - currentIndex);
           let className = "carousel-indicator-dot";
 
-          if (user.id === currentSelectedUserId) {
+          if (user.id === selectedUser.current) {
             className += " active";
           } else if (distance <= 2) {
             className += " nearby";
@@ -534,7 +546,7 @@ export default function Users({
   };
 
   const getSortedUsers = () => {
-    return [...allUsers].sort((a, b) => {
+    return [...users].sort((a, b) => {
       if (isDefaultUser(a)) return -1;
 
       if (isDefaultUser(b)) return 1;
@@ -608,11 +620,11 @@ export default function Users({
                 <li
                   key={user.id}
                   data-userid={user.id}
-                  className={`user-carousel-item ${currentSelectedUserId === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""} ${isDefaultUser(user) ? "default-user" : ""}`}
+                  className={`user-carousel-item ${selectedUser.current === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""} ${isDefaultUser(user) ? "default-user" : ""}`}
                   onClick={(e) => handleSelectUser(user.id, e)}
                 >
                   <div className="user-selection-status">
-                    {currentSelectedUserId === user.id &&
+                    {selectedUser.current === user.id &&
                       (isDefaultUser(user) ? "Default" : "Selected")}
                   </div>
                   <img
@@ -628,7 +640,7 @@ export default function Users({
                       {new Date(user.updatedAt).toLocaleDateString()}
                     </span>
                   </span>
-                  {currentSelectedUserId === user.id && editingIdx === null && (
+                  {selectedUser.current === user.id && editingIdx === null && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -989,10 +1001,10 @@ export default function Users({
             <h4>Confirm Delete</h4>
             <p>
               Are you sure you want to delete user "
-              {allUsers.find((u) => u.id === showDeleteConfirm)?.name}"?
+              {users.find((u) => u.id === showDeleteConfirm)?.name}"?
             </p>
 
-            {allUsers.find((u) => u.id === showDeleteConfirm && isDefaultUser(u)) && (
+            {users.find((u) => u.id === showDeleteConfirm && isDefaultUser(u)) && (
               <p className="default-user-warning">Default User cannot be deleted!</p>
             )}
 
@@ -1001,7 +1013,7 @@ export default function Users({
                 onClick={() => handleDeleteUser(showDeleteConfirm)}
                 className="btn btn--delete btn--medium"
                 disabled={
-                  allUsers.find((u) => u.id === showDeleteConfirm && isDefaultUser(u)) !== undefined
+                  users.find((u) => u.id === showDeleteConfirm && isDefaultUser(u)) !== undefined
                 }
               >
                 <span className="btn__icon btn__icon--left">

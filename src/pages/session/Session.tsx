@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import "./Session.css";
 import wbbIconLineBlue from "../../assets/wbb-icon-line-blue.svg";
 import userIcon from "../../assets/user-icon.svg";
@@ -11,6 +11,7 @@ import CopYGraph from "./CopYGraph";
 import VCopXGraph from "./VCopXGraph";
 import VCopYGraph from "./VCopYGraph";
 import WBBTopGraph from "./WBBTopGraph";
+import {Device, UserType} from "@/types.ts";
 
 declare global {
   interface Window {
@@ -198,15 +199,6 @@ const formatDisplayPath = (path: string, maxLength: number): string => {
   return displayString;
 };
 
-interface SessionProps {
-  availableBoards: string[];
-  onViewChange: (view: string) => void;
-  onInitialBoardConsumed: () => void;
-  usersForDropdown: SessionUser[];
-  currentSelectedUserId: string | null;
-  onSelectUserInSession: (userId: string | null) => void;
-}
-
 let lastStabilityIndex = 5.0;
 const getStabilityIndexFromBackend = (): number => {
   const change = (Math.random() - 0.5) * 0.2;
@@ -234,26 +226,7 @@ const getMockStabilityData = () => {
   return { vCopX: newVCopX, vCopY: newVCopY };
 };
 
-function Session({
-  availableBoards,
-  onViewChange,
-  onInitialBoardConsumed,
-  usersForDropdown,
-  currentSelectedUserId,
-  onSelectUserInSession,
-}: SessionProps) {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const initialSelectedBoardFromRoute =
-    (location.state?.initialSelectedBoard as string | null) || null;
-
-  console.log(
-    "[Session.tsx] Component rendered. availableBoards prop:",
-    availableBoards,
-    "initialSelectedBoardFromRoute:",
-    initialSelectedBoardFromRoute,
-  );
-
+export default function Session() {
   const boardDropdownRef = useRef<HTMLDivElement>(null);
   const boardToggleRef = useRef<HTMLButtonElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -302,6 +275,8 @@ function Session({
   const vCopXGraphContainerRef = useRef<HTMLDivElement>(null);
   const vCopYGraphContainerRef = useRef<HTMLDivElement>(null);
 
+  const selectedUser = useRef<SessionUser | null>(null);
+
   const [copYDataSeries, setCopYDataSeries] = useState<number[]>([]);
   const [copXDataSeries, setCopXDataSeries] = useState<number[]>([]);
   const [vCopXDataSeries, setVCopXDataSeries] = useState<number[]>([]);
@@ -337,52 +312,9 @@ function Session({
 
   const TRAIL_MAX_AGE = 1500;
 
-  useEffect(() => {
-    if (initialSelectedBoardFromRoute && !initialBoardProcessed) {
-      if (availableBoards.length > 0) {
-        if (availableBoards.includes(initialSelectedBoardFromRoute)) {
-          console.log(
-            `[Session.tsx] Initial board from route: ${initialSelectedBoardFromRoute}. Setting as selected.`,
-          );
-          setSelectedBoard(initialSelectedBoardFromRoute);
-        } else {
-          console.warn(
-            `[Session.tsx] Initial board from route "${initialSelectedBoardFromRoute}" not found in available boards. Will attempt to select default.`,
-          );
-          if (!selectedBoard && availableBoards.length > 0) {
-            setSelectedBoard(availableBoards[0]);
-          } else if (!selectedBoard && availableBoards.length === 0) {
-            setSelectedBoard(null);
-          }
-        }
-        setInitialBoardProcessed(true);
-        if (onInitialBoardConsumed) {
-          onInitialBoardConsumed();
-        }
-      }
-    } else if (initialBoardProcessed || !initialSelectedBoardFromRoute) {
-      if (!selectedBoard && availableBoards.length > 0) {
-        console.log(
-          "[Session.tsx] No board selected or initial processed, selecting first available board:",
-          availableBoards[0],
-        );
-        setSelectedBoard(availableBoards[0]);
-      } else if (selectedBoard && !availableBoards.includes(selectedBoard)) {
-        console.warn(
-          `[Session.tsx] Selected board "${selectedBoard}" no longer available. Reselecting.`,
-        );
-        setSelectedBoard(availableBoards.length > 0 ? availableBoards[0] : null);
-      } else if (availableBoards.length === 0 && selectedBoard !== null) {
-        setSelectedBoard(null);
-      }
-    }
-  }, [
-    initialSelectedBoardFromRoute,
-    availableBoards,
-    selectedBoard,
-    initialBoardProcessed,
-    onInitialBoardConsumed,
-  ]);
+  const users: UserType[] = [];
+  const devices: Device[] = [];
+
 
   const handleBoardSelect = (boardName: string) => {
     setSelectedBoard(boardName);
@@ -929,12 +861,11 @@ function Session({
   };
 
   const handleUserSelect = (userId: string) => {
-    onSelectUserInSession(userId);
-    setShowUserDropdown(false);
+    commands.session
   };
 
   const handleGoToUsers = () => {
-    onViewChange("users");
+    //onViewChange("users");
     setShowUserDropdown(false);
   };
 
@@ -958,8 +889,8 @@ function Session({
   };
 
   const selectedUserName =
-    usersForDropdown.find((u) => u.id === currentSelectedUserId)?.name ||
-    currentSelectedUserId ||
+    users.find((u) => u.id === selectedUser.current)?.name ||
+    selectedUser.current ||
     "Select User";
 
   return (
@@ -981,7 +912,7 @@ function Session({
                   recording
                     ? "Settings cannot be changed during recording."
                     : selectedBoard ||
-                      (availableBoards.length === 0 ? "No boards available" : "Select Board")
+                      (devices.length === 0 ? "No boards available" : "Select Board")
                 }
               >
                 <img src={wbbIconLineBlue} alt="Board Icon" className="icon" />
@@ -989,9 +920,9 @@ function Session({
               </button>
               {showBoardDropdown && !recording && (
                 <div ref={boardDropdownRef} className="dropdown">
-                  {availableBoards.length > 0 ? (
+                  {devices.length > 0 ? (
                     <ul className="list">
-                      {availableBoards.map((board) => (
+                      {devices.map((board) => (
                         <li
                           key={board}
                           className={`list-item ${
@@ -1036,13 +967,13 @@ function Session({
               </button>
               {showUserDropdown && !recording && (
                 <div ref={userDropdownRef} className="dropdown">
-                  {usersForDropdown.length > 0 ? (
+                  {users.length > 0 ? (
                     <ul className="list">
-                      {usersForDropdown.map((user) => (
+                      {users.map((user) => (
                         <li
                           key={user.id}
                           className={`list-item ${
-                            user.id === currentSelectedUserId ? "list-item--selected" : ""
+                            user.id === selectedUser.current ? "list-item--selected" : ""
                           }`}
                           onClick={() => handleUserSelect(user.id)}
                         >
@@ -1532,5 +1463,3 @@ function Session({
     </div>
   );
 }
-
-export default Session;

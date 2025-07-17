@@ -30,7 +30,6 @@ export default function Devices() {
     staleTime: 10000,
   });
 
-  // Mutations
   const identifyDeviceMutation = useMutation({
     mutationFn: (macAddress: string) => commands.devices.identifyDevice(macAddress),
     onError: (error) => console.error("Failed to identify device:", error),
@@ -136,21 +135,19 @@ export default function Devices() {
 
   const getSortedDevices = () => {
     if (!Array.isArray(devices)) return [];
-    const connected = devices.filter((d) => d.status === "Connected");
-    const active = devices.filter((d) => d.status === "Active");
-    const disconnected = devices.filter((d) => d.status === "Disconnected");
+    const connected = devices.filter((d) => d.isConnected);
+    const disconnected = devices.filter((d) => !d.isConnected);
 
     connected.sort(
       (a, b) => new Date(a.lastConnected).getTime() - new Date(b.lastConnected).getTime(),
     );
-    active.sort((a, b) => a.name.localeCompare(b.name));
     disconnected.sort((a, b) => a.name.localeCompare(b.name));
 
-    return [...connected, ...active, ...disconnected];
+    return [...connected, ...disconnected];
   };
 
   const sortedDevices = getSortedDevices();
-  const connectedDevices = sortedDevices.filter((d) => d.status === "Connected");
+  const connectedDevices = sortedDevices.filter((d) => d.isConnected);
   const noDevices = sortedDevices.length === 0;
 
   return (

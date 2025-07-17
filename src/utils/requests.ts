@@ -129,4 +129,14 @@ export const commands = {
       return invoke("devices_identify_device", { macAddress: macAddress });
     },
   },
+
+  session: {
+    async startSession(): Promise<Device[]> {
+      if (useDeviceMocks) {
+        return mockDeviceData;
+      }
+
+      return invoke("devices_fetch_all_devices");
+    },
+  }
 };
