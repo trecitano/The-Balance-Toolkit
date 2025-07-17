@@ -25,6 +25,7 @@ pub struct NintendoDevice {
     pub status: String,
     pub mac_address: String,
     pub pin: String,
+    pub is_connected: bool,
     pub last_connected: Option<DateTime<Utc>>,
 }
 

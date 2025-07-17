@@ -52,9 +52,10 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
             let device_futures = device_collection.into_iter().map(|info| async move {
                 let device_id = info.Id()?;
                 let device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
+                let device_information = device.DeviceInformation()?;
                 // In windows, the BluetoothDevice::GetDeviceSelector query only returns the bluetooth devices
                 // that have been paired.
-                let is_paired = true;
+                let is_paired = device_information.Pairing()?.IsPaired()?;
                 let is_connected = device.ConnectionStatus()? == BluetoothConnectionStatus::Connected;
                 let mac_address = convert_u64_to_mac_address(device.BluetoothAddress()?);
 
