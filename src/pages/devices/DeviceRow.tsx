@@ -22,7 +22,7 @@ export default function DeviceRow({
   handleConnectDevice,
 }: DeviceRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const connectTooltip = device.status === "Disconnected" ? "Device is disconnected" : "";
+  const connectTooltip = device.isConnected ? "" : "Device is disconnected";
 
   const formatLastConnected = (dateString: string | undefined) => {
     if (!dateString) return "N/A";
@@ -48,27 +48,23 @@ export default function DeviceRow({
 
   return (
     <div className="device-row">
-      <div className={`device-container${device.status === "Disconnected" ? " disconnected" : ""}`}>
+      <div className={`device-container${device.isConnected ? " " : "disconnected"}`}>
         <button onClick={() => handleRemoveDevice(device.macAddress)} className="remove-device-btn">
           ✕
         </button>
 
         <div className="device-image-status">
           <img
-            src={device.status === "Connected" ? wbbIconBlue : wbbIcon}
+            src={device.isConnected ? wbbIconBlue : wbbIcon}
             alt="Device"
             className={`device-image ${
-              device.status === "Connected"
-                ? "device-image-blue"
-                : device.status === "Active"
-                  ? "device-image-active"
-                  : ""
+              device.isConnected ? "device-image-blue" : ""
             }`}
           />
           <div
-            className={`device-status ${device.status === "Connected" ? "device-status-connected" : "device-status-disconnected"}`}
+            className={`device-status ${device.isConnected ? "device-status-connected" : "device-status-disconnected"}`}
           >
-            {device.status}
+            {device.isConnected ? "Connected" : "Disconnected"}
           </div>
         </div>
 
@@ -109,7 +105,7 @@ export default function DeviceRow({
             </div>
           )}
           <div className="device-last-connected">
-            {device.status !== "Disconnected"
+            {device.isConnected
               ? `MAC: ${device.macAddress}`
               : `Last seen: ${formatLastConnected(device.lastConnected)}`}
           </div>
@@ -119,12 +115,12 @@ export default function DeviceRow({
           <button
             onClick={() => handleIdentifyClick(device.macAddress)}
             className="device-action-btn btn-circle"
-            disabled={device.status === "Disconnected"}
-            title={device.status === "Disconnected" ? "Device is disconnected" : "Identify Device"}
+            disabled={!device.isConnected}
+            title={device.isConnected ? "Identify Device" : "Device is disconnected"}
           >
             ID
           </button>
-          {device.status === "Connected" ? (
+          {device.isConnected ? (
             <button
               onClick={() => handleDisconnectDevice(device.macAddress)}
               className="device-action-btn disconnect"
