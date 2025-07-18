@@ -1,32 +1,20 @@
-# Tauri Development Environment Setup Guide
-
-This guide walks you through setting up a complete development environment for Tauri with Rust.
-
 ## System Requirements
+The app works in Windows, MacOS and Unix distros.
 
-### Windows
+The project is using:
+
+- Bun 1.2.18
+- Rust 1.88
+- Cmake 4.0.3
+
+At the moment of writing, these are the latest versions.
+Later versions of these tools should work.
+
+### Windows Base Requirements
 
 - Windows 10/11
 - PowerShell or Command Prompt with administrator privileges
 
-### macOS
-
-- macOS 10.15 or later
-- Terminal access
-- Homebrew (recommended)
-
-## Step 1: Install Node.js
-
-Download and install Node.js LTS version from https://nodejs.org/
-
-## Step 2: Install Rust
-
-### Windows
-
-1. Download the Rust installer:
-   - Visit https://rustup.rs/
-   - Download and run `rustup-init.exe`
-   - Follow the installation prompts
 
 2. Install Microsoft Visual Studio C++ Build Tools:
    - Download from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
@@ -36,18 +24,41 @@ Download and install Node.js LTS version from https://nodejs.org/
 3. Install WebView2:
    - Download from: https://developer.microsoft.com/en-us/microsoft-edge/webview2/
 
-### macOS
+### MacOS Base Requirements
 
-1. Open Terminal and run:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-2. Install Xcode Command Line Tools:
-
+- macOS 10.15 or later
+- [Homebrew](https://brew.sh/) 
+- Ensure Xcode Command Line Tools are installed:
+  - Open Terminal and run:
 ```bash
 xcode-select --install
+```
+
+### Unix Base Requirements
+
+- TODO!
+
+### Bun
+Bun is necessary for everything frontend related.
+
+[Bun Installation guide](https://bun.com/)
+
+### Rust
+Rust is necessary for everything backend related.
+
+[Rust Installation guide (rustup)](https://rustup.rs/)
+
+### Cmake
+We need Cmake due to add support for the Lab Streaming Layer.
+The [dependency](https://github.com/labstreaminglayer/liblsl-rust) we use for this feature requires cmake.
+
+Windows:
+- [Windows Cmake installation guide](https://cmake.org/download/)
+
+MacOS:
+- Open the terminal and run:
+```bash 
+brew install cmake
 ```
 
 ## Step 3: Verify Installations
@@ -59,47 +70,33 @@ Run these commands to verify your installations:
 rustc --version
 cargo --version
 
-# Check Node.js
-node --version
-npm --version
+# Check Bun
+bun -v
+
+# Check CMake
+cmake --version
 ```
 
-## Step 4: Create a New Tauri Project
+## Running the Application
 
-1. Create a new project:
+Initial setup:
 
+install the frontend dependencies with:
 ```bash
-npm create tauri-app
+bun install
 ```
-
-2. Follow the prompts:
-
-- ✔ Project name · balance-toolkit-app
-- ✔ Identifier · React
-- ✔ Choose which language to use for your frontend · TypeScript / JavaScript - (pnpm, yarn, npm, deno, bun)
-- ✔ Choose your package manager · npm
-- ✔ Choose your UI template · React - (https://react.dev/)
-- ✔ Choose your UI flavor · TypeScript
-
-3. Navigate to the project and install dependencies:
-
-```bash
-cd balance-toolkit-app
-npm install
-```
-
-## Running Your Application
+This is only required the first time. After this, it is possible to run the scripts that exist in the `package.json` file.
 
 Development mode:
 
 ```bash
-npm run tauri dev
+bun run tauri dev
 ```
 
 Build for production:
 
 ```bash
-npm run tauri build
+bun run tauri build
 ```
 
 ## Troubleshooting
@@ -119,20 +116,11 @@ npm run tauri build
    - Check that all dependencies are installed
    - Try cleaning and rebuilding:
      ```bash
-     npm run tauri clean
-     npm run dev
+     bun run tauri clean
+     bun run dev
      ```
-
-### Getting Help
-
-- Tauri Discord: https://discord.com/invite/tauri
-- Rust Forum: https://users.rust-lang.org
 
 ## Additional Resources
 
 - [Tauri Official Documentation](https://tauri.app/v1/guides/)
 - [Rust Documentation](https://www.rust-lang.org/learn)
-
-## License
-
-[MIT License](LICENSE)
