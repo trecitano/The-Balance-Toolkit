@@ -1,33 +1,35 @@
-use crate::balance_board_com;
-use crate::balance_board_com::BoardAction;
-use crate::bluetooth::bluetooth_communication;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
-use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
+use crate::actors::balance_board_actor::BoardAction;
+use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothHandler};
 use crate::file_system::DeviceFileSystem;
 use crate::types::{MacAddress, NintendoDevice};
+use anyhow::Result;
+use crate::actors::balance_board_actor;
 
 // Commands that can be sent to the ConnectionManager
 #[derive(Debug)]
-pub enum ManagerCommand {
+pub enum ToolkitCommand {
     // Manager main actions
-    StartScan {
-        device_found_channel: AppHandle,
-    },
-    StopScan,
-    IsScanning {
-        responder: oneshot::Sender<bool>,
+    BluetoothAction {
+        action: BluetoothCommand
     },
 
     GetBoardsSystemView {
         responder: oneshot::Sender<Vec<NintendoDevice>>,
     },
+    RemoveDevice {
+        device_id: String,
+        response: oneshot::Sender<Result<()>>,
+    },
+
     ConnectedBoards {
         responder: oneshot::Sender<Vec<String>>,
     },
     Connect {
         device_id: String,
+        response: oneshot::Sender<bool>,
     },
     Disconnect {
         device_id: String,
@@ -56,73 +58,64 @@ pub enum ManagerCommand {
 }
 
 pub struct ConnectionManager {
-    manager_tx: mpsc::Sender<ManagerCommand>,
-    manager_rx: mpsc::Receiver<ManagerCommand>,
+    manager_tx: mpsc::Sender<ToolkitCommand>,
+    manager_rx: mpsc::Receiver<ToolkitCommand>,
     connections: HashMap<String, mpsc::Sender<BoardAction>>,
     selected_boards: HashSet<String>,
-    scan_cancel_tx: Option<oneshot::Sender<()>>,
+    bluetooth_manager_tx: mpsc::Sender<BluetoothCommand>,
 }
 
 impl ConnectionManager {
-    pub fn new(manager_tx: mpsc::Sender<ManagerCommand>, manager_rx: mpsc::Receiver<ManagerCommand>) -> Self {
+    pub fn new(manager_tx: mpsc::Sender<ToolkitCommand>, manager_rx: mpsc::Receiver<ToolkitCommand>) -> Self {
         Self {
             manager_tx,
             manager_rx,
             connections: HashMap::new(),
             selected_boards: HashSet::new(),
-            scan_cancel_tx: None,
+            bluetooth_manager_tx: BluetoothHandler::start_bluetooth_handler(),
         }
     }
 
-    pub async fn run(mut self) {
-        println!("Connection manager started.");
+    pub async fn run(mut self) -> Result<()> {
+        println!("Balance Walker Service started.");
         
         while let Some(command) = self.manager_rx.recv().await {
             match command {
-                // --------------------
-                // SCANNING COMMANDS
-                // --------------------
-                ManagerCommand::StartScan { device_found_channel } => {
-                    self.scan(device_found_channel).await;
+                ToolkitCommand::BluetoothAction { action } => {
+                    self.bluetooth_manager_tx.send(action).await?;
+                }
+                ToolkitCommand::GetBoardsSystemView { responder } => {
+                    let result = self.boards_system_view().await?;
+                    responder.send(result);
                 },
-                ManagerCommand::StopScan => {
-                    self.scan_cancel_tx = None;
-                },
-                ManagerCommand::IsScanning { responder } => {
-                    responder.send(self.scan_cancel_tx.is_some()).unwrap();
-                },
-
-                ManagerCommand::GetBoardsSystemView { responder } => {
-                    responder.send(self.boards_system_view().await.unwrap()).unwrap();
-                },
-                ManagerCommand::ConnectedBoards { responder } => {
+                ToolkitCommand::ConnectedBoards { responder } => {
                     responder
                         .send(self.connections.keys().cloned().collect())
                         .unwrap();
                 }
-                ManagerCommand::Connect { device_id } => {
+                ToolkitCommand::Connect { device_id, response } => {
                     self.connect(device_id).await;
                 }
-                ManagerCommand::Disconnect { device_id } => {
+                ToolkitCommand::Disconnect { device_id } => {
                     self.disconnect(device_id);
                 }
-                ManagerCommand::IdentifyBoard { device_id } => {
+                ToolkitCommand::IdentifyBoard { device_id } => {
                     self.identify_board(device_id);
                 }
 
 
-                ManagerCommand::SelectBoardForSession { device_id } => {
+                ToolkitCommand::SelectBoardForSession { device_id } => {
                     self.selected_boards.insert(device_id);
                 }
-                ManagerCommand::UnselectBoardForSession { device_id } => {
+                ToolkitCommand::UnselectBoardForSession { device_id } => {
                     self.selected_boards.remove(&device_id);
                 }
-                ManagerCommand::SelectedBoardsForSession { responder } => {
+                ToolkitCommand::SelectedBoardsForSession { responder } => {
                     responder.send(self.selected_boards.iter().cloned().collect()).unwrap();
                 }
 
 
-                ManagerCommand::BoardAction { device_id, action } => {
+                ToolkitCommand::BoardAction { device_id, action } => {
                     self.board_action(device_id, action).await;
                 }
 
@@ -130,22 +123,25 @@ impl ConnectionManager {
             }
         }
         
-        println!("Connection manager stopped.");
+        println!("Balance Walker Service stopped.");
+        Ok(())
     }
 
 
     // Returns a list of both previous and connected devices.
     // If a device is found to be connected to the Operating System, but the manager doesn't know about it,
     // then the manager automatically connects to it.
-    pub async fn boards_system_view(&mut self) -> Result<Vec<NintendoDevice>, String> {
-        let stored_devices = DeviceFileSystem::get_stored_devices().map_err(|e| e.to_string())?;
-        let os_connected_devices: Vec<NintendoDevice> =
-            bluetooth_communication::get_nintendo_devices()
-                .await
-                .map_err(|e| e.to_string())?
-                .into_iter()
-                .map(|p| p.into())
-                .collect();
+    async fn boards_system_view(&mut self) -> Result<Vec<NintendoDevice>> {
+        let stored_devices = DeviceFileSystem::get_stored_devices()?;
+        
+        let (response_tx, response_rx) = oneshot::channel();
+        self.bluetooth_manager_tx.send(BluetoothCommand::GetNintendoDevices { response: response_tx }).await?;
+        let bluetooth_devices = response_rx.await?;
+        
+        let os_connected_devices: Vec<NintendoDevice> = bluetooth_devices
+            .into_iter()
+            .map(|p| p.into())
+            .collect();
 
         // Connect the manager to any missing devices.
         for device in &os_connected_devices {
@@ -169,44 +165,6 @@ impl ConnectionManager {
         Ok(result)
     }
 
-    // This is a long action, so we execute this in a background task
-    async fn scan(&mut self, emitter: AppHandle) {
-        if self.scan_cancel_tx.is_some() {
-            println!("Scan is already in progress.");
-            return;
-        }
-
-        let (cancel_tx, mut cancel_rx) = oneshot::channel();
-        self.scan_cancel_tx = Some(cancel_tx);
-
-        let manager_tx = self.manager_tx.clone();
-        tokio::spawn(async move {
-            println!("Scanning for devices in background...");
-            loop {
-                tokio::select! {
-                    _ = &mut cancel_rx => {
-                        println!("Scan cancelled.");
-                        break;
-                    }
-                    new_board_bluetooth = bluetooth_communication::connect_new_balance_board() => {
-                        if let Ok(mac_address) = new_board_bluetooth {
-                            tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
-                            let device_id = convert_mac_address_to_string(mac_address);
-                            manager_tx.send(ManagerCommand::Connect { device_id }).await.unwrap();
-
-                            match bluetooth_communication::get_nintendo_device_by_mac_address(mac_address).await {
-                                Ok(device) => emitter.emit("new_board", NintendoDevice::from(device)).unwrap(),
-                                Err(e) => eprintln!("Error getting device info by mac address: {:?}", e),
-                            }
-                        }
-                    },
-                }
-            }
-
-            println!("Exiting background scan task.");
-        });
-    }
-
     async fn connect(&mut self, device_id: String) {
         if self.connections.contains_key(&device_id) {
             println!("Device {} is already connected.", device_id);
@@ -217,7 +175,7 @@ impl ConnectionManager {
         let (action_tx, action_rx) = mpsc::channel(10); // Channel for this specific board
 
         let id_clone = device_id.clone();
-        match balance_board_com::BalanceBoardConnection::new(&id_clone, action_rx) {
+        match balance_board_actor::BalanceBoardConnection::new(&id_clone, action_rx) {
             Ok(board_connection) => {
                 tokio::spawn(async move {
                     board_connection.run().await;
@@ -257,8 +215,7 @@ impl ConnectionManager {
 
         let board_channel_clone = board.clone();
         tokio::spawn(async move {
-            let mut is_on = true;
-            board_channel_clone.send(BoardAction::TurnOffLed).await;
+            let _ = board_channel_clone.send(BoardAction::TurnOffLed).await;
 
             for _ in 0..10 {
                 board_channel_clone.send(BoardAction::TurnOnLed).await;

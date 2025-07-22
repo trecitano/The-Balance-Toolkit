@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 
 use crate::NINTENDO_BOARD_ID;
-use crate::bluetooth::bluetooth_communication::{
+use crate::bluetooth::bluetooth_service::{
     BluetoothAdapterInfo, BluetoothPeripheral, better_mac_address_to_wii_pin,
 };
 use bluer::agent::{Agent, ReqResult, RequestPinCode, RequestPinCodeFn};

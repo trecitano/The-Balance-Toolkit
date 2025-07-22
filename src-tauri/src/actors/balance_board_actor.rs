@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+ use anyhow::{anyhow, Result};
 use chrono::Utc;
 use hidapi::{HidApi, HidDevice};
 use lsl::{ChannelFormat, Pushable};

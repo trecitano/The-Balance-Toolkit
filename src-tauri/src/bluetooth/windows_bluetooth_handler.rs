@@ -9,7 +9,7 @@ use windows::{
 };
 
 use crate::NINTENDO_BOARD_ID;
-use crate::bluetooth::bluetooth_communication::{
+use crate::bluetooth::bluetooth_service::{
     BluetoothAdapterInfo, BluetoothPeripheral, mac_address_to_wii_pin,
 };
 use windows::Devices::Enumeration::{DeviceInformationUpdate, DevicePairingResultStatus, DeviceUnpairingResultStatus};

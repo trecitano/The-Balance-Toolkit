@@ -1,15 +1,15 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod balance_board_com;
+mod actors;
 mod bluetooth;
 mod file_system;
 mod types;
-mod tauri_frontend;
-mod service;
+mod frontend;
 
 use tokio::sync::mpsc;
-use crate::service::{ConnectionManager};
+use crate::actors::bluetooth_service::BluetoothCommand;
+use crate::actors::toolkit_service::{ConnectionManager, ToolkitCommand};
 
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 
@@ -25,6 +25,15 @@ async fn main() {
     });
     
     file_system::initialize_app_dir().unwrap();
+
+    let (new_bluetooth_tx, mut new_bluetooth_rx) = mpsc::channel(10);
+    let command = ToolkitCommand::BluetoothAction {
+        action: BluetoothCommand::StartScanAndPair {
+            response_stream: new_bluetooth_tx
+        }
+    };
+    manager_tx.send(command).await.map_err(|e| e.to_string()).unwrap();
+    tokio::time::sleep(tokio::time::Duration::from_millis(10000)).await;
     
-    tauri_frontend::initialize(manager_tx)
+    //tauri_frontend::initialize(manager_tx)
 }
