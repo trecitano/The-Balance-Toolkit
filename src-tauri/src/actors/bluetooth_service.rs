@@ -1,11 +1,11 @@
 #[cfg(target_os = "linux")]
 use crate::bluetooth::linux_bluetooth_service::Handler;
 #[cfg(target_os = "windows")]
-use crate::bluetooth::windows_bluetooth_service::Handler;
+use crate::bluetooth::windows_bluetooth_service as NativeHandler;
 #[cfg(target_os = "macos")]
 use crate::bluetooth::macos_bluetooth_service as NativeHandler;
 
-use anyhow::{Result};
+use anyhow::{Result};  
 use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
 use crate::NINTENDO_BOARD_ID;
@@ -89,8 +89,7 @@ impl BluetoothHandler {
 
         let (cancel_tx, mut cancel_rx) = oneshot::channel();
         self.scan_cancel_tx = Some(cancel_tx);
-
-        let native_tx_clone = self.inner_tx.clone();
+        
         tokio::spawn(async move {
             println!("Scanning for devices in background...");
             loop {
@@ -100,7 +99,7 @@ impl BluetoothHandler {
                         break;
                     }
 
-                    _ = Self::connect_new_balance_board(native_tx_clone.clone(), response_stream.clone()) => {
+                    _ = Self::connect_new_balance_board(response_stream.clone()) => {
                         // If the current state failed, wait one second before trying again
                         // TODO update this value
                         tokio::time::sleep(tokio::time::Duration::from_millis(50000)).await;
@@ -115,7 +114,7 @@ impl BluetoothHandler {
     }
 
     async fn get_nintendo_devices() -> Result<Vec<BluetoothPeripheral>> {
-        let adapters: Vec<BluetoothAdapterInfo> = NativeHandler::get_all_bluetooth_adapters_info()?
+        let adapters: Vec<BluetoothAdapterInfo> = NativeHandler::get_all_bluetooth_adapters_info().await?
             .into_iter()
             .filter_map(|result| result.ok())
             .collect();
@@ -132,11 +131,11 @@ impl BluetoothHandler {
         Ok(nintendo_devices)
     }
 
-    async fn connect_new_balance_board(native_bluetooth_tx: mpsc::Sender<NativeBluetoothCommand>, response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()> {
-        let connected_nintendo_devices = Self::get_nintendo_devices(&native_bluetooth_tx).await?;
+    async fn connect_new_balance_board(response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()> {
+        let connected_nintendo_devices = Self::get_nintendo_devices().await?;
         println!("Current boards: #{:?}", connected_nintendo_devices);
 
-        let bluetooth_device = match Self::scan_and_pair_nintendo(&native_bluetooth_tx).await {
+        let bluetooth_device = match NativeHandler::scan_and_pair_nintendo().await {
             Ok(bluetooth_device) => bluetooth_device,
             Err(e) => {
                 println!("Failed to scan and pair nintendo balance board: {:?}", e);
@@ -149,15 +148,6 @@ impl BluetoothHandler {
         }
 
         Ok(())
-    }
-
-    // Calls to Native Bluetooth primitives
-
-    async fn scan_and_pair_nintendo(native_bluetooth_tx: &mpsc::Sender<NativeBluetoothCommand>) -> Result<BluetoothPeripheral> {
-        let (tx, rx) = oneshot::channel();
-        let command = NativeBluetoothCommand::ScanAndPairDevice { device_name: NINTENDO_BOARD_ID.to_string(), response: tx };
-        native_bluetooth_tx.send(command).await?;
-        rx.await?
     }
 }
 
@@ -210,6 +200,7 @@ impl From<BluetoothPeripheral> for NintendoDevice {
             status: "Active".to_string(),
             mac_address: mac_str,
             pin: pin_hex_str.clone(),
+            is_connected:  p.is_connected,
             last_connected: None,
         }
     }

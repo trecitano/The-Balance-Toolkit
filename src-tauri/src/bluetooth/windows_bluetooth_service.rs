@@ -9,7 +9,7 @@ use windows::{
 };
 
 use crate::NINTENDO_BOARD_ID;
-use crate::bluetooth::bluetooth_service::{
+use crate::actors::bluetooth_service::{
     BluetoothAdapterInfo, BluetoothPeripheral, mac_address_to_wii_pin,
 };
 use windows::Devices::Enumeration::{DeviceInformationUpdate, DevicePairingResultStatus, DeviceUnpairingResultStatus};
@@ -52,20 +52,7 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
             let device_futures = device_collection.into_iter().map(|info| async move {
                 let device_id = info.Id()?;
                 let device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
-                let device_information = device.DeviceInformation()?;
-                // In windows, the BluetoothDevice::GetDeviceSelector query only returns the bluetooth devices
-                // that have been paired.
-                let is_paired = device_information.Pairing()?.IsPaired()?;
-                let is_connected = device.ConnectionStatus()? == BluetoothConnectionStatus::Connected;
-                let mac_address = convert_u64_to_mac_address(device.BluetoothAddress()?);
-
-                Ok(BluetoothPeripheral {
-                    id: device.BluetoothDeviceId()?.Id()?.to_string(),
-                    name: device.Name()?.to_string(),
-                    mac_address,
-                    is_paired,
-                    is_connected,
-                })
+                convert_to_bluetooth_peripheral(device).await
             });
 
             let mut adapter_list = futures::future::join_all(adapter_futures).await;
@@ -93,10 +80,12 @@ pub async fn get_all_bluetooth_adapters_info() -> Result<Vec<Result<BluetoothAda
 // that does not have the name. This name is later added via an "Updated" event, that updates the
 // "System.ItemNameDisplay" device property.
 // As such, we need to pay attention to both "Added" and "Updated" events.
-pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<MacAddress> {
-    let adapter_mac_address = adapter.mac_address.clone();
+pub async fn scan_and_pair_nintendo() -> Result<BluetoothPeripheral> {  
     tokio::task::spawn_blocking(move || {
         futures::executor::block_on(async {
+            let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
+            let adapter_mac_address = convert_u64_to_mac_address(default_adapter.BluetoothAddress()?);
+                
             let selector = BluetoothDevice::GetDeviceSelectorFromPairingState(false)?;
             let watcher = DeviceInformation::CreateWatcherAqsFilter(&selector)?;
             let pin = mac_address_to_wii_pin(adapter_mac_address);
@@ -162,9 +151,7 @@ pub async fn scan_and_pair_nintendo(adapter: &BluetoothAdapterInfo) -> Result<Ma
             if let Some(device_id) = rx.recv().await {
                 try_pair_with_board(device_id.clone(), pin).await?;
                 let bluetooth_device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
-                let mac_address =
-                    convert_u64_to_mac_address(bluetooth_device.BluetoothAddress()?);
-                return Ok(mac_address);
+                return convert_to_bluetooth_peripheral(bluetooth_device).await;
             }
 
             Err(anyhow!("Failed to find a device to pair with."))
@@ -271,4 +258,22 @@ pub async fn remove_device(mac_address: MacAddress) -> Result<()> {
     Ok(())
         })
     }).await?
+}
+
+async fn convert_to_bluetooth_peripheral(device: BluetoothDevice) -> Result<BluetoothPeripheral> {
+    let device_id = device.DeviceId()?;
+    let device_information = device.DeviceInformation()?;
+    // In windows, the BluetoothDevice::GetDeviceSelector query only returns the bluetooth devices
+    // that have been paired.
+    let mac_address = convert_u64_to_mac_address(device.BluetoothAddress()?);
+    let is_paired = device_information.Pairing()?.IsPaired()?;
+    let is_connected = device.ConnectionStatus()? == BluetoothConnectionStatus::Connected;
+
+    Ok(BluetoothPeripheral {
+        id: device_id.to_string(),
+        name: device.Name()?.to_string(),
+        mac_address,
+        is_paired,
+        is_connected,
+    })
 }
