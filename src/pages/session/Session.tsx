@@ -12,6 +12,8 @@ import VCopXGraph from "./VCopXGraph";
 import VCopYGraph from "./VCopYGraph";
 import WBBTopGraph from "./WBBTopGraph";
 import {Device, UserType} from "@/types.ts";
+import {useQuery} from "@tanstack/react-query";
+import {commands} from "@/utils/requests.ts";
 
 declare global {
   interface Window {
@@ -312,9 +314,19 @@ export default function Session() {
 
   const TRAIL_MAX_AGE = 1500;
 
-  const users: UserType[] = [];
-  const devices: Device[] = [];
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["session"],
+    queryFn: async () => {
+      const [devices, users] = await Promise.all([
+        commands.devices.fetchDevices(),
+        commands.users.fetchUsers(),
+      ]);
+      return { devices, users };
+    },
+    initialData: { devices: [], users: [] }
+  });
 
+  const { users, devices } = data ?? {};
 
   const handleBoardSelect = (boardName: string) => {
     setSelectedBoard(boardName);
