@@ -69,11 +69,12 @@ export default function Users() {
 
       console.log("result: ", users);
 
-      return users;
+      return { users };
     },
+    initialData: { users: [] }
   });
 
-  let users: UserType[] = [];
+  const { users } = data ?? {};
 
   useEffect(() => {
     const adjustCardWidths = () => {
@@ -425,8 +426,6 @@ export default function Users() {
       </div>
     );
   }
-
-  users = data ?? {};
 
   const handleEditUser = (userId: string) => {
     const userToEdit = users.find((user) => user.id === userId);
