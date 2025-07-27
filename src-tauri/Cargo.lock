@@ -309,8 +309,8 @@ dependencies = [
  "log",
  "lsl",
  "objc2 0.6.1",
- "objc2-core-bluetooth",
  "objc2-foundation 0.3.1",
+ "objc2-io-bluetooth",
  "serde",
  "serde_json",
  "tauri",
@@ -2487,19 +2487,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "objc2-core-bluetooth"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d33c82c3e375cee882b82f6a5e6dc9667b04fc18f94c080331e28b50f794d414"
-dependencies = [
- "bitflags 2.9.1",
- "dispatch2",
- "objc2 0.6.1",
- "objc2-core-foundation",
- "objc2-foundation 0.3.1",
-]
-
-[[package]]
 name = "objc2-core-data"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2582,6 +2569,18 @@ dependencies = [
  "libc",
  "objc2 0.6.1",
  "objc2-core-foundation",
+]
+
+[[package]]
+name = "objc2-io-bluetooth"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbecd5ee857b34ee347aeef409f548e36a5b4853013bf53a2c7feaece9d3287f"
+dependencies = [
+ "libc",
+ "objc2 0.6.1",
+ "objc2-core-foundation",
+ "objc2-foundation 0.3.1",
 ]
 
 [[package]]

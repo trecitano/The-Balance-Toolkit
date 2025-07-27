@@ -1,9 +1,9 @@
 #[cfg(target_os = "linux")]
-use crate::bluetooth::linux_bluetooth_handler::Handler;
+use crate::bluetooth::linux_bluetooth_service::Handler;
 #[cfg(target_os = "windows")]
-use crate::bluetooth::windows_bluetooth_handler::Handler;
+use crate::bluetooth::windows_bluetooth_service::Handler;
 #[cfg(target_os = "macos")]
-use crate::bluetooth::macos_bluetooth_handler::NativeBluetoothHandler;
+use crate::bluetooth::macos_bluetooth_service as NativeHandler;
 
 use anyhow::{Result};
 use serde::Serialize;
@@ -20,13 +20,11 @@ pub enum BluetoothCommand {
     RemoveDevice { mac_address: MacAddress },
 }
 
-pub trait NativeBluetoothHandlerInterface {
-    fn start_native_bluetooth_handler() -> mpsc::Sender<NativeBluetoothCommand>;
-    async fn run(&self);
-    async fn get_all_bluetooth_adapters_info(&self) -> Result<Vec<Result<BluetoothAdapterInfo>>>;
-    async fn scan_and_pair_nintendo(&self, adapter: &BluetoothAdapterInfo) -> Result<(MacAddress)>;
-    async fn remove_device(&self, mac_address: MacAddress) -> Result<()>;
-}
+// The bluetooth implementations should contain the following functions:
+//
+// get_all_bluetooth_adapters_info
+// scan_and_pair_nintendo
+// remove_device
 
 pub enum NativeBluetoothCommand {
     GetAllBluetoothAdaptersInfo { response: oneshot::Sender<Result<Vec<Result<BluetoothAdapterInfo>>>> },
@@ -36,7 +34,6 @@ pub enum NativeBluetoothCommand {
 
 
 pub struct BluetoothHandler {
-    inner_tx: mpsc::Sender<NativeBluetoothCommand>,
     bluetooth_rx: mpsc::Receiver<BluetoothCommand>,
     scan_cancel_tx: Option<oneshot::Sender<()>>,
 }
@@ -46,7 +43,6 @@ impl BluetoothHandler {
         let (bluetooth_tx, bluetooth_rx) = mpsc::channel(100);
 
         let handler = BluetoothHandler {
-            inner_tx: NativeBluetoothHandler::start_native_bluetooth_handler(),
             bluetooth_rx,
             scan_cancel_tx: None,
         };
@@ -64,7 +60,7 @@ impl BluetoothHandler {
         while let Some(command) = self.bluetooth_rx.recv().await {
             match command {
                 BluetoothCommand::GetNintendoDevices { response } => {
-                    let result = Self::get_nintendo_devices(&self.inner_tx).await.unwrap();
+                    let result = Self::get_nintendo_devices().await.unwrap();
                     response.send(result).unwrap();
                 },
                 BluetoothCommand::StartScanAndPair { response_stream } => {
@@ -77,7 +73,7 @@ impl BluetoothHandler {
                     response.send(self.scan_cancel_tx.is_some()).unwrap();
                 }
                 BluetoothCommand::RemoveDevice { mac_address } => {
-                    Self::remove_device(&self.inner_tx, mac_address).await.unwrap();
+                    NativeHandler::remove_device(mac_address).await.unwrap();
                 }
             }
         }
@@ -106,7 +102,8 @@ impl BluetoothHandler {
 
                     _ = Self::connect_new_balance_board(native_tx_clone.clone(), response_stream.clone()) => {
                         // If the current state failed, wait one second before trying again
-                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                        // TODO update this value
+                        tokio::time::sleep(tokio::time::Duration::from_millis(50000)).await;
                     },
                 }
             }
@@ -117,8 +114,8 @@ impl BluetoothHandler {
         Ok(())
     }
 
-    async fn get_nintendo_devices(native_bluetooth_tx: &mpsc::Sender<NativeBluetoothCommand>) -> Result<Vec<BluetoothPeripheral>> {
-        let adapters: Vec<BluetoothAdapterInfo> = Self::get_all_bluetooth_adapters_info(native_bluetooth_tx).await?
+    async fn get_nintendo_devices() -> Result<Vec<BluetoothPeripheral>> {
+        let adapters: Vec<BluetoothAdapterInfo> = NativeHandler::get_all_bluetooth_adapters_info()?
             .into_iter()
             .filter_map(|result| result.ok())
             .collect();
@@ -156,23 +153,9 @@ impl BluetoothHandler {
 
     // Calls to Native Bluetooth primitives
 
-    async fn get_all_bluetooth_adapters_info(native_bluetooth_tx: &mpsc::Sender<NativeBluetoothCommand>) -> Result<Vec<Result<BluetoothAdapterInfo>>> {
-        let (tx, rx) = oneshot::channel();
-        let command = NativeBluetoothCommand::GetAllBluetoothAdaptersInfo { response: tx };
-        native_bluetooth_tx.send(command).await?;
-        rx.await?
-    }
-
     async fn scan_and_pair_nintendo(native_bluetooth_tx: &mpsc::Sender<NativeBluetoothCommand>) -> Result<BluetoothPeripheral> {
         let (tx, rx) = oneshot::channel();
         let command = NativeBluetoothCommand::ScanAndPairDevice { device_name: NINTENDO_BOARD_ID.to_string(), response: tx };
-        native_bluetooth_tx.send(command).await?;
-        rx.await?
-    }
-
-    async fn remove_device(native_bluetooth_tx: &mpsc::Sender<NativeBluetoothCommand>, mac_address: MacAddress) -> Result<()> {
-        let (tx, rx) = oneshot::channel();
-        let command = NativeBluetoothCommand::RemoveDevice { mac_address, response: tx };
         native_bluetooth_tx.send(command).await?;
         rx.await?
     }
