@@ -1,1 +1,1 @@
-pub mod tauri_frontend;
+pub mod tauri;

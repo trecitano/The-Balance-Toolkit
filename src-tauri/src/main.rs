@@ -25,15 +25,6 @@ async fn main() {
     });
     
     file_system::initialize_app_dir().unwrap();
-
-    let (new_bluetooth_tx, mut new_bluetooth_rx) = mpsc::channel(10);
-    let command = ToolkitCommand::BluetoothAction {
-        action: BluetoothCommand::StartScanAndPair {
-            response_stream: new_bluetooth_tx
-        }
-    };
-    manager_tx.send(command).await.map_err(|e| e.to_string()).unwrap();
-    tokio::time::sleep(tokio::time::Duration::from_millis(10000)).await;
     
-    //tauri_frontend::initialize(manager_tx)
+    frontend::tauri::initialize(manager_tx)
 }
