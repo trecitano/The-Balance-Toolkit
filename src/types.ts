@@ -43,7 +43,7 @@ export const defaultUser: UserType = {
 };
 
 export interface Device {
-  id: number;
+  id: string;
   name: string;
   isConnected: boolean;
   macAddress: string;

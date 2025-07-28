@@ -72,61 +72,51 @@ export const commands = {
   },
 
   devices: {
-    async fetchDevices(): Promise<Device[]> {
+    async fetchDevices(): Promise<Device[]>   {
       if (useDeviceMocks) {
         return mockDeviceData;
       }
 
       return invoke("devices_fetch_all_devices");
     },
-    async scanDevices(): Promise<Device[]> {
-      return invoke("devices_scan_without_timeout");
+    scanDevices: async (): Promise<Device[]> => invoke("devices_scan_without_timeout"),
+    cancelScanDevices: async (): Promise<void> => invoke("devices_cancel_scan"),
+    isScanning: async (): Promise<boolean> => invoke("devices_is_scanning"),
+    selectDevice: async (deviceId: string): Promise<void> => {
+      console.log("Selecting device ", deviceId);
+      return invoke("devices_select_device", { deviceId: deviceId })
     },
-    async cancelScanDevices(): Promise<void> {
-      return invoke("devices_cancel_scan");
+    unSelectDevice: async (deviceId: string): Promise<void> => {
+      return invoke("devices_unselect_device", { deviceId: deviceId })
     },
-    async isScanning(): Promise<boolean> {
-      return invoke("devices_is_scanning");
-    },
+    selectedDevices: async (): Promise<String[]> => invoke("devices_get_selected_devices"),
 
-    async connectDevice(macAddress: string): Promise<void> {
-      if (useDeviceMocks) {
-        return;
-      }
-
+    connectDevice: async (deviceId: string): Promise<void> => {
       const channel = new Channel<BalanceBoardEvent>();
       channel.onmessage = (message) => {
         console.log(`got download event ${message.event}`);
       };
 
-      console.log("Connecting to device ", macAddress);
+      console.log("Connecting to device ", deviceId);
       return invoke("devices_connect_device", {
-        macAddress: macAddress,
+        deviceId: deviceId,
         channel: channel,
       });
     },
-    async removeDevice(macAddress: string): Promise<void> {
-      if (useDeviceMocks) {
-        return;
-      }
-
-      return invoke("devices_remove_device", { macAddress: macAddress });
+    removeDevice: async (deviceId: string): Promise<void> => {
+      return invoke("devices_remove_device", { deviceId: deviceId });
     },
-    async disconnectDevice(macAddress: string): Promise<void> {
-      if (useDeviceMocks) {
-        return;
-      }
-
-      return invoke("devices_disconnect_device", { macAddress: macAddress });
+    disconnectDevice: async (deviceId: string): Promise<void> => {
+      return invoke("devices_disconnect_device", { deviceId: deviceId });
     },
-    async updateDeviceName(macAddress: string, deviceName: string): Promise<void> {
+    updateDeviceName: async (deviceId: string, deviceName: string): Promise<void> => {
       return invoke("devices_update_device_name", {
-        mac_address: macAddress,
+        deviceId: deviceId,
         device_name: deviceName,
       });
     },
-    async identifyDevice(macAddress: string): Promise<void> {
-      return invoke("devices_identify_device", { macAddress: macAddress });
+    identifyDevice: async (deviceId: string): Promise<void> => {
+      return invoke("devices_identify_device", { deviceId: deviceId });
     },
   },
 
@@ -136,7 +126,7 @@ export const commands = {
         return mockDeviceData;
       }
 
-      return invoke("devices_fetch_all_devices");
+      return invoke("session_start_session");
     },
   }
 };

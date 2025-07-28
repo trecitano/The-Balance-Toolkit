@@ -44,9 +44,9 @@ pub enum BoardAction {
     TurnOnLed,
     TurnOffLed,
     StartRecording {
-        options: BalanceBoardSessionSettings
+        settings: BalanceBoardSessionSettings
     },
-    FinishRecording,
+    StopRecording,
 }
 
 pub enum BalanceBoardCommands {
@@ -58,10 +58,10 @@ pub enum BalanceBoardCommands {
 
 #[derive(Clone, Debug)]
 pub struct BalanceBoardSessionSettings {
-    output_file: Option<String>,
-    output_channel: Option<mpsc::Sender<ProcessedBoardData>>,
-    lsl_connection: Option<LslConnectionSettings>,
-    tcp_connection_string: Option<String>,
+    pub output_file: Option<String>,
+    pub output_channel: Option<mpsc::Sender<ProcessedBoardData>>,
+    pub lsl_connection: Option<LslConnectionSettings>,
+    pub tcp_connection_string: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -80,17 +80,17 @@ pub struct BalanceBoardConnection {
 }
 
 impl BalanceBoardConnection {
-    pub fn new(device_id: &str, action_rx: mpsc::Receiver<BoardAction>) -> Result<Self> {
+    pub fn new(serial_number: &str, action_rx: mpsc::Receiver<BoardAction>) -> Result<Self> {
         let api = HidApi::new()?;
         // The serial number of a nintendo balance board is the string version of a mac address.
         // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
-        println!("Look for {}", device_id);
+        println!("Look for {}", serial_number);
         let balance_board_info = api
             .device_list()
             .find(|device| {
                 println!("Device: {:?}", device.serial_number());
-                if let Some(serial_number) = device.serial_number() {
-                    serial_number == device_id
+                if let Some(hid_serial_number) = device.serial_number() {
+                    hid_serial_number == serial_number
                 } else {
                     false
                 }
@@ -98,7 +98,7 @@ impl BalanceBoardConnection {
             .ok_or(anyhow!("Device with the specified device_id was not found."))?;
 
         let device = balance_board_info.open_device(&api)?;
-        println!("Successfully opened HID connection for {}.", device_id);
+        println!("Successfully opened HID connection for {}.", serial_number);
 
         device.write(&BOARD_TURN_ON_LED)?;
 
@@ -123,6 +123,7 @@ impl BalanceBoardConnection {
         let mut session: Option<SessionHandles> = None;
 
         loop {
+            println!("Session state: {:?}", session);
             tokio::select! {
                 // Received an action from the manager
                 Some(action) = self.action_rx.recv() => {
@@ -137,11 +138,13 @@ impl BalanceBoardConnection {
                         BoardAction::TurnOffLed => {
                             hid_control_tx.send(BalanceBoardCommands::TurnOffLed).await?;
                         },
-                        BoardAction::StartRecording { options } => {
-                            session = Some(Self::start_session(options)?);
+                        BoardAction::StartRecording { settings } => {
+                            session = Some(Self::start_session(settings)?);
+                            println!("Starting recording session with following sessions: {:?}", session);
                             hid_control_tx.send(BalanceBoardCommands::StartRecording).await?;
                         },
-                        BoardAction::FinishRecording => {
+                        BoardAction::StopRecording => {
+                            println!("Stopping the recording");
                             session = None;
                             hid_control_tx.send(BalanceBoardCommands::FinishRecording).await?;
                         },
@@ -195,6 +198,7 @@ impl BalanceBoardConnection {
             match device.read_timeout(&mut buf, 100) {
                 Ok(len) if len > 0 => {
                     if len >= DATA_PACKET_MIN_LEN {
+                        println!("Got reading! {:?}", buf);
                         let reading = BalanceBoardSensorRawReading {
                             top_right: i16::from_be_bytes([buf[3], buf[4]]),
                             bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
@@ -271,6 +275,7 @@ impl BalanceBoardConnection {
         mut rx: mpsc::Receiver<BalanceBoardSensorReading>,
         tx: broadcast::Sender<ProcessedBoardData>,
     ) -> Result<()> {
+        println!("Starting Data Process!");
         loop {
             match rx.recv().await {
                 Some(data) => {
@@ -420,6 +425,7 @@ impl BalanceBoardConnection {
     }
 }
 
+ #[derive(Debug)]
 struct SessionHandles {
     thread_handles: Vec<thread::JoinHandle<Result<()>>>,
     task_handles: Vec<task::JoinHandle<Result<()>>>,

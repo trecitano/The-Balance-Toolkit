@@ -709,8 +709,9 @@ export default function Session() {
     }
   }, [recording]);
 
-  const handleRecord = () => {
+  const handleRecord = async () => {
     setRecording(true);
+    await commands.session.startSession();
     setCopYDataSeries([]);
     setCopXDataSeries([]);
     setVCopXDataSeries([]);

@@ -187,19 +187,11 @@ impl From<BluetoothPeripheral> for NintendoDevice {
             .map(|b| format!("{:02x}", b))
             .collect::<Vec<String>>()
             .join(":");
-
-        let pin_array = mac_address_to_wii_pin(p.mac_address);
-        let pin_hex_str = pin_array
-            .iter()
-            .map(|b| format!("{:02X}", b))
-            .collect::<Vec<String>>()
-            .join("");
-
+        
         NintendoDevice {
+            id: p.id,
             name: p.name,
-            status: "Active".to_string(),
             mac_address: mac_str,
-            pin: pin_hex_str.clone(),
             is_connected:  p.is_connected,
             last_connected: None,
         }

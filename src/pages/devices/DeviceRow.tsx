@@ -6,11 +6,11 @@ import "./DeviceRow.css";
 
 interface DeviceRowProps {
   device: Device;
-  handleIdentifyClick: (macAddress: string) => Promise<void>;
-  handleSaveDeviceName: (macAddress: string, deviceName: string) => Promise<void>;
-  handleRemoveDevice: (macAddress: string) => Promise<void>;
-  handleDisconnectDevice: (macAddress: string) => Promise<void>;
-  handleConnectDevice: (macAddress: string) => Promise<void>;
+  handleIdentifyClick: (deviceId: string) => Promise<void>;
+  handleSaveDeviceName: (deviceId: string, deviceName: string) => Promise<void>;
+  handleRemoveDevice: (deviceId: string) => Promise<void>;
+  handleSelectDeviceForSession: (deviceId: string) => Promise<void>;
+  handleConnectDevice: (deviceId: string) => Promise<void>;
 }
 
 export default function DeviceRow({
@@ -18,7 +18,7 @@ export default function DeviceRow({
   handleIdentifyClick,
   handleSaveDeviceName,
   handleRemoveDevice,
-  handleDisconnectDevice,
+  handleSelectDeviceForSession,
   handleConnectDevice,
 }: DeviceRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -78,11 +78,11 @@ export default function DeviceRow({
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter")
-                    handleSaveDeviceName(device.macAddress, inputRef.current?.value || "");
+                    handleSaveDeviceName(device.id, inputRef.current?.value || "");
                   if (e.key === "Escape") handleAction("cancel");
                 }}
                 onBlur={() =>
-                  handleSaveDeviceName(device.macAddress, inputRef.current?.value || "")
+                  handleSaveDeviceName(device.id, inputRef.current?.value || "")
                 }
                 className="device-name-edit-input"
               />
@@ -113,7 +113,7 @@ export default function DeviceRow({
 
         <div className="device-actions">
           <button
-            onClick={() => handleIdentifyClick(device.macAddress)}
+            onClick={() => handleIdentifyClick(device.id)}
             className="device-action-btn btn-circle"
             disabled={!device.isConnected}
             title={device.isConnected ? "Identify Device" : "Device is disconnected"}
@@ -122,14 +122,14 @@ export default function DeviceRow({
           </button>
           {device.isConnected ? (
             <button
-              onClick={() => handleDisconnectDevice(device.macAddress)}
+              onClick={() => handleSelectDeviceForSession(device.id)}
               className="device-action-btn disconnect"
             >
-              Disconnect
+              Select for Session
             </button>
           ) : (
             <button
-              onClick={() => handleConnectDevice(device.macAddress)}
+              onClick={() => handleConnectDevice(device.id)}
               className="device-action-btn connect"
               title={connectTooltip}
             >
