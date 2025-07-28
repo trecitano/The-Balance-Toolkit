@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
-use crate::actors::balance_board_actor::BoardAction;
+use crate::actors::balance_board_actor::{BalanceBoardSessionSettings, BoardAction};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothHandler};
 use crate::file_system::DeviceFileSystem;
 use crate::types::{MacAddress, NintendoDevice};
@@ -45,10 +45,12 @@ pub enum ToolkitCommand {
         device_id: String,
     },
     SelectedBoardsForSession {
-        responder: oneshot::Sender<Vec<String>>,
+        response: oneshot::Sender<Vec<String>>,
     },
 
-    StartSession,
+    StartSession {
+        settings: BalanceBoardSessionSettings
+    },
     StopSession,
 
     BoardAction {
@@ -58,18 +60,18 @@ pub enum ToolkitCommand {
 }
 
 pub struct ConnectionManager {
-    manager_tx: mpsc::Sender<ToolkitCommand>,
-    manager_rx: mpsc::Receiver<ToolkitCommand>,
+    tx: mpsc::Sender<ToolkitCommand>,
+    rx: mpsc::Receiver<ToolkitCommand>,
     connections: HashMap<String, mpsc::Sender<BoardAction>>,
     selected_boards: HashSet<String>,
     bluetooth_manager_tx: mpsc::Sender<BluetoothCommand>,
 }
 
 impl ConnectionManager {
-    pub fn new(manager_tx: mpsc::Sender<ToolkitCommand>, manager_rx: mpsc::Receiver<ToolkitCommand>) -> Self {
+    pub fn new(tx: mpsc::Sender<ToolkitCommand>, rx: mpsc::Receiver<ToolkitCommand>) -> Self {
         Self {
-            manager_tx,
-            manager_rx,
+            tx,
+            rx,
             connections: HashMap::new(),
             selected_boards: HashSet::new(),
             bluetooth_manager_tx: BluetoothHandler::start_bluetooth_handler(),
@@ -79,7 +81,7 @@ impl ConnectionManager {
     pub async fn run(mut self) -> Result<()> {
         println!("Balance Walker Service started.");
         
-        while let Some(command) = self.manager_rx.recv().await {
+        while let Some(command) = self.rx.recv().await {
             match command {
                 ToolkitCommand::BluetoothAction { action } => {
                     self.bluetooth_manager_tx.send(action).await?;
@@ -94,7 +96,7 @@ impl ConnectionManager {
                         .unwrap();
                 }
                 ToolkitCommand::Connect { device_id, response } => {
-                    self.connect(device_id).await;
+                    self.connect(&device_id, [0, 0, 0, 0, 0, 0]).await;
                 }
                 ToolkitCommand::Disconnect { device_id } => {
                     self.disconnect(device_id);
@@ -110,8 +112,26 @@ impl ConnectionManager {
                 ToolkitCommand::UnselectBoardForSession { device_id } => {
                     self.selected_boards.remove(&device_id);
                 }
-                ToolkitCommand::SelectedBoardsForSession { responder } => {
-                    responder.send(self.selected_boards.iter().cloned().collect()).unwrap();
+                ToolkitCommand::SelectedBoardsForSession { response } => {
+                    response.send(self.selected_boards.iter().cloned().collect()).unwrap();
+                }
+
+
+                ToolkitCommand::StartSession { settings } => {
+                    println!("Sending start recording command to boards: {:?}", self.selected_boards);
+                    println!("State of boards: {:?}", &self.connections);
+                    for board in &self.selected_boards {
+                        let connection = &self.connections.get(board).unwrap();
+                        let command = { BoardAction::StartRecording { settings: settings.clone() } };
+                        connection.send(command).await?
+                    }
+                },
+                ToolkitCommand::StopSession => {
+                    for board in &self.selected_boards {
+                        let connection = &self.connections.get(board).unwrap();
+                        let command = { BoardAction::StopRecording };       
+                        connection.send(command).await?
+                    }
                 }
 
 
@@ -137,21 +157,22 @@ impl ConnectionManager {
         let (response_tx, response_rx) = oneshot::channel();
         self.bluetooth_manager_tx.send(BluetoothCommand::GetNintendoDevices { response: response_tx }).await?;
         let bluetooth_devices = response_rx.await?;
-        
+
+        // Connect the manager to any missing devices.
+        for device in &bluetooth_devices {
+            let device_id = &device.id;
+            let mac_address = device.mac_address;
+            println!("Checking if device {} is connected.", device_id);
+            if !self.connections.contains_key(device_id) {
+                println!("NEED TO CONNECT {}", device_id);
+                self.connect(device_id, mac_address).await;
+            }
+        }
+
         let os_connected_devices: Vec<NintendoDevice> = bluetooth_devices
             .into_iter()
             .map(|p| p.into())
             .collect();
-
-        // Connect the manager to any missing devices.
-        for device in &os_connected_devices {
-            let device_id = device.mac_address.replace(":", "");
-            println!("Checking if device {} is connected.", device_id);
-            if !self.connections.contains_key(&device_id) {
-                println!("NEED TO CONNECT {}", device_id);
-                self.connect(device_id).await;
-            }
-        }
 
         let mut result = stored_devices;
         for device in os_connected_devices {
@@ -165,8 +186,8 @@ impl ConnectionManager {
         Ok(result)
     }
 
-    async fn connect(&mut self, device_id: String) {
-        if self.connections.contains_key(&device_id) {
+    async fn connect(&mut self, device_id: &String, mac_address: MacAddress) {
+        if self.connections.contains_key(device_id) {
             println!("Device {} is already connected.", device_id);
             return;
         }
@@ -174,14 +195,16 @@ impl ConnectionManager {
         println!("Connecting to device: {}", device_id);
         let (action_tx, action_rx) = mpsc::channel(10); // Channel for this specific board
 
-        let id_clone = device_id.clone();
-        match balance_board_actor::BalanceBoardConnection::new(&id_clone, action_rx) {
+        let serial_number = convert_mac_address_to_string(mac_address);
+        match balance_board_actor::BalanceBoardConnection::new(&serial_number, action_rx) {
             Ok(board_connection) => {
                 tokio::spawn(async move {
                     board_connection.run().await;
                 });
-                self.connections.insert(device_id, action_tx);
-                println!("Successfully connected to device {}", id_clone);
+                println!("Successfully connected to device {}", device_id);
+                println!("DEBUG: before self.connections {:?}", self.connections);
+                self.connections.insert(device_id.clone(), action_tx);
+                println!("DEBUG: after self.connections {:?}", self.connections);
             }
             Err(e) => {
                 eprintln!(

@@ -21,10 +21,9 @@ pub struct User {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NintendoDevice {
+    pub id: String,
     pub name: String,
-    pub status: String,
     pub mac_address: String,
-    pub pin: String,
     pub is_connected: bool,
     pub last_connected: Option<DateTime<Utc>>,
 }

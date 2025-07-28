@@ -21,41 +21,42 @@ export default function Devices() {
   const { data, isLoading, error } = useQuery({
     queryKey: DEVICES_QUERY_KEY,
     queryFn: async () => {
-      const [devices, isScanning] = await Promise.all([
+      const [devices, selectedDeviceIds, isScanning] = await Promise.all([
         commands.devices.fetchDevices(),
+        commands.devices.selectedDevices(),
         commands.devices.isScanning(),
       ]);
-      return { devices, isScanning };
+      return { devices, selectedDeviceIds, isScanning };
     },
     staleTime: 10000,
   });
 
   const identifyDeviceMutation = useMutation({
-    mutationFn: (macAddress: string) => commands.devices.identifyDevice(macAddress),
+    mutationFn: (deviceId: string) => commands.devices.identifyDevice(deviceId),
     onError: (error) => console.error("Failed to identify device:", error),
   });
 
   const updateDeviceNameMutation = useMutation({
-    mutationFn: ({ macAddress, deviceName }: { macAddress: string; deviceName: string }) =>
-      commands.devices.updateDeviceName(macAddress, deviceName),
+    mutationFn: ({ deviceId, deviceName }: { deviceId: string; deviceName: string }) =>
+      commands.devices.updateDeviceName(deviceId, deviceName),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
     onError: (error) => console.error("Failed to update device name:", error),
   });
 
   const removeDeviceMutation = useMutation({
-    mutationFn: (macAddress: string) => commands.devices.removeDevice(macAddress),
+    mutationFn: (deviceId: string) => commands.devices.removeDevice(deviceId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
     onError: (error) => console.error("Failed to remove device:", error),
   });
 
   const disconnectDeviceMutation = useMutation({
-    mutationFn: (macAddress: string) => commands.devices.disconnectDevice(macAddress),
+    mutationFn: (deviceId: string) => commands.devices.disconnectDevice(deviceId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
     onError: (error) => console.error("Failed to disconnect device:", error),
   });
 
-  const connectDeviceMutation = useMutation({
-    mutationFn: (macAddress: string) => commands.devices.connectDevice(macAddress),
+  const selectDeviceForSessionMutation = useMutation({
+    mutationFn: (deviceId: string) => commands.devices.selectDevice(deviceId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
     onError: (error) => console.error("Failed to connect device:", error),
   });
@@ -83,8 +84,8 @@ export default function Devices() {
   });
 
   // Handlers that need parameter transformation or additional logic
-  const handleSaveDeviceName = (macAddress: string, deviceName: string) => {
-    updateDeviceNameMutation.mutate({ macAddress, deviceName });
+  const handleSaveDeviceName = (deviceId: string, deviceName: string) => {
+    updateDeviceNameMutation.mutate({ deviceId, deviceName });
   };
 
   const handleScanDevices = () => {
@@ -131,9 +132,7 @@ export default function Devices() {
     );
   }
 
-  const { devices, isScanning } = data ?? {};
-
-  const getSortedDevices = () => {
+  const sortDevices = (devices: Device[]): Device[] => {
     if (!Array.isArray(devices)) return [];
     const connected = devices.filter((d) => d.isConnected);
     const disconnected = devices.filter((d) => !d.isConnected);
@@ -146,9 +145,11 @@ export default function Devices() {
     return [...connected, ...disconnected];
   };
 
-  const sortedDevices = getSortedDevices();
-  const connectedDevices = sortedDevices.filter((d) => d.isConnected);
+  const { devices, selectedDeviceIds, isScanning } = data ?? { devices: [], selectedDeviceIds: [], isScanning: false};
+
+  const sortedDevices = sortDevices(devices);
   const noDevices = sortedDevices.length === 0;
+  const selectedDevices = devices!.filter((d) => selectedDeviceIds.includes(d.id));
 
   return (
     <div className="inside-page">
@@ -182,18 +183,18 @@ export default function Devices() {
             <DeviceRow
               key={device.id}
               device={device}
-              handleIdentifyClick={(macAddress) => identifyDeviceMutation.mutate(macAddress)}
+              handleIdentifyClick={(deviceId) => identifyDeviceMutation.mutate(deviceId)}
               handleSaveDeviceName={handleSaveDeviceName}
-              handleRemoveDevice={(macAddress) => removeDeviceMutation.mutate(macAddress)}
-              handleDisconnectDevice={(macAddress) => disconnectDeviceMutation.mutate(macAddress)}
-              handleConnectDevice={(macAddress) => connectDeviceMutation.mutate(macAddress)}
+              handleRemoveDevice={(deviceId) => removeDeviceMutation.mutate(deviceId)}
+              handleDisconnectDevice={(deviceId) => disconnectDeviceMutation.mutate(deviceId)}
+              handleSelectDeviceForSession={(deviceId) => selectDeviceForSessionMutation.mutate(deviceId)}
             />
           ))}
         </div>
 
         <DeviceSessionList
-          connectedDevices={connectedDevices}
-          handleDisconnectDevice={(macAddress) => disconnectDeviceMutation.mutate(macAddress)}
+          connectedDevices={selectedDevices}
+          handleDisconnectDevice={(deviceId) => disconnectDeviceMutation.mutate(deviceId)}
         />
       </div>
 

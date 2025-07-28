@@ -6,7 +6,7 @@ use tokio::sync::{mpsc, oneshot};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;
 use tokio::sync::mpsc::Sender;
-use crate::actors::balance_board_actor::BoardAction;
+use crate::actors::balance_board_actor::{BalanceBoardSessionSettings, BoardAction};
 use crate::actors::bluetooth_service::BluetoothCommand;
 use crate::actors::toolkit_service::ToolkitCommand;
 
@@ -31,13 +31,17 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>) {
             user_add,
             user_update,
             user_delete,
+            devices_get_selected_devices,
             devices_fetch_all_devices,
             devices_scan_without_timeout,
             devices_cancel_scan,
             devices_is_scanning,
             devices_connect_device,
+            devices_select_device,
             devices_remove_device,
-            devices_identify_device
+            devices_identify_device,
+            session_start_session,
+            session_stop_session
         ])
         .manage(AppState { manager_tx: manager_tx })
         .run(tauri::generate_context!())
@@ -202,7 +206,7 @@ pub async fn devices_identify_device(
 #[tauri::command(async)]
 pub async fn devices_tare_device(
     mac_address: String,
-    state: State<'_, AppState>,
+    state: State<'_, AppState>
 ) -> Result<(), String> {
     println!(">> devices_tare_device: {}", mac_address);
     let device_id = convert_mac_address_string_to_device_id(&mac_address);
@@ -218,6 +222,78 @@ pub async fn devices_tare_device(
         .map_err(|e| e.to_string())?;
 
     println!("<< devices_tare_device: Tare command sent.");
+    Ok(())
+}
+
+
+#[tauri::command(async)]
+pub async fn devices_select_device(
+    device_id: String,
+    state: State<'_, AppState>
+) -> Result<(), String> {
+    println!(">> devices_select_device: {}", device_id);
+
+    let command = ToolkitCommand::SelectBoardForSession { device_id };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+
+    println!("<< devices_select_device: Tare command sent.");
+    Ok(())
+}
+
+#[tauri::command(async)]
+pub async fn devices_unselect_device(
+    device_id: String,
+    state: State<'_, AppState>
+) -> Result<(), String> {
+    println!(">> devices_deselect_device: {}", device_id);
+
+    let command = ToolkitCommand::UnselectBoardForSession { device_id };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+
+    println!("<< devices_deselect_device: Tare command sent.");
+    Ok(())
+}
+
+#[tauri::command(async)]
+pub async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    println!(">> devices_get_selected_devices");
+
+    let (tx, rx) = oneshot::channel();
+    let command = ToolkitCommand::SelectedBoardsForSession { response: tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let result = rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< devices_get_selected_devices. {:?}", result);
+    Ok(result)
+}
+
+#[tauri::command(async)]
+pub async fn session_start_session(state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> session_start_session");
+
+    let command = ToolkitCommand::StartSession { settings: BalanceBoardSessionSettings {
+        output_file: None,
+        output_channel: None,
+        lsl_connection: None,
+        tcp_connection_string: None
+    }};
+    state.manager_tx.send(command)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    println!("<< session_start_session.");
+    Ok(())
+}
+
+#[tauri::command(async)]
+pub async fn session_stop_session(state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> session_stop_session");
+
+    state.manager_tx.send(ToolkitCommand::StopSession)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    println!("<< session_stop_session.");
     Ok(())
 }
 
