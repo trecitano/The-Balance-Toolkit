@@ -12,27 +12,16 @@ use crate::actors::balance_board_actor;
 #[derive(Debug)]
 pub enum ToolkitCommand {
     // Manager main actions
-    BluetoothAction {
-        action: BluetoothCommand
-    },
+    BluetoothAction(BluetoothCommand),
 
     GetBoardsSystemView {
         responder: oneshot::Sender<Vec<NintendoDevice>>,
     },
-    RemoveDevice {
-        device_id: String,
-        response: oneshot::Sender<Result<()>>,
-    },
 
-    ConnectedBoards {
-        responder: oneshot::Sender<Vec<String>>,
-    },
     Connect {
         device_id: String,
+        mac_address: MacAddress,
         response: oneshot::Sender<bool>,
-    },
-    Disconnect {
-        device_id: String,
     },
     IdentifyBoard {
         device_id: String,
@@ -59,19 +48,23 @@ pub enum ToolkitCommand {
     },
 }
 
+pub enum ToolkitResponse {
+    NewDeviceFound(NintendoDevice),
+}
+
 pub struct ConnectionManager {
-    tx: mpsc::Sender<ToolkitCommand>,
     rx: mpsc::Receiver<ToolkitCommand>,
+    tx: mpsc::Sender<ToolkitResponse>,
     connections: HashMap<String, mpsc::Sender<BoardAction>>,
     selected_boards: HashSet<String>,
     bluetooth_manager_tx: mpsc::Sender<BluetoothCommand>,
 }
 
 impl ConnectionManager {
-    pub fn new(tx: mpsc::Sender<ToolkitCommand>, rx: mpsc::Receiver<ToolkitCommand>) -> Self {
+    pub fn new(rx: mpsc::Receiver<ToolkitCommand>, tx: mpsc::Sender<ToolkitResponse>) -> Self {
         Self {
-            tx,
             rx,
+            tx,
             connections: HashMap::new(),
             selected_boards: HashSet::new(),
             bluetooth_manager_tx: BluetoothHandler::start_bluetooth_handler(),
@@ -83,23 +76,17 @@ impl ConnectionManager {
         
         while let Some(command) = self.rx.recv().await {
             match command {
-                ToolkitCommand::BluetoothAction { action } => {
+                ToolkitCommand::BluetoothAction(action)=> {
                     self.bluetooth_manager_tx.send(action).await?;
                 }
                 ToolkitCommand::GetBoardsSystemView { responder } => {
                     let result = self.boards_system_view().await?;
-                    responder.send(result);
+                    responder.send(result).unwrap();
                 },
-                ToolkitCommand::ConnectedBoards { responder } => {
-                    responder
-                        .send(self.connections.keys().cloned().collect())
-                        .unwrap();
-                }
-                ToolkitCommand::Connect { device_id, response } => {
-                    self.connect(&device_id, [0, 0, 0, 0, 0, 0]).await;
-                }
-                ToolkitCommand::Disconnect { device_id } => {
-                    self.disconnect(device_id);
+
+                ToolkitCommand::Connect { device_id, mac_address, response } => {
+                    self.connect(&device_id, mac_address).await;
+                    response.send(true).unwrap();
                 }
                 ToolkitCommand::IdentifyBoard { device_id } => {
                     self.identify_board(device_id);
@@ -138,8 +125,6 @@ impl ConnectionManager {
                 ToolkitCommand::BoardAction { device_id, action } => {
                     self.board_action(device_id, action).await;
                 }
-
-                _ => {}
             }
         }
         
@@ -186,44 +171,28 @@ impl ConnectionManager {
         Ok(result)
     }
 
-    async fn connect(&mut self, device_id: &String, mac_address: MacAddress) {
+    async fn connect(&mut self, device_id: &str, mac_address: MacAddress) -> Result<()> {
         if self.connections.contains_key(device_id) {
             println!("Device {} is already connected.", device_id);
-            return;
+            return Ok(());
         }
 
         println!("Connecting to device: {}", device_id);
         let (action_tx, action_rx) = mpsc::channel(10); // Channel for this specific board
 
         let serial_number = convert_mac_address_to_string(mac_address);
-        match balance_board_actor::BalanceBoardConnection::new(&serial_number, action_rx) {
-            Ok(board_connection) => {
-                tokio::spawn(async move {
-                    board_connection.run().await;
-                });
-                println!("Successfully connected to device {}", device_id);
-                println!("DEBUG: before self.connections {:?}", self.connections);
-                self.connections.insert(device_id.clone(), action_tx);
-                println!("DEBUG: after self.connections {:?}", self.connections);
-            }
-            Err(e) => {
-                eprintln!(
-                    "Failed to create connection for device {}: {}",
-                    device_id, e
-                );
-            }
-        }
-    }
+        let board_connection = balance_board_actor::BalanceBoardConnection::new(&serial_number, action_rx)?;
 
-    fn disconnect(&mut self, device_id: String) {
-        if let Some(_) = self.connections.remove(&device_id) {
-            println!("Disconnected device: {}", device_id);
-        } else {
-            eprintln!(
-                "Attempted to disconnect a non-existent device: {}",
-                device_id
-            );
-        }
+        tokio::spawn(async move {
+            if let Err(e) = board_connection.run().await {
+                eprintln!("Board connection task failed: {}", e);
+            }
+        });
+        
+        self.connections.insert(device_id.to_string(), action_tx);
+        // TODO
+        //self.tx.send(ToolkitResponse::NewDeviceFound())
+        Ok(())
     }
 
     // This is a long action, so we execute this in a background task
@@ -238,20 +207,27 @@ impl ConnectionManager {
 
         let board_channel_clone = board.clone();
         tokio::spawn(async move {
-            let _ = board_channel_clone.send(BoardAction::TurnOffLed).await;
+            let result: Result<()> = async {
+                board_channel_clone.send(BoardAction::TurnOffLed).await?;
 
-            for _ in 0..10 {
-                board_channel_clone.send(BoardAction::TurnOnLed).await;
-                tokio::time::sleep(Duration::from_millis(100)).await;
-                board_channel_clone.send(BoardAction::TurnOffLed).await;
-                tokio::time::sleep(Duration::from_millis(100)).await;
-                board_channel_clone.send(BoardAction::TurnOnLed).await;
-                tokio::time::sleep(Duration::from_millis(100)).await;
-                board_channel_clone.send(BoardAction::TurnOffLed).await;
-                tokio::time::sleep(Duration::from_millis(800)).await;
+                for _ in 0..10 {
+                    board_channel_clone.send(BoardAction::TurnOnLed).await?;
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    board_channel_clone.send(BoardAction::TurnOffLed).await?;
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    board_channel_clone.send(BoardAction::TurnOnLed).await?;
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    board_channel_clone.send(BoardAction::TurnOffLed).await?;
+                    tokio::time::sleep(Duration::from_millis(800)).await;
+                }
+
+                board_channel_clone.send(BoardAction::TurnOnLed).await?;
+                Ok(())
+            }.await;
+
+            if let Err(e) = result {
+                eprintln!("LED identification failed: {}", e);
             }
-
-            board_channel_clone.send(BoardAction::TurnOnLed).await;
         });
     }
 

@@ -7,24 +7,29 @@ mod file_system;
 mod types;
 mod frontend;
 
+use std::panic::panic_any;
 use tokio::sync::mpsc;
-use crate::actors::bluetooth_service::BluetoothCommand;
-use crate::actors::toolkit_service::{ConnectionManager, ToolkitCommand};
+use anyhow::Result;
+use crate::actors::toolkit_service::ConnectionManager;
 
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     // Startup: We initialize a single manager that holds all of the state, and runs in the background.
     // The architecture of the app is that the commandline or web/tauri send messages to this manager,
     // and the manager responds via a oneshot channel.
-    let (manager_tx, manager_rx) = mpsc::channel(100);
-    let manager = ConnectionManager::new(manager_tx.clone(), manager_rx);
+    let (manager_command_tx, manager_command_rx) = mpsc::channel(100);
+    let (manager_response_tx, manager_response_rx) = mpsc::channel(100);
+    let manager = ConnectionManager::new(manager_command_rx, manager_response_tx);
     tokio::spawn(async move {
-        manager.run().await;
+        if let Err(e) = manager.run().await {
+            eprintln!("Error running connection manager: {}", e);
+            panic!();
+        }
     });
     
-    file_system::initialize_app_dir().unwrap();
+    file_system::initialize_app_dir()?;
     
-    frontend::tauri::initialize(manager_tx)
+    Ok(frontend::tauri::initialize(manager_command_tx, manager_response_rx))
 }

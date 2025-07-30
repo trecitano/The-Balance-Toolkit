@@ -7,7 +7,7 @@ import {
   mockRecentFiles,
   mockScanDeviceData,
 } from "@/utils/mocks.ts";
-import { BalanceBoardEvent, Device, RecentFile, UserType } from "@/types.ts";
+import {BalanceBoardEvent, Device, ProcessedBoardData, RecentFile, UserType} from "@/types.ts";
 
 const useFileMocks = true;
 const useUserMocks = false;
@@ -121,12 +121,12 @@ export const commands = {
   },
 
   session: {
-    async startSession(): Promise<Device[]> {
+    async startSession(sessionChannel: Channel<ProcessedBoardData>): Promise<Device[]> {
       if (useDeviceMocks) {
         return mockDeviceData;
       }
 
-      return invoke("session_start_session");
+      return invoke("session_start_session", { sessionChannel: sessionChannel });
     },
   }
 };

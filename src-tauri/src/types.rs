@@ -20,7 +20,7 @@ pub struct User {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct NintendoDevice {
+pub struct  NintendoDevice {
     pub id: String,
     pub name: String,
     pub mac_address: String,
