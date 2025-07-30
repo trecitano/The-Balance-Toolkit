@@ -1,20 +1,22 @@
+use std::time::Duration;
 use crate::file_system::UserFileSystem;
 use crate::types::{NintendoDevice, User};
 use crate::file_system;
 
 use tokio::sync::{mpsc, oneshot};
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{Emitter, Manager, State};
+use tauri::ipc::Channel;
 use tauri_plugin_fs::FsExt;
-use tokio::sync::mpsc::Sender;
-use crate::actors::balance_board_actor::{BalanceBoardSessionSettings, BoardAction};
-use crate::actors::bluetooth_service::BluetoothCommand;
-use crate::actors::toolkit_service::ToolkitCommand;
+use tokio::sync::mpsc::{Sender, Receiver};
+use crate::actors::balance_board_actor::{BalanceBoardSessionSettings, BoardAction, ProcessedBoardData};
+use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
+use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
 
 pub struct AppState {
     pub manager_tx: Sender<ToolkitCommand>,
 }
 
-pub fn initialize(manager_tx: Sender<ToolkitCommand>) {
+pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<ToolkitResponse>) {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
@@ -23,6 +25,16 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>) {
             let app_dir = file_system::app_dir();
             let scope = app.fs_scope();
             scope.allow_directory(app_dir, true)?;
+
+            let app_handle = app.app_handle().clone();
+            tokio::spawn(async move {
+                while let Some(new_event) = manager_rx.recv().await {
+                    match new_event {
+                        ToolkitResponse::NewDeviceFound(device) =>
+                            app_handle.emit("new_board", NintendoDevice::from(device)).unwrap()
+                    }
+                }
+            });
 
             Ok(())
         })
@@ -36,14 +48,15 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>) {
             devices_scan_without_timeout,
             devices_cancel_scan,
             devices_is_scanning,
-            devices_connect_device,
             devices_select_device,
+            devices_unselect_device,
             devices_remove_device,
             devices_identify_device,
+            devices_tare_device,
             session_start_session,
             session_stop_session
         ])
-        .manage(AppState { manager_tx: manager_tx })
+        .manage(AppState { manager_tx })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -81,7 +94,7 @@ pub fn user_delete(user_id: String) -> Result<(), String> {
 pub async fn devices_fetch_all_devices(state: State<'_, AppState>) -> Result<Vec<NintendoDevice>, String> {
     println!(">> devices_fetch_all_devices");
 
-    let (response_tx, mut response_rx) = oneshot::channel();
+    let (response_tx, response_rx) = oneshot::channel();
     let command = ToolkitCommand::GetBoardsSystemView { responder: response_tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
@@ -92,36 +105,30 @@ pub async fn devices_fetch_all_devices(state: State<'_, AppState>) -> Result<Vec
 }
 
 #[tauri::command(async)]
-async fn devices_scan_without_timeout(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+async fn devices_scan_without_timeout(state: State<'_, AppState>) -> Result<(), String> {
     println!(">> devices_scan_without_timeout");
 
-    let (new_bluetooth_tx, mut new_bluetooth_rx) = mpsc::channel(10);
+    let (new_bluetooth_tx, mut new_bluetooth_rx) = mpsc::channel::<BluetoothPeripheral>(10);
     let (hid_connection_tx, mut hid_connection_rx) = mpsc::channel(10);
     let manager_tx_clone = state.manager_tx.clone();
 
     // Flow: First we connect via bluetooth, then we connect via HID.
     tokio::spawn(async move {
         while let Some(device) = new_bluetooth_rx.recv().await {
-            let (response_tx, mut response_rx) = oneshot::channel();
-            manager_tx_clone.send(ToolkitCommand::Connect { device_id: "wow".to_string(), response: response_tx}).await.unwrap();
+            let (response_tx, response_rx) = oneshot::channel();
+            manager_tx_clone.send(ToolkitCommand::Connect { device_id: device.id.clone(), mac_address: device.mac_address, response: response_tx}).await.unwrap();
+            tokio::time::sleep(Duration::from_millis(2000)).await; // TODO Improve
 
             match response_rx.await {
-                Ok(result) => { hid_connection_tx.send(device).await.unwrap() }
+                Ok(_) => { hid_connection_tx.send(device).await.unwrap() }
                 Err(_) => { } // Device was not HID connected succesfully.
             }
         }
     });
-    tokio::spawn(async move {
-        while let Some(device) = hid_connection_rx.recv().await {
-            app.app_handle().emit("new_board", NintendoDevice::from(device)).unwrap()
-        }
-    });
 
-    let command = ToolkitCommand::BluetoothAction {
-        action: BluetoothCommand::StartScanAndPair {
+    let command = ToolkitCommand::BluetoothAction(BluetoothCommand::StartScanAndPair {
             response_stream: new_bluetooth_tx
-        }
-    };
+        });
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     
     println!("<< devices_scan_without_timeout: Scan started in background.\n");
@@ -132,7 +139,7 @@ async fn devices_scan_without_timeout(app: AppHandle, state: State<'_, AppState>
 async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
     println!(">> cancel_scan");
     
-    let command = ToolkitCommand::BluetoothAction { action: BluetoothCommand::StopScan };
+    let command = ToolkitCommand::BluetoothAction(BluetoothCommand::StopScan);
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
     println!("<< cancel_scan\n");
@@ -144,7 +151,7 @@ async fn devices_is_scanning(state: State<'_, AppState>) -> Result<bool, String>
     println!(">> is_scanning");
 
     let (tx, rx) = oneshot::channel();
-    let command = ToolkitCommand::BluetoothAction { action: BluetoothCommand::IsScanning { response: tx} };
+    let command = ToolkitCommand::BluetoothAction(BluetoothCommand::IsScanning { response: tx});
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     let is_scanning = rx.await.map_err(|e| e.to_string())?;
     
@@ -153,32 +160,13 @@ async fn devices_is_scanning(state: State<'_, AppState>) -> Result<bool, String>
 }
 
 #[tauri::command(async)]
-pub async fn devices_connect_device(
-    mac_address: String,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
-    println!(">> devices_connect_device: {}", mac_address);
-    let device_id = convert_mac_address_string_to_device_id(&mac_address);
+pub async fn devices_remove_device(device_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> devices_remove_device: {}", device_id);
 
-    let (tx, rx) = oneshot::channel();
-    let command = ToolkitCommand::Connect { device_id, response: tx };
+    let command = ToolkitCommand::BluetoothAction(BluetoothCommand::RemoveDevice { device_id });
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
-    let result = rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< devices_connect_device: Connection command sent. {}", result);
-    Ok(())
-}
-
-#[tauri::command(async)]
-pub async fn devices_remove_device(mac_address: String, state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> devices_remove_device: {}", mac_address);
-
-    let (tx, rx) = oneshot::channel();
-    let command = ToolkitCommand::RemoveDevice { device_id: mac_address, response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
-    let result = rx.await.map_err(|e| e.to_string())?;
-
-    println!("<< devices_remove_device: {:?}\n", result);
+    println!("<< devices_remove_device\n");
     Ok(())
 }
 
@@ -268,12 +256,20 @@ pub async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<
 }
 
 #[tauri::command(async)]
-pub async fn session_start_session(state: State<'_, AppState>) -> Result<(), String> {
+pub async fn session_start_session(state: State<'_, AppState>, session_channel: Channel<ProcessedBoardData>) -> Result<(), String> {
     println!(">> session_start_session");
+
+    // When we receive a balance board reading, we send it to the frontend.
+    let (balance_board_tx, mut balance_board_rx) = mpsc::channel::<ProcessedBoardData>(100);
+    tokio::spawn(async move {
+        while let Some(data) = balance_board_rx.recv().await {
+            session_channel.send(data);
+        };
+    });
 
     let command = ToolkitCommand::StartSession { settings: BalanceBoardSessionSettings {
         output_file: None,
-        output_channel: None,
+        output_channel: Some(balance_board_tx),
         lsl_connection: None,
         tcp_connection_string: None
     }};

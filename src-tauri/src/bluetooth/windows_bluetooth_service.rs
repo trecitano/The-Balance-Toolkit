@@ -16,7 +16,6 @@ use windows::Devices::Enumeration::{DeviceInformationUpdate, DevicePairingResult
 use windows::Foundation::IPropertyValue;
 use windows::core::HSTRING;
 use windows_core::Interface;
-use crate::types::MacAddress;
 
 // In Windows, we can only use a single bluetooth adapter. (This is an assumption).
 // Regardless of the assumption, it is extremely complicated to associate the adapters to the devices.
@@ -207,7 +206,7 @@ fn properties_has_matching_name(
         Err(_) => return false,
     };
 
-    value == HSTRING::from(target)
+    value == *target
 }
 
 // Windows RT stores the mac address in a u64, but we only want the relevant 48 bits
@@ -222,24 +221,15 @@ fn convert_u64_to_mac_address(winrt_mac_address: u64) -> [u8; 6] {
     mac_address
 }
 
-pub async fn remove_device(mac_address: MacAddress) -> Result<()> {
+pub async fn remove_device(device_id: String) -> Result<()> {
     tokio::task::spawn_blocking(move || {
         futures::executor::block_on(async {
-    let devices_selector = BluetoothDevice::GetDeviceSelector()?;
-    let device_collection = DeviceInformation::FindAllAsyncAqsFilter(&devices_selector)?.await?;
-
-    for info in device_collection {
-        let device_id = info.Id()?;
-        let device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
-        let device_mac_address = convert_u64_to_mac_address(device.BluetoothAddress()?);
-
-        if device_mac_address == mac_address {
+            let device = BluetoothDevice::FromIdAsync(&HSTRING::from(device_id))?.await?;
             let connection_status = device.ConnectionStatus()?;
-            if connection_status == BluetoothConnectionStatus::Connected{
-
+            if connection_status == BluetoothConnectionStatus::Connected {
                 // Windows is very weird. If we check the pairing status, it will say that it's not paired.
                 // However, to disconnect it, we must unpair it.
-                let pairing = info.Pairing()?;
+                let pairing = device.DeviceInformation()?.Pairing()?;
                 let unpair_result = pairing.UnpairAsync()?.await?;
 
                 return match unpair_result.Status()? {
@@ -252,10 +242,7 @@ pub async fn remove_device(mac_address: MacAddress) -> Result<()> {
                     }
                 }
             }
-        }
-    };
-
-    Ok(())
+            Ok(())
         })
     }).await?
 }

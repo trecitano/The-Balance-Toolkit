@@ -1,8 +1,9 @@
  use anyhow::{anyhow, Result};
 use chrono::Utc;
-use hidapi::{HidApi, HidDevice};
+use hidapi::{HidApi, HidDevice, HidResult};
 use lsl::{ChannelFormat, Pushable};
 use std::thread;
+use serde::Serialize;
 use tokio::fs::OpenOptions;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
@@ -35,7 +36,7 @@ const BOARD_TURN_ON_LED: [u8; 2] = [HID_INTERFACE_LED_INPUT, 0x10];
 const BOARD_TURN_OFF_LED: [u8; 2] = [HID_INTERFACE_LED_INPUT, 0x00];
 
 const BOARD_START_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, HID_CMD_DATA_REPORT_MODE];
-const BOARD_STOP_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, 0x00];
+const BOARD_STOP_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, 0x30];
 
 // Board primitives
 #[derive(Debug, Clone)]
@@ -49,6 +50,7 @@ pub enum BoardAction {
     StopRecording,
 }
 
+ #[derive(Debug)]
 pub enum BalanceBoardCommands {
     TurnOnLed,
     TurnOffLed,
@@ -70,8 +72,6 @@ pub struct LslConnectionSettings {
     stream_type: String,
     channel_count: u32,
     nominal_srate: f64,
-    channel_format: ChannelFormat,
-    source_id: String,
 }
 
 pub struct BalanceBoardConnection {
@@ -100,7 +100,7 @@ impl BalanceBoardConnection {
         let device = balance_board_info.open_device(&api)?;
         println!("Successfully opened HID connection for {}.", serial_number);
 
-        device.write(&BOARD_TURN_ON_LED)?;
+        write_to_device(&device, &BOARD_TURN_ON_LED)?;
 
         Ok(Self {
             device,
@@ -124,6 +124,12 @@ impl BalanceBoardConnection {
 
         loop {
             println!("Session state: {:?}", session);
+
+            if let Some(s) = &session {
+                println!("Receiver channel state: {:?}", s.receiver_channel.is_closed());
+            }
+
+            //println!("is closed: {}", &session.unwrap().receiver_channel.is_closed());
             tokio::select! {
                 // Received an action from the manager
                 Some(action) = self.action_rx.recv() => {
@@ -133,32 +139,46 @@ impl BalanceBoardConnection {
                             //hid_control_tx.send(BalanceBoardCommands::Tare).await?;
                         }
                         BoardAction::TurnOnLed => {
-                            hid_control_tx.send(BalanceBoardCommands::TurnOnLed).await?;
+                            hid_control_tx.send(BalanceBoardCommands::TurnOnLed).await.unwrap();
                         },
                         BoardAction::TurnOffLed => {
-                            hid_control_tx.send(BalanceBoardCommands::TurnOffLed).await?;
+                            hid_control_tx.send(BalanceBoardCommands::TurnOffLed).await.unwrap();
                         },
                         BoardAction::StartRecording { settings } => {
                             session = Some(Self::start_session(settings)?);
                             println!("Starting recording session with following sessions: {:?}", session);
-                            hid_control_tx.send(BalanceBoardCommands::StartRecording).await?;
+
+                                        if let Some(s) = &session {
+                println!("JUST STARTED Receiver channel state: {:?}", s.receiver_channel.is_closed());
+            }
+
+
+
+                            hid_control_tx.send(BalanceBoardCommands::StartRecording).await.unwrap();
                         },
                         BoardAction::StopRecording => {
                             println!("Stopping the recording");
                             session = None;
-                            hid_control_tx.send(BalanceBoardCommands::FinishRecording).await?;
+                            hid_control_tx.send(BalanceBoardCommands::FinishRecording).await.unwrap();
                         },
                     }
                 },
 
                 // Received data from the HID thread
                 Some(data) = hid_data_rx.recv() => {
+
+
+            if let Some(s) = &session {
+                println!("RIGHT BEFORE: channel state: {:?}", s.receiver_channel.is_closed());
+            }
+
                     // If there's a session, we forward the data to it.
                     if let Some(session) = &mut session {
-                        session.receiver_channel.send(data).await?;
+                        session.receiver_channel.send(data).await.map_err(anyhow::Error::from).unwrap();
                     }
                 },
                 else => {
+                    println!("Channels closed debug"); // DEBUG
                     // Channels closed
                     break;
                 }
@@ -177,15 +197,19 @@ impl BalanceBoardConnection {
         hid_data_tx: mpsc::Sender<BalanceBoardSensorReading>,
     ) -> Result<()> {
         let mut buf = [0u8; 32];
+
         let calibration = Self::read_calibration_data(&device)?;
 
         loop {
             match hid_control_rx.try_recv() {
-                Ok(command) => match command {
-                    BalanceBoardCommands::TurnOnLed => { device.write(&BOARD_TURN_ON_LED)?; }
-                    BalanceBoardCommands::TurnOffLed => { device.write(&BOARD_TURN_OFF_LED)?; }
-                    BalanceBoardCommands::StartRecording => { device.write(&BOARD_START_READING)?; },
-                    BalanceBoardCommands::FinishRecording => { device.write(&BOARD_STOP_READING)?; },
+                Ok(command) => {
+                    println!("blocking hid: Got command: {:?}", command);
+                    match command {
+                    BalanceBoardCommands::TurnOnLed => { write_to_device(&device, &BOARD_TURN_ON_LED)?; }
+                    BalanceBoardCommands::TurnOffLed => { write_to_device(&device, &BOARD_TURN_OFF_LED)?; }
+                    BalanceBoardCommands::StartRecording => { write_to_device(&device, &BOARD_START_READING)?; },
+                    BalanceBoardCommands::FinishRecording => { write_to_device(&device, &BOARD_STOP_READING)?; },
+                }
                 },
                 Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ },
                 Err(mpsc::error::TryRecvError::Disconnected) => {
@@ -195,7 +219,7 @@ impl BalanceBoardConnection {
                 }
             }
 
-            match device.read_timeout(&mut buf, 100) {
+            match read_from_device(&device, &mut buf) {
                 Ok(len) if len > 0 => {
                     if len >= DATA_PACKET_MIN_LEN {
                         println!("Got reading! {:?}", buf);
@@ -224,7 +248,7 @@ impl BalanceBoardConnection {
                 }
             }
         }
-        let _ = device.write(&BOARD_STOP_READING);
+        let _ = write_to_device(&device, &BOARD_STOP_READING);
         println!("Blocking HID loop terminated.");
         Ok(())
     }
@@ -288,6 +312,7 @@ impl BalanceBoardConnection {
                     ];
 
                     if tx.send(ProcessedBoardData { timestamp, reading} ).is_err() {
+                        println!("Temporary log: disconnected"); // TODO
                         break; // Receiver has disconnected
                     }
                 }
@@ -384,14 +409,14 @@ impl BalanceBoardConnection {
         // We need to read at least 2 packets, as each packet is not large enough to contain
         // all of the calibration data.
         let cmd: [u8; 7] = [0x17, 0x04, 0xA4, 0x00, 0x20, 0x00, 0x20];
-        device.write(&cmd)?;
+        write_to_device(&device, &cmd)?;
 
         let mut calibration_buf = [0u8; CALIBRATION_DATA_SIZE];
         let mut bytes_read: usize = 0;
 
         while bytes_read < CALIBRATION_DATA_SIZE {
             let mut buf = [0u8; 32];
-            let len = device.read_timeout(&mut buf, 1000)?;
+            let len = read_from_device(&device, &mut buf)?;
 
             if len == 0 { return Err(anyhow!("Timeout reading calibration data.")); }
             // We ignore everything that isn't what we want.
@@ -424,6 +449,36 @@ impl BalanceBoardConnection {
         BalanceBoardCalibrationData::from_bytes(calibration_buf)
     }
 }
+
+fn write_to_device(device: &HidDevice, data: &[u8]) -> HidResult<usize> {
+    print!("DEVICE_WRITE: ");
+    for b in data {
+        print!("{:02x} ", b);
+    }
+    println!();
+    device.write(data)
+}
+
+ fn read_from_device(device: &HidDevice, buf: &mut [u8]) -> HidResult<usize> {
+     let result = device.read_timeout(buf, 1000);
+
+     match &result {
+         Ok(len) => {
+             if *len > 0 {
+                 print!("DEVICE_READ: ");
+                 for b in buf {
+                     print!("{:02x} ", b);
+                 }
+                 println!();
+             }
+         }
+         Err(e) => {
+             println!("Read failed: {:?}", e);
+         }
+     }
+
+     result
+ }
 
  #[derive(Debug)]
 struct SessionHandles {
@@ -482,7 +537,7 @@ impl BalanceBoardSensorRawReading {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Serialize, Debug, Clone, Copy)]
 pub struct ProcessedBoardData {
     timestamp: chrono::DateTime<Utc>,
     reading: [f32; 4],

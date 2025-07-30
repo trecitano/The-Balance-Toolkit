@@ -17,7 +17,7 @@ pub enum BluetoothCommand {
     StartScanAndPair { response_stream: mpsc::Sender<BluetoothPeripheral> },
     StopScan,
     IsScanning { response: oneshot::Sender<bool>},
-    RemoveDevice { mac_address: MacAddress },
+    RemoveDevice { device_id: String },
 }
 
 // The bluetooth implementations should contain the following functions:
@@ -25,13 +25,6 @@ pub enum BluetoothCommand {
 // get_all_bluetooth_adapters_info
 // scan_and_pair_nintendo
 // remove_device
-
-pub enum NativeBluetoothCommand {
-    GetAllBluetoothAdaptersInfo { response: oneshot::Sender<Result<Vec<Result<BluetoothAdapterInfo>>>> },
-    ScanAndPairDevice { device_name: String, response: oneshot::Sender<Result<BluetoothPeripheral>> },
-    RemoveDevice { mac_address: MacAddress, response: oneshot::Sender<Result<()>> },
-}
-
 
 pub struct BluetoothHandler {
     bluetooth_rx: mpsc::Receiver<BluetoothCommand>,
@@ -72,8 +65,8 @@ impl BluetoothHandler {
                 BluetoothCommand::IsScanning { response } => {
                     response.send(self.scan_cancel_tx.is_some()).unwrap();
                 }
-                BluetoothCommand::RemoveDevice { mac_address } => {
-                    NativeHandler::remove_device(mac_address).await.unwrap();
+                BluetoothCommand::RemoveDevice { device_id } => {
+                    NativeHandler::remove_device(device_id).await.unwrap();
                 }
             }
         }
@@ -143,7 +136,7 @@ impl BluetoothHandler {
             }
         };
 
-        if connected_nintendo_devices.iter().find(|device| device.mac_address == bluetooth_device.mac_address).is_none() {
+        if !connected_nintendo_devices.iter().any(|device| device.mac_address == bluetooth_device.mac_address) {
             response_stream.send(bluetooth_device).await?
         }
 

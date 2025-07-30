@@ -11,9 +11,10 @@ import CopYGraph from "./CopYGraph";
 import VCopXGraph from "./VCopXGraph";
 import VCopYGraph from "./VCopYGraph";
 import WBBTopGraph from "./WBBTopGraph";
-import {Device, UserType} from "@/types.ts";
+import {Device, ProcessedBoardData, UserType} from "@/types.ts";
 import {useQuery} from "@tanstack/react-query";
 import {commands} from "@/utils/requests.ts";
+import {Channel} from "@tauri-apps/api/core";
 
 declare global {
   interface Window {
@@ -240,6 +241,8 @@ export default function Session() {
   const lslToggleRef = useRef<HTMLButtonElement>(null);
   const tcpDropdownRef = useRef<HTMLDivElement>(null);
   const tcpToggleRef = useRef<HTMLButtonElement>(null);
+
+  const sessionWebSocket = useRef<Channel<ProcessedBoardData>>(null);
 
   const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
   const [initialBoardProcessed, setInitialBoardProcessed] = useState(false);
@@ -711,7 +714,13 @@ export default function Session() {
 
   const handleRecord = async () => {
     setRecording(true);
-    await commands.session.startSession();
+
+    const sessionChannel = new Channel<ProcessedBoardData>();
+    sessionChannel.onmessage = (message) => {
+      console.log(`got download event ${message}`);
+    };
+    sessionWebSocket.current = sessionChannel;
+    await commands.session.startSession(sessionChannel);
     setCopYDataSeries([]);
     setCopXDataSeries([]);
     setVCopXDataSeries([]);

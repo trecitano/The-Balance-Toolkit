@@ -58,3 +58,8 @@ export type BalanceBoardEvent = {
     record: number;
   };
 };
+
+export type ProcessedBoardData = {
+  timestamp: Date;
+  reading: [number, number, number, number];
+};
