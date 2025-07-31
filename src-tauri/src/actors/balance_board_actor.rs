@@ -123,8 +123,6 @@ impl BalanceBoardConnection {
         let mut session: Option<SessionHandles> = None;
 
         loop {
-            println!("Session state: {:?}", session);
-
             if let Some(s) = &session {
                 println!("Receiver channel state: {:?}", s.receiver_channel.is_closed());
             }
@@ -222,7 +220,7 @@ impl BalanceBoardConnection {
             match read_from_device(&device, &mut buf) {
                 Ok(len) if len > 0 => {
                     if len >= DATA_PACKET_MIN_LEN {
-                        println!("Got reading! {:?}", buf);
+                        // println!("Got reading! {:?}", buf);
                         let reading = BalanceBoardSensorRawReading {
                             top_right: i16::from_be_bytes([buf[3], buf[4]]),
                             bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
@@ -257,34 +255,43 @@ impl BalanceBoardConnection {
         let mut thread_handles: Vec<thread::JoinHandle<Result<()>>> = vec!();
         let mut task_handles: Vec<task::JoinHandle<Result<()>>> = vec!();
 
-        let (processed_data_tx, _) = broadcast::channel::<ProcessedBoardData>(100);
+        let (processed_data_tx, processed_data_rx) = broadcast::channel::<ProcessedBoardData>(100);
 
         if let Some(output_file) = settings.output_file {
-            let file_sender = processed_data_tx.clone();
+            let file_writer_rx = processed_data_tx.subscribe();
             let handle = tokio::spawn(async move {
-                let rx = file_sender.subscribe();
-                Self::file_write_loop(rx, output_file).await
+                Self::file_write_loop(file_writer_rx, output_file).await
             });
             task_handles.push(handle);
         }
 
         if let Some(lsl_connection) = settings.lsl_connection {
-            let lsl_sender = processed_data_tx.clone();
+            let lsl_rx = processed_data_tx.subscribe();
             let handle = thread::spawn(move || {
-                let rx = lsl_sender.subscribe();
-                Self::lsl_stream_loop(rx, lsl_connection)
+                Self::lsl_stream_loop(lsl_rx, lsl_connection)
             });
             thread_handles.push(handle);
         }
 
         if let Some(tcp_connection_string) = settings.tcp_connection_string {
-            let tcp_sender = processed_data_tx.clone();
+            let tcp_rx = processed_data_tx.subscribe();
             let handle = tokio::spawn(async move {
-                let rx = tcp_sender.subscribe();
-                Self::tcp_stream_loop(rx, tcp_connection_string).await
+                Self::tcp_stream_loop(tcp_rx, tcp_connection_string).await
             });
             task_handles.push(handle);
         };
+        
+        if let Some(output_channel) = settings.output_channel {
+            let mut output_channel_rx = processed_data_tx.subscribe();
+            let handle = tokio::spawn(async move {
+                while let Ok(data) = output_channel_rx.recv().await {
+                    println!("sending data :)");
+                    output_channel.send(data).await?;
+                }
+                Ok(())
+            });
+            task_handles.push(handle);
+        }
 
         let (data_process_tx, data_process_rx) = mpsc::channel(100);
         let handle = tokio::spawn(async move {
@@ -301,6 +308,7 @@ impl BalanceBoardConnection {
     ) -> Result<()> {
         println!("Starting Data Process!");
         loop {
+            println!("Data process loop");
             match rx.recv().await {
                 Some(data) => {
                     let timestamp = Utc::now();
@@ -311,9 +319,12 @@ impl BalanceBoardConnection {
                         data.bottom_left,
                     ];
 
-                    if tx.send(ProcessedBoardData { timestamp, reading} ).is_err() {
-                        println!("Temporary log: disconnected"); // TODO
-                        break; // Receiver has disconnected
+                    match tx.send(ProcessedBoardData { timestamp, reading} ) {
+                        Ok(_) => (),
+                        Err(e) => {
+                            println!("Temporary log: disconnected: {}", e); // TODO
+                            break;
+                        }
                     }
                 }
                 None => break
@@ -465,11 +476,14 @@ fn write_to_device(device: &HidDevice, data: &[u8]) -> HidResult<usize> {
      match &result {
          Ok(len) => {
              if *len > 0 {
+                 /*
                  print!("DEVICE_READ: ");
                  for b in buf {
                      print!("{:02x} ", b);
                  }
                  println!();
+
+                  */
              }
          }
          Err(e) => {
@@ -539,8 +553,8 @@ impl BalanceBoardSensorRawReading {
 
 #[derive(Serialize, Debug, Clone, Copy)]
 pub struct ProcessedBoardData {
-    timestamp: chrono::DateTime<Utc>,
-    reading: [f32; 4],
+    pub timestamp: chrono::DateTime<Utc>,
+    pub reading: [f32; 4],
 }
 
 impl ProcessedBoardData {
