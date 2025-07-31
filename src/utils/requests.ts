@@ -122,11 +122,11 @@ export const commands = {
 
   session: {
     async startSession(sessionChannel: Channel<ProcessedBoardData>): Promise<Device[]> {
-      if (useDeviceMocks) {
-        return mockDeviceData;
-      }
-
       return invoke("session_start_session", { sessionChannel: sessionChannel });
+    },
+
+    async stopSession(): Promise<void> {
+      return invoke("session_stop_session");
     },
   }
 };

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useLocation } from "react-router-dom";
 import "./Session.css";
 import wbbIconLineBlue from "../../assets/wbb-icon-line-blue.svg";
 import userIcon from "../../assets/user-icon.svg";
@@ -11,7 +10,7 @@ import CopYGraph from "./CopYGraph";
 import VCopXGraph from "./VCopXGraph";
 import VCopYGraph from "./VCopYGraph";
 import WBBTopGraph from "./WBBTopGraph";
-import {Device, ProcessedBoardData, UserType} from "@/types.ts";
+import {ProcessedBoardData} from "@/types.ts";
 import {useQuery} from "@tanstack/react-query";
 import {commands} from "@/utils/requests.ts";
 import {Channel} from "@tauri-apps/api/core";
@@ -242,7 +241,8 @@ export default function Session() {
   const tcpDropdownRef = useRef<HTMLDivElement>(null);
   const tcpToggleRef = useRef<HTMLButtonElement>(null);
 
-  const sessionWebSocket = useRef<Channel<ProcessedBoardData>>(null);
+  const sessionWebSocket = useRef<Channel<ProcessedBoardData | null>>(null);
+
 
   const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
   const [initialBoardProcessed, setInitialBoardProcessed] = useState(false);
@@ -717,9 +717,10 @@ export default function Session() {
 
     const sessionChannel = new Channel<ProcessedBoardData>();
     sessionChannel.onmessage = (message) => {
-      console.log(`got download event ${message}`);
+      console.log('got download event', message);
     };
     sessionWebSocket.current = sessionChannel;
+    console.log("Socket state: ", sessionWebSocket.current.id);
     await commands.session.startSession(sessionChannel);
     setCopYDataSeries([]);
     setCopXDataSeries([]);
@@ -732,9 +733,10 @@ export default function Session() {
     lastActualCopTrailPointIdRef.current = 0;
   };
 
-  const handleStop = useCallback(() => {
+  const handleStop = async () => {
+    await commands.session.stopSession();
     setRecording(false);
-  }, [setRecording]);
+  };
 
   const handleOpenStopAfterDropdown = () => {
     if (stopAfterEnabled) {
