@@ -8,7 +8,8 @@ use tauri::{Emitter, Manager, State};
 use tauri::ipc::Channel;
 use tauri_plugin_fs::FsExt;
 use tokio::sync::mpsc::{Sender, Receiver};
-use crate::actors::balance_board_actor::{BalanceBoardSessionSettings, BoardAction, ProcessedBoardData};
+use crate::actors::balance_board_actor::{BalanceBoardSessionSettings, BoardAction};
+use crate::processing::data_processor::ProcessedBoardData;
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
 use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
 
@@ -172,11 +173,10 @@ pub async fn devices_remove_device(device_id: String, state: State<'_, AppState>
 
 #[tauri::command(async)]
 pub async fn devices_identify_device(
-    mac_address: String,
+    device_id: String,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    println!(">> devices_identify_device: {}", mac_address);
-    let device_id = convert_mac_address_string_to_device_id(&mac_address);
+    println!(">> devices_identify_device: {}", device_id);
 
     let command = ToolkitCommand::IdentifyBoard {
         device_id,

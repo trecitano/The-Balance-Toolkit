@@ -6,8 +6,8 @@ mod bluetooth;
 mod file_system;
 mod types;
 mod frontend;
+mod processing;
 
-use std::panic::panic_any;
 use tokio::sync::mpsc;
 use anyhow::Result;
 use crate::actors::toolkit_service::ConnectionManager;
