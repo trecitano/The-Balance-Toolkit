@@ -15,9 +15,54 @@ import settingsIcon from "../../assets/settings-icon.svg";
 import sessionIcon from "../../assets/session-icon.svg";
 import activitiesConfig from "../../config/activities.config";
 
-// Use dynamic imports to get all SVGs from activity folders
-// Using absolute path format for Vite's import.meta.glob
-const activityImageModules = import.meta.glob('/src/assets/activities/**/*.svg', { eager: true });
+// Import specific SVG images for each activity card
+// Quiet Standing
+import quietStanding1 from "../../assets/activities/quiet-standing/quiet-standing-1-tare.svg";
+import quietStanding2 from "../../assets/activities/quiet-standing/quiet-standing-2-step-onto-board.svg";
+import quietStanding3 from "../../assets/activities/quiet-standing/quiet-standing-3-stand-eyes-open.svg";
+import quietStanding4 from "../../assets/activities/quiet-standing/quiet-standing-4-stand-eyes-closed.svg";
+
+// TUG
+import tug1 from "../../assets/activities/tug/tug-1-tare.svg";
+import tug2 from "../../assets/activities/tug/tug-2-step-onto-board.svg";
+import tug3 from "../../assets/activities/tug/tug-3-stand-up.svg";
+import tug4 from "../../assets/activities/tug/tug-4-walk-forward.svg";
+import tug5 from "../../assets/activities/tug/tug-5-turn-around.svg";
+import tug6 from "../../assets/activities/tug/tug-6-walk-back.svg";
+import tug7 from "../../assets/activities/tug/tug-7-sit-down.svg";
+
+// Single Leg Stance
+import singleLeg1 from "../../assets/activities/single-leg-stance/single-leg-stance-1-tare.svg";
+import singleLeg2 from "../../assets/activities/single-leg-stance/single-leg-stance-2-stand-with-both-legs.svg";
+import singleLeg3 from "../../assets/activities/single-leg-stance/single-leg-stance-3-left-leg-up.svg";
+import singleLeg4 from "../../assets/activities/single-leg-stance/single-leg-stance-4-stand-with-both-legs.svg";
+import singleLeg5 from "../../assets/activities/single-leg-stance/single-leg-stance-5-right-leg-up.svg";
+import singleLeg6 from "../../assets/activities/single-leg-stance/single-leg-stance-6-stand-with-both-legs.svg";
+
+// Tandem Stance
+import tandem1 from "../../assets/activities/tandem-stance/tandem-stance-1-tare.svg";
+import tandem2 from "../../assets/activities/tandem-stance/tandem-stance-2-step-onto-board.svg";
+import tandem3 from "../../assets/activities/tandem-stance/tandem-stance-3-left-leg-in-front.svg";
+import tandem4 from "../../assets/activities/tandem-stance/tandem-stance-4-stand-with-both-legs.svg";
+import tandem5 from "../../assets/activities/tandem-stance/tandem-stance-5-right-leg-in-front.svg";
+import tandem6 from "../../assets/activities/tandem-stance/tandem-stance-6-stand-with-both-legs.svg";
+
+// Functional Reach Test
+import functionalReach1 from "../../assets/activities/functional-reach-test/functional-reach-test-1-tare.svg";
+import functionalReach2 from "../../assets/activities/functional-reach-test/functional-reach-test-2-left-arm-up.svg";
+import functionalReach3 from "../../assets/activities/functional-reach-test/functional-reach-test-3-left-arm-reach.svg";
+import functionalReach4 from "../../assets/activities/functional-reach-test/functional-reach-test-4-left-arm-up.svg";
+import functionalReach5 from "../../assets/activities/functional-reach-test/functional-reach-test-5-right-arm-up.svg";
+import functionalReach6 from "../../assets/activities/functional-reach-test/functional-reach-test-6-right-arm-reach.svg";
+
+// Dynamic Weight Shifting
+import dynamicWeight1 from "../../assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-1-tare.svg";
+import dynamicWeight2 from "../../assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-2-step-onto-board.svg";
+import dynamicWeight3 from "../../assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-3-lean-forward.svg";
+import dynamicWeight4 from "../../assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-4-stand-upright.svg";
+import dynamicWeight5 from "../../assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-5-lean-backwards.svg";
+import dynamicWeight6 from "../../assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-6-lean-left.svg";
+import dynamicWeight7 from "../../assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-7-lean-right.svg";
 
 export interface ActivityData {
   id: number;
@@ -30,163 +75,65 @@ export interface ActivityData {
   activityName?: string;  // The folder/identifier name for the activity (e.g., 'quiet-standing')
 }
 
-/**
- * Interface for image objects used in the helper functions
- */
-interface ImageItem {
-  path: string;
-  image: string;
-}
+// Hardcoded image mappings for each activity
+const activityImageMappings = {
+  'quiet-standing': {
+    staticImage: quietStanding3, // Stand with eyes open as the main image
+    sequenceImages: [quietStanding3, quietStanding4],
+  },
+  'tug': {
+    staticImage: tug2, // Stand up as the main image
+    sequenceImages: [tug3, tug4, tug5, tug6, tug2],
+  },
+  'single-leg-stance': {
+    staticImage: singleLeg3, // Left leg up as the main image
+    sequenceImages: [singleLeg3, singleLeg4, singleLeg5, singleLeg6],
+  },
+  'tandem-stance': {
+    staticImage: tandem3, // Left leg in front as the main image
+    sequenceImages: [tandem2, tandem3, tandem4, tandem5],
+  },
+  'functional-reach-test': {
+    staticImage: functionalReach3, // Left arm reach as the main image
+    sequenceImages: [functionalReach3, functionalReach2],
+  },
+  'dynamic-weight-shifting': {
+    staticImage: dynamicWeight3, // Stand upright as the main image
+    sequenceImages: [dynamicWeight3, dynamicWeight4, dynamicWeight5, dynamicWeight6, dynamicWeight7],
+  },
+};
 
 /**
- * Helper function to get all SVGs from a specific activity folder
- * @param activityName The name of the activity (e.g., 'tandem-stance')
+ * Helper function to get all sequence images for an activity
+ * @param activityName The name of the activity (e.g., 'quiet-standing')
  * @returns Array of image URLs for the activity
  */
 export function getActivityImages(activityName: string): string[] {
-  const images: ImageItem[] = [];
-  
-  // Match activity images by name pattern
-  const regex = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}[\\d\\w-]+\\.svg$`);
-  
-  // Sort function to order by number in filename
-  const sortByNumber = (a: string, b: string) => {
-    // Extract the number after the activity name
-    const aMatch = a.match(new RegExp(`${activityName}(\\d+)`));
-    const bMatch = b.match(new RegExp(`${activityName}(\\d+)`));
-    
-    if (aMatch && bMatch) {
-      return parseInt(aMatch[1]) - parseInt(bMatch[1]);
-    }
-    return a.localeCompare(b);
-  };
-  
-  // Find all matching SVGs for this activity
-  Object.entries(activityImageModules).forEach(([path, module]) => {
-    if (regex.test(path)) {
-      images.push({
-        path: path,
-        image: (module as { default: string }).default
-      });
-    }
-  });
-  
-  // Sort images by their number
-  const sortedImages = images.sort((a, b) => sortByNumber(a.path, b.path));
-  
-  // Return just the image URLs
-  return sortedImages.map(item => item.image);
+  const mapping = activityImageMappings[activityName as keyof typeof activityImageMappings];
+  return mapping ? mapping.sequenceImages : [];
 }
 
 /**
- * Helper function to get action-specific SVGs from the activity folder
- * @param activityName The name of the activity (e.g., 'tandem-stance')
- * @param actionLabel The label of the action (e.g., 'tandem-stand')
- * @returns Array of image URLs for the activity action
+ * Helper function to get action-specific images from the activity
+ * For now, this returns all sequence images since we don't have action-specific mappings
+ * @param activityName The name of the activity (e.g., 'quiet-standing')
+ * @param actionLabel The label of the action (currently unused)
+ * @returns Array of image URLs for the activity
  */
 export function getActionImages(activityName: string, actionLabel: string): string[] {
-  const images: ImageItem[] = [];
-  
-  // Pattern 1: activityName-actionLabel.svg or activityName-actionLabel-N.svg
-  const regex1 = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}-${actionLabel}(-\\d+)?\.svg$`);
-  
-  // Pattern 2: activityNameN-actionLabel.svg
-  const regex2 = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}\\d+-${actionLabel}\\.svg$`);
-  
-  // Pattern 3: activityNameN.svg (general sequence images)
-  const regex3 = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}\\d+\\.svg$`);
-  
-  // Sort function to order by number in filename
-  const sortByNumber = (a: string, b: string) => {
-    // First try to extract specific numbers from the path
-    const aMatch = a.match(/(\d+)\.svg$/) || a.match(/(\d+)-/);
-    const bMatch = b.match(/(\d+)\.svg$/) || b.match(/(\d+)-/);
-    if (aMatch && bMatch) {
-      return parseInt(aMatch[1]) - parseInt(bMatch[1]);
-    }
-    return a.localeCompare(b);
-  };
-  
-  // Find all matching SVGs for this activity action
-  Object.entries(activityImageModules).forEach(([path, module]) => {
-    // First prioritize action-specific images
-    if (regex1.test(path) || regex2.test(path)) {
-      images.push({
-        path: path,
-        image: (module as { default: string }).default
-      });
-    } 
-    // If no action-specific images are found, include general sequence images
-    else if (images.length === 0 && regex3.test(path)) {
-      images.push({
-        path: path,
-        image: (module as { default: string }).default
-      });
-    }
-  });
-  
-  // If we found no action-specific images, get the general sequence images
-  if (images.length === 0) {
-    // Re-run search for general sequence images only
-    Object.entries(activityImageModules).forEach(([path, module]) => {
-      if (regex3.test(path)) {
-        images.push({
-          path: path,
-          image: (module as { default: string }).default
-        });
-      }
-    });
-  }
-  
-  // Sort images by their number
-  const sortedImages = images.sort((a, b) => sortByNumber(a.path, b.path));
-  
-  // Return just the image URLs
-  return sortedImages.map(item => item.image);
+  // For now, return all sequence images regardless of action label
+  return getActivityImages(activityName);
 }
 
 /**
  * Helper function to get action-specific image or fall back to default
- * @param activityName The name of the activity (e.g., 'tandem-stance')
- * @param actionLabel The label of the action (e.g., 'tandem-stand')
- * @returns The image URL or undefined if not found
+ * @param activityName The name of the activity (e.g., 'quiet-standing')
+ * @param actionLabel The label of the action (currently unused)
+ * @returns The static image for the activity
  */
 export function getActionImage(activityName: string, actionLabel: string): string | undefined {
-  const actionSpecificImages: ImageItem[] = [];
-  
-  // Pattern 1 & 3: activityName-actionLabel.svg or activityName-actionLabel-N.svg
-  const regex1 = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}-${actionLabel}(-\\d+)?\.svg$`);
-  
-  // Pattern 2: activityNameN-actionLabel.svg
-  const regex2 = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}\\d+-${actionLabel}\\.svg$`);
-  
-  Object.entries(activityImageModules).forEach(([path, module]) => {
-    // Try matching first regex
-    if (regex1.test(path) || regex2.test(path)) {
-      actionSpecificImages.push({
-        path: path,
-        image: (module as { default: string }).default
-      });
-    }
-  });
-  
-  // If we found action-specific images, return the first one
-  if (actionSpecificImages.length > 0) {
-    // Sort and return the first one
-    const sortedImages = actionSpecificImages.sort((a, b) => {
-      const aMatch = a.path.match(/(\d+)\.svg$/) || a.path.match(/(\d+)-/);
-      const bMatch = b.path.match(/(\d+)\.svg$/) || b.path.match(/(\d+)-/);
-      if (aMatch && bMatch) {
-        return parseInt(aMatch[1]) - parseInt(bMatch[1]);
-      }
-      return a.path.localeCompare(b.path);
-    });
-    return sortedImages[0].image;
-  }
-  
-  // If no specific action image is found, fall back to default sequence images
-  const defaultImages = getActivityImages(activityName);
-  return defaultImages.length > 0 ? defaultImages[0] : undefined;
+  const mapping = activityImageMappings[activityName as keyof typeof activityImageMappings];
+  return mapping ? mapping.staticImage : undefined;
 }
 
 export default function Activities() {
@@ -196,61 +143,61 @@ export default function Activities() {
     {
       id: 1,
       title: activitiesConfig["quiet-standing"].title,
-      staticImage: getActivityImages('quiet-standing')[0] || activitiesIcon,
+      staticImage: activityImageMappings['quiet-standing'].staticImage,
       hoverImages: [activitiesIcon, lightIcon, activitiesIcon, fileIcon, settingsIcon, wbbIcon],
       description: activitiesConfig["quiet-standing"].description || "Assess stability while standing still with eyes open and closed.",
       boardsRequired: activitiesConfig["quiet-standing"].boardsRequired || 1,
-      sequenceImages: getActivityImages('quiet-standing'),
+      sequenceImages: activityImageMappings['quiet-standing'].sequenceImages,
       activityName: 'quiet-standing',
     },
     {
       id: 2,
       title: activitiesConfig["tug"].title,
-      staticImage: getActivityImages('tug')[0] || bookIcon,
+      staticImage: activityImageMappings['tug'].staticImage,
       hoverImages: [bookIcon, bookmarkIcon, bookIcon],
       description: activitiesConfig["tug"].description || "Measure mobility and balance by timing the 'up and go' sequence.",
       boardsRequired: activitiesConfig["tug"].boardsRequired || 1,
-      sequenceImages: getActivityImages('tug'),
+      sequenceImages: activityImageMappings['tug'].sequenceImages,
       activityName: 'tug',
     },
     {
       id: 3,
       title: activitiesConfig["single-leg-stance"].title,
-      staticImage: getActivityImages('single-leg-stance')[0] || wbbIcon,
+      staticImage: activityImageMappings['single-leg-stance'].staticImage,
       hoverImages: [wbbIcon, logoIcon, wbbIcon],
       description: activitiesConfig["single-leg-stance"].description || "Evaluate balance by standing on one leg for a period of time.",
       boardsRequired: activitiesConfig["single-leg-stance"].boardsRequired || 1,
-      sequenceImages: getActivityImages('single-leg-stance'),
+      sequenceImages: activityImageMappings['single-leg-stance'].sequenceImages,
       activityName: 'single-leg-stance',
     },
     {
       id: 4,
       title: activitiesConfig["tandem-stance"].title,
-      staticImage: getActivityImages('tandem-stance')[0] || homeIcon,
+      staticImage: activityImageMappings['tandem-stance'].staticImage,
       hoverImages: [homeIcon, lightIcon, homeIcon],
       description: activitiesConfig["tandem-stance"].description || "Test balance by standing with one foot directly in front of the other.",
       boardsRequired: activitiesConfig["tandem-stance"].boardsRequired || 1,
-      sequenceImages: getActivityImages('tandem-stance'),
+      sequenceImages: activityImageMappings['tandem-stance'].sequenceImages,
       activityName: 'tandem-stance',
     },
     {
       id: 5,
       title: activitiesConfig["functional-reach"].title,
-      staticImage: getActivityImages('functional-reach-test')[0] || fileIcon,
+      staticImage: activityImageMappings['functional-reach-test'].staticImage,
       hoverImages: [fileIcon, settingsIcon, fileIcon],
       description: activitiesConfig["functional-reach"].description || "Measure forward reach distance to assess balance and stability limits.",
       boardsRequired: activitiesConfig["functional-reach"].boardsRequired || 1,
-      sequenceImages: getActivityImages('functional-reach-test'),
+      sequenceImages: activityImageMappings['functional-reach-test'].sequenceImages,
       activityName: 'functional-reach-test',
     },
     {
       id: 6,
       title: activitiesConfig["dynamic-weight-shifting"].title,
-      staticImage: getActivityImages('dynamic-weight-shifting')[0] || activitiesIcon,
+      staticImage: activityImageMappings['dynamic-weight-shifting'].staticImage,
       hoverImages: [activitiesIcon, sessionIcon, activitiesIcon],
       description: activitiesConfig["dynamic-weight-shifting"].description || "Assess the ability to shift weight effectively while maintaining balance.",
       boardsRequired: activitiesConfig["dynamic-weight-shifting"].boardsRequired || 2,
-      sequenceImages: getActivityImages('dynamic-weight-shifting'),
+      sequenceImages: activityImageMappings['dynamic-weight-shifting'].sequenceImages,
       activityName: 'dynamic-weight-shifting',
     },
   ];

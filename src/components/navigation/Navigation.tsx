@@ -44,7 +44,7 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
             {menuItems.map((item) => (
               <li
                 key={item.id}
-                className={`menu-item${activeView === item.id ? " active" : ""}`}
+                className={`menu-item ${item.id}${activeView === item.id ? " active" : ""}`}
                 onClick={() => onViewChange(item.id)}
               >
                 <span className="menu-item-icon">

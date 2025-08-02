@@ -5,7 +5,6 @@ import {
   mockUsersData,
   mockDeviceData,
   mockRecentFiles,
-  mockScanDeviceData,
 } from "@/utils/mocks.ts";
 import {BalanceBoardEvent, Device, ProcessedBoardData, RecentFile, UserType} from "@/types.ts";
 
