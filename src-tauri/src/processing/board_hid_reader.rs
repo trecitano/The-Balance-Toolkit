@@ -1,8 +1,9 @@
 use std::thread;
 use anyhow::anyhow;
+use chrono::Utc;
 use hidapi::{HidDevice, HidResult};
-use serde::Serialize;
 use tokio::sync::mpsc;
+use crate::actors::balance_board_actor::BalanceBoardCalibratedReading;
 
 // --- HID Command Constants ---
 const HID_INTERFACE_LED_INPUT: u8 = 0x11;
@@ -35,37 +36,29 @@ const BOARD_STOP_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, 0x30];
 pub enum BalanceBoardCommands {
     TurnOnLed,
     TurnOffLed,
-    StartRecording,
+    StartRecording(mpsc::Sender<BalanceBoardCalibratedReading>),
     FinishRecording
-}
-
-#[derive(Serialize, Debug, Clone, Default, Copy)]
-pub struct BalanceBoardCalibratedReading {
-    pub top_right: f32,
-    pub bottom_right: f32,
-    pub top_left: f32,
-    pub bottom_left: f32,
 }
 
 pub fn initialize(
     device: HidDevice,
-    rx: mpsc::Receiver<BalanceBoardCommands>,
-    tx: mpsc::Sender<BalanceBoardCalibratedReading>) -> thread::JoinHandle<anyhow::Result<()>> {
+    rx: mpsc::Receiver<BalanceBoardCommands>
+) -> thread::JoinHandle<anyhow::Result<()>> {
 
     thread::spawn(move || {
-        blocking_hid_loop(device, rx, tx)
+        blocking_hid_loop(device, rx)
     })
 }
 
 fn blocking_hid_loop(
     device: HidDevice,
     mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>,
-    hid_data_tx: mpsc::Sender<BalanceBoardCalibratedReading>,
 ) -> anyhow::Result<()> {
     let mut buf = [0u8; 32];
 
     write_to_device(&device, &BOARD_TURN_ON_LED)?;
     let calibration = read_calibration_data(&device)?;
+    let mut tx_channel: Option<mpsc::Sender<BalanceBoardCalibratedReading>> = None;
 
     loop {
         match hid_control_rx.try_recv() {
@@ -74,7 +67,10 @@ fn blocking_hid_loop(
                 match command {
                     BalanceBoardCommands::TurnOnLed => { write_to_device(&device, &BOARD_TURN_ON_LED)?; }
                     BalanceBoardCommands::TurnOffLed => { write_to_device(&device, &BOARD_TURN_OFF_LED)?; }
-                    BalanceBoardCommands::StartRecording => { write_to_device(&device, &BOARD_START_READING)?; },
+                    BalanceBoardCommands::StartRecording(tx) => {
+                        tx_channel = Some(tx);
+                        write_to_device(&device, &BOARD_START_READING)?; 
+                    },
                     BalanceBoardCommands::FinishRecording => { write_to_device(&device, &BOARD_STOP_READING)?; },
                 }
             },
@@ -89,7 +85,6 @@ fn blocking_hid_loop(
         match read_from_device(&device, &mut buf) {
             Ok(len) if len > 0 => {
                 if len >= DATA_PACKET_MIN_LEN {
-                    // println!("Got reading! {:?}", buf);
                     let reading = BalanceBoardSensorRawReading {
                         top_right: i16::from_be_bytes([buf[3], buf[4]]),
                         bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
@@ -102,9 +97,8 @@ fn blocking_hid_loop(
                     //let tared_reading = reading.apply_tare(&tare_offset);
                     //let weights = tared_reading.calculate_weights(&calibration);
 
-                    if hid_data_tx.blocking_send(calibrated_reading).is_err() {
-                        // Main task has disconnected, shut down.
-                        break;
+                    if let Some(tx) = &tx_channel {
+                        tx.blocking_send(calibrated_reading)?;
                     }
                 }
             }
@@ -226,6 +220,7 @@ impl BalanceBoardSensorRawReading {
 
     fn calculate_weights(&self, cal: &BalanceBoardCalibrationData) -> BalanceBoardCalibratedReading {
         BalanceBoardCalibratedReading {
+            timestamp: Utc::now(),
             top_right: self.calculate_single_weight(self.top_right, &cal.top_right),
             bottom_right: self.calculate_single_weight(self.bottom_right, &cal.bottom_right),
             top_left: self.calculate_single_weight(self.top_left, &cal.top_left),

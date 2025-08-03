@@ -15,14 +15,16 @@ tauri = { version = "2.7.0", features = [] }
 tauri-plugin-opener = "2.4.0"
 tauri-plugin-fs = "2.4.1"
 serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.141"
-tokio = { version = "1.47.0", features = ["time", "rt", "macros", "net"] }
+serde_json = "1.0.142"
+tokio = { version = "1.47.1", features = ["time", "rt", "macros", "net"] }
 anyhow = "1.0.98"
-futures = "0.3.1"
+futures = "0.3.31"
 hidapi = "2.6.3"
 lsl = {git = "https://github.com/labstreaminglayer/liblsl-rust.git", branch = "main"}
 chrono = { version = "0.4.41", features = ["serde"] }
 dirs = "6.0.0"
+rustfft = "6.4.0"
+toml = "0.8.22"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bluer = { version = "0.17.3", features = ["bluetoothd"] }

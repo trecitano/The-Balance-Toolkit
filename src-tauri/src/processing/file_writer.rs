@@ -1,58 +1,115 @@
-use crate::processing::data_processor::ProcessedBoardData;
-use tokio::fs::OpenOptions;
+use crate::actors::balance_board_actor::{BalanceBoardOutput, SettingMode};
+use crate::processing::data_processor::ProcessingSettings;
+use anyhow::Result;
+use chrono::Utc;
+use std::io;
+use std::path::PathBuf;
+use tokio::fs::{File, OpenOptions};
 use tokio::io::AsyncWriteExt;
-use tokio::sync::broadcast;
-use tokio::task;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 
-pub fn initialize(rx: broadcast::Receiver<ProcessedBoardData>,
-                  output_file: String) -> task::JoinHandle<anyhow::Result<()>> {
+pub fn initialize(output_directory: String,
+                  setting_mode: SettingMode,
+                  device_name: String,
+                  processing_settings: Option<ProcessingSettings>) -> Sender<BalanceBoardOutput> {
+    let (tx, rx) = mpsc::channel(100);
+    
     tokio::spawn(async move {
-        file_write_loop(rx, output_file).await
-    })
+        file_write_loop(rx, output_directory, setting_mode, device_name, processing_settings).await
+    });
+
+    tx
 }
 
-async fn file_write_loop(mut rx: broadcast::Receiver<ProcessedBoardData>, 
-                         output_file: String) -> anyhow::Result<()> {
-    let mut file = OpenOptions::new()
-        .create(true)
-        .write(true)
-        .truncate(true)
-        .open(output_file)
-        .await?;
+async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
+                         output_directory: String,
+                         setting_mode: SettingMode,
+                         device_name: String,
+                         processing_settings: Option<ProcessingSettings>) -> Result<()> {
 
-    // Write CSV header
-    file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n").await?;
+    let path = PathBuf::from(output_directory);
+    let time_format = Utc::now().format("%Y-%m-%dT%H-%M-%SZ").to_string();
+    let prepared_file_name = format!("{device_name}-{time_format}");
 
-    // Process incoming data
-    loop {
-        match rx.recv().await {
-            Ok(data) => {
-                // Format data as CSV row
-                let csv_line = format!(
-                    "{},{},{},{},{}\n",
-                    data.timestamp.to_rfc3339(),
-                    data.reading[0],  // top_right
-                    data.reading[1],  // bottom_right
-                    data.reading[2],  // top_left
-                    data.reading[3]   // bottom_left
-                );
+    // Create a file to store the session processing settings;
+    if setting_mode.receive_processed {
+        let file_path = path.join(format!("{prepared_file_name}-settings.txt"));
+        let mut file = create_file(file_path).await?;
+        let content = toml::to_string_pretty(&processing_settings.unwrap())?;
+        file.write_all(content.as_ref()).await?;
+    }
 
-                // Write and flush
-                file.write_all(csv_line.as_bytes()).await?;
-                file.flush().await?;
-            }
-            Err(broadcast::error::RecvError::Closed) => {
-                // Channel closed, exit gracefully
-                break;
-            }
-            Err(broadcast::error::RecvError::Lagged(_)) => {
-                // We've missed some messages due to slow file writing
-                eprintln!("Warning: File writing lagged behind data stream");
-                continue;
-            }
+    // Create a file to optionally store the raw values;
+    let mut raw_values_file = if setting_mode.receive_raw {
+        let file_path = path.join(format!("{prepared_file_name}-raw-values.txt"));
+        let mut file = create_file(file_path).await?;
+        file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n").await?;
+        Some(file)
+    } else {
+        None
+    };
+
+    // Create a file to optionally store the processed values;
+    let mut processed_values_file = if setting_mode.receive_processed {
+        let file_path = path.join(format!("{prepared_file_name}-processed-values.txt"));
+        let mut file = create_file(file_path).await?;
+        file.write_all(b"timestamp,mean_velocity,total_path_length,velocity_moment,confidence_ellipse_area,convex_hull_area,mean_power_frequency,center_of_spectrum,frequency_total_power,dfa_alpha,jerk\n").await?;
+        Some(file)
+    } else {
+        None
+    };
+
+    while let Some(data) = rx.recv().await {
+        match data {
+            BalanceBoardOutput::Raw(data) => {
+                if let Some(ref mut file) = raw_values_file {
+                    let csv_line = format!(
+                        "{},{},{},{},{}\n",
+                        data.timestamp.format("%Y-%m-%dT%H:%M:%S%.6fZ"),
+                        data.top_right,
+                        data.bottom_right,
+                        data.top_left,
+                        data.bottom_left
+                    );
+
+                    file.write_all(csv_line.as_bytes()).await?;
+                    file.flush().await?;
+                }
+            },
+            BalanceBoardOutput::Processed(data) => {
+                if let Some(ref mut file) = processed_values_file {
+                    let csv_line = format!(
+                        "{},{},{},{},{},{},{},{},{},{},{}\n",
+                        data.timestamp.format("%Y-%m-%dT%H:%M:%S%.6fZ"),
+                        data.sway_metrics.as_ref().map_or(String::new(), |v| v.mean_velocity.to_string()),
+                        data.sway_metrics.as_ref().map_or(String::new(), |v| v.total_path_length.to_string()),
+                        data.sway_metrics.as_ref().map_or(String::new(), |v| v.velocity_moment.to_string()),
+                        data.area_metrics.as_ref().map_or(String::new(), |a| a.confidence_ellipse_area.to_string()),
+                        data.area_metrics.as_ref().map_or(String::new(), |a| a.convex_hull_area.to_string()),
+                        data.frequency_metrics.as_ref().map_or(String::new(), |f| f.mean_power_frequency.to_string()),
+                        data.frequency_metrics.as_ref().map_or(String::new(), |f| f.center_of_spectrum.to_string()),
+                        data.frequency_metrics.as_ref().map_or(String::new(), |f| f.total_power.to_string()),
+                        data.dfa_alpha.map_or(String::new(), |v| v.to_string()),
+                        data.jerk.map_or(String::new(), |v| v.to_string())
+                    );
+
+                    // Write and flush
+                    file.write_all(csv_line.as_bytes()).await?;
+                    file.flush().await?;
+                }
+            },
         }
     }
 
     println!("File writing loop terminated.");
     Ok(())
+}
+
+async fn create_file(output_path: PathBuf) -> io::Result<File> {
+    OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(output_path.to_str().unwrap()).await
 }
