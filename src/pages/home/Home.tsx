@@ -1,295 +1,436 @@
-import React, { useState, useEffect, useRef, FC } from "react";
-import "./Home.css";
-import clockIcon from "@/assets/clock-counter-clockwise-icon.svg";
-import fileIcon from "@/assets/file-icon.svg";
-import bookBookmarkIcon from "@/assets/book-bookmark-icon.svg";
-import questionMarkIcon from "@/assets/question-mark-icon.svg";
-import githubIcon from "@/assets/github-icon.svg";
-import { commands } from "@/utils/requests.ts";
+// Home.tsx
+import React from 'react';
+import {
+  ChevronRightIcon,
+  PlusIcon,
+  QuestionMarkCircleIcon,
+  DocumentTextIcon,
+  DocumentIcon,
+  CodeBracketIcon,
+  EnvelopeIcon,
+  SignalIcon,
+} from '@heroicons/react/24/outline';
 
-interface RecentFile {
-  id: string;
+// Types
+interface Activity {
+  id: number;
   name: string;
-  location: string;
-  lastUpdated: string;
-  userName: string;
-}
-
-declare global {
-  interface Window {
-    showDirectoryPicker?: (options?: {
-      id?: string;
-      mode?: "read" | "readwrite";
-      startIn?:
-        | "desktop"
-        | "documents"
-        | "downloads"
-        | "music"
-        | "pictures"
-        | "videos"
-        | FileSystemHandle;
-    }) => Promise<FileSystemDirectoryHandle>;
-  }
-}
-
-// Helper component for main content sections
-interface MainSectionProps {
-  className?: string;
   icon: string;
-  alt: string;
-  title: string;
-  text: string;
-  linkText: string;
-  onLinkClick: () => void;
 }
 
-const MainSection: FC<MainSectionProps> = ({
-  className,
-  icon,
-  alt,
-  title,
-  text,
-  linkText,
-  onLinkClick,
-}) => (
-  <div className={`main-area-section ${className || ""}`}>
-    <div className="main-section-icon-panel">
-      <img src={icon} alt={alt} className="main-section-icon" />
-    </div>
-    <div className="main-section-details-column">
-      <h3 className="main-section-title">{title}</h3>
-      <div className="main-section-text-wrapper">
-        <p className="main-section-text">{text}</p>
-      </div>
-      <div className="link-footer">
-        <div className="main-section-action-link" onClick={onLinkClick}>
-          {linkText} &rarr;
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-// Helper component for a single recent file item
-interface RecentFileItemProps {
-  file: RecentFile;
-}
-
-const RecentFileItem: FC<RecentFileItemProps> = ({ file }) => (
-  <li className="recent-file-item">
-    <div className="recent-file-column file-column">
-      <img src={fileIcon} alt="file" className="recent-file-icon" />
-      <div className="recent-file-info">
-        <span className="recent-file-name">{file.name}</span>
-        <span className="recent-file-location">{file.location}</span>
-      </div>
-    </div>
-    <div className="recent-file-column user-column">
-      <span className="recent-file-user">{file.userName}</span>
-    </div>
-    <div className="recent-file-column updated-column">
-      <span className="recent-file-date">{file.lastUpdated}</span>
-    </div>
-  </li>
-);
-
-// Helper component for a single contact item
-interface ContactItemProps {
+interface StatusIndicator {
+  value: string;
   label: string;
-  href: string;
-  ariaLabel: string;
-  icon: string;
-  alt: string;
-  iconClassName: string;
+  color: 'green' | 'orange' | 'blue';
+  icon: React.ComponentType<{ className?: string }>;
 }
 
-const ContactItem: FC<ContactItemProps> = ({
-  label,
-  href,
-  ariaLabel,
-  icon,
-  alt,
-  iconClassName,
-}) => (
-  <div className="contact-item">
-    <span className="contact-label">{label}</span>
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="contact-visual-link"
-      aria-label={ariaLabel}
-    >
-      <img src={icon} alt={alt} className={`contact-icon ${iconClassName}`} />
-    </a>
-  </div>
-);
-
-function Home() {
-  const [recentFiles, setRecentFiles] = useState<RecentFile[]>([]);
-  const listContentRef = useRef<HTMLDivElement>(null);
-  const [topFadeOpacity, setTopFadeOpacity] = useState(0);
-  const [bottomFadeOpacity, setBottomFadeOpacity] = useState(1);
-
-  useEffect(() => {
-    const sortedFiles = async () => {
-      const recentFiles = await commands.files.fetchRecentFiles();
-      [...recentFiles].sort((a, b) => {
-        const dateA = new Date(a.lastUpdated);
-        const dateB = new Date(b.lastUpdated);
-
-        return dateB.getTime() - dateA.getTime();
-      });
-      setRecentFiles(recentFiles);
-    };
-    void sortedFiles();
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!listContentRef.current) return;
-      const { scrollTop, scrollHeight, clientHeight } = listContentRef.current;
-      const maxFade = 50; // Adjust this value to control fade sensitivity
-
-      // Top fade
-      const calculatedTopOpacity = Math.min(scrollTop / maxFade, 1);
-      setTopFadeOpacity(calculatedTopOpacity);
-
-      // Bottom fade
-      const scrollBottom = scrollHeight - clientHeight - scrollTop;
-      const calculatedBottomOpacity = Math.max(0, Math.min(scrollBottom / maxFade, 1));
-      setBottomFadeOpacity(calculatedBottomOpacity);
-    };
-
-    const listElement = listContentRef.current;
-    if (listElement) {
-      listElement.addEventListener("scroll", handleScroll);
-      handleScroll(); // Initial check
-    }
-
-    return () => {
-      if (listElement) {
-        listElement.removeEventListener("scroll", handleScroll);
-      }
-    };
-  }, [recentFiles]); // Re-run if recentFiles changes, affecting scrollHeight
-
-  const handleMoreFilesClick = async () => {
-    if (window.showDirectoryPicker) {
-      try {
-        const directoryHandle = await window.showDirectoryPicker({
-          startIn: "documents",
-        });
-        console.log("Selected directory:", directoryHandle.name);
-      } catch (err) {
-        if ((err as Error).name === "AbortError") {
-          console.log("User cancelled the directory selection.");
-        } else {
-          console.error("Error picking directory:", err);
-          alert("Could not open directory picker.");
-        }
-      }
-    } else {
-      alert("Your browser does not support the directory picker API.");
-      console.log("Directory Picker API not supported.");
-    }
-  };
-
+const Home: React.FC = () => {
   return (
-    <div className="inside-page">
-      <div className="page-header">
-        <span className="page-title">Home</span>
-      </div>
-      <div className="main-content">
-        <div className="home-left-sidebar">
-          <div className="sidebar-header">
-            <img src={clockIcon} alt="Recent" className="sidebar-header-icon" />
-            <h2 className="sidebar-header-title">Recent</h2>
-          </div>
-          <div className="sidebar-list-container">
-            <div className="sidebar-fade sidebar-fade-top" style={{ opacity: topFadeOpacity }} />
-            <div className="sidebar-content" ref={listContentRef}>
-              <div className="recent-files-header">
-                <div className="recent-files-column-header file-column">File</div>
-                <div className="recent-files-column-header user-column">User</div>
-                <div className="recent-files-column-header updated-column">Updated</div>
-              </div>
-              {recentFiles.length > 0 ? (
-                <ul className="recent-files-list">
-                  {recentFiles.map((file) => (
-                    <RecentFileItem key={file.id} file={file} />
-                  ))}
-                </ul>
-              ) : (
-                <p className="no-recent-files">No recent files to display.</p>
-              )}
-            </div>
-            <div
-              className="sidebar-fade sidebar-fade-bottom"
-              style={{ opacity: bottomFadeOpacity }}
-            />
-          </div>
-          <div className="link-footer">
-            <div className="more-files-link" onClick={handleMoreFilesClick}>
-              More files &rarr;
-            </div>
-          </div>
-        </div>
-        <div className="home-main-area">
-          <MainSection
-            className="documentation-section"
-            icon={bookBookmarkIcon}
-            alt="Documentation"
-            title="Documentation"
-            text="Read through the documentation for a seamless experience of using the balance toolkit with your wii balance board"
-            linkText="View documentation"
-            onLinkClick={() => console.log("View documentation clicked")}
-          />
-          <MainSection
-            className="placeholder-section"
-            icon={fileIcon}
-            alt="Placeholder"
-            title="Placeholder"
-            text="Placeholder Content"
-            linkText="Placeholder"
-            onLinkClick={() => console.log("Placeholder action clicked")}
-          />
-          <MainSection
-            className="help-section"
-            icon={questionMarkIcon}
-            alt="Help"
-            title="Help & Support"
-            text="Go through a quick tutorial and see how you can make the most of The Balance Toolkit"
-            linkText="Go to tutorial"
-            onLinkClick={() => console.log("Go to tutorial clicked")}
-          />
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <Header />
 
-          <div className="main-area-section contact-section">
-            <div className="main-section-details-column">
-              <div className="contact-item-list">
-                <ContactItem
-                  label="Source"
-                  href="YOUR_GITHUB_REPOSITORY_LINK_HERE"
-                  ariaLabel="View on GitHub"
-                  icon={githubIcon}
-                  alt="GitHub"
-                  iconClassName="github-icon"
-                />
-                <ContactItem
-                  label="Cite"
-                  href="YOUR_PUBLICATION_LINK_HERE"
-                  ariaLabel="View Publication"
-                  icon={fileIcon}
-                  alt="Publication"
-                  iconClassName="citation-icon"
-                />
-              </div>
-            </div>
+      {/* Main Content */}
+      <div className="p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+          {/* Left Column */}
+          <div className="space-y-6">
+            <LastSessionCard />
+            <ActivitiesCard />
+          </div>
+
+          {/* Middle Column */}
+          <div>
+            <ConnectionCard />
+          </div>
+
+          {/* Right Column */}
+          <div className="space-y-6">
+            <HelpSupportCard />
+            <DocumentationCard />
+            <OtherResourcesCard />
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+// Header Component
+const Header: React.FC = () => {
+  return (
+    <div className="bg-red-600 text-white">
+      <div className="max-w-4xl flex justify-between pt-6 pl-6">
+        <div>
+          <h1 className="text-5xl font-bold mb-2">Hello!</h1>
+          <p className="text-lg opacity-90">Welcome back to the balance tool kit</p>
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <div className="bg-white text-red-600 rounded-full p-4 flex flex-col items-center">
+            <div className="text-sm font-semibold">The</div>
+            <div className="text-sm font-semibold">Balance</div>
+            <div className="text-2xl my-1">🏃‍♂️</div>
+            <div className="text-sm font-semibold">Toolkit</div>
+          </div>
+        </div>
+
+        <div className="space-x-2">
+          <button
+            className="text-white px-4 py-2 rounded-lg flex items-center space-x-1"
+            type="button"
+          >
+            <DocumentIcon className="w-4 h-4" />
+            <span>Cite</span>
+            <ChevronRightIcon className="w-4 h-4" />
+          </button>
+          <button
+            className="text-white px-4 py-2 rounded-lg flex items-center space-x-1"
+            type="button"
+          >
+            <CodeBracketIcon className="w-4 h-4" />
+            <span>Source Code</span>
+            <ChevronRightIcon className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Last Session Card
+const LastSessionCard: React.FC = () => {
+  return (
+    <div className="bg-white rounded-lg border-2 border-blue-200 p-6">
+      <h2 className="text-xl font-semibold mb-4">Last session</h2>
+
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="w-4 h-4 bg-red-600 rounded-full"></div>
+            <span className="font-medium">Username</span>
+          </div>
+          <div className="text-sm text-gray-600 space-y-1">
+            <div>Weight:</div>
+            <div>Sex:</div>
+            <div>Age:</div>
+            <div>Handedness:</div>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center space-x-2 mb-2">
+            <DocumentTextIcon className="w-4 h-4 text-red-600" />
+            <span className="font-medium">Stats</span>
+          </div>
+          <div className="text-sm text-gray-600 space-y-1">
+            <div>Duration:</div>
+            <div>Something else:</div>
+            <div>Something else:</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <DocumentIcon className="w-4 h-4 text-red-600" />
+          <div>
+            <div className="text-sm font-medium">Name of file</div>
+            <div className="text-xs text-gray-500">/location of file</div>
+          </div>
+          <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+        </div>
+
+        <button
+          className="bg-white border-2 border-red-600 text-red-600 px-6 py-2 rounded-full hover:bg-red-50"
+          type="button"
+        >
+          Resume
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Activities Card
+const ActivitiesCard: React.FC = () => {
+  const activities: Activity[] = [
+    { id: 1, name: "Activity name", icon: "🧍" },
+    { id: 2, name: "Activity name", icon: "🏃" },
+    { id: 3, name: "Activity name", icon: "🧍" }
+  ];
+
+  const handleActivityClick = (activityId: number): void => {
+    console.log(`Activity ${activityId} clicked`);
+  };
+
+  return (
+    <div className="bg-white rounded-lg border-2 border-blue-200 p-6">
+      <h2 className="text-xl font-semibold mb-4">Activities</h2>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {activities.map((activity: Activity) => (
+          <div
+            key={activity.id}
+            className="bg-gray-100 rounded-lg p-4 text-center hover:bg-gray-200 cursor-pointer"
+            onClick={() => handleActivityClick(activity.id)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleActivityClick(activity.id);
+              }
+            }}
+          >
+            <div className="text-2xl mb-2">{activity.icon}</div>
+            <div className="text-sm font-medium">{activity.name}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex justify-center space-x-2 mb-4">
+        <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+        <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+        <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+      </div>
+
+      <button
+        className="bg-red-600 text-white px-6 py-2 rounded-full flex items-center space-x-2 hover:bg-red-600"
+        type="button"
+      >
+        <span>Explore more</span>
+        <ChevronRightIcon className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
+// Connection Card
+const ConnectionCard: React.FC = () => {
+  const [selectedDevice, setSelectedDevice] = React.useState<string>("Andreia's WBB");
+
+  const statusIndicators: StatusIndicator[] = [
+    {
+      value: "Strong",
+      label: "Signal",
+      color: "green",
+      icon: SignalIcon
+    },
+    {
+      value: "48%",
+      label: "Battery",
+      color: "orange",
+      icon: SignalIcon
+    },
+    {
+      value: "24 C",
+      label: "Temp",
+      color: "blue",
+      icon: SignalIcon
+    }
+  ];
+
+  const getStatusClasses = (color: 'green' | 'orange' | 'blue'): string => {
+    switch (color) {
+      case 'green':
+        return 'bg-green-50 border-green-200 text-green-600';
+      case 'orange':
+        return 'bg-orange-50 border-orange-200 text-orange-600';
+      case 'blue':
+        return 'bg-blue-50 border-blue-200 text-blue-600';
+      default:
+        return 'bg-gray-50 border-gray-200 text-gray-600';
+    }
+  };
+
+  const handleDeviceChange = (event: React.ChangeEvent<HTMLSelectElement>): void => {
+    setSelectedDevice(event.target.value);
+  };
+
+  return (
+    <div className="bg-white rounded-lg border-2 border-blue-200 p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-semibold">Connection</h2>
+        <button
+          className="bg-red-600 text-white rounded-full p-2 hover:bg-red-600"
+          type="button"
+          aria-label="Add connection"
+        >
+          <PlusIcon className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="mb-4">
+        <select
+          className="w-full p-2 border border-gray-300 rounded-lg"
+          value={selectedDevice}
+          onChange={handleDeviceChange}
+        >
+          <option value="Andreia's WBB">Andreia's WBB</option>
+          <option value="Device 2">Device 2</option>
+          <option value="Device 3">Device 3</option>
+        </select>
+      </div>
+
+      {/* Balance Board Illustration */}
+      <div className="flex justify-center mb-6">
+        <div className="relative">
+          <div className="w-48 h-32 bg-gray-200 rounded-lg border-2 border-gray-300 relative">
+            <div className="absolute inset-4 grid grid-cols-2 gap-2">
+              <div className="bg-white rounded border border-gray-400"></div>
+              <div className="bg-white rounded border border-gray-400"></div>
+              <div className="bg-white rounded border border-gray-400"></div>
+              <div className="bg-white rounded border border-gray-400"></div>
+            </div>
+            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-16 h-4 bg-gray-300 rounded"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Status Indicators */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {statusIndicators.map((indicator: StatusIndicator, index: number) => {
+          const IconComponent = indicator.icon;
+          return (
+            <div
+              key={index}
+              className={`border rounded-lg p-3 text-center ${getStatusClasses(indicator.color)}`}
+            >
+              <IconComponent className="w-6 h-6 mx-auto mb-1" />
+              <div className="text-sm font-semibold">{indicator.value}</div>
+              <div className="text-xs">{indicator.label}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button
+        className="w-full bg-red-600 text-white py-2 px-4 rounded-full flex items-center justify-center space-x-2 hover:bg-red-600"
+        type="button"
+      >
+        <span>Manage</span>
+        <ChevronRightIcon className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
+// Help Support Card
+const HelpSupportCard: React.FC = () => {
+  return (
+    <div className="bg-white rounded-lg border-2 border-red-200 p-6">
+      <div className="flex items-center space-x-2 mb-4">
+        <div className="bg-red-600 text-white rounded-full p-1">
+          <QuestionMarkCircleIcon className="w-4 h-4" />
+        </div>
+        <h2 className="text-xl font-semibold">Help and Support</h2>
+      </div>
+
+      <p className="text-gray-600 mb-4">
+        Go through a quick tutorial and see how you can make the most of The Balance Toolkit
+      </p>
+
+      <button
+        className="bg-red-600 text-white px-6 py-2 rounded-full flex items-center space-x-2 hover:bg-red-600"
+        type="button"
+      >
+        <span>Go to Tutorial</span>
+        <ChevronRightIcon className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
+// Documentation Card
+const DocumentationCard: React.FC = () => {
+  return (
+    <div className="bg-white rounded-lg border-2 border-red-200 p-6">
+      <div className="flex items-center space-x-2 mb-4">
+        <div className="bg-red-600 text-white rounded p-1">
+          <DocumentTextIcon className="w-4 h-4" />
+        </div>
+        <h2 className="text-xl font-semibold">Documentation</h2>
+      </div>
+
+      <p className="text-xs text-gray-500 mb-4 font-mono">
+        awfsdzivja['pkepnzjfdjaipjekwnd,'cjxoypkjm,'cdjn,'0
+        fivzmshdQjcz0=A,'vkcznjh*dvxnzskrjdgmzdrjxsjalz
+        loejls'[jfeojfeojstojfeosjojejojejejojejojfejxjxjslfejle
+        sjflesjifoslrfejslfo
+      </p>
+
+      <button
+        className="bg-red-600 text-white px-6 py-2 rounded-full flex items-center space-x-2 hover:bg-red-600"
+        type="button"
+      >
+        <span>Read More</span>
+        <ChevronRightIcon className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
+// Other Resources Card
+const OtherResourcesCard: React.FC = () => {
+  interface ResourceLink {
+    icon: React.ComponentType<{ className?: string }>;
+    text: string;
+    onClick: () => void;
+  }
+
+  const handleCitationClick = (): void => {
+    console.log('Citation clicked');
+  };
+
+  const handleSourceCodeClick = (): void => {
+    console.log('Source code clicked');
+  };
+
+  const handleContactClick = (): void => {
+    console.log('Contact clicked');
+  };
+
+  const resourceLinks: ResourceLink[] = [
+    {
+      icon: DocumentIcon,
+      text: "Read our citation",
+      onClick: handleCitationClick
+    },
+    {
+      icon: CodeBracketIcon,
+      text: "View our source code",
+      onClick: handleSourceCodeClick
+    },
+    {
+      icon: EnvelopeIcon,
+      text: "Contact us",
+      onClick: handleContactClick
+    }
+  ];
+
+  return (
+    <div className="bg-white rounded-lg border-2 border-gray-200 p-6">
+      <h2 className="text-xl font-semibold mb-4">Other Resources</h2>
+
+      <div className="space-y-3">
+        {resourceLinks.map((link: ResourceLink, index: number) => {
+          const IconComponent = link.icon;
+          return (
+            <button
+              key={index}
+              className="flex items-center space-x-3 text-gray-600 hover:text-gray-800 w-full text-left"
+              onClick={link.onClick}
+              type="button"
+            >
+              <IconComponent className="w-5 h-5" />
+              <span>{link.text}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 export default Home;
