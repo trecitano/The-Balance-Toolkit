@@ -8,10 +8,10 @@ use tauri::{Emitter, Manager, State};
 use tauri::ipc::Channel;
 use tauri_plugin_fs::FsExt;
 use tokio::sync::mpsc::{Sender, Receiver};
-use crate::actors::balance_board_actor::{BalanceBoardSessionSettings, BoardAction};
-use crate::processing::data_processor::ProcessedBoardData;
+use crate::actors::balance_board_actor::{BalanceBoardOutput, BalanceBoardSessionSettings, BoardAction, SettingMode, SettingWithMode};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
 use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
+use crate::processing::data_processor::ProcessingSettings;
 
 pub struct AppState {
     pub manager_tx: Sender<ToolkitCommand>,
@@ -117,8 +117,10 @@ async fn devices_scan_without_timeout(state: State<'_, AppState>) -> Result<(), 
     tokio::spawn(async move {
         while let Some(device) = new_bluetooth_rx.recv().await {
             let (response_tx, response_rx) = oneshot::channel();
-            manager_tx_clone.send(ToolkitCommand::Connect { device_id: device.id.clone(), mac_address: device.mac_address, response: response_tx}).await.unwrap();
+
             tokio::time::sleep(Duration::from_millis(2000)).await; // TODO Improve
+
+            manager_tx_clone.send(ToolkitCommand::Connect { device_id: device.id.clone(), mac_address: device.mac_address, response: response_tx}).await.unwrap();
 
             match response_rx.await {
                 Ok(_) => { hid_connection_tx.send(device).await.unwrap() }
@@ -256,11 +258,11 @@ pub async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<
 }
 
 #[tauri::command(async)]
-pub async fn session_start_session(state: State<'_, AppState>, session_channel: Channel<ProcessedBoardData>) -> Result<(), String> {
+pub async fn session_start_session(state: State<'_, AppState>, session_channel: Channel<BalanceBoardOutput>) -> Result<(), String> {
     println!(">> session_start_session");
 
     // When we receive a balance board reading, we send it to the frontend.
-    let (balance_board_tx, mut balance_board_rx) = mpsc::channel::<ProcessedBoardData>(100);
+    let (balance_board_tx, mut balance_board_rx) = mpsc::channel(100);
     tokio::spawn(async move {
         while let Some(data) = balance_board_rx.recv().await {
             session_channel.send(data);
@@ -268,10 +270,11 @@ pub async fn session_start_session(state: State<'_, AppState>, session_channel: 
     });
 
     let command = ToolkitCommand::StartSession { settings: BalanceBoardSessionSettings {
-        output_file: None,
-        output_channel: Some(balance_board_tx),
+        output_directory: None,
+        frontend_channel: Some(SettingWithMode { value: balance_board_tx, mode: SettingMode::processed_only() }),
         lsl_connection: None,
-        tcp_connection_string: None
+        tcp_connection_string: None,
+        processing_settings: Some(ProcessingSettings::default())
     }};
     state.manager_tx.send(command)
         .await
