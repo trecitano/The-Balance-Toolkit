@@ -125,7 +125,7 @@ export default function DeviceRow({
               onClick={() => handleSelectDeviceForSession(device.id)}
               className="device-action-btn disconnect"
             >
-              Select for Session
+              Connect
             </button>
           ) : (
             <button

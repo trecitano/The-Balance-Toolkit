@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Navigation from "@/components/navigation/Navigation";
-import Home from "@/pages/home/Home";
+import Home from "@/pages/home/Home.tsx";
 import DevicesPage from "@/pages/devices/Devices";
 import UsersPage from "@/pages/users/Users";
 import Session from "@/pages/session/Session";
