@@ -270,7 +270,7 @@ pub async fn session_start_session(state: State<'_, AppState>, session_channel: 
     });
 
     let command = ToolkitCommand::StartSession { settings: BalanceBoardSessionSettings {
-        output_directory: None,
+        output_directory: Some(SettingWithMode { value: file_system::app_dir().to_str().unwrap().to_string(), mode: SettingMode::all() }),
         frontend_channel: Some(SettingWithMode { value: balance_board_tx, mode: SettingMode::processed_only() }),
         lsl_connection: None,
         tcp_connection_string: None,

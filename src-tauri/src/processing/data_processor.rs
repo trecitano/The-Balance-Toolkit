@@ -91,7 +91,7 @@ fn data_process_loop(
     mut observers: Vec<Sender<BalanceBoardOutput>>,
     settings: ProcessingSettings
 ) -> Result<()> {
-    println!("Starting Data Process!");
+    println!("Data processing execution start.");
     let mut buffer = Vec::with_capacity(200);
 
     let update_rate = std::time::Duration::from_millis(100);
@@ -184,7 +184,7 @@ fn data_process_loop(
         }
     }
 
-    println!("Data processing loop terminated.");
+    println!("Data processing execution complete.");
     Ok(())
 }
 

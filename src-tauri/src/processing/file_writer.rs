@@ -27,7 +27,7 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
                          setting_mode: SettingMode,
                          device_name: String,
                          processing_settings: Option<ProcessingSettings>) -> Result<()> {
-
+    println!("File writer execution start.");
     let path = PathBuf::from(output_directory);
     let time_format = Utc::now().format("%Y-%m-%dT%H-%M-%SZ").to_string();
     let prepared_file_name = format!("{device_name}-{time_format}");
@@ -35,6 +35,7 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
     // Create a file to store the session processing settings;
     if setting_mode.receive_processed {
         let file_path = path.join(format!("{prepared_file_name}-settings.txt"));
+        println!("Storing settings in {:?}", file_path);
         let mut file = create_file(file_path).await?;
         let content = toml::to_string_pretty(&processing_settings.unwrap())?;
         file.write_all(content.as_ref()).await?;
@@ -43,6 +44,7 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
     // Create a file to optionally store the raw values;
     let mut raw_values_file = if setting_mode.receive_raw {
         let file_path = path.join(format!("{prepared_file_name}-raw-values.txt"));
+        println!("Storing processed session in {:?}", file_path);
         let mut file = create_file(file_path).await?;
         file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n").await?;
         Some(file)
@@ -102,7 +104,7 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
         }
     }
 
-    println!("File writing loop terminated.");
+    println!("File writer execution complete.");
     Ok(())
 }
 
