@@ -25,6 +25,7 @@ pub fn initialize(settings: LslConnectionSettings) -> Sender<BalanceBoardOutput>
 
 fn lsl_stream_loop(mut rx: Receiver<BalanceBoardOutput>, 
                    settings: LslConnectionSettings) -> Result<()> {
+    println!("LSL writer execution start.");
     let info = lsl::StreamInfo::new(
         settings.stream_name.as_str(),
         settings.stream_type.as_str(),
@@ -40,6 +41,7 @@ fn lsl_stream_loop(mut rx: Receiver<BalanceBoardOutput>,
         let byte_slices: Vec<&[u8]> = vec![&byte_array];
         outlet.push_sample(&byte_slices)?;
     }
-
+    
+    println!("LSL writer execution complete.");
     Ok(())
 }

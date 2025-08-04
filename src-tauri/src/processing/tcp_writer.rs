@@ -16,10 +16,14 @@ pub fn initialize(tcp_connection_string: String) -> Sender<BalanceBoardOutput> {
 
 async fn tcp_stream_loop(mut rx: Receiver<BalanceBoardOutput>, 
                          tcp_connection_string: String) -> anyhow::Result<()> {
+    println!("TCP writer execution start.");
+    
     let mut stream = TcpStream::connect(tcp_connection_string).await?;
 
     while let Some(data) = rx.recv().await {
         stream.write_all(&data.to_byte_array()).await?
     }
+
+    println!("TCP writer execution complete.");
     Ok(())
 }

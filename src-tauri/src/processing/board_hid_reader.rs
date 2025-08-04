@@ -71,7 +71,10 @@ fn blocking_hid_loop(
                         tx_channel = Some(tx);
                         write_to_device(&device, &BOARD_START_READING)?; 
                     },
-                    BalanceBoardCommands::FinishRecording => { write_to_device(&device, &BOARD_STOP_READING)?; },
+                    BalanceBoardCommands::FinishRecording => {
+                        tx_channel = None;
+                        write_to_device(&device, &BOARD_STOP_READING)?; 
+                    },
                 }
             },
             Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ },
