@@ -10,6 +10,18 @@ import "./Devices.css";
 import DeviceScanner from "@/pages/devices/DeviceScanner.tsx";
 
 const DEVICES_QUERY_KEY = ["devices"];
+export const DevicesQuery = {
+  queryKey: DEVICES_QUERY_KEY,
+  queryFn: async () => {
+    const [devices, selectedDeviceIds, isScanning] = await Promise.all([
+      commands.devices.fetchDevices(),
+      commands.devices.selectedDevices(),
+      commands.devices.isScanning(),
+    ]);
+    return { devices, selectedDeviceIds, isScanning };
+  },
+  staleTime: 10000,
+}
 
 export default function Devices() {
   const [showIdentifyPopup, setShowIdentifyPopup] = useState(false);
@@ -18,18 +30,7 @@ export default function Devices() {
   const unlistenRef = useRef<(() => void) | null>(null);
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: DEVICES_QUERY_KEY,
-    queryFn: async () => {
-      const [devices, selectedDeviceIds, isScanning] = await Promise.all([
-        commands.devices.fetchDevices(),
-        commands.devices.selectedDevices(),
-        commands.devices.isScanning(),
-      ]);
-      return { devices, selectedDeviceIds, isScanning };
-    },
-    staleTime: 10000,
-  });
+  const { data, isLoading, error } = useQuery(DevicesQuery);
 
   const identifyDeviceMutation = useMutation({
     mutationFn: (deviceId: string) => commands.devices.identifyDevice(deviceId),
