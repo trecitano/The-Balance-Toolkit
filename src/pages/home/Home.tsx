@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, { useMemo, useRef, useState} from 'react';
 import {
   ChevronRightIcon,
   QuestionMarkCircleIcon,
@@ -50,58 +50,54 @@ const Home: React.FC = () => {
   );
 };
 
-// Header Component
 const Header: React.FC = () => {
   return (
-      <div className="bg-red-600 text-white mx-auto max-w-7xl px-6 py-6">
-        <div className="grid grid-cols-12 items-start gap-6">
-          {/* Left: Greeting */}
-          <div className="col-span-12 md:col-span-5">
-            <h1 className="text-6xl font-bold leading-tight">Hello!</h1>
-            <p className="mt-2 text-xl opacity-90">
-              Welcome back to the balance tool kit
-            </p>
-          </div>
+    <div className="mx-auto max-w-7xl bg-red-600 px-6 py-6 text-white">
+      <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
+        {/* Left: Greeting */}
+        <div className="mb-auto md:flex-1">
+          <h1 className="text-6xl font-bold leading-tight">Hello!</h1>
+          <p className="mt-2 text-xl opacity-90">
+            Welcome back to the balance tool kit
+          </p>
+        </div>
 
-          {/* Center: Circle logo */}
-          <div className="col-span-12 md:col-span-3 flex justify-center">
-            <div className="relative flex h-44 w-44 items-center justify-center rounded-full border-4 border-white">
-              <div className="text-center leading-tight">
-                <div className="text-lg font-bold">The</div>
-                <div className="text-lg font-bold">Balance</div>
-                <div className="w-16 h-16">
-                  <img
-                    src={balanceToolkitLogo}
-                    draggable={false}
-                  />
-                </div>
-                <div className="text-lg font-bold">Toolkit</div>
+        {/* Center: Circle logo */}
+        <div className="flex w-full justify-center md:w-auto md:flex-1">
+          <div className="relative flex h-44 w-44 items-center justify-center rounded-full border-4 border-white">
+            <div className="text-center leading-tight">
+              <div className="text-lg font-bold">The</div>
+              <div className="text-lg font-bold">Balance</div>
+              <div className="h-16 w-16">
+                <img src={balanceToolkitLogo} draggable={false} />
               </div>
+              <div className="text-lg font-bold">Toolkit</div>
             </div>
           </div>
+        </div>
 
-          {/* Right: Links */}
-          <div className="col-span-12 md:col-span-4 flex flex-col items-end gap-3">
-            <button
-              className="inline-flex items-center gap-2 text-white/95 hover:text-white"
-              type="button"
-            >
-              <DocumentIcon className="h-5 w-5" />
-              <span className="text-base">Cite</span>
-              <ChevronRightIcon className="h-5 w-5" />
-            </button>
+        {/* Right: Links */}
+        <div className="mt-auto flex w-full flex-col items-end gap-3 md:w-auto md:flex-1 md:items-end">
+          <button
+            className="inline-flex items-center gap-2 text-white/95 hover:text-white"
+            type="button"
+          >
+            <DocumentIcon className="h-5 w-5" />
+            <span className="text-base">Cite</span>
+            <ChevronRightIcon className="h-5 w-5" />
+          </button>
 
-            <button
-              className="inline-flex items-center gap-2 text-white/95 hover:text-white"
-              type="button"
-            >
-              <CodeBracketIcon className="h-5 w-5" />
-              <span className="text-base">Source Code</span>
-              <ChevronRightIcon className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            className="inline-flex items-center gap-2 text-white/95 hover:text-white"
+            type="button"
+          >
+            <CodeBracketIcon className="h-5 w-5" />
+            <span className="text-base">Source Code</span>
+            <ChevronRightIcon className="h-5 w-5" />
+          </button>
         </div>
       </div>
+    </div>
   );
 };
 

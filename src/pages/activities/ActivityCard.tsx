@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ActivityData } from "./Activities";
 import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
-import { getDefaultBlocksByTitle } from "../../config/activities.config";
+import {ActivityConfig, getDefaultBlocksByTitle} from "@/config/activities.config.ts";
 
 
 /**
@@ -11,7 +10,7 @@ import { getDefaultBlocksByTitle } from "../../config/activities.config";
  * Supports two modes: compact (in list) and maximized (detailed view)
  */
 interface ActivityCardProps {
-  activity: ActivityData;
+  activity: ActivityConfig;
   maximized?: boolean;
   onMaximize?: () => void;
   onMinimize?: () => void;
@@ -28,7 +27,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   // Image and animation state
   const [currentImageSrc, setCurrentImageSrc] = useState<string>(activity.staticImage);
   const [isHovering, setIsHovering] = useState(false);
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const imageIndexRef = useRef<number>(0);
   
   // Timeline and actions state
@@ -52,7 +51,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
    */
   useEffect(() => {
     // If we have an active action block selected, try to get its specific image
-    if (currentActionLabel && activity.activityName) {
+    if (currentActionLabel && activity.id) {
       const actionImage = activity.staticImage;
       if (actionImage) {
         setCurrentImageSrc(actionImage);
@@ -66,7 +65,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     } else {
       setCurrentImageSrc(activity.staticImage);
     }
-  }, [activity.staticImage, activity.sequenceImages, activity.title, activity.activityName, currentActionLabel]);
+  }, [activity.staticImage, activity.sequenceImages, activity.title, activity.id, currentActionLabel]);
 
 
   /**
@@ -79,7 +78,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       // If we have a current action selected and the activity has a name, get action-specific images
       let animationImages: string[] = [];
       
-      if (currentActionLabel && activity.activityName) {
+      if (currentActionLabel && activity.id) {
         // This will now include both action-specific and general sequence images
         animationImages = activity.sequenceImages;
       }
@@ -117,7 +116,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       
       if (!isHovering) {
         // If we have a current action selected, try to get its specific image
-        if (currentActionLabel && activity.activityName) {
+        if (currentActionLabel && activity.id) {
           const actionImage = activity.staticImage;
           if (actionImage) {
             setCurrentImageSrc(actionImage);
@@ -135,7 +134,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         clearInterval(intervalRef.current);
       }
     };
-  }, [isHovering, activity.hoverImages, activity.sequenceImages, activity.staticImage, activity.activityName, currentActionLabel, maximized]);
+  }, [isHovering, activity.hoverImages, activity.sequenceImages, activity.staticImage, activity.id, currentActionLabel, maximized]);
 
 
   /**
@@ -200,7 +199,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   /**
    * Gets the default action blocks for an activity
    */
-  function getDefaultBlocks(activity: ActivityData) {
+  function getDefaultBlocks(activity: ActivityConfig) {
     return getDefaultBlocksByTitle(activity.title);
   }
 
@@ -333,7 +332,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
                 blocks={timelineBlocks}
                 onChange={setTimelineBlocks}
                 onBlockSelect={(block) => setCurrentActionLabel(block.label)}
-                activityName={activity.activityName}
+                activityName={activity.id}
               />
               {/* Activity settings panel below timeline */}
               <div className="activity-details-panel">

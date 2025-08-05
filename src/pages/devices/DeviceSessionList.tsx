@@ -15,7 +15,7 @@ import battery100Icon from "@/assets/battery-100-icon.svg";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
-  handleDisconnectDevice: (macAddress: string) => Promise<void>;
+  handleDisconnectDevice: (macAddress: string) => void;
 }
 
 export default function DeviceSessionList({
@@ -81,16 +81,9 @@ export default function DeviceSessionList({
 
                 <div className="side-panel-info-squares">
                   <div className="info-square">
-                    <span className="info-square-value">{device.firmware}</span>
-                    <div className="info-square-label">
-                      <img src={signalIcon} alt="Connectivity" />
-                      <span>Firmware</span>
-                    </div>
-                  </div>
-                  <div className="info-square">
                     <span className="info-square-value">{device.battery}%</span>
                     <div className="info-square-label">
-                      <img src={getBatteryIcon(device.battery)} alt="Battery" />
+                      <img src={getBatteryIcon(device.battery ?? 0)} alt="Battery" />
                       <span>Battery</span>
                     </div>
                   </div>

@@ -37,7 +37,7 @@ export default function Users() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [leftFadeOpacity, setLeftFadeOpacity] = useState(0);
   const [rightFadeOpacity, setRightFadeOpacity] = useState(1);
-      const [carouselScrollPosition, setCarouselScrollPosition] = useState<number>(0);
+  const [carouselScrollPosition, setCarouselScrollPosition] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [searchResults, setSearchResults] = useState<UserType[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
@@ -49,7 +49,7 @@ export default function Users() {
   const isAutoScrolling = useRef<boolean>(false);
   const colorPickerRef = useRef<HTMLDivElement>(null);
 
-  const selectedUser = useRef(null);
+  const selectedUser = useRef<string | null>(null);
 
   const fixedColors = [
     "#e55d82",
@@ -170,8 +170,6 @@ export default function Users() {
       const firstItem = items[0] as HTMLElement;
       const itemWidth = firstItem.offsetWidth;
       const containerWidth = list.clientWidth;
-
-      const cardsPerView = Math.floor(containerWidth / itemWidth);
 
       const scrollAmount = Math.sign(delta) * (itemWidth + 26);
 
