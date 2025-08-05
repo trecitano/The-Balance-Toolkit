@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import { useRef } from "react";
 import { Device } from "@/types";
 import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
@@ -6,11 +6,11 @@ import "./DeviceRow.css";
 
 interface DeviceRowProps {
   device: Device;
-  handleIdentifyClick: (deviceId: string) => Promise<void>;
-  handleSaveDeviceName: (deviceId: string, deviceName: string) => Promise<void>;
-  handleRemoveDevice: (deviceId: string) => Promise<void>;
-  handleSelectDeviceForSession: (deviceId: string) => Promise<void>;
-  handleConnectDevice: (deviceId: string) => Promise<void>;
+  handleIdentifyClick: (deviceId: string) => void;
+  handleSaveDeviceName: (deviceId: string, deviceName: string) => void;
+  handleRemoveDevice: (deviceId: string) => void;
+  handleDisconnectDevice: (deviceId: string) => void;
+  handleSelectDeviceForSession: (deviceId: string) => void;
 }
 
 export default function DeviceRow({
@@ -79,7 +79,10 @@ export default function DeviceRow({
                 onKeyDown={(e) => {
                   if (e.key === "Enter")
                     handleSaveDeviceName(device.id, inputRef.current?.value || "");
-                  if (e.key === "Escape") handleAction("cancel");
+                  if (e.key === "Escape") {
+                    // TODO ?
+                    //handleAction("cancel");
+                  }
                 }}
                 onBlur={() =>
                   handleSaveDeviceName(device.id, inputRef.current?.value || "")

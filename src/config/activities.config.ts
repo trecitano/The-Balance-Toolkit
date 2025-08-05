@@ -61,7 +61,7 @@ export interface ActivityConfig {
   sequenceImages: string[];  // Multiple SVG files
   hoverImages: string[];
   defaultBlocks: ActionBlock[]; // Sequence of action blocks for this activity
-  boardsRequired?: number;   // Number of balance boards needed (default: 1)
+  boardsRequired: number;   // Number of balance boards needed (default: 1)
   description?: string;      // Brief description of the activity purpose
 }
 
