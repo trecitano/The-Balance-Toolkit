@@ -159,11 +159,9 @@ impl BalanceBoardConnection {
         let api = HidApi::new()?;
         // The serial number of a nintendo balance board is the string version of a mac address.
         // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
-        println!("Look for {}", serial_number);
         let balance_board_info = api
             .device_list()
             .find(|device| {
-                println!("Device: {:?}", device.serial_number());
                 if let Some(hid_serial_number) = device.serial_number() {
                     hid_serial_number == serial_number
                 } else {
@@ -199,8 +197,7 @@ impl BalanceBoardConnection {
                 Some(action) = self.action_rx.recv() => {
                     match action {
                         BoardAction::Tare => {
-                            // TODO
-                            //hid_control_tx.send(BalanceBoardCommands::Tare).await?;
+                            hid_control_tx.send(BalanceBoardCommands::ApplyTare).await?;
                         }
                         BoardAction::TurnOnLed => {
                             hid_control_tx.send(BalanceBoardCommands::TurnOnLed).await.unwrap();
