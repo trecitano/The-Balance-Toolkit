@@ -6,6 +6,39 @@
  * that define the protocol for performing the activity.
  */
 
+import quietStanding3 from "@/assets/activities/quiet-standing/quiet-standing-3-stand-eyes-open.svg";
+import quietStanding4 from "@/assets/activities/quiet-standing/quiet-standing-4-stand-eyes-closed.svg";
+import tug2 from "@/assets/activities/tug/tug-2-step-onto-board.svg";
+import tug3 from "@/assets/activities/tug/tug-3-stand-up.svg";
+import tug4 from "@/assets/activities/tug/tug-4-walk-forward.svg";
+import tug5 from "@/assets/activities/tug/tug-5-turn-around.svg";
+import tug6 from "@/assets/activities/tug/tug-6-walk-back.svg";
+import singleLeg3 from "@/assets/activities/single-leg-stance/single-leg-stance-3-left-leg-up.svg";
+import singleLeg4 from "@/assets/activities/single-leg-stance/single-leg-stance-4-stand-with-both-legs.svg";
+import singleLeg5 from "@/assets/activities/single-leg-stance/single-leg-stance-5-right-leg-up.svg";
+import singleLeg6 from "@/assets/activities/single-leg-stance/single-leg-stance-6-stand-with-both-legs.svg";
+import tandem3 from "@/assets/activities/tandem-stance/tandem-stance-3-left-leg-in-front.svg";
+import tandem2 from "@/assets/activities/tandem-stance/tandem-stance-2-step-onto-board.svg";
+import tandem4 from "@/assets/activities/tandem-stance/tandem-stance-4-stand-with-both-legs.svg";
+import tandem5 from "@/assets/activities/tandem-stance/tandem-stance-5-right-leg-in-front.svg";
+import functionalReach3 from "@/assets/activities/functional-reach-test/functional-reach-test-3-left-arm-reach.svg";
+import functionalReach2 from "@/assets/activities/functional-reach-test/functional-reach-test-2-left-arm-up.svg";
+import dynamicWeight3 from "@/assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-3-lean-forward.svg";
+import dynamicWeight4 from "@/assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-4-stand-upright.svg";
+import dynamicWeight5 from "@/assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-5-lean-backwards.svg";
+import dynamicWeight6 from "@/assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-6-lean-left.svg";
+import dynamicWeight7 from "@/assets/activities/dynamic-weight-shifting/dynamic-weight-shifting-7-lean-right.svg";
+import activitiesIcon from "@/assets/activities-icon.svg";
+import lightIcon from "@/assets/light-icon.svg";
+import fileIcon from "@/assets/file-icon.svg";
+import settingsIcon from "@/assets/settings-icon.svg";
+import wbbIcon from "@/assets/wbb-icon-line.svg";
+import bookIcon from "@/assets/book-icon.svg";
+import bookmarkIcon from "@/assets/book-bookmark-icon.svg";
+import logoIcon from "@/assets/balance-icon.svg";
+import homeIcon from "@/assets/home-icon.svg";
+import sessionIcon from "@/assets/session-icon.svg";
+
 /**
  * Represents a single action block within an activity timeline
  */
@@ -22,7 +55,11 @@ export interface ActionBlock {
  * Represents the configuration for a balance assessment activity
  */
 export interface ActivityConfig {
+  id: string;
   title: string;             // Display name of the activity
+  staticImage: string;       // A SVG file
+  sequenceImages: string[];  // Multiple SVG files
+  hoverImages: string[];
   defaultBlocks: ActionBlock[]; // Sequence of action blocks for this activity
   boardsRequired?: number;   // Number of balance boards needed (default: 1)
   description?: string;      // Brief description of the activity purpose
@@ -33,10 +70,14 @@ export interface ActivityConfig {
  * 
  * Keys should be kebab-case and match the folder names in the assets structure
  */
-const activitiesConfig: Record<string, ActivityConfig> = {
+const activitiesConfig: ActivityConfig[] = [
   // Quiet standing assessment (eyes open and closed)
-  "quiet-standing": {
+  {
+    id: "quiet-standing",
     title: "Quiet standing (eyes-close + eyes-open)",
+    staticImage: quietStanding3, // Stand with eyes open as the main image
+    sequenceImages: [quietStanding3, quietStanding4],
+    hoverImages: [activitiesIcon, lightIcon, activitiesIcon, fileIcon, settingsIcon, wbbIcon],
     boardsRequired: 1,
     description: "Assess balance during quiet standing with eyes open and closed",
     defaultBlocks: [
@@ -48,8 +89,12 @@ const activitiesConfig: Record<string, ActivityConfig> = {
   },
   
   // Timed Up and Go assessment
-  "tug": {
+  {
+    id: "tug",
     title: "Timed Up and Go (TUG)",
+    staticImage: tug2,
+    sequenceImages: [tug3, tug4, tug5, tug6, tug2],
+    hoverImages: [bookIcon, bookmarkIcon, bookIcon],
     boardsRequired: 1,
     description: "Evaluate mobility and fall risk",
     defaultBlocks: [
@@ -63,8 +108,12 @@ const activitiesConfig: Record<string, ActivityConfig> = {
     ],
   },
   // Single leg stance assessment
-  "single-leg-stance": {
+  {
+    id: "single-leg-stance",
     title: "Single leg stance",
+    staticImage: singleLeg3,
+    sequenceImages: [singleLeg3, singleLeg4, singleLeg5, singleLeg6],
+    hoverImages: [wbbIcon, logoIcon, wbbIcon],
     boardsRequired: 1,
     description: "Assess balance while standing on one leg",
     defaultBlocks: [
@@ -75,8 +124,12 @@ const activitiesConfig: Record<string, ActivityConfig> = {
   },
   
   // Tandem stance assessment
-  "tandem-stance": {
+  {
+    id: "tandem-stance",
     title: "Tandem stance",
+    staticImage: tandem3,
+    sequenceImages: [tandem2, tandem3, tandem4, tandem5],
+    hoverImages: [homeIcon, lightIcon, homeIcon],
     boardsRequired: 1,
     description: "Assess balance with feet in tandem position",
     defaultBlocks: [
@@ -88,8 +141,12 @@ const activitiesConfig: Record<string, ActivityConfig> = {
   },
   
   // Functional reach test
-  "functional-reach": {
+  {
+    id: "functional-reach",
     title: "Functional Reach Test",
+    staticImage: functionalReach3,
+    sequenceImages: [functionalReach3, functionalReach2],
+    hoverImages: [fileIcon, settingsIcon, fileIcon],
     boardsRequired: 1,
     description: "Measure reaching capability while maintaining balance",
     defaultBlocks: [
@@ -101,8 +158,12 @@ const activitiesConfig: Record<string, ActivityConfig> = {
   },
   
   // Dynamic weight shifting assessment
-  "dynamic-weight-shifting": {
+  {
+    id: "dynamic-weight-shifting",
     title: "Dynamic weight shifting",
+    staticImage: dynamicWeight3,
+    sequenceImages: [dynamicWeight3, dynamicWeight4, dynamicWeight5, dynamicWeight6, dynamicWeight7],
+    hoverImages: [activitiesIcon, sessionIcon, activitiesIcon],
     boardsRequired: 1,
     description: "Assess controlled weight shifting ability",
     defaultBlocks: [
@@ -111,7 +172,7 @@ const activitiesConfig: Record<string, ActivityConfig> = {
       { id: 3, title: "Shift Weight", label: "shift-weight", start: 10, duration: 20 },
     ],
   },
-};
+];
 
 /**
  * Default action blocks for activities not explicitly defined
@@ -142,18 +203,6 @@ export function getDefaultBlocksByTitle(activityTitle: string): ActionBlock[] {
   
   // If not found, return a copy of the default blocks
   return [...defaultActionBlocks];
-}
-
-/**
- * Gets the full activity configuration by title
- * 
- * @param activityTitle The title of the activity
- * @returns The activity configuration or undefined if not found
- */
-export function getActivityConfigByTitle(activityTitle: string): ActivityConfig | undefined {
-  return Object.values(activitiesConfig).find(
-    (activity) => activity.title === activityTitle
-  );
 }
 
 // Export the activities configuration as the default export
