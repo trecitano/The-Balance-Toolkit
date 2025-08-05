@@ -1,8 +1,6 @@
-// Home.tsx
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
   ChevronRightIcon,
-  PlusIcon,
   QuestionMarkCircleIcon,
   DocumentTextIcon,
   DocumentIcon,
@@ -10,17 +8,12 @@ import {
   EnvelopeIcon,
   SignalIcon,
 } from '@heroicons/react/24/outline';
+import balanceToolkitLogo from "@/assets/balance-icon.svg"
 import fileIcon from "@/assets/file-icon.svg"
 import userIcon from "@/assets/user-icon.svg";
 import wbbIconLine from "@/assets/wbb-icon-line.svg";
-import wbbTopdown from "@/assets/wbb-topdown.svg";
-
-// Types
-interface Activity {
-  id: number;
-  name: string;
-  icon: string;
-}
+import {Button} from "@/components/Button.tsx";
+import activitiesConfig from "@/config/activities.config.ts";
 
 interface StatusIndicator {
   value: string;
@@ -36,24 +29,22 @@ const Home: React.FC = () => {
       <Header />
 
       {/* Main Content */}
-      <div className="p-6">
-        <div className="grid grid-flow-col grid-cols-4 grid-rows-3 gap-6 max-w-7xl mx-auto">
-          {/* Left Column */}
-          <div className="row-span-1 col-span-2 rounded-lg border-2 border-red-500 p-6">
-            <LastSessionCard />
-          </div>
-          <div className="row-span-2 col-span-2 rounded-lg border-2 border-red-500 p-6">
-            <ActivitiesCard />
-          </div>
-
-          {/* Middle Column */}
-          <div className="row-span-3 rounded-lg border-2 border-red-500 p-6"> <ConnectionCard /> </div>
-
-          {/* Right Column */}
-          <div className="row-span-1 rounded-lg border-2 border-red-500 p-6"> <HelpSupportCard /> </div>
-          <div className="row-span-1 rounded-lg border-2 border-red-500 p-6"> <DocumentationCard /> </div>
-          <div className="row-span-1 rounded-lg border-2 border-red-500 p-6"> <OtherResourcesCard /> </div>
+      <div className="grid grid-flow-col grid-cols-3 grid-rows-3 gap-6 max-w-7xl mx-auto mt-6">
+        {/* Left Column */}
+        <div className="row-span-1 col-span-1 rounded-lg border-2 border-red-500 p-5">
+          <LastSessionCard />
         </div>
+        <div className="row-span-2 col-span-1 rounded-lg border-2 border-red-500 p-5">
+          <ActivitiesCard />
+        </div>
+
+        {/* Middle Column */}
+        <div className="row-span-3 rounded-lg border-2 border-red-500 p-5"> <ConnectionCard /> </div>
+
+        {/* Right Column */}
+        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5"> <HelpSupportCard /> </div>
+        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5"> <DocumentationCard /> </div>
+        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5"> <OtherResourcesCard /> </div>
       </div>
     </div>
   );
@@ -62,42 +53,55 @@ const Home: React.FC = () => {
 // Header Component
 const Header: React.FC = () => {
   return (
-    <div className="bg-red-600 text-white">
-      <div className="max-w-4xl flex justify-between pt-6 pl-6">
-        <div>
-          <h1 className="text-5xl font-bold mb-2">Hello!</h1>
-          <p className="text-lg opacity-90">Welcome back to the balance tool kit</p>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <div className="bg-white text-red-600 rounded-full p-4 flex flex-col items-center">
-            <div className="text-sm font-semibold">The</div>
-            <div className="text-sm font-semibold">Balance</div>
-            <div className="text-2xl my-1">🏃‍♂️</div>
-            <div className="text-sm font-semibold">Toolkit</div>
+      <div className="bg-red-600 text-white mx-auto max-w-7xl px-6 py-6">
+        <div className="grid grid-cols-12 items-start gap-6">
+          {/* Left: Greeting */}
+          <div className="col-span-12 md:col-span-5">
+            <h1 className="text-6xl font-bold leading-tight">Hello!</h1>
+            <p className="mt-2 text-xl opacity-90">
+              Welcome back to the balance tool kit
+            </p>
+          </div>
+
+          {/* Center: Circle logo */}
+          <div className="col-span-12 md:col-span-3 flex justify-center">
+            <div className="relative flex h-44 w-44 items-center justify-center rounded-full border-4 border-white">
+              <div className="text-center leading-tight">
+                <div className="text-lg font-bold">The</div>
+                <div className="text-lg font-bold">Balance</div>
+                <div className="w-16 h-16">
+                  <img
+                    src={balanceToolkitLogo}
+                    draggable={false}
+                  />
+                </div>
+                <div className="text-lg font-bold">Toolkit</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Links */}
+          <div className="col-span-12 md:col-span-4 flex flex-col items-end gap-3">
+            <button
+              className="inline-flex items-center gap-2 text-white/95 hover:text-white"
+              type="button"
+            >
+              <DocumentIcon className="h-5 w-5" />
+              <span className="text-base">Cite</span>
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
+
+            <button
+              className="inline-flex items-center gap-2 text-white/95 hover:text-white"
+              type="button"
+            >
+              <CodeBracketIcon className="h-5 w-5" />
+              <span className="text-base">Source Code</span>
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
           </div>
         </div>
-
-        <div className="space-x-2">
-          <button
-            className="text-white px-4 py-2 rounded-lg flex items-center space-x-1"
-            type="button"
-          >
-            <DocumentIcon className="w-4 h-4" />
-            <span>Cite</span>
-            <ChevronRightIcon className="w-4 h-4" />
-          </button>
-          <button
-            className="text-white px-4 py-2 rounded-lg flex items-center space-x-1"
-            type="button"
-          >
-            <CodeBracketIcon className="w-4 h-4" />
-            <span>Source Code</span>
-            <ChevronRightIcon className="w-4 h-4" />
-          </button>
-        </div>
       </div>
-    </div>
   );
 };
 
@@ -155,184 +159,147 @@ const LastSessionCard: React.FC = () => {
             <div className="text-xs text-gray-500">/location of file</div>
           </div>
 
-          <button
-            className="bg-white border-2 border-red-600 text-red-600 px-6 py-2 rounded-full hover:bg-red-50"
-            type="button"
-          >
-            Resume
-          </button>
+          <Button variant="outline">Resume</Button>
         </div>
       </div>
     </>
   );
 };
 
-type Slide = {
-  id: string;
-  imgSrc: string;
-  label: string;
-};
-
-const allSlides: Slide[] = [
-  { id: "1", imgSrc: "/img/a.png", label: "New User 1", date: "26/06/2025" },
-  { id: "2", imgSrc: "/img/b.png", label: "New User 2", date: "26/06/2025" },
-  { id: "3", imgSrc: "/img/c.png", label: "New User 3", date: "26/06/2025" },
-  { id: "4", imgSrc: "/img/d.png", label: "New User 4", date: "26/06/2025" },
-  { id: "5", imgSrc: "/img/e.png", label: "New User 5", date: "26/06/2025" },
-  { id: "6", imgSrc: "/img/f.png", label: "New User 6", date: "26/06/2025" },
-];
-
-const VISIBLE = 3; // show exactly 3 at a time
-
-// Activities Card
 const ActivitiesCard: React.FC = () => {
-  // start selected on the second activity (index 1)
-  const [selected, setSelected] = useState(1);
-  // window start index (which slice of 3 we render)
-  const [start, setStart] = useState(0);
+  const [selected, setSelected] = useState(1); // start at second
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
-  const end = start + VISIBLE - 1;
-
-  const windowSlides = useMemo(
-    () => allSlides.slice(start, start + VISIBLE),
-    [start]
+  // derive a width array (active wider)
+  const widths = useMemo(
+    () =>
+      activitiesConfig.map((_, i) => (i === selected ? 130 : 110)),
+    [activitiesConfig, selected]
   );
 
-  const clamp = (n: number, min: number, max: number) =>
-    Math.max(min, Math.min(max, n));
+  // compute cumulative X of each card's left edge
+  const leftOffsets = useMemo(() => {
+    const arr: number[] = [];
+    let x = 0;
+    for (let i = 0; i < widths.length; i++) {
+      arr.push(x);
+      x += widths[i] + 5;
+    }
+    return arr;
+  }, [widths]);
 
-  const canPrev = start > 0;
-  const canNext = start + VISIBLE < allSlides.length;
+  const totalWidth =
+    widths.reduce((a, b) => a + b, 0) + 5 * Math.max(0, widths.length - 1);
 
-  const shiftLeft = () => setStart((s) => clamp(s - 1, 0, allSlides.length - VISIBLE));
-  const shiftRight = () =>
-    setStart((s) => clamp(s + 1, 0, allSlides.length - VISIBLE));
-
-  // Handle clicking a card:
-  // - If clicking leftmost visible, shift left and select that card.
-  // - If clicking rightmost visible, shift right and select that card.
-  // - Otherwise just select.
-  const onCardClick = (absoluteIndex: number) => {
-    if (absoluteIndex === start && canPrev) {
-      setSelected(absoluteIndex - 1 >= 0 ? absoluteIndex : absoluteIndex);
-      shiftLeft();
+  const scrollToCenter = (index: number) => {
+    const scroller = scrollerRef.current;
+    if (!scroller) {
       return;
     }
-    if (absoluteIndex === end && canNext) {
-      setSelected(absoluteIndex + 1 < allSlides.length ? absoluteIndex : absoluteIndex);
-      shiftRight();
-      return;
-    }
-    setSelected(absoluteIndex);
+    const viewport = scroller.clientWidth;
+
+    // target center position for the selected card
+    const cardLeft = leftOffsets[index] ?? 0;
+    const cardWidth = widths[index] ?? 80;
+    const targetCenter = cardLeft + cardWidth / 2;
+
+    const newScrollLeft = Math.max(
+      0,
+      Math.min(targetCenter - viewport / 2, totalWidth - viewport)
+    );
+
+    console.log("scroller position: ", scroller)
+    console.log("Viewport: ", viewport);
+    console.log("New scroll left: ", newScrollLeft);
+
+    scroller.scrollTo({ left: newScrollLeft, behavior: "smooth" });
   };
 
-  // Ensure selected stays inside the current window on init/edge cases
-  if (selected < start) setStart(selected);
-  if (selected > end) setStart(clamp(selected - (VISIBLE - 1), 0, allSlides.length - VISIBLE));
+  const onCardClick = (index: number) => {
+    setSelected(index);
+    scrollToCenter(index);
+  };
 
   return (
-    <div className="w-full">
+    <div className="h-full flex flex-col">
       <h2 className="text-2xl font-semibold text-neutral-900">Activities</h2>
 
-      {/* Track: exactly 3 items shown */}
-      <div className="mt-6 flex items-end justify-center gap-6">
-        {/* Prev spacer/chevron (optional) */}
-        <button
-          onClick={shiftLeft}
-          disabled={!canPrev}
-          className={`h-10 w-10 rounded-full border border-neutral-200 text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed`}
+      <div className="mt-4 flex items-center gap-4">
+        <div
+          ref={scrollerRef}
+          className="relative w-full overflow-x-hidden overflow-y-hidden"
         >
-          ‹
-        </button>
+          <div
+            className="flex h-40 items-center gap-1"
+            style={{ width: totalWidth }}
+          >
+            {activitiesConfig.map((s, i) => {
+              const active = i === selected;
 
-        {windowSlides.map((s, i) => {
-          const absoluteIndex = start + i;
-          const active = absoluteIndex === selected;
+              const cardBase =
+                "relative rounded-2xl border transition-all duration-600 " +
+                "flex shrink-0 flex-col items-center justify-center text-center bg-[var(--bg-light)]";
 
-          const cardBase =
-            "relative transition-all duration-200 rounded-2xl " +
-            "bg-white border flex flex-col items-center justify-start";
+              const cardSize = active
+                ? `w-[130px] h-[130px] border-2 border-[var(--primary)] shadow-[0_6px_20px_rgba(0,0,0,0.12)]`
+                : `w-[110px] h-[110px] border-neutral-200 opacity-70 hover:border-sky-700`;
 
-          // Sizes match your pattern: center one looks bigger when active
-          const cardSize = active
-            ? "w-[360px] h-[260px] border-[#2a69ac] shadow-[0_6px_20px_rgba(0,0,0,0.12)]"
-            : "w-[280px] h-[220px] border-neutral-200 opacity-70";
-
-          return (
-            <button
-              key={s.id}
-              onClick={() => onCardClick(absoluteIndex)}
-              className={`${cardBase} ${cardSize} px-8 pt-6 pb-4 text-center hover:border-[#2a69ac]`}
-            >
-              {/* Selected pill */}
-              {active && (
-                <span className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-sky-600 px-3 py-1 text-xs font-semibold text-white">
-                  Selected
-                </span>
-              )}
-
-              {/* Avatar circle */}
-              <div
-                className={`mt-4 grid place-items-center rounded-full border-4 ${
-                  active ? "border-lime-400" : "border-indigo-300"
-                }`}
-                style={{ width: active ? 112 : 84, height: active ? 112 : 84 }}
-              >
-                <img
-                  src={s.imgSrc}
-                  alt=""
-                  className={`${active ? "scale-100" : "scale-90"} transition`}
-                />
-              </div>
-
-              {/* Name */}
-              <div
-                className={`mt-4 font-semibold ${
-                  active ? "text-lg text-neutral-900" : "text-neutral-500"
-                }`}
-              >
-                {s.label}
-              </div>
-
-              {/* Updated line */}
-              <div className="mt-2 text-xs text-neutral-400">
-                Updated
-                <div className="mt-1">{s.date}</div>
-              </div>
-            </button>
-          );
-        })}
-
-        {/* Next spacer/chevron (optional) */}
-        <button
-          onClick={shiftRight}
-          disabled={!canNext}
-          className={`h-10 w-10 rounded-full border border-neutral-200 text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed`}
-        >
-          ›
-        </button>
+              return (
+                <button
+                  key={String(s.id)}
+                  onClick={() => onCardClick(i)}
+                  className={`${cardBase} ${cardSize}`}
+                  type="button"
+                >
+                  <div className="h-[70%]">
+                    <img
+                      src={s.staticImage}
+                      alt=""
+                      draggable={false}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                  <div
+                    className={`mt-2 font-semibold h-[30%] ${
+                      active ? "text-base text-neutral-900" : "text-sm text-neutral-500"
+                    }`}
+                  >
+                    {s.title}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Dots for pages (2 pages: 0..1 for 6 items with 3 visible) */}
-      <div className="mt-4 flex justify-center gap-4">
-        {Array.from({ length: Math.ceil(allSlides.length / VISIBLE) }).map(
-          (_, page) => {
-            const active = page === Math.floor(start / VISIBLE);
-            return (
-              <button
-                key={page}
-                onClick={() => setStart(page * VISIBLE)}
-                className={`h-3 w-3 rounded-full ${
-                  active ? "bg-red-600" : "bg-neutral-400"
-                }`}
-              />
-            );
-          }
-        )}
+      <div className="mt-4 flex justify-center gap-2">
+        {activitiesConfig.map((_, i) => {
+          const active = i === selected;
+          return (
+            <button
+              key={i}
+              onClick={() => {
+                setSelected(i);
+                scrollToCenter(i);
+              }}
+              className={`h-3 w-3 rounded-full ${
+                active ? "bg-red-600" : "bg-neutral-400"
+              }`}
+              type="button"
+            />
+          );
+        })}
+      </div>
+
+      <div className="mt-auto">
+        <Button rightIcon={<ChevronRightIcon className="h-4 w-4" />}>
+          Explore More
+        </Button>
       </div>
     </div>
   );
-}
+};
 
 // Connection Card
 const ConnectionCard: React.FC = () => {
@@ -377,19 +344,12 @@ const ConnectionCard: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold">Connection</h2>
-        <button
-          className="bg-red-600 text-white rounded-full p-2 hover:bg-red-600"
-          type="button"
-          aria-label="Add connection"
-        >
-          <PlusIcon className="w-4 h-4" />
-        </button>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-10">
         <select
           className="w-full p-2 border border-gray-300 rounded-lg"
           value={selectedDevice}
@@ -427,14 +387,12 @@ const ConnectionCard: React.FC = () => {
         })}
       </div>
 
-      <button
-        className="w-full bg-red-600 text-white py-2 px-4 rounded-full flex items-center justify-center space-x-2 hover:bg-red-600"
-        type="button"
-      >
-        <span>Manage</span>
-        <ChevronRightIcon className="w-4 h-4" />
-      </button>
-    </>
+      <div className="mt-auto">
+        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>
+          Manage
+        </Button>
+      </div>
+    </div>
   );
 };
 
@@ -453,13 +411,11 @@ const HelpSupportCard: React.FC = () => {
         Go through a quick tutorial and see how you can make the most of The Balance Toolkit
       </p>
 
-      <button
-        className="bg-red-600 text-white px-6 py-2 rounded-full flex items-center space-x-2 hover:bg-red-600"
-        type="button"
-      >
-        <span>Go to Tutorial</span>
-        <ChevronRightIcon className="w-4 h-4" />
-      </button>
+      <div className="mt-auto flex justify-end">
+        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>
+          Go to Tutorial
+        </Button>
+      </div>
     </>
   );
 };
@@ -467,7 +423,7 @@ const HelpSupportCard: React.FC = () => {
 // Documentation Card
 const DocumentationCard: React.FC = () => {
   return (
-    <>
+    <div className="h-full flex flex-col">
       <div className="flex items-center space-x-2 mb-4">
         <div className="bg-red-600 text-white rounded p-1">
           <DocumentTextIcon className="w-4 h-4" />
@@ -475,18 +431,12 @@ const DocumentationCard: React.FC = () => {
         <h2 className="text-xl font-semibold">Documentation</h2>
       </div>
 
-      <p className="text-xs text-gray-500 mb-4 font-mono">
-
-      </p>
-
-      <button
-        className="bg-red-600 text-white px-6 py-2 rounded-full flex items-center space-x-2 hover:bg-red-600"
-        type="button"
-      >
-        <span>Read More</span>
-        <ChevronRightIcon className="w-4 h-4" />
-      </button>
-    </>
+      <div className="mt-auto flex justify-end">
+        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>
+          Read More
+        </Button>
+      </div>
+    </div>
   );
 };
 

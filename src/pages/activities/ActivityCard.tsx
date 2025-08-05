@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ActivityData, getActionImages, getActionImage } from "./Activities";
+import { ActivityData } from "./Activities";
 import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
@@ -53,7 +53,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   useEffect(() => {
     // If we have an active action block selected, try to get its specific image
     if (currentActionLabel && activity.activityName) {
-      const actionImage = getActionImage(activity.activityName, currentActionLabel);
+      const actionImage = activity.staticImage;
       if (actionImage) {
         setCurrentImageSrc(actionImage);
         return;
@@ -81,7 +81,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       
       if (currentActionLabel && activity.activityName) {
         // This will now include both action-specific and general sequence images
-        animationImages = getActionImages(activity.activityName, currentActionLabel);
+        animationImages = activity.sequenceImages;
       }
       
       // If no action-specific images found or no action selected, fall back to default sequence
@@ -118,7 +118,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       if (!isHovering) {
         // If we have a current action selected, try to get its specific image
         if (currentActionLabel && activity.activityName) {
-          const actionImage = getActionImage(activity.activityName, currentActionLabel);
+          const actionImage = activity.staticImage;
           if (actionImage) {
             setCurrentImageSrc(actionImage);
             return;
