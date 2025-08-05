@@ -4,17 +4,17 @@
   "version": "0.1.0",
   "identifier": "React",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "bun run build",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
         "title": "balance-toolkit-app",
-        "width": 1024,
-        "height": 600,
+        "width": 1366,
+        "height": 768,
         "resizable": true,
         "maximizable": true
       }

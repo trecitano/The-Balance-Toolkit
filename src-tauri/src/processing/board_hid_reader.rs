@@ -36,8 +36,9 @@ const BOARD_STOP_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, 0x30];
 pub enum BalanceBoardCommands {
     TurnOnLed,
     TurnOffLed,
+    ApplyTare,
     StartRecording(mpsc::Sender<BalanceBoardCalibratedReading>),
-    FinishRecording
+    FinishRecording,
 }
 
 pub fn initialize(
@@ -59,6 +60,10 @@ fn blocking_hid_loop(
     write_to_device(&device, &BOARD_TURN_ON_LED)?;
     let calibration = read_calibration_data(&device)?;
     let mut tx_channel: Option<mpsc::Sender<BalanceBoardCalibratedReading>> = None;
+    // By default, we use an empty tare value.
+    // If the user wants to tare, then in the next balance board reading, the tare_value is updated.
+    let mut update_tare = false;
+    let mut tare_value: BalanceBoardSensorRawReading = BalanceBoardSensorRawReading::default();
 
     loop {
         match hid_control_rx.try_recv() {
@@ -67,13 +72,14 @@ fn blocking_hid_loop(
                 match command {
                     BalanceBoardCommands::TurnOnLed => { write_to_device(&device, &BOARD_TURN_ON_LED)?; }
                     BalanceBoardCommands::TurnOffLed => { write_to_device(&device, &BOARD_TURN_OFF_LED)?; }
+                    BalanceBoardCommands::ApplyTare => { update_tare = true; }
                     BalanceBoardCommands::StartRecording(tx) => {
                         tx_channel = Some(tx);
                         write_to_device(&device, &BOARD_START_READING)?; 
                     },
                     BalanceBoardCommands::FinishRecording => {
                         tx_channel = None;
-                        write_to_device(&device, &BOARD_STOP_READING)?; 
+                        write_to_device(&device, &BOARD_STOP_READING)?;
                     },
                 }
             },
@@ -95,10 +101,13 @@ fn blocking_hid_loop(
                         bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
                     };
 
-                    let calibrated_reading = reading.calculate_weights(&calibration);
+                    if update_tare {
+                        update_tare = false;
+                        tare_value = reading.clone();
+                    }
 
-                    //let tared_reading = reading.apply_tare(&tare_offset);
-                    //let weights = tared_reading.calculate_weights(&calibration);
+                    let tared_reading = reading.apply_tare(&tare_value);
+                    let calibrated_reading = tared_reading.calculate_weights(&calibration);
 
                     if let Some(tx) = &tx_channel {
                         tx.blocking_send(calibrated_reading)?;

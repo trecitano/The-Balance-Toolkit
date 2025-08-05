@@ -106,7 +106,6 @@ impl ConnectionManager {
 
                 ToolkitCommand::StartSession { settings } => {
                     println!("Sending start recording command to boards: {:?}", self.selected_boards);
-                    println!("State of boards: {:?}", &self.connections);
                     for board in &self.selected_boards {
                         let connection = &self.connections.get(board).unwrap();
                         let command = { BoardAction::StartRecording { settings: settings.clone() } };
