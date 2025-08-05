@@ -720,7 +720,6 @@ export default function Session() {
       console.log('got download event', message);
     };
     sessionWebSocket.current = sessionChannel;
-    console.log("Socket state: ", sessionWebSocket.current.id);
     await commands.session.startSession(sessionChannel);
     setCopYDataSeries([]);
     setCopXDataSeries([]);
