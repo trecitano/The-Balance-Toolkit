@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import logo from "@/assets/app-logo.png";
 import homeIcon from "@/assets/home-icon.svg";
 import devicesIcon from "@/assets/wbb-icon-line.svg";
 import usersIcon from "@/assets/users-icon.svg";
 import sessionIcon from "@/assets/session-icon.svg";
 import settingsIcon from "@/assets/settings-icon.svg";
-import helpIcon from "@/assets/question-mark-icon.svg";
 import activitiesIcon from "@/assets/activities-icon.svg";
 import Settings from "@/components/settings/Settings.tsx";
 
@@ -67,13 +66,6 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
             <img src={settingsIcon} alt="Settings" className="nav-icon-sm" />
           </span>
           <span className="menu-item-text">Settings</span>
-        </button>
-        {/* Help & Support */}
-        <button className="menu-item help unstyled-button" title="Help & Support">
-          <span className="menu-item-icon">
-            <img src={helpIcon} alt="Help & Support" className="nav-icon-sm" />
-          </span>
-          <span className="menu-item-text">Help</span>
         </button>
       </div>
 

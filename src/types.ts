@@ -40,6 +40,8 @@ export const defaultUser: UserType = {
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   submitted: false,
+  isDefault: true,
+  isSelected: true,
 };
 
 export interface Device {
@@ -59,7 +61,28 @@ export type BalanceBoardEvent = {
   };
 };
 
+// TEMP
 export type ProcessedBoardData = {
-  timestamp: Date;
-  reading: [number, number, number, number];
+  ts: number; // epoch ms
+  boardId: string;
+  userId: string;
+
+  // instantaneous center of pressure
+  cop: { x: number; y: number }; // normalized -1..1 or device units
+
+  // derived per-frame values
+  traces: {
+    vCoPx: number;
+    vCoPy: number;
+  };
+
+  // derived metrics
+  metrics: {
+    stabilityIndex?: number | null;
+  };
+};
+
+export type ActiveBoards = {
+  leftBoardId: string;
+  rightBoardId: string;
 };

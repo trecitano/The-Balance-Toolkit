@@ -1,5 +1,5 @@
 // Home.tsx
-import React from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {
   ChevronRightIcon,
   PlusIcon,
@@ -10,6 +10,10 @@ import {
   EnvelopeIcon,
   SignalIcon,
 } from '@heroicons/react/24/outline';
+import fileIcon from "@/assets/file-icon.svg"
+import userIcon from "@/assets/user-icon.svg";
+import wbbIconLine from "@/assets/wbb-icon-line.svg";
+import wbbTopdown from "@/assets/wbb-topdown.svg";
 
 // Types
 interface Activity {
@@ -33,24 +37,22 @@ const Home: React.FC = () => {
 
       {/* Main Content */}
       <div className="p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+        <div className="grid grid-flow-col grid-cols-4 grid-rows-3 gap-6 max-w-7xl mx-auto">
           {/* Left Column */}
-          <div className="space-y-6">
+          <div className="row-span-1 col-span-2 rounded-lg border-2 border-red-500 p-6">
             <LastSessionCard />
+          </div>
+          <div className="row-span-2 col-span-2 rounded-lg border-2 border-red-500 p-6">
             <ActivitiesCard />
           </div>
 
           {/* Middle Column */}
-          <div>
-            <ConnectionCard />
-          </div>
+          <div className="row-span-3 rounded-lg border-2 border-red-500 p-6"> <ConnectionCard /> </div>
 
           {/* Right Column */}
-          <div className="space-y-6">
-            <HelpSupportCard />
-            <DocumentationCard />
-            <OtherResourcesCard />
-          </div>
+          <div className="row-span-1 rounded-lg border-2 border-red-500 p-6"> <HelpSupportCard /> </div>
+          <div className="row-span-1 rounded-lg border-2 border-red-500 p-6"> <DocumentationCard /> </div>
+          <div className="row-span-1 rounded-lg border-2 border-red-500 p-6"> <OtherResourcesCard /> </div>
         </div>
       </div>
     </div>
@@ -102,15 +104,22 @@ const Header: React.FC = () => {
 // Last Session Card
 const LastSessionCard: React.FC = () => {
   return (
-    <div className="bg-white rounded-lg border-2 border-blue-200 p-6">
+    <>
       <h2 className="text-xl font-semibold mb-4">Last session</h2>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className="flex justify-between">
+        {/* User Section */}
         <div>
-          <div className="flex items-center space-x-2 mb-2">
-            <div className="w-4 h-4 bg-red-600 rounded-full"></div>
+          <div className="flex">
+            <div className="w-4 h-4">
+              <img
+                src={userIcon}
+                draggable={false}
+              />
+            </div>
             <span className="font-medium">Username</span>
           </div>
+
           <div className="text-sm text-gray-600 space-y-1">
             <div>Weight:</div>
             <div>Sex:</div>
@@ -119,6 +128,7 @@ const LastSessionCard: React.FC = () => {
           </div>
         </div>
 
+        {/* Stats Section */}
         <div>
           <div className="flex items-center space-x-2 mb-2">
             <DocumentTextIcon className="w-4 h-4 text-red-600" />
@@ -130,81 +140,199 @@ const LastSessionCard: React.FC = () => {
             <div>Something else:</div>
           </div>
         </div>
-      </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <DocumentIcon className="w-4 h-4 text-red-600" />
+        {/* File */}
+        <div>
+          <div className="flex w-4 h-4 mb-2">
+            <img
+              src={fileIcon}
+              draggable={false}
+            />
+            <span className="text-xs">Name of file</span>
+          </div>
+
           <div>
-            <div className="text-sm font-medium">Name of file</div>
             <div className="text-xs text-gray-500">/location of file</div>
           </div>
-          <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-        </div>
 
-        <button
-          className="bg-white border-2 border-red-600 text-red-600 px-6 py-2 rounded-full hover:bg-red-50"
-          type="button"
-        >
-          Resume
-        </button>
+          <button
+            className="bg-white border-2 border-red-600 text-red-600 px-6 py-2 rounded-full hover:bg-red-50"
+            type="button"
+          >
+            Resume
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
+
+type Slide = {
+  id: string;
+  imgSrc: string;
+  label: string;
+};
+
+const allSlides: Slide[] = [
+  { id: "1", imgSrc: "/img/a.png", label: "New User 1", date: "26/06/2025" },
+  { id: "2", imgSrc: "/img/b.png", label: "New User 2", date: "26/06/2025" },
+  { id: "3", imgSrc: "/img/c.png", label: "New User 3", date: "26/06/2025" },
+  { id: "4", imgSrc: "/img/d.png", label: "New User 4", date: "26/06/2025" },
+  { id: "5", imgSrc: "/img/e.png", label: "New User 5", date: "26/06/2025" },
+  { id: "6", imgSrc: "/img/f.png", label: "New User 6", date: "26/06/2025" },
+];
+
+const VISIBLE = 3; // show exactly 3 at a time
 
 // Activities Card
 const ActivitiesCard: React.FC = () => {
-  const activities: Activity[] = [
-    { id: 1, name: "Activity name", icon: "🧍" },
-    { id: 2, name: "Activity name", icon: "🏃" },
-    { id: 3, name: "Activity name", icon: "🧍" }
-  ];
+  // start selected on the second activity (index 1)
+  const [selected, setSelected] = useState(1);
+  // window start index (which slice of 3 we render)
+  const [start, setStart] = useState(0);
 
-  const handleActivityClick = (activityId: number): void => {
-    console.log(`Activity ${activityId} clicked`);
+  const end = start + VISIBLE - 1;
+
+  const windowSlides = useMemo(
+    () => allSlides.slice(start, start + VISIBLE),
+    [start]
+  );
+
+  const clamp = (n: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, n));
+
+  const canPrev = start > 0;
+  const canNext = start + VISIBLE < allSlides.length;
+
+  const shiftLeft = () => setStart((s) => clamp(s - 1, 0, allSlides.length - VISIBLE));
+  const shiftRight = () =>
+    setStart((s) => clamp(s + 1, 0, allSlides.length - VISIBLE));
+
+  // Handle clicking a card:
+  // - If clicking leftmost visible, shift left and select that card.
+  // - If clicking rightmost visible, shift right and select that card.
+  // - Otherwise just select.
+  const onCardClick = (absoluteIndex: number) => {
+    if (absoluteIndex === start && canPrev) {
+      setSelected(absoluteIndex - 1 >= 0 ? absoluteIndex : absoluteIndex);
+      shiftLeft();
+      return;
+    }
+    if (absoluteIndex === end && canNext) {
+      setSelected(absoluteIndex + 1 < allSlides.length ? absoluteIndex : absoluteIndex);
+      shiftRight();
+      return;
+    }
+    setSelected(absoluteIndex);
   };
 
+  // Ensure selected stays inside the current window on init/edge cases
+  if (selected < start) setStart(selected);
+  if (selected > end) setStart(clamp(selected - (VISIBLE - 1), 0, allSlides.length - VISIBLE));
+
   return (
-    <div className="bg-white rounded-lg border-2 border-blue-200 p-6">
-      <h2 className="text-xl font-semibold mb-4">Activities</h2>
+    <div className="w-full">
+      <h2 className="text-2xl font-semibold text-neutral-900">Activities</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        {activities.map((activity: Activity) => (
-          <div
-            key={activity.id}
-            className="bg-gray-100 rounded-lg p-4 text-center hover:bg-gray-200 cursor-pointer"
-            onClick={() => handleActivityClick(activity.id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                handleActivityClick(activity.id);
-              }
-            }}
-          >
-            <div className="text-2xl mb-2">{activity.icon}</div>
-            <div className="text-sm font-medium">{activity.name}</div>
-          </div>
-        ))}
+      {/* Track: exactly 3 items shown */}
+      <div className="mt-6 flex items-end justify-center gap-6">
+        {/* Prev spacer/chevron (optional) */}
+        <button
+          onClick={shiftLeft}
+          disabled={!canPrev}
+          className={`h-10 w-10 rounded-full border border-neutral-200 text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed`}
+        >
+          ‹
+        </button>
+
+        {windowSlides.map((s, i) => {
+          const absoluteIndex = start + i;
+          const active = absoluteIndex === selected;
+
+          const cardBase =
+            "relative transition-all duration-200 rounded-2xl " +
+            "bg-white border flex flex-col items-center justify-start";
+
+          // Sizes match your pattern: center one looks bigger when active
+          const cardSize = active
+            ? "w-[360px] h-[260px] border-[#2a69ac] shadow-[0_6px_20px_rgba(0,0,0,0.12)]"
+            : "w-[280px] h-[220px] border-neutral-200 opacity-70";
+
+          return (
+            <button
+              key={s.id}
+              onClick={() => onCardClick(absoluteIndex)}
+              className={`${cardBase} ${cardSize} px-8 pt-6 pb-4 text-center hover:border-[#2a69ac]`}
+            >
+              {/* Selected pill */}
+              {active && (
+                <span className="absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-sky-600 px-3 py-1 text-xs font-semibold text-white">
+                  Selected
+                </span>
+              )}
+
+              {/* Avatar circle */}
+              <div
+                className={`mt-4 grid place-items-center rounded-full border-4 ${
+                  active ? "border-lime-400" : "border-indigo-300"
+                }`}
+                style={{ width: active ? 112 : 84, height: active ? 112 : 84 }}
+              >
+                <img
+                  src={s.imgSrc}
+                  alt=""
+                  className={`${active ? "scale-100" : "scale-90"} transition`}
+                />
+              </div>
+
+              {/* Name */}
+              <div
+                className={`mt-4 font-semibold ${
+                  active ? "text-lg text-neutral-900" : "text-neutral-500"
+                }`}
+              >
+                {s.label}
+              </div>
+
+              {/* Updated line */}
+              <div className="mt-2 text-xs text-neutral-400">
+                Updated
+                <div className="mt-1">{s.date}</div>
+              </div>
+            </button>
+          );
+        })}
+
+        {/* Next spacer/chevron (optional) */}
+        <button
+          onClick={shiftRight}
+          disabled={!canNext}
+          className={`h-10 w-10 rounded-full border border-neutral-200 text-neutral-600 disabled:opacity-30 disabled:cursor-not-allowed`}
+        >
+          ›
+        </button>
       </div>
 
-      <div className="flex justify-center space-x-2 mb-4">
-        <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-        <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-        <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+      {/* Dots for pages (2 pages: 0..1 for 6 items with 3 visible) */}
+      <div className="mt-4 flex justify-center gap-4">
+        {Array.from({ length: Math.ceil(allSlides.length / VISIBLE) }).map(
+          (_, page) => {
+            const active = page === Math.floor(start / VISIBLE);
+            return (
+              <button
+                key={page}
+                onClick={() => setStart(page * VISIBLE)}
+                className={`h-3 w-3 rounded-full ${
+                  active ? "bg-red-600" : "bg-neutral-400"
+                }`}
+              />
+            );
+          }
+        )}
       </div>
-
-      <button
-        className="bg-red-600 text-white px-6 py-2 rounded-full flex items-center space-x-2 hover:bg-red-600"
-        type="button"
-      >
-        <span>Explore more</span>
-        <ChevronRightIcon className="w-4 h-4" />
-      </button>
     </div>
   );
-};
+}
 
 // Connection Card
 const ConnectionCard: React.FC = () => {
@@ -249,7 +377,7 @@ const ConnectionCard: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg border-2 border-blue-200 p-6">
+    <>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold">Connection</h2>
         <button
@@ -275,17 +403,11 @@ const ConnectionCard: React.FC = () => {
 
       {/* Balance Board Illustration */}
       <div className="flex justify-center mb-6">
-        <div className="relative">
-          <div className="w-48 h-32 bg-gray-200 rounded-lg border-2 border-gray-300 relative">
-            <div className="absolute inset-4 grid grid-cols-2 gap-2">
-              <div className="bg-white rounded border border-gray-400"></div>
-              <div className="bg-white rounded border border-gray-400"></div>
-              <div className="bg-white rounded border border-gray-400"></div>
-              <div className="bg-white rounded border border-gray-400"></div>
-            </div>
-            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-16 h-4 bg-gray-300 rounded"></div>
-          </div>
-        </div>
+        <img
+          src={wbbIconLine}
+          alt="Balance Board"
+          draggable={false}
+        />
       </div>
 
       {/* Status Indicators */}
@@ -312,14 +434,14 @@ const ConnectionCard: React.FC = () => {
         <span>Manage</span>
         <ChevronRightIcon className="w-4 h-4" />
       </button>
-    </div>
+    </>
   );
 };
 
 // Help Support Card
 const HelpSupportCard: React.FC = () => {
   return (
-    <div className="bg-white rounded-lg border-2 border-red-200 p-6">
+    <>
       <div className="flex items-center space-x-2 mb-4">
         <div className="bg-red-600 text-white rounded-full p-1">
           <QuestionMarkCircleIcon className="w-4 h-4" />
@@ -338,14 +460,14 @@ const HelpSupportCard: React.FC = () => {
         <span>Go to Tutorial</span>
         <ChevronRightIcon className="w-4 h-4" />
       </button>
-    </div>
+    </>
   );
 };
 
 // Documentation Card
 const DocumentationCard: React.FC = () => {
   return (
-    <div className="bg-white rounded-lg border-2 border-red-200 p-6">
+    <>
       <div className="flex items-center space-x-2 mb-4">
         <div className="bg-red-600 text-white rounded p-1">
           <DocumentTextIcon className="w-4 h-4" />
@@ -354,10 +476,7 @@ const DocumentationCard: React.FC = () => {
       </div>
 
       <p className="text-xs text-gray-500 mb-4 font-mono">
-        awfsdzivja['pkepnzjfdjaipjekwnd,'cjxoypkjm,'cdjn,'0
-        fivzmshdQjcz0=A,'vkcznjh*dvxnzskrjdgmzdrjxsjalz
-        loejls'[jfeojfeojstojfeosjojejojejejojejojfejxjxjslfejle
-        sjflesjifoslrfejslfo
+
       </p>
 
       <button
@@ -367,7 +486,7 @@ const DocumentationCard: React.FC = () => {
         <span>Read More</span>
         <ChevronRightIcon className="w-4 h-4" />
       </button>
-    </div>
+    </>
   );
 };
 
@@ -410,7 +529,7 @@ const OtherResourcesCard: React.FC = () => {
   ];
 
   return (
-    <div className="bg-white rounded-lg border-2 border-gray-200 p-6">
+    <>
       <h2 className="text-xl font-semibold mb-4">Other Resources</h2>
 
       <div className="space-y-3">
@@ -429,7 +548,7 @@ const OtherResourcesCard: React.FC = () => {
           );
         })}
       </div>
-    </div>
+    </>
   );
 };
 

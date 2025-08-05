@@ -1,10 +1,9 @@
-import React from "react";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Navigation from "@/components/navigation/Navigation";
 import Home from "@/pages/home/Home.tsx";
 import DevicesPage, { DevicesQuery } from "@/pages/devices/Devices";
 import UsersPage from "@/pages/users/Users";
-import Session from "@/pages/session/Session";
+import SessionPage from "@/pages/new_session/SessionPage";
 import Activities from "@/pages/activities/Activities";
 import "./App.css";
 import {QueryClient, QueryClientProvider, usePrefetchQuery} from "@tanstack/react-query";
@@ -30,9 +29,9 @@ function AppContent() {
       />
       <main className="main-page">
         <Routes>
-          <Route path="/" element={<Home onViewChange={handleViewChange} />} />
+          <Route path="/" element={<Home />} />
           <Route path="/devices" element={<DevicesPage />} />
-          <Route path="/session" element={<Session/>}/>
+          <Route path="/session" element={<SessionPage/>}/>
           <Route path="/users" element={<UsersPage /> }/>
           <Route path="/activities" element={<Activities />} />
         </Routes>
