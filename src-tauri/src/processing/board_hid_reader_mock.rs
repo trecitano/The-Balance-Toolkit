@@ -2,8 +2,7 @@ use std::thread;
 use chrono::Utc;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
-use crate::actors::balance_board_actor::BalanceBoardCalibratedReading;
-use crate::processing::board_hid_reader::BalanceBoardCommands;
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
 
 pub fn initialize(_: &str) -> anyhow::Result<Sender<BalanceBoardCommands>> {
     let (tx, rx) = mpsc::channel(100);

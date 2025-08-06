@@ -1,5 +1,4 @@
 use crate::processing;
-use crate::processing::board_hid_reader::BalanceBoardCommands;
 use crate::processing::lsl_writer::LslConnectionSettings;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
 use anyhow::Result;
@@ -23,6 +22,15 @@ pub enum BoardAction {
         settings: BalanceBoardSessionSettings
     },
     StopRecording
+}
+
+#[derive(Debug)]
+pub enum BalanceBoardCommands {
+    TurnOnLed,
+    TurnOffLed,
+    ApplyTare,
+    StartRecording(mpsc::Sender<BalanceBoardCalibratedReading>),
+    FinishRecording,
 }
 
 #[derive(Serialize, Debug, Clone)]
