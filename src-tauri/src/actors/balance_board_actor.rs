@@ -2,13 +2,15 @@ use crate::processing;
 use crate::processing::board_hid_reader::BalanceBoardCommands;
 use crate::processing::lsl_writer::LslConnectionSettings;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use chrono::Utc;
-use hidapi::{HidApi, HidDevice};
 use serde::Serialize;
+#[cfg(feature = "mock")]
+use processing::board_hid_reader_mock as board_hid_reader;
+#[cfg(not(feature = "mock"))]
 use processing::board_hid_reader;
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::{Receiver, Sender};
 use crate::processing::data_processor::{ProcessedBoardData, ProcessingSettings};
 
 // Board primitives
@@ -149,179 +151,146 @@ pub struct SettingWithMode<T> {
     pub mode: SettingMode,
 }
 
-pub struct BalanceBoardConnection {
-    device: HidDevice,
-    action_rx: mpsc::Receiver<BoardAction>
+pub fn initialize(device_serial_number: &str) -> Result<Sender<BoardAction>> {
+    let (tx, rx) = mpsc::channel(100);
+
+    let board_hid_tx = board_hid_reader::initialize(
+        device_serial_number,
+    )?;
+    
+    tokio::spawn(async move{
+        balance_board_actor_loop(rx, board_hid_tx).await
+    });
+
+    Ok(tx)
 }
 
-impl BalanceBoardConnection {
-    pub fn new(serial_number: &str, action_rx: mpsc::Receiver<BoardAction>) -> Result<Self> {
-        let api = HidApi::new()?;
-        // The serial number of a nintendo balance board is the string version of a mac address.
-        // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
-        let balance_board_info = api
-            .device_list()
-            .find(|device| {
-                if let Some(hid_serial_number) = device.serial_number() {
-                    hid_serial_number == serial_number
-                } else {
-                    false
-                }
-            })
-            .ok_or(anyhow!("Device with the specified device_id was not found."))?;
-
-        let device = balance_board_info.open_device(&api)?;
-        println!("Successfully opened HID connection for {}.", serial_number);
-
-        Ok(Self {
-            device,
-            action_rx,
-        })
-    }
-
-    pub async fn run(mut self) -> Result<()> {
-        println!("Board connection task started.");
-        let device = self.device;
-
-        let (hid_control_tx, hid_control_rx) = mpsc::channel(10);
-
-        // Since HIDAPI is blocking, we need to run the core device loop in a blocking thread.
-        let hid_thread = board_hid_reader::initialize(
-            device,
-            hid_control_rx
-        );
-
-        loop {
-            tokio::select! {
-                // Received an action from the manager
-                Some(action) = self.action_rx.recv() => {
-                    match action {
-                        BoardAction::Tare => {
-                            hid_control_tx.send(BalanceBoardCommands::ApplyTare).await?;
-                        }
-                        BoardAction::TurnOnLed => {
-                            hid_control_tx.send(BalanceBoardCommands::TurnOnLed).await.unwrap();
-                        },
-                        BoardAction::TurnOffLed => {
-                            hid_control_tx.send(BalanceBoardCommands::TurnOffLed).await.unwrap();
-                        },
-                        BoardAction::StartRecording { settings } => {
-                            let (raw_data_tx, raw_data_rx) = mpsc::channel(10);
-                            Self::start_session(settings, raw_data_rx);
-                            hid_control_tx.send(BalanceBoardCommands::StartRecording(raw_data_tx)).await.unwrap();
-                        },
-                        BoardAction::StopRecording => {
-                            println!("Stopping the recording");
-                            // This closes the channel from the balance board side,
-                            // which closes all of the subsequent pipeline channels
-                            hid_control_tx.send(BalanceBoardCommands::FinishRecording).await.unwrap();
-                        },
+async fn balance_board_actor_loop(mut rx: Receiver<BoardAction>, board_hid_tx: Sender<BalanceBoardCommands>) {
+    loop {
+        tokio::select! {
+            // Received an action from the manager
+            Some(action) = rx.recv() => {
+                match action {
+                    BoardAction::Tare => {
+                        board_hid_tx.send(BalanceBoardCommands::ApplyTare).await.unwrap();
                     }
-                },
-                else => {
-                    // Channels closed
-                    break;
+                    BoardAction::TurnOnLed => {
+                        board_hid_tx.send(BalanceBoardCommands::TurnOnLed).await.unwrap();
+                    },
+                    BoardAction::TurnOffLed => {
+                        board_hid_tx.send(BalanceBoardCommands::TurnOffLed).await.unwrap();
+                    },
+                    BoardAction::StartRecording { settings } => {
+                        let (raw_data_tx, raw_data_rx) = mpsc::channel(10);
+                        start_session(settings, raw_data_rx);
+                        board_hid_tx.send(BalanceBoardCommands::StartRecording(raw_data_tx)).await.unwrap();
+                    },
+                    BoardAction::StopRecording => {
+                        println!("Stopping the recording");
+                        // This closes the channel from the balance board side,
+                        // which closes all of the subsequent pipeline channels
+                        board_hid_tx.send(BalanceBoardCommands::FinishRecording).await.unwrap();
+                    },
                 }
+            },
+            else => {
+                // Channels closed
+                break;
             }
         }
-
-
-        // Wait for the HID thread to finish.
-        let _ = hid_thread.join();
-        println!("Board connection task finished.");
-        Ok(())
     }
+}
 
-    // This method steps up all of the communication channels between the different 
-    // parties that are interested in receiving balance board data.
-    fn start_session(settings: BalanceBoardSessionSettings,
-                     raw_data_rx: mpsc::Receiver<BalanceBoardCalibratedReading>) {
-        let mut raw_data_observers = vec!();
-        let mut processed_data_observers = vec!();
 
-        if let Some(config) = settings.output_directory {
-            let processing_settings = settings.processing_settings.clone();
-            let tx = file_writer::initialize(
-                config.value,
-                config.mode.clone(),
-                "test_device_tmp".to_string(),
-                processing_settings
-            );
-            Self::add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
-        }
+// This method steps up all of the communication channels between the different 
+// parties that are interested in receiving balance board data.
+fn start_session(settings: BalanceBoardSessionSettings,
+                 raw_data_rx: mpsc::Receiver<BalanceBoardCalibratedReading>) {
+    let mut raw_data_observers = vec!();
+    let mut processed_data_observers = vec!();
 
-        if let Some(config) = settings.lsl_connection {
-            let tx = lsl_writer::initialize(config.value);
-            Self::add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
-        }
-
-        if let Some(config) = settings.tcp_connection_string {
-            let tx = tcp_writer::initialize(config.value);
-            Self::add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
-        };
-        
-        if let Some(config) = settings.frontend_channel {
-            let tx = Self::initialize_frontend_observer(config.value);
-            Self::add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
-        }
-
-        let processed_data_observers_count = processed_data_observers.len();
-        if processed_data_observers.len() > 0 {
-            let processed_data_tx = data_processor::initialize(processed_data_observers, settings.processing_settings.unwrap());
-            raw_data_observers.push(processed_data_tx);
-        }
-
-        let raw_data_observers_count = raw_data_observers.len();
-        if raw_data_observers.len() > 0 {
-            Self::initialize_raw_data_forwarder(raw_data_rx, raw_data_observers);
-        }
-
-        println!("Session started with {} raw data listeners and {} processed data listeners",
-                 processed_data_observers_count,
-                 raw_data_observers_count
+    if let Some(config) = settings.output_directory {
+        let processing_settings = settings.processing_settings.clone();
+        let tx = file_writer::initialize(
+            config.value,
+            config.mode.clone(),
+            "test_device_tmp".to_string(),
+            processing_settings
         );
+        add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
     }
+
+    if let Some(config) = settings.lsl_connection {
+        let tx = lsl_writer::initialize(config.value);
+        add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
+    }
+
+    if let Some(config) = settings.tcp_connection_string {
+        let tx = tcp_writer::initialize(config.value);
+        add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
+    };
     
-    fn initialize_frontend_observer(frontend_channel: Sender<BalanceBoardOutput>) -> Sender<BalanceBoardOutput> {
-        let (tx, mut rx) = mpsc::channel(100);
-
-        tokio::spawn(async move {
-            while let Some(data) = rx.recv().await {
-                frontend_channel.send(data).await?;
-            }
-            Ok::<(), anyhow::Error>(())
-        });
-
-        tx
+    if let Some(config) = settings.frontend_channel {
+        let tx = initialize_frontend_observer(config.value);
+        add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
     }
 
-    fn initialize_raw_data_forwarder(mut raw_data_rx: mpsc::Receiver<BalanceBoardCalibratedReading>,
-                                     mut observers: Vec<Sender<BalanceBoardOutput>>) {
-        tokio::spawn(async move {
-            while let Some(data) = raw_data_rx.recv().await {
-                observers.retain(|observer| {
-                    match observer.try_send(BalanceBoardOutput::Raw(data.clone())) {
-                        Ok(_) => true,
-                        Err(_) => false
-                    }
-                });
+    let processed_data_observers_count = processed_data_observers.len();
+    if processed_data_observers.len() > 0 {
+        let processed_data_tx = data_processor::initialize(processed_data_observers, settings.processing_settings.unwrap());
+        raw_data_observers.push(processed_data_tx);
+    }
 
-                if observers.is_empty() {
-                    break;
+    let raw_data_observers_count = raw_data_observers.len();
+    if raw_data_observers.len() > 0 {
+        initialize_raw_data_forwarder(raw_data_rx, raw_data_observers);
+    }
+
+    println!("Session started with {} raw data listeners and {} processed data listeners",
+             processed_data_observers_count,
+             raw_data_observers_count
+    );
+}
+
+fn initialize_frontend_observer(frontend_channel: Sender<BalanceBoardOutput>) -> Sender<BalanceBoardOutput> {
+    let (tx, mut rx) = mpsc::channel(100);
+
+    tokio::spawn(async move {
+        while let Some(data) = rx.recv().await {
+            frontend_channel.send(data).await?;
+        }
+        Ok::<(), anyhow::Error>(())
+    });
+
+    tx
+}
+
+fn initialize_raw_data_forwarder(mut raw_data_rx: mpsc::Receiver<BalanceBoardCalibratedReading>,
+                                 mut observers: Vec<Sender<BalanceBoardOutput>>) {
+    tokio::spawn(async move {
+        while let Some(data) = raw_data_rx.recv().await {
+            observers.retain(|observer| {
+                match observer.try_send(BalanceBoardOutput::Raw(data.clone())) {
+                    Ok(_) => true,
+                    Err(_) => false
                 }
-            }
-        });
-    }
+            });
 
-    fn add_observer_to_vecs(observer: Sender<BalanceBoardOutput>,
-                            setting_mode: SettingMode,
-                            raw_data_observers: &mut Vec<Sender<BalanceBoardOutput>>,
-                            processed_data_observers: &mut Vec<Sender<BalanceBoardOutput>>) {
-        if setting_mode.receive_raw {
-            raw_data_observers.push(observer.clone());
+            if observers.is_empty() {
+                break;
+            }
         }
-        if setting_mode.receive_processed {
-            processed_data_observers.push(observer);
-        }
+    });
+}
+
+fn add_observer_to_vecs(observer: Sender<BalanceBoardOutput>,
+                        setting_mode: SettingMode,
+                        raw_data_observers: &mut Vec<Sender<BalanceBoardOutput>>,
+                        processed_data_observers: &mut Vec<Sender<BalanceBoardOutput>>) {
+    if setting_mode.receive_raw {
+        raw_data_observers.push(observer.clone());
+    }
+    if setting_mode.receive_processed {
+        processed_data_observers.push(observer);
     }
 }
