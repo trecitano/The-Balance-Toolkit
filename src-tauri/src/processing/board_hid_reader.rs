@@ -5,7 +5,7 @@ use hidapi::{HidApi, HidDevice, HidResult};
 use hidapi::HidError::HidApiError;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
-use crate::actors::balance_board_actor::BalanceBoardCalibratedReading;
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
 
 // --- HID Command Constants ---
 const HID_INTERFACE_LED_INPUT: u8 = 0x11;
@@ -33,15 +33,6 @@ const BOARD_TURN_OFF_LED: [u8; 2] = [HID_INTERFACE_LED_INPUT, 0x00];
 
 const BOARD_START_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, HID_CMD_DATA_REPORT_MODE];
 const BOARD_STOP_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, 0x30];
-
-#[derive(Debug)]
-pub enum BalanceBoardCommands {
-    TurnOnLed,
-    TurnOffLed,
-    ApplyTare,
-    StartRecording(mpsc::Sender<BalanceBoardCalibratedReading>),
-    FinishRecording,
-}
 
 pub fn initialize(device_serial_number: &str) -> Result<Sender<BalanceBoardCommands>> {
     let (tx, rx) = mpsc::channel(100);
