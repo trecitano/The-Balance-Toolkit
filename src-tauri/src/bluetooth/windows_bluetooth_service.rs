@@ -159,6 +159,32 @@ pub async fn scan_and_pair_nintendo() -> Result<BluetoothPeripheral> {
     .await?
 }
 
+pub async fn remove_device(device_id: String) -> Result<()> {
+    tokio::task::spawn_blocking(move || {
+        futures::executor::block_on(async {
+            let device = BluetoothDevice::FromIdAsync(&HSTRING::from(device_id))?.await?;
+            let connection_status = device.ConnectionStatus()?;
+            if connection_status == BluetoothConnectionStatus::Connected {
+                // Windows is very weird. If we check the pairing status, it will say that it's not paired.
+                // However, to disconnect it, we must unpair it.
+                let pairing = device.DeviceInformation()?.Pairing()?;
+                let unpair_result = pairing.UnpairAsync()?.await?;
+
+                return match unpair_result.Status()? {
+                    DeviceUnpairingResultStatus::Unpaired => {
+                        println!("Device successfully unpaired");
+                        Ok(())
+                    },
+                    _ => {
+                        Err(anyhow!("Failed to unpair: Unknown status: {:?}", unpair_result.Status()))
+                    }
+                }
+            }
+            Ok(())
+        })
+    }).await?
+}
+
 async fn try_pair_with_board(device_id: HSTRING, pin: [u8; 6]) -> Result<()> {
     println!("Trying to pair with device {}", device_id);
 
@@ -219,32 +245,6 @@ fn convert_u64_to_mac_address(winrt_mac_address: u64) -> [u8; 6] {
     }
 
     mac_address
-}
-
-pub async fn remove_device(device_id: String) -> Result<()> {
-    tokio::task::spawn_blocking(move || {
-        futures::executor::block_on(async {
-            let device = BluetoothDevice::FromIdAsync(&HSTRING::from(device_id))?.await?;
-            let connection_status = device.ConnectionStatus()?;
-            if connection_status == BluetoothConnectionStatus::Connected {
-                // Windows is very weird. If we check the pairing status, it will say that it's not paired.
-                // However, to disconnect it, we must unpair it.
-                let pairing = device.DeviceInformation()?.Pairing()?;
-                let unpair_result = pairing.UnpairAsync()?.await?;
-
-                return match unpair_result.Status()? {
-                    DeviceUnpairingResultStatus::Unpaired => {
-                        println!("Device successfully unpaired");
-                        Ok(())
-                    },
-                    _ => {
-                        Err(anyhow!("Failed to unpair: Unknown status: {:?}", unpair_result.Status()))
-                    }
-                }
-            }
-            Ok(())
-        })
-    }).await?
 }
 
 async fn convert_to_bluetooth_peripheral(device: BluetoothDevice) -> Result<BluetoothPeripheral> {

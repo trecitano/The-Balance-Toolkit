@@ -1,9 +1,11 @@
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", not(feature = "mock")))]
 use crate::bluetooth::linux_bluetooth_service::Handler;
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", not(feature = "mock")))]
 use crate::bluetooth::windows_bluetooth_service as NativeHandler;
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", not(feature = "mock")))]
 use crate::bluetooth::macos_bluetooth_service as NativeHandler;
+#[cfg(feature = "mock")]
+use crate::bluetooth::bluetooth_service_mock as NativeHandler;
 
 use anyhow::{Result};  
 use serde::Serialize;
@@ -164,7 +166,7 @@ pub struct BluetoothAdapterInfo {
     pub devices: Vec<Result<BluetoothPeripheral>>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct BluetoothPeripheral {
     pub id: String,
     pub name: String,

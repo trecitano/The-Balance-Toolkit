@@ -177,18 +177,10 @@ impl ConnectionManager {
         }
 
         println!("Connecting to device: {}", device_id);
-        let (action_tx, action_rx) = mpsc::channel(10); // Channel for this specific board
-
         let serial_number = convert_mac_address_to_string(mac_address);
-        let board_connection = balance_board_actor::BalanceBoardConnection::new(&serial_number, action_rx)?;
-
-        tokio::spawn(async move {
-            if let Err(e) = board_connection.run().await {
-                eprintln!("Board connection task failed: {}", e);
-            }
-        });
+        let board_connection = balance_board_actor::initialize(&serial_number)?;
         
-        self.connections.insert(device_id.to_string(), action_tx);
+        self.connections.insert(device_id.to_string(), board_connection);
         // TODO
         //self.tx.send(ToolkitResponse::NewDeviceFound())
         Ok(())

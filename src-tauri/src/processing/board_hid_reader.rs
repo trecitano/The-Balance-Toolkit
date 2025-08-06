@@ -1,8 +1,10 @@
 use std::thread;
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use chrono::Utc;
-use hidapi::{HidDevice, HidResult};
+use hidapi::{HidApi, HidDevice, HidResult};
+use hidapi::HidError::HidApiError;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::Sender;
 use crate::actors::balance_board_actor::BalanceBoardCalibratedReading;
 
 // --- HID Command Constants ---
@@ -41,15 +43,35 @@ pub enum BalanceBoardCommands {
     FinishRecording,
 }
 
-pub fn initialize(
-    device: HidDevice,
-    rx: mpsc::Receiver<BalanceBoardCommands>
-) -> thread::JoinHandle<anyhow::Result<()>> {
-
+pub fn initialize(device_serial_number: &str) -> Result<Sender<BalanceBoardCommands>> {
+    let (tx, rx) = mpsc::channel(100);
+    
+    let device = connect_via_hid(device_serial_number)?;
+    
     thread::spawn(move || {
         blocking_hid_loop(device, rx)
-    })
+    });
+    
+    Ok(tx)
 }
+
+fn connect_via_hid(serial_number: &str) -> HidResult<HidDevice> {
+    let api = HidApi::new()?;
+    // The serial number of a nintendo balance board is the string version of a mac address.
+    // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
+    let balance_board_info = api
+        .device_list()
+        .find(|device| {
+            if let Some(hid_serial_number) = device.serial_number() {
+                hid_serial_number == serial_number
+            } else {
+                false
+            }
+        })
+        .ok_or(HidApiError { message: "Device with the specified device_id was not found.".to_string() })?;
+    balance_board_info.open_device(&api)
+}
+
 
 fn blocking_hid_loop(
     device: HidDevice,

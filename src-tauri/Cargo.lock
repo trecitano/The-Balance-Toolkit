@@ -280,6 +280,8 @@ dependencies = [
  "objc2 0.6.1",
  "objc2-foundation 0.3.1",
  "objc2-io-bluetooth",
+ "once_cell",
+ "rand 0.9.2",
  "rustfft",
  "serde",
  "serde_json",
