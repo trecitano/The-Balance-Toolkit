@@ -4,17 +4,18 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
 
-pub fn initialize(_: &str) -> anyhow::Result<Sender<BalanceBoardCommands>> {
+pub fn initialize(device_serial_number: &str) -> anyhow::Result<Sender<BalanceBoardCommands>> {
     let (tx, rx) = mpsc::channel(100);
 
+    let device_number_clone = device_serial_number.to_string();
     thread::spawn(move || {
-        mock_hid_loop(rx)
+        mock_hid_loop(rx, device_number_clone)
     });
 
     Ok(tx)
 }
 
-fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>) -> anyhow::Result<()> {
+fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, device_serial_number: String) -> anyhow::Result<()> {
     let mut tx_channel: Option<mpsc::Sender<BalanceBoardCalibratedReading>> = None;
     let mut update_tare = false;
 
@@ -27,6 +28,7 @@ fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>) -> an
                     BalanceBoardCommands::TurnOffLed => { /* No Action */ }
                     BalanceBoardCommands::ApplyTare => { update_tare = true; }
                     BalanceBoardCommands::StartRecording(tx) => {
+                        println!("Mock Board {} is starting the session!", device_serial_number);
                         tx_channel = Some(tx);
                     },
                     BalanceBoardCommands::FinishRecording => {
