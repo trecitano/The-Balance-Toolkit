@@ -31,8 +31,8 @@ impl ProcessingSettings {
         ProcessingSettings {
             balance_board_x_size:  446.0,
             balance_board_y_size:  238.0,
-            window_size_ms: 3000,
-            window_slide_ms: 300,
+            window_size_ms: 1000,
+            window_slide_ms: 1000,
             sampling_window_size_ms: 20,
             interpolation: InterpolationSetting::Cubic,
             analysis_configuration: AnalysisConfiguration {
@@ -92,7 +92,7 @@ fn data_process_loop(
     settings: ProcessingSettings
 ) -> Result<()> {
     println!("Data processing execution start.");
-    let mut buffer = Vec::with_capacity(200);
+    let mut buffer: Vec<CenterOfPressurePoint> = Vec::with_capacity(200);
 
     let update_rate = std::time::Duration::from_millis(100);
 
@@ -105,12 +105,13 @@ fn data_process_loop(
     let cop_calculation_y_value = settings.balance_board_y_size / 2.0;
 
     // Initialization : We need to let the window build up first
-    let mut start_time = chrono::Utc::now();
     thread::sleep(window_size);
 
     let chosen_calculations = settings.analysis_configuration;
 
     loop {
+        thread::sleep(window_slide_size);
+
         while let Ok(item) = rx.try_recv() {
             match item {
                 BalanceBoardOutput::Raw(data) => {
@@ -124,17 +125,27 @@ fn data_process_loop(
                 }
             }
         }
-
+        
         if rx.is_closed() {
             break;
         }
 
-        let end_time = chrono::Utc::now();
+        let end_time = Utc::now();
+        let start_time = end_time - window_size;
+
+        // Cleanup old raw readings
+        let idx = buffer.partition_point(|p| p.timestamp < start_time);
+        buffer.drain(0..idx);
+        
+        println!("Data processor: {:?}", &buffer.len());
+
         let points = match settings.interpolation {
             InterpolationSetting::Linear => { linear_interpolation(&buffer, start_time, end_time, &sampling_size)}
             InterpolationSetting::Cubic => { cubic_interpolation(&buffer, start_time, end_time, &sampling_size)}
             InterpolationSetting::Polynomial => { polynomial_interpolation(&buffer, start_time, end_time, &sampling_size)}
         };
+
+        println!("Data processor: {:?}", &points.len());
 
         let sway_calculation = if chosen_calculations.sway_metrics {
             calculate_basic_sway_metrics(&points)
@@ -190,15 +201,20 @@ fn data_process_loop(
 
 fn balance_board_reading_to_cop(data: BalanceBoardCalibratedReading, x_value: f32, y_value: f32)
     -> CenterOfPressurePoint {
+    let total_force = data.top_right + data.bottom_right + data.top_left + data.bottom_left;
+    if total_force.abs() < 0.1 {
+        return CenterOfPressurePoint {
+            timestamp: data.timestamp,
+            x: 0.0,
+            y: 0.0,
+        };
+    }
+
     let center_of_pressure_x =
-        x_value *
-            (data.top_right + data.bottom_right) - (data.top_left + data.bottom_left) /
-            (data.top_right + data.bottom_right + data.top_left + data.bottom_left);
+        x_value * ((data.top_right + data.bottom_right) - (data.top_left + data.bottom_left)) / total_force;
 
     let center_of_pressure_y =
-        y_value *
-            (data.top_right + data.top_left) - (data.bottom_right + data.bottom_left) /
-            (data.top_right + data.bottom_right + data.top_left + data.bottom_left);
+        y_value * ((data.top_right + data.top_left) - (data.bottom_right + data.bottom_left)) / total_force;
 
     CenterOfPressurePoint {
         timestamp: data.timestamp,
@@ -217,10 +233,6 @@ fn linear_interpolation(
     end_time: DateTime<Utc>,
     time_step: &TimeDelta,
 ) -> Vec<CenterOfPressurePoint> {
-    if points.len() < 2 {
-        return Vec::new();
-    }
-
     let mut result = Vec::new();
     let mut current_time = start_time;
 
@@ -344,6 +356,10 @@ fn find_interpolation_points(
     points: &[CenterOfPressurePoint],
     target_time: DateTime<Utc>,
 ) -> Option<(&CenterOfPressurePoint, &CenterOfPressurePoint)> {
+    if points.len() < 2 {
+        return None;
+    }
+
     for i in 0..points.len() - 1 {
         if points[i].timestamp <= target_time && points[i + 1].timestamp >= target_time {
             return Some((&points[i], &points[i + 1]));
