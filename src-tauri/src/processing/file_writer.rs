@@ -30,7 +30,7 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
     println!("File writer execution start.");
     let path = PathBuf::from(output_directory);
     let time_format = Utc::now().format("%Y-%m-%dT%H-%M-%SZ").to_string();
-    let prepared_file_name = format!("{device_name}-{time_format}");
+    let prepared_file_name = format!("{time_format}-{device_name}");
 
     // Create a file to store the session processing settings;
     if setting_mode.receive_processed {

@@ -1,5 +1,6 @@
 use std::thread;
 use chrono::Utc;
+use rand::Rng;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
@@ -18,6 +19,7 @@ pub fn initialize(device_serial_number: &str) -> anyhow::Result<Sender<BalanceBo
 fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, device_serial_number: String) -> anyhow::Result<()> {
     let mut tx_channel: Option<mpsc::Sender<BalanceBoardCalibratedReading>> = None;
     let mut update_tare = false;
+    let mut rng = rand::rng();
 
     loop {
         match hid_control_rx.try_recv() {
@@ -47,10 +49,10 @@ fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, devic
         if let Some(tx) = &tx_channel {
             let mock_reading = BalanceBoardCalibratedReading {
                 timestamp: Utc::now(),
-                top_right: 0.4,
-                bottom_right: 0.3,
-                top_left: 0.2,
-                bottom_left: 0.1,
+                top_right: rng.random_range(15.0..25.0),
+                bottom_right: rng.random_range(20.0..30.0),
+                top_left: rng.random_range(20.0..30.0),
+                bottom_left: rng.random_range(12.0..17.0),
             };
             tx.blocking_send(mock_reading)?;
             
