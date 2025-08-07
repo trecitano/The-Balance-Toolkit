@@ -1,6 +1,5 @@
 use crate::processing;
 use crate::processing::lsl_writer::LslConnectionSettings;
-use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
 use anyhow::Result;
 use chrono::Utc;
 use serde::Serialize;
@@ -18,9 +17,7 @@ pub enum BoardAction {
     Tare,
     TurnOnLed,
     TurnOffLed,
-    StartRecording {
-        settings: BalanceBoardSessionSettings
-    },
+    StartRecording(Sender<BalanceBoardCalibratedReading>),
     StopRecording
 }
 
@@ -188,9 +185,7 @@ async fn balance_board_actor_loop(mut rx: Receiver<BoardAction>, board_hid_tx: S
                     BoardAction::TurnOffLed => {
                         board_hid_tx.send(BalanceBoardCommands::TurnOffLed).await.unwrap();
                     },
-                    BoardAction::StartRecording { settings } => {
-                        let (raw_data_tx, raw_data_rx) = mpsc::channel(10);
-                        start_session(settings, raw_data_rx);
+                    BoardAction::StartRecording(raw_data_tx) => {
                         board_hid_tx.send(BalanceBoardCommands::StartRecording(raw_data_tx)).await.unwrap();
                     },
                     BoardAction::StopRecording => {
@@ -206,99 +201,5 @@ async fn balance_board_actor_loop(mut rx: Receiver<BoardAction>, board_hid_tx: S
                 break;
             }
         }
-    }
-}
-
-
-// This method steps up all of the communication channels between the different 
-// parties that are interested in receiving balance board data.
-fn start_session(settings: BalanceBoardSessionSettings,
-                 raw_data_rx: mpsc::Receiver<BalanceBoardCalibratedReading>) {
-    let mut raw_data_observers = vec!();
-    let mut processed_data_observers = vec!();
-
-    if let Some(config) = settings.output_directory {
-        let processing_settings = settings.processing_settings.clone();
-        let tx = file_writer::initialize(
-            config.value,
-            config.mode.clone(),
-            "test_device_tmp".to_string(),
-            processing_settings
-        );
-        add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
-    }
-
-    if let Some(config) = settings.lsl_connection {
-        let tx = lsl_writer::initialize(config.value);
-        add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
-    }
-
-    if let Some(config) = settings.tcp_connection_string {
-        let tx = tcp_writer::initialize(config.value);
-        add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
-    };
-    
-    if let Some(config) = settings.frontend_channel {
-        let tx = initialize_frontend_observer(config.value);
-        add_observer_to_vecs(tx, config.mode, &mut raw_data_observers, &mut processed_data_observers);
-    }
-
-    let processed_data_observers_count = processed_data_observers.len();
-    if processed_data_observers.len() > 0 {
-        let processed_data_tx = data_processor::initialize(processed_data_observers, settings.processing_settings.unwrap());
-        raw_data_observers.push(processed_data_tx);
-    }
-
-    let raw_data_observers_count = raw_data_observers.len();
-    if raw_data_observers.len() > 0 {
-        initialize_raw_data_forwarder(raw_data_rx, raw_data_observers);
-    }
-
-    println!("Session started with {} raw data listeners and {} processed data listeners",
-             processed_data_observers_count,
-             raw_data_observers_count
-    );
-}
-
-fn initialize_frontend_observer(frontend_channel: Sender<BalanceBoardOutput>) -> Sender<BalanceBoardOutput> {
-    let (tx, mut rx) = mpsc::channel(100);
-
-    tokio::spawn(async move {
-        while let Some(data) = rx.recv().await {
-            frontend_channel.send(data).await?;
-        }
-        Ok::<(), anyhow::Error>(())
-    });
-
-    tx
-}
-
-fn initialize_raw_data_forwarder(mut raw_data_rx: mpsc::Receiver<BalanceBoardCalibratedReading>,
-                                 mut observers: Vec<Sender<BalanceBoardOutput>>) {
-    tokio::spawn(async move {
-        while let Some(data) = raw_data_rx.recv().await {
-            observers.retain(|observer| {
-                match observer.try_send(BalanceBoardOutput::Raw(data.clone())) {
-                    Ok(_) => true,
-                    Err(_) => false
-                }
-            });
-
-            if observers.is_empty() {
-                break;
-            }
-        }
-    });
-}
-
-fn add_observer_to_vecs(observer: Sender<BalanceBoardOutput>,
-                        setting_mode: SettingMode,
-                        raw_data_observers: &mut Vec<Sender<BalanceBoardOutput>>,
-                        processed_data_observers: &mut Vec<Sender<BalanceBoardOutput>>) {
-    if setting_mode.receive_raw {
-        raw_data_observers.push(observer.clone());
-    }
-    if setting_mode.receive_processed {
-        processed_data_observers.push(observer);
     }
 }

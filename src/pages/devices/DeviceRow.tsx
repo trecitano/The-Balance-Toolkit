@@ -49,7 +49,7 @@ export default function DeviceRow({
   return (
     <div className="device-row">
       <div className={`device-container${device.isConnected ? " " : "disconnected"}`}>
-        <button onClick={() => handleRemoveDevice(device.macAddress)} className="remove-device-btn">
+        <button onClick={() => handleRemoveDevice(device.id)} className="remove-device-btn">
           ✕
         </button>
 

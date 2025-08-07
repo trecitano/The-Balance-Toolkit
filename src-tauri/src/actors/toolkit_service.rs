@@ -1,12 +1,14 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
-use crate::actors::balance_board_actor::{BalanceBoardSessionSettings, BoardAction};
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, BalanceBoardSessionSettings, BoardAction, SettingMode};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothHandler};
 use crate::file_system::DeviceFileSystem;
 use crate::types::{MacAddress, NintendoDevice};
 use anyhow::Result;
+use tokio::sync::mpsc::Sender;
 use crate::actors::balance_board_actor;
+use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
 
 // Commands that can be sent to the ConnectionManager
 #[derive(Debug)]
@@ -106,11 +108,7 @@ impl ConnectionManager {
 
                 ToolkitCommand::StartSession { settings } => {
                     println!("Sending start recording command to boards: {:?}", self.selected_boards);
-                    for board in &self.selected_boards {
-                        let connection = &self.connections.get(board).unwrap();
-                        let command = { BoardAction::StartRecording { settings: settings.clone() } };
-                        connection.send(command).await?
-                    }
+                    start_session(settings, &self.selected_boards, &self.connections).await;
                 },
                 ToolkitCommand::StopSession => {
                     for board in &self.selected_boards {
@@ -179,7 +177,7 @@ impl ConnectionManager {
         println!("Connecting to device: {}", device_id);
         let serial_number = convert_mac_address_to_string(mac_address);
         let board_connection = balance_board_actor::initialize(&serial_number)?;
-        
+
         self.connections.insert(device_id.to_string(), board_connection);
         // TODO
         //self.tx.send(ToolkitResponse::NewDeviceFound())
@@ -234,6 +232,195 @@ impl ConnectionManager {
         if let Err(e) = board.send(action).await {
             eprintln!("Failed to forward action to device {}: {}", device_id, e);
         }
+    }
+}
+
+
+// In a session, we have 2 producers:
+//   - HID board - raw data
+//   - Data processor - Processed data
+// and 5 consumers:
+//   - Data processor
+//   - File writer
+//   - LSL writer
+//   - TCP writer
+//   - Frontend observer
+// Additionally, the number of observers and producers can vary based on the number of balance boards:
+//   - HID Board - 1 thread per board
+//   - Data processor - 1 thread per board
+//   - File writer - 1 task per board
+//   - LSL writer - 1 thread total
+//   - TCP writer - 1 task total
+//   - Frontend observer - 1 task total
+//
+// Each of the different consumers may be interested in receiving
+// either or both the raw and processed data. (The Data Processor can only receive raw data).
+// As such, we must keep track of who is interested in what, and in the end, create the correct channel
+// connections.
+#[derive(Clone, Debug)]
+enum ObserverType {
+    DataProcessor,
+    FrontendObserver,
+    FileWriter,
+    TcpWriter,
+    LslWriter,
+}
+struct SessionMapping {
+    device_id: String,
+    observers_raw: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
+    observers_processed: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
+}
+async fn start_session(settings: BalanceBoardSessionSettings,
+                       selected_boards: &HashSet<String>,
+                       hid_board_rx_map: &HashMap<String, mpsc::Sender<BoardAction>>) {
+    let mut observer_list: Vec<SessionMapping> = vec!();
+    for board_id in selected_boards {   
+        observer_list.push(SessionMapping {
+            device_id: board_id.clone(),
+            observers_raw: vec!(),
+            observers_processed: vec!(),
+        })
+    }
+
+    // N file writers (one per board)
+    if let Some(config) = settings.output_directory {
+        let processing_settings = settings.processing_settings.clone();
+        let config_mode = config.mode;
+
+        for mut session_mapping in observer_list.iter_mut() {
+            let output_directory = &config.value;
+            let tx = file_writer::initialize(
+                output_directory.clone(),
+                config_mode.clone(),
+                session_mapping.device_id.clone(),
+                processing_settings.clone()
+            );
+
+            add_observer_to_device_list(tx, ObserverType::FileWriter, &config_mode, &mut session_mapping);
+        }
+    }
+
+    // 1 LSL Writer
+    if let Some(config) = settings.lsl_connection {
+        let tx = lsl_writer::initialize(config.value);
+        for mut session_mapping in observer_list.iter_mut() {
+            add_observer_to_device_list(tx.clone(), ObserverType::LslWriter, &config.mode, &mut session_mapping);
+        }
+    }
+
+    // 1 TCP Writer
+    if let Some(config) = settings.tcp_connection_string {
+        let tx = tcp_writer::initialize(config.value);
+        for mut session_mapping in observer_list.iter_mut() {
+            add_observer_to_device_list(tx.clone(), ObserverType::TcpWriter, &config.mode, &mut session_mapping);
+        }
+    };
+
+    // 1 Frontend Observer
+    if let Some(config) = settings.frontend_channel {
+        let tx = initialize_frontend_observer(config.value);
+        for mut session_mapping in observer_list.iter_mut() {
+            add_observer_to_device_list(tx.clone(), ObserverType::FrontendObserver, &config.mode, &mut session_mapping);
+        }
+    }
+
+    // N Data Processors (one per board)
+    for device_mapping in observer_list.iter_mut() {
+        let observers: Vec<Sender<BalanceBoardOutput>> = device_mapping.observers_processed.iter()
+            .map(|(_, sender)| sender.clone())
+            .collect();
+
+        if observers.len() > 0 {
+            let tx = data_processor::initialize(observers, settings.processing_settings.clone().unwrap());
+            device_mapping.observers_raw.push( (ObserverType::DataProcessor, tx));
+        }
+    }
+
+    for device_mapping in &observer_list {
+        let observers: Vec<Sender<BalanceBoardOutput>> = device_mapping.observers_raw.iter()
+            .map(|(_, sender)| sender.clone())
+            .collect();
+
+        if observers.len() > 0 {
+            let (raw_data_tx, raw_data_rx) = mpsc::channel(10);
+            let command = BoardAction::StartRecording(raw_data_tx);
+            match hid_board_rx_map.get(&device_mapping.device_id) {
+                Some(sender) => sender.send(command).await.unwrap(),
+                None => ()
+            }
+            initialize_raw_data_forwarder(raw_data_rx, observers);
+        }
+    }
+
+    println!("Session Debug Information:");
+    for device_mapping in observer_list {
+        println!(">> Board ID: {}", device_mapping.device_id);
+        println!("  Raw data observers: ");
+        for (observer_type, _) in &device_mapping.observers_raw {
+            print!("{:?} ", observer_type)
+        }
+        println!("");
+        println!("  Processed data observers: ");
+        for (observer_type, _) in &device_mapping.observers_processed {
+            print!("{:?} ", observer_type)
+        }
+        println!("");
+    }
+}
+
+fn initialize_frontend_observer(frontend_channel: Sender<BalanceBoardOutput>) -> Sender<BalanceBoardOutput> {
+    let (tx, mut rx) = mpsc::channel(100);
+
+    tokio::spawn(async move {
+        while let Some(data) = rx.recv().await {
+            frontend_channel.send(data).await?;
+        }
+        Ok::<(), anyhow::Error>(())
+    });
+
+    tx
+}
+
+fn initialize_raw_data_forwarder(mut raw_data_rx: mpsc::Receiver<BalanceBoardCalibratedReading>,
+                                 mut observers: Vec<Sender<BalanceBoardOutput>>) {
+    tokio::spawn(async move {
+        while let Some(data) = raw_data_rx.recv().await {
+            observers.retain(|observer| {
+                match observer.try_send(BalanceBoardOutput::Raw(data.clone())) {
+                    Ok(_) => true,
+                    Err(_) => false
+                }
+            });
+
+            if observers.is_empty() {
+                break;
+            }
+        }
+    });
+}
+
+fn add_observer_to_device_list(observer: Sender<BalanceBoardOutput>,
+                               observer_type: ObserverType,
+                               setting_mode: &SettingMode,
+                               session_mapping: &mut SessionMapping) {
+    if setting_mode.receive_raw {
+        session_mapping.observers_raw.push((observer_type.clone(), observer.clone()) );
+    }
+    if setting_mode.receive_processed {
+        session_mapping.observers_processed.push( (observer_type.clone(), observer.clone()) );
+    }
+}
+
+
+fn add_observer_to_vecs(observer: Sender<BalanceBoardOutput>,
+                        setting_mode: &SettingMode,
+                        raw_data_observers: &mut Vec<Sender<BalanceBoardOutput>>,
+                        processed_data_observers: &mut Vec<Sender<BalanceBoardOutput>>) {
+    if setting_mode.receive_raw {
+        raw_data_observers.push(observer.clone());
+    }
+    if setting_mode.receive_processed {
+        processed_data_observers.push(observer);
     }
 }
 

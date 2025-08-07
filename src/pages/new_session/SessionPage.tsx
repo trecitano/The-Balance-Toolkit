@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 import { useSessionStream } from "@/hooks/useSessionStream";
 import BoardPanel from "./BoardPanel";
 import { SessionPanel } from "./SessionPanel.tsx";
+import {Channel} from "@tauri-apps/api/core";
+import {ProcessedBoardData} from "@/types.ts";
+import {commands} from "@/utils/requests.ts";
 
 // For demo, pick two board IDs you expect to receive.
 const LEFT_ID = "andreia-board";
@@ -9,6 +12,22 @@ const RIGHT_ID = "nidhi-board";
 
 export default function SessionPage() {
   const [playing, setPlaying] = useState(false);
+
+  const sessionWebSocket = useRef<Channel<ProcessedBoardData | null>>(null);
+
+  const handleRecord = async (newSession: boolean) => {
+    if (newSession) {
+      const sessionChannel = new Channel<ProcessedBoardData>();
+      sessionChannel.onmessage = (message) => {
+        console.log('got download event', message);
+      };
+      sessionWebSocket.current = sessionChannel;
+      await commands.session.startSession(sessionChannel);
+    } else {
+      await commands.session.stopSession();
+      sessionWebSocket.current = null;
+    }
+  };
 
   useSessionStream(playing);
 
@@ -34,7 +53,8 @@ export default function SessionPage() {
           boardIds: ["andreia"], // pick one or more to start
           // userId: "u1", lsl: false, tcp: false, saveDir: null, recording: false
         }}
-        onRecordToggle={(recording, state) => {
+        onRecordToggle={ async (recording, state) => {
+          await handleRecord(recording)
           console.log("recording:", recording, state);
           // state.boardIds is string[]
         }}
