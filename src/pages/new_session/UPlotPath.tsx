@@ -6,15 +6,15 @@ type PathProps = {
   height?: number;
   points: { x: number[]; y: number[] };
   yRange?: [number, number]; // default [-1,1]
-  showGuides?: boolean;      // draw center crosshair
+  showGuides?: boolean; // draw center crosshair
 };
 
 export function UPlotPath({
-                            height = 160,
-                            points,
-                            yRange = [-1, 1],
-                            showGuides = true,
-                          }: PathProps) {
+  height = 160,
+  points,
+  yRange = [-1, 1],
+  showGuides = true,
+}: PathProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
 
@@ -62,46 +62,42 @@ export function UPlotPath({
       ],
       hooks: showGuides
         ? {
-          draw: [
-            (u) => {
-              const { ctx } = u;
-              // Center crosshair (x mid of plotting area, y=0)
-              const y0 = u.valToPos(0, "y", true);
-              const xMid = Math.round((u.bbox.left + u.bbox.left + u.bbox.width) / 2);
+            draw: [
+              (u) => {
+                const { ctx } = u;
+                // Center crosshair (x mid of plotting area, y=0)
+                const y0 = u.valToPos(0, "y", true);
+                const xMid = Math.round((u.bbox.left + u.bbox.left + u.bbox.width) / 2);
 
-              ctx.save();
-              ctx.strokeStyle = "rgba(0,0,0,0.25)";
-              ctx.lineWidth = 1;
+                ctx.save();
+                ctx.strokeStyle = "rgba(0,0,0,0.25)";
+                ctx.lineWidth = 1;
 
-              // vertical center line
-              ctx.beginPath();
-              ctx.moveTo(xMid, u.bbox.top);
-              ctx.lineTo(xMid, u.bbox.top + u.bbox.height);
-              ctx.stroke();
+                // vertical center line
+                ctx.beginPath();
+                ctx.moveTo(xMid, u.bbox.top);
+                ctx.lineTo(xMid, u.bbox.top + u.bbox.height);
+                ctx.stroke();
 
-              // horizontal zero line
-              ctx.beginPath();
-              ctx.moveTo(u.bbox.left, y0);
-              ctx.lineTo(u.bbox.left + u.bbox.width, y0);
-              ctx.stroke();
+                // horizontal zero line
+                ctx.beginPath();
+                ctx.moveTo(u.bbox.left, y0);
+                ctx.lineTo(u.bbox.left + u.bbox.width, y0);
+                ctx.stroke();
 
-              // Front/Back labels
-              ctx.fillStyle = "rgba(17,24,39,0.9)";
-              ctx.font = "12px system-ui, sans-serif";
-              ctx.textBaseline = "top";
-              ctx.textAlign = "left";
-              ctx.fillText("Front", u.bbox.left + 4, u.bbox.top + 4);
-              ctx.textBaseline = "bottom";
-              ctx.fillText(
-                "Back",
-                u.bbox.left + 4,
-                u.bbox.top + u.bbox.height - 4
-              );
+                // Front/Back labels
+                ctx.fillStyle = "rgba(17,24,39,0.9)";
+                ctx.font = "12px system-ui, sans-serif";
+                ctx.textBaseline = "top";
+                ctx.textAlign = "left";
+                ctx.fillText("Front", u.bbox.left + 4, u.bbox.top + 4);
+                ctx.textBaseline = "bottom";
+                ctx.fillText("Back", u.bbox.left + 4, u.bbox.top + u.bbox.height - 4);
 
-              ctx.restore();
-            },
-          ],
-        }
+                ctx.restore();
+              },
+            ],
+          }
         : undefined,
     };
 

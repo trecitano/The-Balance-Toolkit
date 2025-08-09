@@ -21,7 +21,7 @@ export const DevicesQuery = {
     return { devices, selectedDeviceIds, isScanning };
   },
   staleTime: 10000,
-}
+};
 
 export default function Devices() {
   const [showIdentifyPopup, setShowIdentifyPopup] = useState(false);
@@ -146,7 +146,11 @@ export default function Devices() {
     return [...connected, ...disconnected];
   };
 
-  const { devices, selectedDeviceIds, isScanning } = data ?? { devices: [], selectedDeviceIds: [], isScanning: false};
+  const { devices, selectedDeviceIds, isScanning } = data ?? {
+    devices: [],
+    selectedDeviceIds: [],
+    isScanning: false,
+  };
 
   const sortedDevices = sortDevices(devices);
   const noDevices = sortedDevices.length === 0;
@@ -188,7 +192,9 @@ export default function Devices() {
               handleSaveDeviceName={handleSaveDeviceName}
               handleRemoveDevice={(deviceId) => removeDeviceMutation.mutate(deviceId)}
               handleDisconnectDevice={(deviceId) => disconnectDeviceMutation.mutate(deviceId)}
-              handleSelectDeviceForSession={(deviceId) => selectDeviceForSessionMutation.mutate(deviceId)}
+              handleSelectDeviceForSession={(deviceId) =>
+                selectDeviceForSessionMutation.mutate(deviceId)
+              }
             />
           ))}
         </div>

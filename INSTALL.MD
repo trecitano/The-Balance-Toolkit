@@ -1,4 +1,5 @@
 ## System Requirements
+
 The app works in Windows, MacOS and Unix distros.
 
 The project is using:
@@ -15,7 +16,6 @@ Later versions of these tools should work.
 - Windows 10/11
 - PowerShell or Command Prompt with administrator privileges
 
-
 2. Install Microsoft Visual Studio C++ Build Tools:
    - Download from: https://visualstudio.microsoft.com/visual-cpp-build-tools/
    - Install "Desktop development with C++"
@@ -27,9 +27,10 @@ Later versions of these tools should work.
 ### MacOS Base Requirements
 
 - macOS 10.15 or later
-- [Homebrew](https://brew.sh/) 
+- [Homebrew](https://brew.sh/)
 - Ensure Xcode Command Line Tools are installed:
   - Open Terminal and run:
+
 ```bash
 xcode-select --install
 ```
@@ -39,25 +40,31 @@ xcode-select --install
 - TODO!
 
 ### Bun
+
 Bun is necessary for everything frontend related.
 
 [Bun Installation guide](https://bun.com/)
 
 ### Rust
+
 Rust is necessary for everything backend related.
 
 [Rust Installation guide (rustup)](https://rustup.rs/)
 
 ### Cmake
+
 We need Cmake due to add support for the Lab Streaming Layer.
 The [dependency](https://github.com/labstreaminglayer/liblsl-rust) we use for this feature requires cmake.
 
 Windows:
+
 - [Windows Cmake installation guide](https://cmake.org/download/)
 
 MacOS:
+
 - Open the terminal and run:
-```bash 
+
+```bash
 brew install cmake
 ```
 
@@ -82,9 +89,11 @@ cmake --version
 Initial setup:
 
 install the frontend dependencies with:
+
 ```bash
 bun install
 ```
+
 This is only required the first time. After this, it is possible to run the scripts that exist in the `package.json` file.
 
 Development mode:

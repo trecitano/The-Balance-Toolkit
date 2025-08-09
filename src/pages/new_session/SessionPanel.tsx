@@ -10,22 +10,19 @@ export type SessionPanelValue = {
 };
 
 export function SessionPanel({
-                               boards,
-                               users,
-                               value,
-                               onChange,
-                               onRecordToggle,
-                             }: {
+  boards,
+  users,
+  value,
+  onChange,
+  onRecordToggle,
+}: {
   boards: string[];
   users: string;
   value: SessionPanelValue;
   onChange: (v: SessionPanelValue) => void;
   onRecordToggle?: (recording: boolean, state: SessionPanelValue) => void;
 }) {
-  const update = <K extends keyof SessionPanelValue>(
-    key: K,
-    val: SessionPanelValue[K]
-  ) => {
+  const update = <K extends keyof SessionPanelValue>(key: K, val: SessionPanelValue[K]) => {
     const next = { ...value, [key]: val };
     onChange(next);
   };
@@ -63,9 +60,7 @@ export function SessionPanel({
           type="button"
           onClick={toggleRecording}
           className={`flex items-center w-35 gap-2 rounded-full px-4 py-2.5 text-white shadow transition ${
-            value.recording
-              ? "bg-red-700 hover:bg-red-800"
-              : "bg-red-600 hover:bg-red-700"
+            value.recording ? "bg-red-700 hover:bg-red-800" : "bg-red-600 hover:bg-red-700"
           }`}
         >
           <span
@@ -73,9 +68,7 @@ export function SessionPanel({
               value.recording ? "animate-pulse" : ""
             }`}
           />
-          <span className="font-medium">
-            {value.recording ? "Recording…" : "Record"}
-          </span>
+          <span className="font-medium">{value.recording ? "Recording…" : "Record"}</span>
         </button>
 
         {/* Controls grid */}
@@ -93,9 +86,7 @@ export function SessionPanel({
 
           {/* User (single select) */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-700">
-              User
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">User</label>
             <select
               className={selectCls}
               value={value.userId ?? ""}
@@ -111,9 +102,7 @@ export function SessionPanel({
 
           {/* LSL */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-700">
-              LSL
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">LSL</label>
             <label className={shellCls}>
               <input
                 type="checkbox"
@@ -127,9 +116,7 @@ export function SessionPanel({
 
           {/* TCP */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-700">
-              TCP
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">TCP</label>
             <label className={shellCls}>
               <input
                 type="checkbox"
@@ -143,9 +130,7 @@ export function SessionPanel({
 
           {/* Save Location */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-gray-700">
-              Save Location
-            </label>
+            <label className="mb-1 block text-xs font-semibold text-gray-700">Save Location</label>
             <div className="flex h-10 items-center gap-2">
               <button
                 type="button"

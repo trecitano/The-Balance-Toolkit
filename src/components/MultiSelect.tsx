@@ -7,15 +7,15 @@ export type CheckboxOption = {
 };
 
 export function MultiSelect({
-                                      label,
-                                      options,
-                                      value,
-                                      onChange,
-                                      placeholder = "None selected",
-                                      className = "",
-                                      disabled = false,
-                                      maxHeight = 260,
-                                    }: {
+  label,
+  options,
+  value,
+  onChange,
+  placeholder = "None selected",
+  className = "",
+  disabled = false,
+  maxHeight = 260,
+}: {
   label?: string;
   options: CheckboxOption[];
   value: string[];
@@ -49,9 +49,7 @@ export function MultiSelect({
     setOpen(false);
   };
 
-  const onTriggerKeyDown: React.KeyboardEventHandler<HTMLButtonElement> = (
-    e
-  ) => {
+  const onTriggerKeyDown: React.KeyboardEventHandler<HTMLButtonElement> = (e) => {
     if (disabled) return;
     if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -94,9 +92,7 @@ export function MultiSelect({
   return (
     <div ref={rootRef} className={className} onBlur={handleBlur} tabIndex={-1}>
       {label ? (
-        <label className="mb-1 block text-xs font-semibold text-gray-700">
-          {label}
-        </label>
+        <label className="mb-1 block text-xs font-semibold text-gray-700">{label}</label>
       ) : null}
 
       {/* Relative wrapper so popup is absolutely positioned and doesn't shift layout */}
@@ -125,11 +121,7 @@ export function MultiSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
         >
-          <span
-            className={`truncate ${
-              selectedLabels.length ? "text-gray-900" : "text-gray-500"
-            }`}
-          >
+          <span className={`truncate ${selectedLabels.length ? "text-gray-900" : "text-gray-500"}`}>
             {display}
           </span>
           <svg
@@ -156,10 +148,7 @@ export function MultiSelect({
             className="absolute left-0 top-full z-40 mt-1 w-full overflow-hidden rounded-md border border-gray-300 bg-white shadow-lg focus:outline-none"
             aria-multiselectable="true"
           >
-            <div
-              className="max-h-[260px] overflow-auto py-1"
-              style={{ maxHeight }}
-            >
+            <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>
               {options.map((opt, idx) => {
                 const checked = value.includes(opt.value);
                 const active = idx === activeIdx;

@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
-import {ActivityConfig, getDefaultBlocksByTitle} from "@/config/activities.config.ts";
-
+import { ActivityConfig, getDefaultBlocksByTitle } from "@/config/activities.config.ts";
 
 /**
  * ActivityCard component displays an activity with its details
@@ -17,7 +16,6 @@ interface ActivityCardProps {
   index?: number;
 }
 
-
 const ActivityCard: React.FC<ActivityCardProps> = ({
   activity,
   maximized = false,
@@ -29,12 +27,12 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   const [isHovering, setIsHovering] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const imageIndexRef = useRef<number>(0);
-  
+
   // Timeline and actions state
   const [currentActionLabel, setCurrentActionLabel] = useState<string | null>(null);
   const [timelineBlocks, setTimelineBlocks] = useState(() => getDefaultBlocks(activity));
   const defaultBlocksRef = useRef(getDefaultBlocks(activity));
-  
+
   // UI state
   const [maxStyle, setMaxStyle] = useState<React.CSSProperties | undefined>();
   const [showMaximizedClass, setShowMaximizedClass] = useState(false);
@@ -43,8 +41,6 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   const [newActionDuration, setNewActionDuration] = useState(10);
   const cardRef = useRef<HTMLDivElement>(null);
 
-
-  
   /**
    * Loads the appropriate image based on the current action label
    * Uses action-specific images when available, otherwise falls back to static image
@@ -58,15 +54,20 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         return;
       }
     }
-    
+
     // Otherwise, fall back to sequence images or static image
     if (activity.sequenceImages && activity.sequenceImages.length > 0) {
       setCurrentImageSrc(activity.sequenceImages[0]);
     } else {
       setCurrentImageSrc(activity.staticImage);
     }
-  }, [activity.staticImage, activity.sequenceImages, activity.title, activity.id, currentActionLabel]);
-
+  }, [
+    activity.staticImage,
+    activity.sequenceImages,
+    activity.title,
+    activity.id,
+    currentActionLabel,
+  ]);
 
   /**
    * Handles animation when hovering over the activity card
@@ -77,27 +78,28 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     if (isHovering && !maximized) {
       // If we have a current action selected and the activity has a name, get action-specific images
       let animationImages: string[] = [];
-      
+
       if (currentActionLabel && activity.id) {
         // This will now include both action-specific and general sequence images
         animationImages = activity.sequenceImages;
       }
-      
+
       // If no action-specific images found or no action selected, fall back to default sequence
       if (animationImages.length === 0) {
         const hasSequence = activity.sequenceImages && activity.sequenceImages.length > 0;
-        animationImages = hasSequence && activity.sequenceImages ? 
-          activity.sequenceImages : 
-          (activity.hoverImages || []);
+        animationImages =
+          hasSequence && activity.sequenceImages
+            ? activity.sequenceImages
+            : activity.hoverImages || [];
       }
-      
+
       // Now use the determined images for animation
       if (animationImages && animationImages.length > 0) {
         // Start directly with the second image when hovering (if available)
         let startIndex = animationImages.length > 1 ? 1 : 0;
         imageIndexRef.current = startIndex;
         setCurrentImageSrc(animationImages[imageIndexRef.current]);
-        
+
         if (animationImages.length > 1) {
           // Use a consistent animation speed of 700ms for sequences
           const animationSpeed = 700;
@@ -113,7 +115,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      
+
       if (!isHovering) {
         // If we have a current action selected, try to get its specific image
         if (currentActionLabel && activity.id) {
@@ -123,19 +125,26 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
             return;
           }
         }
-        
+
         // Otherwise fall back to static image
         setCurrentImageSrc(activity.staticImage);
       }
     }
-    
+
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isHovering, activity.hoverImages, activity.sequenceImages, activity.staticImage, activity.id, currentActionLabel, maximized]);
-
+  }, [
+    isHovering,
+    activity.hoverImages,
+    activity.sequenceImages,
+    activity.staticImage,
+    activity.id,
+    currentActionLabel,
+    maximized,
+  ]);
 
   /**
    * Handles animation and positioning when the card is maximized
@@ -150,13 +159,13 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       }
       setCurrentImageSrc(activity.staticImage);
     }
-    
+
     if (maximized && cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
       const parentRect = cardRef.current.parentElement?.getBoundingClientRect();
       if (parentRect) {
         setShowMaximizedClass(false);
-        
+
         const initialLeft = rect.left - parentRect.left;
         const initialTop = rect.top - parentRect.top;
         setMaxStyle({
@@ -187,8 +196,6 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     }
   }, [maximized, activity.staticImage]);
 
-
-  
   /**
    * Handler for the start button click
    */
@@ -225,7 +232,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     const newBlock = {
       id: Date.now(),
       title: newActionName,
-      label: newActionName.toLowerCase().replace(/\s+/g, '-'),
+      label: newActionName.toLowerCase().replace(/\s+/g, "-"),
       start: lastEnd,
       duration: Math.max(1, Number(newActionDuration) || 10),
     };
@@ -243,8 +250,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     setNewActionName("");
     setNewActionDuration(10);
   };
-  
-  
+
   return (
     <div
       ref={cardRef}
@@ -264,14 +270,20 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       )}
       <div className="activity-details" style={{ marginLeft: 0 }}>
         {/* Board tag above the title */}
-        <div className="activity-board-tag" style={{ 
-          backgroundColor: activity.boardsRequired > 1 ? 'var(--primary-light, #e0e7ff)' : 'var(--bg-light)',
-          position: maximized ? 'absolute' : 'relative',
-          top: maximized ? '1vw' : 'auto',
-          right: maximized ? '1vw' : 'auto'
-        }}>
+        <div
+          className="activity-board-tag"
+          style={{
+            backgroundColor:
+              activity.boardsRequired > 1 ? "var(--primary-light, #e0e7ff)" : "var(--bg-light)",
+            position: maximized ? "absolute" : "relative",
+            top: maximized ? "1vw" : "auto",
+            right: maximized ? "1vw" : "auto",
+          }}
+        >
           <img src={wbbIcon} alt="Balance Board" className="board-icon" />
-          <span>{activity.boardsRequired} {activity.boardsRequired === 1 ? 'board' : 'boards'}</span>
+          <span>
+            {activity.boardsRequired} {activity.boardsRequired === 1 ? "board" : "boards"}
+          </span>
         </div>
         {/* Always show the title in the same place, but use header style if maximized */}
         {maximized ? (
@@ -282,14 +294,11 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
           <h3 className="activity-title">{activity.title}</h3>
         )}
         {maximized && (
-          <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
+          <div style={{ display: "flex", flexDirection: "column", minHeight: 0, flex: 1 }}>
             {/* Add Action Row */}
             <div className="add-action-row">
               {!showAddForm ? (
-                <button
-                  className="add-action-btn"
-                  onClick={() => setShowAddForm(true)}
-                >
+                <button className="add-action-btn" onClick={() => setShowAddForm(true)}>
                   + Add Action
                 </button>
               ) : (
@@ -298,7 +307,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
                     type="text"
                     placeholder="Action name"
                     value={newActionName}
-                    onChange={e => setNewActionName(e.target.value)}
+                    onChange={(e) => setNewActionName(e.target.value)}
                     className="add-action-input"
                   />
                   <input
@@ -306,11 +315,19 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
                     min={1}
                     placeholder="Duration"
                     value={newActionDuration}
-                    onChange={e => setNewActionDuration(Number(e.target.value))}
+                    onChange={(e) => setNewActionDuration(Number(e.target.value))}
                     className="add-action-input add-action-duration"
                     style={{ width: 50, marginRight: 4 }}
                   />
-                  <span style={{ fontSize: "0.9em", color: "var(--primary-dark, #3730a3)", marginRight: 8 }}>s</span>
+                  <span
+                    style={{
+                      fontSize: "0.9em",
+                      color: "var(--primary-dark, #3730a3)",
+                      marginRight: 8,
+                    }}
+                  >
+                    s
+                  </span>
                   <button
                     className="add-action-btn"
                     onClick={handleAddAction}
@@ -318,16 +335,21 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
                   >
                     Add
                   </button>
-                  <button
-                    className="add-action-btn add-action-cancel"
-                    onClick={handleCancelAdd}
-                  >
+                  <button className="add-action-btn add-action-cancel" onClick={handleCancelAdd}>
                     Cancel
                   </button>
                 </>
               )}
             </div>
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "auto",
+              }}
+            >
               <ActivityTimeline
                 blocks={timelineBlocks}
                 onChange={setTimelineBlocks}
@@ -359,7 +381,16 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
             </div>
           </div>
         )}
-        <div className="activity-footer" style={{ display: 'flex', flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
+        <div
+          className="activity-footer"
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: 8,
+            alignItems: "center",
+            justifyContent: "flex-end",
+          }}
+        >
           {!maximized ? (
             <button className="activity-start-btn" onClick={handleStartClick}>
               Start
@@ -368,19 +399,29 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
             <>
               <button
                 className="add-action-btn"
-                style={{ background: 'var(--primary)', color: 'var(--white)' }}
-                onClick={() => {/* Save logic placeholder */}}
+                style={{ background: "var(--primary)", color: "var(--white)" }}
+                onClick={() => {
+                  /* Save logic placeholder */
+                }}
               >
                 Save
               </button>
               <button
                 className="add-action-btn add-action-cancel"
-                style={{ background: 'var(--bg-light)', color: 'var(--text-dark)', border: '1px solid var(--border)' }}
+                style={{
+                  background: "var(--bg-light)",
+                  color: "var(--text-dark)",
+                  border: "1px solid var(--border)",
+                }}
                 onClick={() => setTimelineBlocks(defaultBlocksRef.current)}
               >
                 Reset to Default
               </button>
-              <button className="activity-start-btn" onClick={onMinimize} style={{ background: '#e5e7eb', color: '#374151' }}>
+              <button
+                className="activity-start-btn"
+                onClick={onMinimize}
+                style={{ background: "#e5e7eb", color: "#374151" }}
+              >
                 Close
               </button>
             </>
@@ -390,6 +431,5 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     </div>
   );
 };
-
 
 export default ActivityCard;

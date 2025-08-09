@@ -31,6 +31,9 @@ pub enum ToolkitCommand {
         device_id: String,
     },
 
+    SelectUser {
+        user_name: String,
+    },
     GetSelectedUser {
         response: oneshot::Sender<String>
     },
@@ -67,7 +70,7 @@ pub struct ConnectionManager {
     tx: mpsc::Sender<ToolkitResponse>,
     bluetooth_manager_tx: mpsc::Sender<BluetoothCommand>,
 
-    selected_user: User,
+    selected_user: String,
     session_settings: SessionSettings,
     connections: HashMap<String, mpsc::Sender<BoardAction>>,
     selected_boards: HashSet<String>,
@@ -76,7 +79,7 @@ pub struct ConnectionManager {
 
 impl ConnectionManager {
     pub fn new(rx: mpsc::Receiver<ToolkitCommand>, tx: mpsc::Sender<ToolkitResponse>) -> Result<Self> {
-        let selected_user = UserFileSystem::get_or_create_default_user()?;
+        let selected_user = UserFileSystem::get_or_create_default_user()?.name;
         let session_settings = SessionFileSystem::get_or_create_default_session_settings()?;
 
         Ok(Self {
@@ -113,9 +116,11 @@ impl ConnectionManager {
                     self.identify_board(device_id);
                 }
 
-
+                ToolkitCommand::SelectUser { user_name } => {
+                    self.selected_user = user_name;
+                }
                 ToolkitCommand::GetSelectedUser { response } => {
-                    response.send(self.selected_user.name.clone()).unwrap();
+                    response.send(self.selected_user.clone()).unwrap();
                 }
                 ToolkitCommand::SelectBoardForSession { device_id } => {
                     self.selected_boards.insert(device_id);
@@ -129,7 +134,7 @@ impl ConnectionManager {
 
                 ToolkitCommand::SessionInformation { response } => {
                     let session_information = SessionInformation {
-                        selected_user: self.selected_user.name.clone(),
+                        selected_user: self.selected_user.clone(),
                         available_users: UserFileSystem::get_users()?.into_iter().map(|user| user.name).collect(),
                         selected_boards: self.selected_boards.iter().cloned().collect(),
                         enabled_lsl: self.session_settings.lsl_connection.is_some(),

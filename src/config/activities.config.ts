@@ -1,6 +1,6 @@
 /**
  * Configuration file for balance assessment activities
- * 
+ *
  * This file defines all the available activities and their default action blocks.
  * Each activity has a unique key, title, description, and a sequence of action blocks
  * that define the protocol for performing the activity.
@@ -44,11 +44,11 @@ import sessionIcon from "@/assets/session-icon.svg";
  */
 export interface ActionBlock {
   id: number;
-  title: string;   // Human-readable title (e.g., "Step onto board")
-  label: string;   // Machine-readable identifier (e.g., "step-onto-board")
-  start: number;   // Start time in seconds
+  title: string; // Human-readable title (e.g., "Step onto board")
+  label: string; // Machine-readable identifier (e.g., "step-onto-board")
+  start: number; // Start time in seconds
   duration: number; // Duration in seconds
-  image?: string;  // Path to the image for the action block
+  image?: string; // Path to the image for the action block
 }
 
 /**
@@ -56,18 +56,18 @@ export interface ActionBlock {
  */
 export interface ActivityConfig {
   id: string;
-  title: string;             // Display name of the activity
-  staticImage: string;       // A SVG file
-  sequenceImages: string[];  // Multiple SVG files
+  title: string; // Display name of the activity
+  staticImage: string; // A SVG file
+  sequenceImages: string[]; // Multiple SVG files
   hoverImages: string[];
   defaultBlocks: ActionBlock[]; // Sequence of action blocks for this activity
-  boardsRequired: number;   // Number of balance boards needed (default: 1)
-  description?: string;      // Brief description of the activity purpose
+  boardsRequired: number; // Number of balance boards needed (default: 1)
+  description?: string; // Brief description of the activity purpose
 }
 
 /**
  * Registry of all available assessment activities
- * 
+ *
  * Keys should be kebab-case and match the folder names in the assets structure
  */
 const activitiesConfig: ActivityConfig[] = [
@@ -87,7 +87,7 @@ const activitiesConfig: ActivityConfig[] = [
       { id: 4, title: "Stand - Eyes Closed", label: "stand-eyes-closed", start: 30, duration: 20 },
     ],
   },
-  
+
   // Timed Up and Go assessment
   {
     id: "tug",
@@ -122,7 +122,7 @@ const activitiesConfig: ActivityConfig[] = [
       { id: 3, title: "Stand on One Leg", label: "stand-on-one-leg", start: 10, duration: 20 },
     ],
   },
-  
+
   // Tandem stance assessment
   {
     id: "tandem-stance",
@@ -136,10 +136,16 @@ const activitiesConfig: ActivityConfig[] = [
       { id: 1, title: "Tare", label: "tare", start: 0, duration: 5 },
       { id: 2, title: "Step onto board", label: "step-onto-board", start: 5, duration: 5 },
       { id: 3, title: "Tandem Stand", label: "tandem-stand", start: 10, duration: 20 },
-      { id: 4, title: "Return to Normal Stance", label: "return-to-normal-stance", start: 30, duration: 5 },
+      {
+        id: 4,
+        title: "Return to Normal Stance",
+        label: "return-to-normal-stance",
+        start: 30,
+        duration: 5,
+      },
     ],
   },
-  
+
   // Functional reach test
   {
     id: "functional-reach",
@@ -156,13 +162,19 @@ const activitiesConfig: ActivityConfig[] = [
       { id: 4, title: "Return to Start", label: "return-to-start", start: 20, duration: 5 },
     ],
   },
-  
+
   // Dynamic weight shifting assessment
   {
     id: "dynamic-weight-shifting",
     title: "Dynamic weight shifting",
     staticImage: dynamicWeight3,
-    sequenceImages: [dynamicWeight3, dynamicWeight4, dynamicWeight5, dynamicWeight6, dynamicWeight7],
+    sequenceImages: [
+      dynamicWeight3,
+      dynamicWeight4,
+      dynamicWeight5,
+      dynamicWeight6,
+      dynamicWeight7,
+    ],
     hoverImages: [activitiesIcon, sessionIcon, activitiesIcon],
     boardsRequired: 1,
     description: "Assess controlled weight shifting ability",
@@ -186,21 +198,21 @@ export const defaultActionBlocks: ActionBlock[] = [
 
 /**
  * Gets the default blocks for an activity by its title
- * 
+ *
  * @param activityTitle The title of the activity
  * @returns The default action blocks for the activity (cloned to prevent modification of originals)
  */
 export function getDefaultBlocksByTitle(activityTitle: string): ActionBlock[] {
   // First try to find the activity by exact title match
   const activity = Object.values(activitiesConfig).find(
-    (activity) => activity.title === activityTitle
+    (activity) => activity.title === activityTitle,
   );
-  
+
   // If found, return a copy of its default blocks
   if (activity) {
     return [...activity.defaultBlocks];
   }
-  
+
   // If not found, return a copy of the default blocks
   return [...defaultActionBlocks];
 }

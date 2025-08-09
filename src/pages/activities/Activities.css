@@ -207,7 +207,6 @@
   transition: all var(--transition);
 }
 
-
 .activity-board-tag .board-icon {
   width: 1.7vw;
   height: 1.7vw;
@@ -336,7 +335,6 @@
   background-color: var(--primary-dark);
 }
 
-
 .close-btn {
   background: var(--bg-light);
   color: var(--text-dark);
@@ -345,7 +343,9 @@
   padding: 0.3em 1em;
   font-size: var(--text-md);
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -364,7 +364,9 @@
   padding: 0.3em 1em;
   font-size: var(--text-md);
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition);
 }
 .reset-btn:hover {
   background: var(--red);
@@ -379,7 +381,9 @@
   padding: 0.3em 1em;
   font-size: var(--text-md);
   cursor: pointer;
-  transition: background var(--transition), color var(--transition);
+  transition:
+    background var(--transition),
+    color var(--transition);
 }
 .save-btn:hover {
   background: var(--primary-dark);

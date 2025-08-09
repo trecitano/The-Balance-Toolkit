@@ -42,6 +42,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
         })
         .invoke_handler(tauri::generate_handler![
             user_page_information,
+            user_select_user,
             user_add,
             user_update,
             user_delete,
@@ -82,6 +83,16 @@ async fn user_page_information(state: State<'_, AppState>) -> Result<UserPageInf
     };
 
     Ok(response)
+}
+
+#[tauri::command]
+async fn user_select_user(state: State<'_, AppState>, user_name: String) -> Result<(), String> {
+    println!(">> user_select_user: {}", user_name);
+
+    let command = ToolkitCommand::SelectUser { user_name };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[tauri::command]
