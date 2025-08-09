@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef, useMemo} from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { UserType } from "@/types.ts";
 import "./Users.css";
 import defaultUserIcon from "../../assets/user-icon.svg";
@@ -8,26 +8,23 @@ import personIcon from "../../assets/user-icon.svg";
 import paletteIcon from "../../assets/palette-icon.svg";
 import calendarIcon from "../../assets/calendar-icon.svg";
 import sexIcon from "../../assets/sex-icon.svg";
-import heightIcon from  "../../assets/measure-icon.svg";
+import heightIcon from "../../assets/measure-icon.svg";
 import weightIcon from "../../assets/weight-icon.svg";
 import handIcon from "../../assets/hand-icon.svg";
 import searchIcon from "../../assets/search-icon.svg";
 import { commands } from "@/utils/requests.ts";
-import {useQuery, useQueryClient} from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const USERS_QUERY_KEY = ["users"];
 
 export default function Users() {
   const [editingUserData, setEditingUserData] = useState<UserType | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [leftFadeOpacity, setLeftFadeOpacity] = useState(0);
-  const [rightFadeOpacity, setRightFadeOpacity] = useState(1);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showColorDropdown, setShowColorDropdown] = useState<boolean>(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const userListRef = useRef<HTMLUListElement>(null);
-  const isAutoScrolling = useRef<boolean>(false);
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -47,114 +44,34 @@ export default function Users() {
     queryFn: async () => {
       const { users, selectedUser } = await commands.users.userPageInformation();
 
-      return {users, selectedUser};
+      return { users, selectedUser };
     },
-    initialData: { users: [], selectedUser: '' }
   });
 
-  const users = data.users ?? [];
-  const [selectedUser, setSelectedUser] = useState<string>(data.selectedUser);
-  const isSearching = searchTerm.trim().length > 0;
-  const sortedUsers = useMemo(() => {
-    return [...users].sort((a, b) => {
-      if (a.isDefault) return -1;
-      if (b.isDefault) return 1;
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-  }, [users]);
-  const searchResults = useMemo(() => {
-    if (!searchTerm.trim()) return [];
-    return users.filter(user =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [users, searchTerm]);
-  const displayUser = useMemo(() => {
-    if (editingUserData) return editingUserData;
-    return users.find(user => user.name === selectedUser) || null;
-  }, [editingUserData, users, selectedUser]);
-  const currentIndex = useMemo(
-    () => sortedUsers.findIndex(user => user.name === selectedUser),
-    [sortedUsers, selectedUser]
-  );
-
-
   useEffect(() => {
+    if (!userListRef.current) return;
+
     const adjustCardWidths = () => {
       const list = userListRef.current;
       if (!list) return;
-
       const items = list.querySelectorAll(".user-carousel-item");
-      if (items.length === 0) return;
+      if (!items.length) return;
 
       const containerWidth = list.clientWidth;
       const gap = 16;
       const desiredCardCount = 5;
-
       const idealCardWidth = (containerWidth - gap * (desiredCardCount - 1)) / desiredCardCount;
 
       items.forEach((item) => {
         (item as HTMLElement).style.width = `${idealCardWidth}px`;
       });
-
-      items.forEach((item) => {
-        const element = item as HTMLElement;
-        if (element.classList.contains("selected")) {
-          const scaleIncrease = 0.15;
-          const extraSpace = (idealCardWidth * scaleIncrease) / 2;
-          element.style.marginLeft = `${extraSpace}px`;
-          element.style.marginRight = `${extraSpace}px`;
-        } else {
-          element.style.marginLeft = "";
-          element.style.marginRight = "";
-        }
-      });
     };
 
-    adjustCardWidths();
-    window.addEventListener("resize", adjustCardWidths);
+    const observer = new ResizeObserver(adjustCardWidths);
+    observer.observe(userListRef.current);
 
-    return () => {
-      window.removeEventListener("resize", adjustCardWidths);
-    };
-  }, [users.length, selectedUser]);
-
-  const scrollToSelectedUser= (userId: string) => {
-    requestAnimationFrame(() => {
-      if (!userListRef.current || !selectedUser) return;
-      const selectedUserElement = userListRef.current.querySelector(
-        `[data-userid="${userId}"]`
-      ) as HTMLLIElement;
-
-      if (!selectedUserElement) return;
-
-      setTimeout(() => {
-        const listElement = userListRef.current;
-        if (!listElement) return;
-
-        const listRect: DOMRect = listElement.getBoundingClientRect();
-        const elementRect: DOMRect = selectedUserElement.getBoundingClientRect();
-
-        const listCenter: number = listRect.left + listRect.width / 2;
-        const elementCenter: number = elementRect.left + elementRect.width / 2;
-        const offset: number = elementCenter - listCenter;
-
-        if (Math.abs(offset) > 2) {
-          isAutoScrolling.current = true;
-
-          const newScrollLeft: number = listElement.scrollLeft + offset;
-
-          listElement.scrollTo({
-            left: newScrollLeft,
-            behavior: "smooth",
-          });
-
-          setTimeout(() => {
-            isAutoScrolling.current = false;
-          }, 600);
-        }
-      }, 50);
-    });
-  }
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -191,27 +108,83 @@ export default function Users() {
     };
   }, []);
 
+  const users = data?.users ?? [];
+  const selectedUser = data?.selectedUser ?? "";
+  const selectedUserData = users.find((user) => user.name === selectedUser)!;
+  const isSearching = searchTerm.trim().length > 0;
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => {
+      if (a.isDefault) return -1;
+      if (b.isDefault) return 1;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }, [users]);
+  const searchResults = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    return users.filter((user) => user.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [users, searchTerm]);
+  const currentIndex = useMemo(
+    () => sortedUsers.findIndex((user) => user.name === selectedUser),
+    [sortedUsers, selectedUser],
+  );
+  console.log("Rerender!");
+
+  if (isLoading) {
+    return <div></div>;
+  }
+
+  if (error) {
+    return <div></div>;
+  }
+
+  const scrollToSelectedUser = (userId: string) => {
+    if (!userListRef.current) return;
+
+    const selectedUserElement = userListRef.current.querySelector(
+      `[data-userid="${userId}"]`,
+    ) as HTMLLIElement | null;
+
+    if (selectedUserElement) {
+      selectedUserElement.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  };
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
 
-  const handleSelectSearchResult = (userId: string) => {
-    handleSelectUser(userId);
+  const handleSelectSearchResult = async (userName: string) => {
+    await handleSelectUser(userName);
     setSearchTerm("");
   };
 
-  const handleSelectUser = (userId: string) => {
+  const handleSelectUser = async (userName: string) => {
     if (editingUserData) {
-      if (window.confirm("You have unsaved changes. Discard changes and select a different user?")) {
+      if (
+        window.confirm("You have unsaved changes. Discard changes and select a different user?")
+      ) {
         setEditingUserData(null);
       } else {
         return;
       }
     }
 
-    setSelectedUser(userId);
+    await commands.users.selectUser(userName);
+    queryClient.setQueryData(USERS_QUERY_KEY, (oldData: any) => {
+      if (!oldData) return oldData;
+
+      return {
+        ...oldData,
+        selectedUser: userName
+      };
+    });
+
     setEditingUserData(null);
-    scrollToSelectedUser(userId);
+    scrollToSelectedUser(userName);
   };
 
   const handleAddUser = async (usersArg: UserType[]) => {
@@ -224,14 +197,15 @@ export default function Users() {
       name: `New User ${usersArg.filter((u) => u.name.startsWith("New User")).length + 1}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, "0")}`,
+      color: `#${Math.floor(Math.random() * 16777215)
+        .toString(16)
+        .padStart(6, "0")}`,
       isDefault: false,
     };
 
     await commands.users.addUser(newUser);
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
-    setSelectedUser(newUser.name);
     setEditingUserData({ ...newUser });
     scrollToSelectedUser(newUser.name);
   };
@@ -240,9 +214,6 @@ export default function Users() {
     await commands.users.deleteUser(userIdToDelete);
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
-    if (selectedUser === userIdToDelete) {
-      setSelectedUser(users[0].name)
-    }
     if (editingUserData?.name === userIdToDelete) {
       setEditingUserData(null);
     }
@@ -255,7 +226,6 @@ export default function Users() {
     const userIndex = users.findIndex((user) => user.name === userId);
     if (userToEdit && userIndex !== -1) {
       setEditingUserData({ ...userToEdit });
-      setSelectedUser(selectedUser);
     }
   };
 
@@ -263,39 +233,25 @@ export default function Users() {
     setEditingUserData(null);
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
-  ) => {
-    if (!editingUserData) return;
-    const { name, value, type } = e.target;
-
-    if (type === "checkbox") {
-      const { checked } = e.target as HTMLInputElement;
-      setEditingUserData((prev) => (prev ? { ...prev, [name]: checked } : null));
-    } else if (type === "number") {
-      const numValue = parseFloat(value);
-      setEditingUserData((prev) => (prev ? { ...prev, [name]: numValue } : null));
-    } else {
-      setEditingUserData((prev) => (prev ? { ...prev, [name]: value } : null));
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!editingUserData || editingUserData.name === null) return;
+    const formData = new FormData(e.currentTarget);
+    console.log("Lets go");
+    const updatedUser = Object.fromEntries(formData.entries()) as UserType;
 
-    if (!editingUserData.weight) {
-      const weightField = document.querySelector(".form-field.required-field");
-      weightField?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!updatedUser.weight) {
+      document.querySelector(".form-field.required-field")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      alert("Weight is required");
       return;
     }
 
-    await commands.users.updateUser(editingUserData);
+    await commands.users.updateUser(updatedUser);
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
-
-    setSelectedUser(editingUserData.name)
-    scrollToSelectedUser(editingUserData.name);
+    scrollToSelectedUser(updatedUser.name);
     setEditingUserData(null);
   };
 
@@ -346,17 +302,6 @@ export default function Users() {
 
     setShowColorDropdown(false);
   };
-
-  if (isLoading) {
-    return <div></div>;
-  }
-
-  if (error) {
-    return (
-      <div>
-      </div>
-    );
-  }
 
   return (
     <div className="inside-page">
@@ -414,10 +359,6 @@ export default function Users() {
       <div className="users-main-content">
         <div className="users-list-panel">
           <div className="user-carousel-scroll-container" ref={scrollContainerRef}>
-            <div
-              className="users-list-fade users-list-fade-left"
-              style={{ opacity: leftFadeOpacity }}
-            />
             <ul className="users-list" ref={userListRef}>
               {sortedUsers.map((user) => (
                 <li
@@ -427,8 +368,7 @@ export default function Users() {
                   onClick={() => handleSelectUser(user.name)}
                 >
                   <div className="user-selection-status">
-                    {selectedUser === user.name &&
-                      (user.isDefault ? "Default" : "Selected")}
+                    {selectedUser === user.name && (user.isDefault ? "Default" : "Selected")}
                   </div>
                   <img
                     src={defaultUserIcon}
@@ -455,105 +395,251 @@ export default function Users() {
                 </li>
               ))}
             </ul>
-            <div
-              className="users-list-fade users-list-fade-right"
-              style={{ opacity: rightFadeOpacity }}
-            />
           </div>
           {renderCarouselIndicators()}
         </div>
 
-        <div className="user-details-panel">
-          {displayUser ? (
+        {editingUserData ? (
+          <form className="user-details-panel" onSubmit={handleSubmit}>
             <div className="user-display">
               <div className="user-display-header">
                 <img
                   src={defaultUserIcon}
                   alt="User"
                   className="user-display-icon"
-                  style={{ borderColor: displayUser.color || "#ccc" }}
+                  style={{ borderColor: selectedUserData.color || "#ccc" }}
                 />
                 <div className="user-header-info">
-                  <h2>{displayUser.name}</h2>
+                  <h2>{selectedUserData.name}</h2>
                   <div className="user-metadata">
                     <span className="metadata-item">
                       <span className="metadata-label">ID:</span>
-                      <span className="metadata-value">{displayUser.name.substring(0, 10)}...</span>
+                      <span className="metadata-value">
+                        {selectedUserData.name.substring(0, 10)}...
+                      </span>
                     </span>
                     <span className="metadata-item">
                       <span className="metadata-label">Created:</span>
                       <span className="metadata-value">
-                        {new Date(displayUser.createdAt).toLocaleDateString()}
+                        {new Date(selectedUserData.createdAt).toLocaleDateString()}
                       </span>
                     </span>
                     <span className="metadata-item">
                       <span className="metadata-label">Updated:</span>
                       <span className="metadata-value">
-                        {new Date(displayUser.updatedAt).toLocaleDateString()}
+                        {new Date(selectedUserData.updatedAt).toLocaleDateString()}
                       </span>
                     </span>
                   </div>
                 </div>
                 <div className="user-display-actions">
-                  {editingUserData ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (!editingUserData?.weight) {
-                            const weightField = document.querySelector(
-                              ".form-field.required-field",
-                            );
-                            weightField?.scrollIntoView({
-                              behavior: "smooth",
-                              block: "center",
-                            });
-                            return;
-                          }
-                          handleSubmit(
-                            new Event("submit") as unknown as React.FormEvent<HTMLFormElement>,
-                          );
-                        }}
-                        className="btn btn--primary"
-                      >
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        className="btn btn--secondary"
-                      >
-                        Cancel
-                      </button>
-                      {!displayUser.isDefault && (
-                        <button
-                          type="button"
-                          onClick={() => setShowDeleteConfirm(displayUser.name)}
-                          className="btn btn--delete"
-                        >
-                          <img src={deleteIcon} alt="Delete" /> Delete
-                        </button>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => handleEditUser(displayUser.name)}
-                        className="btn btn--primary"
-                        aria-label="Edit user"
-                      >
-                        <img src={editIcon} alt="Edit" /> Edit
-                      </button>
-                      {!displayUser.isDefault && (
-                        <button
-                          onClick={() => setShowDeleteConfirm(displayUser.name)}
-                          className="btn btn--delete"
-                          aria-label="Delete user"
-                        >
-                          <img src={deleteIcon} alt="Delete" /> Delete
-                        </button>
-                      )}
-                    </>
+                  <button type="submit" className="btn btn--primary">
+                    Save
+                  </button>
+                  <button type="button" onClick={handleCancelEdit} className="btn btn--secondary">
+                    Cancel
+                  </button>
+                  {!selectedUserData.isDefault && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(selectedUserData.name)}
+                      className="btn btn--delete"
+                    >
+                      <img src={deleteIcon} alt="Delete" /> Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Editable fields */}
+              <div className="user-info-fields">
+                <div className="form-field">
+                  <label>
+                    <img src={personIcon} alt="" className="info-grid-icon" />
+                    Name:
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    defaultValue={editingUserData?.name ?? ""}
+                    required
+                  />
+                </div>
+
+                <div className="form-field">
+                  <label>
+                    <img src={calendarIcon} alt="" className="info-grid-icon" />
+                    Age:
+                  </label>
+                  <input type="number" name="age" defaultValue={editingUserData?.age} />
+                </div>
+
+                <div className="form-field">
+                  <label>
+                    <img src={sexIcon} alt="" className="info-grid-icon" />
+                    Gender:
+                  </label>
+                  <select name="gender" defaultValue={editingUserData?.gender ?? ""}>
+                    <option value="">Select...</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Non-binary">Non-binary</option>
+                    <option value="Other">Other</option>
+                    <option value="Prefer not to say">Prefer not to say</option>
+                  </select>
+                </div>
+
+                {editingUserData?.gender === "Other" && (
+                  <div className="form-field">
+                    <label>
+                      <img src={sexIcon} alt="" className="info-grid-icon" />
+                      Specify Gender:
+                    </label>
+                    <input
+                      type="text"
+                      name="customGender"
+                      defaultValue={editingUserData?.customGender}
+                    />
+                  </div>
+                )}
+
+                <div className="form-field">
+                  <label>
+                    <img src={heightIcon} alt="" className="info-grid-icon" />
+                    Height:
+                  </label>
+                  <div className="user-weight-row">
+                    <input type="number" name="height" defaultValue={editingUserData?.height} />
+                    <select
+                      name="heightMetric"
+                      defaultValue={editingUserData?.heightMetric || "cm"}
+                      className="metric-select"
+                    >
+                      <option value="cm">cm</option>
+                      <option value="in">in</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-field required-field">
+                  <label>
+                    <img src={weightIcon} alt="" className="info-grid-icon" />
+                    Weight:
+                  </label>
+                  <div className="user-weight-row">
+                    <input type="number" name="weight" defaultValue={editingUserData?.weight} />
+                    <select
+                      name="metric"
+                      defaultValue={editingUserData?.weightMetric}
+                      className="metric-select"
+                    >
+                      <option value="kg">kg</option>
+                      <option value="lb">lb</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-field">
+                  <label>
+                    <img src={handIcon} alt="" className="info-grid-icon" />
+                    Handedness:
+                  </label>
+                  <select name="handedness" defaultValue={editingUserData?.handedness}>
+                    <option value="right">Right</option>
+                    <option value="left">Left</option>
+                    <option value="ambidextrous">Ambidextrous</option>
+                  </select>
+                </div>
+
+                <div className="form-field">
+                  <label>
+                    <img src={paletteIcon} alt="" className="info-grid-icon" />
+                    Color:
+                  </label>
+                  <div className="color-picker-container" ref={colorPickerRef}>
+                    <input
+                      type="color"
+                      id="color"
+                      name="color"
+                      defaultValue={editingUserData?.color || "#397aac"}
+                      onChange={handleColorChange}
+                    />
+                    <div
+                      className="color-swatch-trigger"
+                      onClick={handleColorClick}
+                      style={{
+                        backgroundColor: editingUserData?.color || "#397aac",
+                      }}
+                    ></div>
+                    {showColorDropdown && (
+                      <div className="recent-colors-dropdown">
+                        <div className="recent-colors">
+                          {fixedColors.map((color, index) => (
+                            <div
+                              key={index}
+                              className="recent-color-swatch"
+                              style={{ backgroundColor: color }}
+                              onClick={() => selectFixedColor(color)}
+                              title={color}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+        ) : (
+          <div className="user-details-panel">
+            <div className="user-display">
+              <div className="user-display-header">
+                <img
+                  src={defaultUserIcon}
+                  alt="User"
+                  className="user-display-icon"
+                  style={{ borderColor: selectedUserData.color || "#ccc" }}
+                />
+                <div className="user-header-info">
+                  <h2>{selectedUserData.name}</h2>
+                  <div className="user-metadata">
+                    <span className="metadata-item">
+                      <span className="metadata-label">ID:</span>
+                      <span className="metadata-value">
+                        {selectedUserData.name.substring(0, 10)}...
+                      </span>
+                    </span>
+                    <span className="metadata-item">
+                      <span className="metadata-label">Created:</span>
+                      <span className="metadata-value">
+                        {new Date(selectedUserData.createdAt).toLocaleDateString()}
+                      </span>
+                    </span>
+                    <span className="metadata-item">
+                      <span className="metadata-label">Updated:</span>
+                      <span className="metadata-value">
+                        {new Date(selectedUserData.updatedAt).toLocaleDateString()}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+                <div className="user-display-actions">
+                  <button
+                    type="button"
+                    onClick={() => handleEditUser(selectedUserData.name)}
+                    className="btn btn--primary"
+                  >
+                    <img src={editIcon} alt="Edit" /> Edit
+                  </button>
+                  {!selectedUserData.isDefault && (
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(selectedUserData.name)}
+                      className="btn btn--delete"
+                    >
+                      <img src={deleteIcon} alt="Delete" /> Delete
+                    </button>
                   )}
                 </div>
               </div>
@@ -564,17 +650,7 @@ export default function Users() {
                     <img src={personIcon} alt="" className="info-grid-icon" />
                     Name:
                   </label>
-                  {editingUserData ? (
-                    <input
-                      type="text"
-                      name="name"
-                      value={editingUserData.name}
-                      onChange={handleChange}
-                      required
-                    />
-                  ) : (
-                    <div className="display-value">{displayUser.name}</div>
-                  )}
+                  <div className="display-value">{selectedUserData.name}</div>
                 </div>
 
                 <div className="form-field">
@@ -582,16 +658,7 @@ export default function Users() {
                     <img src={calendarIcon} alt="" className="info-grid-icon" />
                     Age:
                   </label>
-                  {editingUserData ? (
-                    <input
-                      type="number"
-                      name="age"
-                      value={editingUserData.age ?? ""}
-                      onChange={handleChange}
-                    />
-                  ) : (
-                    <div className="display-value">{displayUser.age || "N/A"}</div>
-                  )}
+                  <div className="display-value">{selectedUserData.age || "N/A"}</div>
                 </div>
 
                 <div className="form-field">
@@ -599,107 +666,35 @@ export default function Users() {
                     <img src={sexIcon} alt="" className="info-grid-icon" />
                     Gender:
                   </label>
-                  {editingUserData ? (
-                    <select name="gender" value={editingUserData.gender} onChange={handleChange}>
-                      <option value="">Select...</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Non-binary">Non-binary</option>
-                      <option value="Other">Other</option>
-                      <option value="Prefer not to say">Prefer not to say</option>
-                    </select>
-                  ) : (
-                    <div className="display-value">
-                      {displayUser.gender === "Other"
-                        ? displayUser.customGender
-                        : displayUser.gender || "N/A"}
-                    </div>
-                  )}
+                  <div className="display-value">
+                    {selectedUserData.gender === "Other"
+                      ? selectedUserData.customGender
+                      : selectedUserData.gender || "N/A"}
+                  </div>
                 </div>
 
-                {editingUserData && editingUserData.gender === "Other" ? (
-                  <div className="form-field">
-                    <label>
-                      <img src={sexIcon} alt="" className="info-grid-icon" />
-                      Specify Gender:
-                    </label>
-                    <input
-                      type="text"
-                      name="customGender"
-                      value={editingUserData.customGender}
-                      onChange={handleChange}
-                    />
+                <div className="form-field">
+                  <label>
+                    <img src={heightIcon} alt="" className="info-grid-icon" />
+                    Height:
+                  </label>
+                  <div className="display-value">
+                    {selectedUserData.height
+                      ? `${selectedUserData.height} ${selectedUserData.heightMetric || "cm"}`
+                      : "N/A"}
                   </div>
-                ) : (
-                  <div className="form-field">
-                    <label>
-                      <img src={heightIcon} alt="" className="info-grid-icon" />
-                      Height:
-                    </label>
-                    {editingUserData ? (
-                      <div className="user-weight-row">
-                        <input
-                          type="number"
-                          name="height"
-                          value={editingUserData.height ?? ""}
-                          onChange={handleChange}
-                        />
-                        <select
-                          name="heightMetric"
-                          value={editingUserData.heightMetric || "cm"}
-                          onChange={handleChange}
-                          className="metric-select"
-                        >
-                          <option value="cm">cm</option>
-                          <option value="in">in</option>
-                        </select>
-                      </div>
-                    ) : (
-                      <div className="display-value">
-                        {displayUser.height
-                          ? `${displayUser.height} ${displayUser.heightMetric || "cm"}`
-                          : "N/A"}
-                      </div>
-                    )}
-                  </div>
-                )}
+                </div>
 
-                <div className="form-field required-field">
+                <div className="form-field">
                   <label>
                     <img src={weightIcon} alt="" className="info-grid-icon" />
                     Weight:
                   </label>
-                  {editingUserData ? (
-                    <>
-                      <div className={`user-weight-row ${!editingUserData.weight ? "error" : ""}`}>
-                        <input
-                          type="number"
-                          name="weight"
-                          value={editingUserData.weight ?? ""}
-                          onChange={handleChange}
-                          required
-                        />
-                        <select
-                          name="metric"
-                          value={editingUserData.weightMetric}
-                          onChange={handleChange}
-                          className="metric-select"
-                        >
-                          <option value="kg">kg</option>
-                          <option value="lb">lb</option>
-                        </select>
-                      </div>
-                      {!editingUserData.weight && (
-                        <div className="validation-error">Weight is required</div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="display-value">
-                      {displayUser.weight
-                        ? `${displayUser.weight} ${displayUser.weightMetric}`
-                        : "N/A"}
-                    </div>
-                  )}
+                  <div className="display-value">
+                    {selectedUserData.weight
+                      ? `${selectedUserData.weight} ${selectedUserData.weightMetric}`
+                      : "N/A"}
+                  </div>
                 </div>
 
                 <div className="form-field">
@@ -707,19 +702,7 @@ export default function Users() {
                     <img src={handIcon} alt="" className="info-grid-icon" />
                     Handedness:
                   </label>
-                  {editingUserData ? (
-                    <select
-                      name="handedness"
-                      value={editingUserData.handedness}
-                      onChange={handleChange}
-                    >
-                      <option value="right">Right</option>
-                      <option value="left">Left</option>
-                      <option value="ambidextrous">Ambidextrous</option>
-                    </select>
-                  ) : (
-                    <div className="display-value">{displayUser.handedness || "N/A"}</div>
-                  )}
+                  <div className="display-value">{selectedUserData.handedness || "N/A"}</div>
                 </div>
 
                 <div className="form-field">
@@ -727,74 +710,19 @@ export default function Users() {
                     <img src={paletteIcon} alt="" className="info-grid-icon" />
                     Color:
                   </label>
-                  {editingUserData ? (
-                    <div className="color-picker-container" ref={colorPickerRef}>
-                      <input
-                        type="color"
-                        id="color"
-                        name="color"
-                        value={editingUserData.color || "#397aac"}
-                        onChange={handleColorChange}
-                      />
-                      <div
-                        className="color-swatch-trigger"
-                        onClick={(e) => handleColorClick(e)}
-                        style={{
-                          backgroundColor: editingUserData.color || "#397aac",
-                        }}
-                      ></div>
-                      {showColorDropdown && (
-                        <div className="recent-colors-dropdown">
-                          <div className="recent-colors">
-                            {fixedColors.map((color, index) => (
-                              <div
-                                key={index}
-                                className="recent-color-swatch"
-                                style={{ backgroundColor: color }}
-                                onClick={() => selectFixedColor(color)}
-                                title={color}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="color-display" style={{ backgroundColor: "white" }}>
-                      <div
-                        className="color-swatch"
-                        style={{ backgroundColor: displayUser.color || "#ccc" }}
-                        title={displayUser.color || "No color selected"}
-                      ></div>
-                    </div>
-                  )}
-                </div>
-
-                {editingUserData && editingUserData.gender === "Other" && (
-                  <div className="form-field">
-                    <label>
-                      <img src={heightIcon} alt="" className="info-grid-icon" />
-                      Height:
-                    </label>
-                    <input
-                      type="number"
-                      name="height"
-                      value={editingUserData.height}
-                      onChange={handleChange}
-                    />
+                  <div className="color-display" style={{ backgroundColor: "white" }}>
+                    <div
+                      className="color-swatch"
+                      style={{ backgroundColor: selectedUserData.color || "#ccc" }}
+                      title={selectedUserData.color || "No color selected"}
+                    ></div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="no-user-selected">
-              <p>No user selected or no users exist.</p>
-              <p>Click 'Add User' to create a new profile.</p>
-            </div>
-          )}
-        </div>
-      </div>{" "}
-      {}
+          </div>
+        )}
+      </div>
       {showDeleteConfirm && (
         <div className="delete-confirm-overlay">
           <div className="delete-confirm-dialog">
