@@ -68,30 +68,7 @@
 .btn--delete:hover:not(:disabled) {
   background-color: var(--red-dark);
 }
-.btn--neutral {
-  background-color: var(--light);
-  color: var(--text);
-}
-.btn--neutral:hover:not(:disabled) {
-  background-color: #e8e8e8;
-}
 
-.btn--small {
-  font-size: var(--text-xs);
-  padding: calc(var(--input-padding) * 0.7) var(--input-padding);
-  min-width: 70px;
-}
-.btn--medium {
-  font-size: var(--text-sm);
-}
-.btn--large {
-  font-size: var(--text-md);
-  padding: calc(var(--input-padding) * 1.2) calc(var(--input-padding) * 2);
-}
-
-.btn--full-width {
-  width: 100%;
-}
 .btn--icon-only {
   aspect-ratio: 1/1;
   padding: var(--space-xs);
@@ -107,9 +84,6 @@
 }
 .btn__icon--left {
   margin-right: 5px;
-}
-.btn__icon--right {
-  margin-left: 5px;
 }
 
 .btn__icon img,
@@ -165,29 +139,18 @@
   scrollbar-width: none;
   box-sizing: content-box;
   scroll-snap-type: x mandatory;
+
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
 }
 
 .users-list::-webkit-scrollbar {
   display: none;
-}
-
-.users-list-fade {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 60px;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.users-list-fade-left {
-  left: 0;
-  background: linear-gradient(to right, white 30%, rgba(255, 255, 255, 0));
-}
-
-.users-list-fade-right {
-  right: 0;
-  background: linear-gradient(to left, white 30%, rgba(255, 255, 255, 0));
 }
 
 .user-carousel-item {
@@ -376,7 +339,6 @@
   width: 100%;
 }
 
-.user-form-header,
 .user-display-header {
   display: flex;
   align-items: center;
@@ -388,15 +350,6 @@
   width: 100%;
 }
 
-.user-form-header h3 {
-  margin: 0;
-  font-size: var(--text-xl);
-  color: var(--text);
-  flex-grow: 1;
-  font-weight: bold;
-}
-
-.user-form-actions,
 .user-display-actions {
   display: flex;
   gap: 0.8vw;
@@ -404,9 +357,7 @@
   margin-left: auto;
 }
 
-.user-display-actions button,
-.user-form-actions .save-btn,
-.user-form-actions .delete-btn-form {
+.user-display-actions button {
   width: 7.5vw;
   height: 5vh;
 }
@@ -467,7 +418,6 @@
   outline: none;
 }
 
-.form-field-icon,
 .info-grid-icon {
   width: 16px;
   height: 16px;
