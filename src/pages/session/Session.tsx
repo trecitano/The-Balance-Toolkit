@@ -10,10 +10,10 @@ import CopYGraph from "./CopYGraph";
 import VCopXGraph from "./VCopXGraph";
 import VCopYGraph from "./VCopYGraph";
 import WBBTopGraph from "./WBBTopGraph";
-import {ProcessedBoardData} from "@/types.ts";
-import {useQuery} from "@tanstack/react-query";
-import {commands} from "@/utils/requests.ts";
-import {Channel} from "@tauri-apps/api/core";
+import { ProcessedBoardData } from "@/types.ts";
+import { useQuery } from "@tanstack/react-query";
+import { commands } from "@/utils/requests.ts";
+import { Channel } from "@tauri-apps/api/core";
 
 declare global {
   interface Window {
@@ -243,7 +243,6 @@ export default function Session() {
 
   const sessionWebSocket = useRef<Channel<ProcessedBoardData | null>>(null);
 
-
   const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
   const [initialBoardProcessed, setInitialBoardProcessed] = useState(false);
   const [showBoardDropdown, setShowBoardDropdown] = useState(false);
@@ -326,7 +325,7 @@ export default function Session() {
       ]);
       return { devices, users };
     },
-    initialData: { devices: [], users: [] }
+    initialData: { devices: [], users: [] },
   });
 
   const { users, devices } = data ?? {};
@@ -717,7 +716,7 @@ export default function Session() {
 
     const sessionChannel = new Channel<ProcessedBoardData>();
     sessionChannel.onmessage = (message) => {
-      console.log('got download event', message);
+      console.log("got download event", message);
     };
     sessionWebSocket.current = sessionChannel;
     await commands.session.startSession(sessionChannel);
@@ -884,7 +883,7 @@ export default function Session() {
   };
 
   const handleUserSelect = (userId: string) => {
-    commands.session
+    commands.session;
   };
 
   const handleGoToUsers = () => {
@@ -912,9 +911,7 @@ export default function Session() {
   };
 
   const selectedUserName =
-    users.find((u) => u.id === selectedUser.current)?.name ||
-    selectedUser.current ||
-    "Select User";
+    users.find((u) => u.id === selectedUser.current)?.name || selectedUser.current || "Select User";
 
   return (
     <div className="inside-page">

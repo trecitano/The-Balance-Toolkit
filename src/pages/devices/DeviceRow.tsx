@@ -19,7 +19,7 @@ export default function DeviceRow({
   handleSaveDeviceName,
   handleRemoveDevice,
   handleSelectDeviceForSession,
-  handleDisconnectDevice
+  handleDisconnectDevice,
 }: DeviceRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const connectTooltip = device.isConnected ? "" : "Device is disconnected";
@@ -57,9 +57,7 @@ export default function DeviceRow({
           <img
             src={device.isConnected ? wbbIconBlue : wbbIcon}
             alt="Device"
-            className={`device-image ${
-              device.isConnected ? "device-image-blue" : ""
-            }`}
+            className={`device-image ${device.isConnected ? "device-image-blue" : ""}`}
           />
           <div
             className={`device-status ${device.isConnected ? "device-status-connected" : "device-status-disconnected"}`}
@@ -84,9 +82,7 @@ export default function DeviceRow({
                     //handleAction("cancel");
                   }
                 }}
-                onBlur={() =>
-                  handleSaveDeviceName(device.id, inputRef.current?.value || "")
-                }
+                onBlur={() => handleSaveDeviceName(device.id, inputRef.current?.value || "")}
                 className="device-name-edit-input"
               />
             </div>

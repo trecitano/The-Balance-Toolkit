@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState} from 'react';
+import React, { useMemo, useRef, useState } from "react";
 import {
   ChevronRightIcon,
   QuestionMarkCircleIcon,
@@ -7,18 +7,18 @@ import {
   CodeBracketIcon,
   EnvelopeIcon,
   SignalIcon,
-} from '@heroicons/react/24/outline';
-import balanceToolkitLogo from "@/assets/balance-icon.svg"
-import fileIcon from "@/assets/file-icon.svg"
+} from "@heroicons/react/24/outline";
+import balanceToolkitLogo from "@/assets/balance-icon.svg";
+import fileIcon from "@/assets/file-icon.svg";
 import userIcon from "@/assets/user-icon.svg";
 import wbbIconLine from "@/assets/wbb-icon-line.svg";
-import {Button} from "@/components/Button.tsx";
+import { Button } from "@/components/Button.tsx";
 import activitiesConfig from "@/config/activities.config.ts";
 
 interface StatusIndicator {
   value: string;
   label: string;
-  color: 'green' | 'orange' | 'blue';
+  color: "green" | "orange" | "blue";
   icon: React.ComponentType<{ className?: string }>;
 }
 
@@ -39,12 +39,24 @@ const Home: React.FC = () => {
         </div>
 
         {/* Middle Column */}
-        <div className="row-span-3 rounded-lg border-2 border-red-500 p-5"> <ConnectionCard /> </div>
+        <div className="row-span-3 rounded-lg border-2 border-red-500 p-5">
+          {" "}
+          <ConnectionCard />{" "}
+        </div>
 
         {/* Right Column */}
-        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5"> <HelpSupportCard /> </div>
-        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5"> <DocumentationCard /> </div>
-        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5"> <OtherResourcesCard /> </div>
+        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5">
+          {" "}
+          <HelpSupportCard />{" "}
+        </div>
+        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5">
+          {" "}
+          <DocumentationCard />{" "}
+        </div>
+        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5">
+          {" "}
+          <OtherResourcesCard />{" "}
+        </div>
       </div>
     </div>
   );
@@ -57,9 +69,7 @@ const Header: React.FC = () => {
         {/* Left: Greeting */}
         <div className="mb-auto md:flex-1">
           <h1 className="text-6xl font-bold leading-tight">Hello!</h1>
-          <p className="mt-2 text-xl opacity-90">
-            Welcome back to the balance tool kit
-          </p>
+          <p className="mt-2 text-xl opacity-90">Welcome back to the balance tool kit</p>
         </div>
 
         {/* Center: Circle logo */}
@@ -112,10 +122,7 @@ const LastSessionCard: React.FC = () => {
         <div>
           <div className="flex">
             <div className="w-4 h-4">
-              <img
-                src={userIcon}
-                draggable={false}
-              />
+              <img src={userIcon} draggable={false} />
             </div>
             <span className="font-medium">Username</span>
           </div>
@@ -144,10 +151,7 @@ const LastSessionCard: React.FC = () => {
         {/* File */}
         <div>
           <div className="flex w-4 h-4 mb-2">
-            <img
-              src={fileIcon}
-              draggable={false}
-            />
+            <img src={fileIcon} draggable={false} />
             <span className="text-xs">Name of file</span>
           </div>
 
@@ -168,9 +172,8 @@ const ActivitiesCard: React.FC = () => {
 
   // derive a width array (active wider)
   const widths = useMemo(
-    () =>
-      activitiesConfig.map((_, i) => (i === selected ? 130 : 110)),
-    [activitiesConfig, selected]
+    () => activitiesConfig.map((_, i) => (i === selected ? 130 : 110)),
+    [activitiesConfig, selected],
   );
 
   // compute cumulative X of each card's left edge
@@ -184,8 +187,7 @@ const ActivitiesCard: React.FC = () => {
     return arr;
   }, [widths]);
 
-  const totalWidth =
-    widths.reduce((a, b) => a + b, 0) + 5 * Math.max(0, widths.length - 1);
+  const totalWidth = widths.reduce((a, b) => a + b, 0) + 5 * Math.max(0, widths.length - 1);
 
   const scrollToCenter = (index: number) => {
     const scroller = scrollerRef.current;
@@ -199,12 +201,9 @@ const ActivitiesCard: React.FC = () => {
     const cardWidth = widths[index] ?? 80;
     const targetCenter = cardLeft + cardWidth / 2;
 
-    const newScrollLeft = Math.max(
-      0,
-      Math.min(targetCenter - viewport / 2, totalWidth - viewport)
-    );
+    const newScrollLeft = Math.max(0, Math.min(targetCenter - viewport / 2, totalWidth - viewport));
 
-    console.log("scroller position: ", scroller)
+    console.log("scroller position: ", scroller);
     console.log("Viewport: ", viewport);
     console.log("New scroll left: ", newScrollLeft);
 
@@ -221,14 +220,8 @@ const ActivitiesCard: React.FC = () => {
       <h2 className="text-2xl font-semibold text-neutral-900">Activities</h2>
 
       <div className="mt-4 flex items-center gap-4">
-        <div
-          ref={scrollerRef}
-          className="relative w-full overflow-x-hidden overflow-y-hidden"
-        >
-          <div
-            className="flex h-40 items-center gap-1"
-            style={{ width: totalWidth }}
-          >
+        <div ref={scrollerRef} className="relative w-full overflow-x-hidden overflow-y-hidden">
+          <div className="flex h-40 items-center gap-1" style={{ width: totalWidth }}>
             {activitiesConfig.map((s, i) => {
               const active = i === selected;
 
@@ -279,9 +272,7 @@ const ActivitiesCard: React.FC = () => {
                 setSelected(i);
                 scrollToCenter(i);
               }}
-              className={`h-3 w-3 rounded-full ${
-                active ? "bg-red-600" : "bg-neutral-400"
-              }`}
+              className={`h-3 w-3 rounded-full ${active ? "bg-red-600" : "bg-neutral-400"}`}
               type="button"
             />
           );
@@ -289,9 +280,7 @@ const ActivitiesCard: React.FC = () => {
       </div>
 
       <div className="mt-auto">
-        <Button rightIcon={<ChevronRightIcon className="h-4 w-4" />}>
-          Explore More
-        </Button>
+        <Button rightIcon={<ChevronRightIcon className="h-4 w-4" />}>Explore More</Button>
       </div>
     </div>
   );
@@ -306,32 +295,32 @@ const ConnectionCard: React.FC = () => {
       value: "Strong",
       label: "Signal",
       color: "green",
-      icon: SignalIcon
+      icon: SignalIcon,
     },
     {
       value: "48%",
       label: "Battery",
       color: "orange",
-      icon: SignalIcon
+      icon: SignalIcon,
     },
     {
       value: "24 C",
       label: "Temp",
       color: "blue",
-      icon: SignalIcon
-    }
+      icon: SignalIcon,
+    },
   ];
 
-  const getStatusClasses = (color: 'green' | 'orange' | 'blue'): string => {
+  const getStatusClasses = (color: "green" | "orange" | "blue"): string => {
     switch (color) {
-      case 'green':
-        return 'bg-green-50 border-green-200 text-green-600';
-      case 'orange':
-        return 'bg-orange-50 border-orange-200 text-orange-600';
-      case 'blue':
-        return 'bg-blue-50 border-blue-200 text-blue-600';
+      case "green":
+        return "bg-green-50 border-green-200 text-green-600";
+      case "orange":
+        return "bg-orange-50 border-orange-200 text-orange-600";
+      case "blue":
+        return "bg-blue-50 border-blue-200 text-blue-600";
       default:
-        return 'bg-gray-50 border-gray-200 text-gray-600';
+        return "bg-gray-50 border-gray-200 text-gray-600";
     }
   };
 
@@ -359,11 +348,7 @@ const ConnectionCard: React.FC = () => {
 
       {/* Balance Board Illustration */}
       <div className="flex justify-center mb-6">
-        <img
-          src={wbbIconLine}
-          alt="Balance Board"
-          draggable={false}
-        />
+        <img src={wbbIconLine} alt="Balance Board" draggable={false} />
       </div>
 
       {/* Status Indicators */}
@@ -384,9 +369,7 @@ const ConnectionCard: React.FC = () => {
       </div>
 
       <div className="mt-auto">
-        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>
-          Manage
-        </Button>
+        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>Manage</Button>
       </div>
     </div>
   );
@@ -408,9 +391,7 @@ const HelpSupportCard: React.FC = () => {
       </p>
 
       <div className="mt-auto flex justify-end">
-        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>
-          Go to Tutorial
-        </Button>
+        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>Go to Tutorial</Button>
       </div>
     </>
   );
@@ -428,9 +409,7 @@ const DocumentationCard: React.FC = () => {
       </div>
 
       <div className="mt-auto flex justify-end">
-        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>
-          Read More
-        </Button>
+        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>Read More</Button>
       </div>
     </div>
   );
@@ -445,33 +424,33 @@ const OtherResourcesCard: React.FC = () => {
   }
 
   const handleCitationClick = (): void => {
-    console.log('Citation clicked');
+    console.log("Citation clicked");
   };
 
   const handleSourceCodeClick = (): void => {
-    console.log('Source code clicked');
+    console.log("Source code clicked");
   };
 
   const handleContactClick = (): void => {
-    console.log('Contact clicked');
+    console.log("Contact clicked");
   };
 
   const resourceLinks: ResourceLink[] = [
     {
       icon: DocumentIcon,
       text: "Read our citation",
-      onClick: handleCitationClick
+      onClick: handleCitationClick,
     },
     {
       icon: CodeBracketIcon,
       text: "View our source code",
-      onClick: handleSourceCodeClick
+      onClick: handleSourceCodeClick,
     },
     {
       icon: EnvelopeIcon,
       text: "Contact us",
-      onClick: handleContactClick
-    }
+      onClick: handleContactClick,
+    },
   ];
 
   return (

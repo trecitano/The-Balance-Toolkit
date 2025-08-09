@@ -1,9 +1,5 @@
 import { useMemo } from "react";
-import {
-  useBoardBuffer,
-  useBoardLatest,
-  useWindowMs,
-} from "@/store/liveStore.tsx";
+import { useBoardBuffer, useBoardLatest, useWindowMs } from "@/store/liveStore.tsx";
 import { UPlotLine } from "./UPlotLine";
 import { UPlotPath } from "./UPlotPath";
 import { ProcessedBoardData } from "@/types.ts";
@@ -12,12 +8,12 @@ import wbbTopdown from "../../assets/wbb-topdown.svg";
 function windowFramesFromBuffer(
   buf:
     | {
-    frames: (ProcessedBoardData | undefined)[];
-    head: number;
-    len: number;
-  }
+        frames: (ProcessedBoardData | undefined)[];
+        head: number;
+        len: number;
+      }
     | undefined,
-  windowMs: number
+  windowMs: number,
 ) {
   if (!buf || buf.len === 0) return [];
   const latest = buf.frames[buf.head]!;
@@ -41,7 +37,7 @@ export function BoardPanel({ boardName }: { boardName: string }) {
 
   const windowFrames = useMemo(
     () => windowFramesFromBuffer(buf, windowMs),
-    [buf, buf?.head, buf?.len, windowMs]
+    [buf, buf?.head, buf?.len, windowMs],
   );
 
   const vCoPxData = useMemo(() => {
@@ -99,9 +95,7 @@ export function BoardPanel({ boardName }: { boardName: string }) {
           <div className="rounded border p-3 space-y-3">
             <div>
               <div className="text-sm text-gray-500">Stability Index</div>
-              <div className="text-2xl font-semibold">
-                {latest?.metrics.stabilityIndex ?? "—"}
-              </div>
+              <div className="text-2xl font-semibold">{latest?.metrics.stabilityIndex ?? "—"}</div>
             </div>
             <div>
               <div className="text-sm text-gray-500">User</div>

@@ -2,11 +2,11 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-ro
 import Navigation from "@/components/navigation/Navigation";
 import Home from "@/pages/home/Home.tsx";
 import DevicesPage, { DevicesQuery } from "@/pages/devices/Devices";
-import UsersPage from "@/pages/users/Users";                        
+import UsersPage from "@/pages/users/Users";
 import SessionPage from "@/pages/new_session/SessionPage";
 import Activities from "@/pages/activities/Activities";
 import "./App.css";
-import {QueryClient, QueryClientProvider, usePrefetchQuery} from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, usePrefetchQuery } from "@tanstack/react-query";
 
 function AppContent() {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ function AppContent() {
     }
   };
 
-  usePrefetchQuery(DevicesQuery)
+  usePrefetchQuery(DevicesQuery);
 
   return (
     <div className={`app`}>
@@ -31,8 +31,8 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/devices" element={<DevicesPage />} />
-          <Route path="/session" element={<SessionPage/>}/>
-          <Route path="/users" element={<UsersPage /> }/>
+          <Route path="/session" element={<SessionPage />} />
+          <Route path="/users" element={<UsersPage />} />
           <Route path="/activities" element={<Activities />} />
         </Routes>
       </main>

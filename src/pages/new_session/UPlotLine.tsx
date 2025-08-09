@@ -4,13 +4,13 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 
 type SeriesData = { t: number[]; y: number[] };
 export function UPlotLine({
-                            label,
-                            color = "#dc2626", // red
-                            height = 150,
-                            data,
-                            yLabel = "",         // NEW: axis label (e.g., "vCoPx", "vCoPy")
-                            yRange,              // NEW: [min, max] if you want fixed range
-                          }: {
+  label,
+  color = "#dc2626", // red
+  height = 150,
+  data,
+  yLabel = "", // NEW: axis label (e.g., "vCoPx", "vCoPy")
+  yRange, // NEW: [min, max] if you want fixed range
+}: {
   label: string;
   color?: string;
   height?: number;

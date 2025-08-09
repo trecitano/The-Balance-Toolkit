@@ -1,6 +1,6 @@
 import React from "react";
 
-    type Variant = "primary" | "outline" | "ghost";
+type Variant = "primary" | "outline" | "ghost";
 type Size = "sm" | "md" | "lg";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -17,8 +17,7 @@ const base =
 
 const byVariant: Record<Variant, string> = {
   primary: "bg-red-600 text-white hover:bg-red-700",
-  outline:
-    "border-2 border-red-600 text-red-600 bg-white hover:bg-red-50",
+  outline: "border-2 border-red-600 text-red-600 bg-white hover:bg-red-50",
   ghost: "text-red-600 hover:bg-red-50",
 };
 
@@ -29,15 +28,15 @@ const bySize: Record<Size, string> = {
 };
 
 export function Button({
-                         variant = "primary",
-                         size = "md",
-                         fullWidth,
-                         leftIcon,
-                         rightIcon,
-                         className = "",
-                         children,
-                         ...props
-                       }: ButtonProps) {
+  variant = "primary",
+  size = "md",
+  fullWidth,
+  leftIcon,
+  rightIcon,
+  className = "",
+  children,
+  ...props
+}: ButtonProps) {
   return (
     <button
       className={[

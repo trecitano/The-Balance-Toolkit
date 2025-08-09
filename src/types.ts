@@ -31,38 +31,38 @@ export interface Device {
 
 export interface SessionInformation {
   selectedUser: string;
-  availableUsers: string[],
-  selectedBoards: string[],
-  lslEnabled: boolean,
-  tcpEnabled: boolean,
-  fileLocation: string,
-  isRecording: boolean,
+  availableUsers: string[];
+  selectedBoards: string[];
+  lslEnabled: boolean;
+  tcpEnabled: boolean;
+  fileLocation: string;
+  isRecording: boolean;
 }
 
 export type BalanceBoardEvent = RawBalanceBoardEvent | ProcessedBoardEvent;
 
 export type RawBalanceBoardEvent = {
-  event: "raw",
+  event: "raw";
   data: {
-    cop_x: number,
-    cop_y: number
-  }
-}
+    cop_x: number;
+    cop_y: number;
+  };
+};
 
 type ProcessedBoardEvent = {
-  event: "processed",
+  event: "processed";
   data: {
     timestamp: number;
     swayMetrics?: {
-      meanVelocity: number,
-      totalPathLength: number,
-      velocityMoment: number,
-    },
+      meanVelocity: number;
+      totalPathLength: number;
+      velocityMoment: number;
+    };
     areaMetrics?: {
-      confidenceEllipseArea: number,
-      convexHullArea: number,
-    },
-    dfaAlpha?: number,
-    jerk?: number
-  }
-}
+      confidenceEllipseArea: number;
+      convexHullArea: number;
+    };
+    dfaAlpha?: number;
+    jerk?: number;
+  };
+};

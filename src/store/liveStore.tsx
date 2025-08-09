@@ -20,10 +20,7 @@ type LiveState = {
 };
 
 // Internal helper
-function ensureBuffer(
-  boards: Record<string, BoardBuffer>,
-  boardId: string
-): BoardBuffer {
+function ensureBuffer(boards: Record<string, BoardBuffer>, boardId: string): BoardBuffer {
   let b = boards[boardId];
   if (!b) {
     b = { frames: Array(MAX_FRAMES), head: -1, len: 0 };
@@ -64,8 +61,7 @@ export const useLiveStore = create<LiveState>((set) => ({
 
 // Stable selectors
 
-export const useBoardBuffer = (boardId: string) =>
-  useLiveStore((s) => s.boards[boardId]); // stable reference until that board updates
+export const useBoardBuffer = (boardId: string) => useLiveStore((s) => s.boards[boardId]); // stable reference until that board updates
 
 export const useWindowMs = () => useLiveStore((s) => s.windowMs);
 
