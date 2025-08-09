@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { UserType } from "@/types.ts";
 import "./Users.css";
-import defaultUserIcon from "../../assets/user-icon.svg";
-import editIcon from "../../assets/edit-icon.svg";
-import deleteIcon from "../../assets/trash-icon.svg";
-import personIcon from "../../assets/user-icon.svg";
-import paletteIcon from "../../assets/palette-icon.svg";
-import calendarIcon from "../../assets/calendar-icon.svg";
-import sexIcon from "../../assets/sex-icon.svg";
-import heightIcon from "../../assets/measure-icon.svg";
-import weightIcon from "../../assets/weight-icon.svg";
-import handIcon from "../../assets/hand-icon.svg";
-import searchIcon from "../../assets/search-icon.svg";
+import defaultUserIcon from "@/assets/user-icon.svg";
+import editIcon from "@/assets/edit-icon.svg";
+import deleteIcon from "@/assets/trash-icon.svg";
+import personIcon from "@/assets/user-icon.svg";
+import paletteIcon from "@/assets/palette-icon.svg";
+import calendarIcon from "@/assets/calendar-icon.svg";
+import sexIcon from "@/assets/sex-icon.svg";
+import heightIcon from "@/assets/measure-icon.svg";
+import weightIcon from "@/assets/weight-icon.svg";
+import handIcon from "@/assets/hand-icon.svg";
+import searchIcon from "@/assets/search-icon.svg";
 import { commands } from "@/utils/requests.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -23,9 +23,8 @@ export default function Users() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showColorDropdown, setShowColorDropdown] = useState<boolean>(false);
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const hasInitialScroll = useRef(false);
   const userListRef = useRef<HTMLUListElement>(null);
-  const colorPickerRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   const fixedColors = [
@@ -43,11 +42,27 @@ export default function Users() {
     queryKey: USERS_QUERY_KEY,
     queryFn: async () => {
       const { users, selectedUser } = await commands.users.userPageInformation();
-
       return { users, selectedUser };
     },
   });
 
+  const users = data?.users ?? [];
+  const selectedUser = data?.selectedUser ?? "";
+  const selectedUserData = users.find((user) => user.name === selectedUser)!;
+  const isSearching = searchTerm.trim().length > 0;
+  const sortedUsers = [...users].sort((a, b) => {
+    if (a.isDefault) return -1;
+    if (b.isDefault) return 1;
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
+  const searchResults = searchTerm.trim()
+    ? users.filter((user) =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    : [];
+  const currentIndex = sortedUsers.findIndex((user) => user.name === selectedUser);
+
+  // Resize user cards
   useEffect(() => {
     if (!userListRef.current) return;
 
@@ -73,61 +88,94 @@ export default function Users() {
     return () => observer.disconnect();
   }, []);
 
+  // Keyboard navigation setup
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    const list = userListRef.current;
+    const handleGlobalKeyDown = async (e: KeyboardEvent) => {
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.tagName === 'SELECT'
+      );
 
-    if (!container || !list) return;
+      if (editingUserData || isInputFocused) {
+        return;
+      }
 
-    const handleWheel = (e: WheelEvent) => {
-      console.log("Handle wheeee");
-      e.preventDefault();
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
 
-      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+        if (sortedUsers.length <= 1) return;
 
-      const items = list.querySelectorAll(".user-carousel-item");
-      if (items.length === 0) return;
+        let newIndex;
+        if (e.key === 'ArrowLeft') {
+          newIndex = currentIndex > 0 ? currentIndex - 1 : sortedUsers.length - 1;
+        } else {
+          newIndex = currentIndex < sortedUsers.length - 1 ? currentIndex + 1 : 0;
+        }
 
-      const firstItem = items[0] as HTMLElement;
-      const itemWidth = firstItem.offsetWidth;
-
-      const scrollAmount = Math.sign(delta) * (itemWidth + 26);
-
-      list.scrollBy({
-        left: scrollAmount,
-        behavior: "smooth",
-      });
-    };
-
-    container.addEventListener("wheel", handleWheel, { passive: false });
-
-    return () => {
-      if (container) {
-        container.removeEventListener("wheel", handleWheel);
+        const newSelectedUser = sortedUsers[newIndex];
+        if (newSelectedUser) {
+          await handleSelectUser(newSelectedUser.name);
+        }
       }
     };
-  }, []);
 
-  const users = data?.users ?? [];
-  const selectedUser = data?.selectedUser ?? "";
-  const selectedUserData = users.find((user) => user.name === selectedUser)!;
-  const isSearching = searchTerm.trim().length > 0;
-  const sortedUsers = useMemo(() => {
-    return [...users].sort((a, b) => {
-      if (a.isDefault) return -1;
-      if (b.isDefault) return 1;
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-  }, [users]);
-  const searchResults = useMemo(() => {
-    if (!searchTerm.trim()) return [];
-    return users.filter((user) => user.name.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [users, searchTerm]);
-  const currentIndex = useMemo(
-    () => sortedUsers.findIndex((user) => user.name === selectedUser),
-    [sortedUsers, selectedUser],
-  );
-  console.log("Rerender!");
+    document.addEventListener('keydown', handleGlobalKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [sortedUsers]);
+
+  // Mouse wheel navigation setup
+  useEffect(() => {
+    const handleGlobalWheel = async (e: WheelEvent) => {
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.tagName === 'SELECT'
+      );
+
+      if (editingUserData || isInputFocused) {
+        return;
+      }
+
+      const target = e.target as Element;
+      const isOverUserListPanel = target.closest('.users-list-panel');
+
+      if (!isOverUserListPanel) {
+        return;
+      }
+
+      if (sortedUsers.length <= 1) return;
+
+      const delta = e.deltaY || e.deltaX;
+
+      if (Math.abs(delta) < 10) return;
+
+      e.preventDefault();
+
+      let newIndex;
+      if (delta < 0) {
+        newIndex = currentIndex < sortedUsers.length - 1 ? currentIndex + 1 : 0;
+      } else {
+        newIndex = currentIndex > 0 ? currentIndex - 1 : sortedUsers.length - 1;
+      }
+
+      const newSelectedUser = sortedUsers[newIndex];
+      if (newSelectedUser) {
+        await handleSelectUser(newSelectedUser.name);
+      }
+    };
+
+    document.addEventListener('wheel', handleGlobalWheel, { passive: false });
+
+    return () => {
+      document.removeEventListener('wheel', handleGlobalWheel);
+    };
+  }, [sortedUsers]);
 
   if (isLoading) {
     return <div></div>;
@@ -148,7 +196,7 @@ export default function Users() {
       selectedUserElement.scrollIntoView({
         behavior: "smooth",
         inline: "center",
-        block: "nearest",
+        block: "center",
       });
     }
   };
@@ -207,6 +255,7 @@ export default function Users() {
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
     setEditingUserData({ ...newUser });
+    await handleSelectUser(newUser.name);
     scrollToSelectedUser(newUser.name);
   };
 
@@ -355,15 +404,29 @@ export default function Users() {
           Add New User
         </button>
       </header>
-      {}
+
       <div className="users-main-content">
         <div className="users-list-panel">
-          <div className="user-carousel-scroll-container" ref={scrollContainerRef}>
+          <div className="user-carousel-scroll-container">
             <ul className="users-list" ref={userListRef}>
               {sortedUsers.map((user) => (
                 <li
                   key={user.name}
                   data-userid={user.name}
+                  ref={(el) => {
+                    if (
+                      el &&
+                      user.name === selectedUser &&
+                      !hasInitialScroll.current
+                    ) {
+                      hasInitialScroll.current = true;
+                      el.scrollIntoView({
+                        behavior: "instant",
+                        inline: "center",
+                        block: "center",
+                      });
+                    }
+                  }}
                   className={`user-carousel-item ${selectedUser === user.name ? "selected" : ""} ${editingUserData?.name === user.name ? "editing" : ""} ${user.isDefault ? "default-user" : ""}`}
                   onClick={() => handleSelectUser(user.name)}
                 >
@@ -556,7 +619,7 @@ export default function Users() {
                     <img src={paletteIcon} alt="" className="info-grid-icon" />
                     Color:
                   </label>
-                  <div className="color-picker-container" ref={colorPickerRef}>
+                  <div className="color-picker-container">
                     <input
                       type="color"
                       id="color"
@@ -723,6 +786,7 @@ export default function Users() {
           </div>
         )}
       </div>
+
       {showDeleteConfirm && (
         <div className="delete-confirm-overlay">
           <div className="delete-confirm-dialog">
