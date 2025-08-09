@@ -1,5 +1,4 @@
 export interface UserType {
-  id: string;
   name: string;
   age?: number;
   gender?: string;
@@ -13,36 +12,12 @@ export interface UserType {
   createdAt: string;
   updatedAt: string;
   isDefault: boolean;
-  isSelected: boolean
-  submitted?: boolean;
 }
 
-export interface RecentFile {
-  id: string;
-  name: string;
-  location: string;
-  lastUpdated: string;
-  userName: string;
+export interface UserPageInformation {
+  users: UserType[];
+  selectedUser: string;
 }
-
-export const defaultUser: UserType = {
-  id: "",
-  name: "",
-  age: undefined,
-  gender: "",
-  customGender: "",
-  height: undefined,
-  heightMetric: "cm", // Default to centimeters
-  weight: undefined,
-  weightMetric: "kg", // Default to kilograms
-  handedness: "Right",
-  color: "#397aac",
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  submitted: false,
-  isDefault: true,
-  isSelected: true,
-};
 
 export interface Device {
   id: string;
@@ -54,35 +29,40 @@ export interface Device {
   lastConnected: string; // ISO date string
 }
 
-export type BalanceBoardEvent = {
-  event: "reading";
+export interface SessionInformation {
+  selectedUser: string;
+  availableUsers: string[],
+  selectedBoards: string[],
+  lslEnabled: boolean,
+  tcpEnabled: boolean,
+  fileLocation: string,
+  isRecording: boolean,
+}
+
+export type BalanceBoardEvent = RawBalanceBoardEvent | ProcessedBoardEvent;
+
+export type RawBalanceBoardEvent = {
+  event: "raw",
   data: {
-    record: number;
-  };
-};
+    cop_x: number,
+    cop_y: number
+  }
+}
 
-// TEMP
-export type ProcessedBoardData = {
-  ts: number; // epoch ms
-  boardId: string;
-  userId: string;
-
-  // instantaneous center of pressure
-  cop: { x: number; y: number }; // normalized -1..1 or device units
-
-  // derived per-frame values
-  traces: {
-    vCoPx: number;
-    vCoPy: number;
-  };
-
-  // derived metrics
-  metrics: {
-    stabilityIndex?: number | null;
-  };
-};
-
-export type ActiveBoards = {
-  leftBoardId: string;
-  rightBoardId: string;
-};
+type ProcessedBoardEvent = {
+  event: "processed",
+  data: {
+    timestamp: number;
+    swayMetrics?: {
+      meanVelocity: number,
+      totalPathLength: number,
+      velocityMoment: number,
+    },
+    areaMetrics?: {
+      confidenceEllipseArea: number,
+      convexHullArea: number,
+    },
+    dfaAlpha?: number,
+    jerk?: number
+  }
+}

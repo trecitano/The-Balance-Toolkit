@@ -16,20 +16,20 @@ pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Startup: We initialize a single manager that holds all of the state, and runs in the background.
+    file_system::initialize_app_dir()?;
+
+    // Startup: We initialize a single manager that holds all state, and runs in the background.
     // The architecture of the app is that the commandline or web/tauri send messages to this manager,
     // and the manager responds via a oneshot channel.
     let (manager_command_tx, manager_command_rx) = mpsc::channel(100);
     let (manager_response_tx, manager_response_rx) = mpsc::channel(100);
-    let manager = ConnectionManager::new(manager_command_rx, manager_response_tx);
+    let manager = ConnectionManager::new(manager_command_rx, manager_response_tx)?;
     tokio::spawn(async move {
         if let Err(e) = manager.run().await {
             eprintln!("Error running connection manager: {}", e);
             panic!();
         }
     });
-    
-    file_system::initialize_app_dir()?;
     
     Ok(frontend::tauri::initialize(manager_command_tx, manager_response_rx))
 }

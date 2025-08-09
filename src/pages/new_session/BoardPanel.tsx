@@ -34,15 +34,9 @@ function windowFramesFromBuffer(
   return out;
 }
 
-export function BoardPanel({
-                             boardId,
-                             title,
-                           }: {
-  boardId: string;
-  title: string;
-}) {
-  const buf = useBoardBuffer(boardId);
-  const latest = useBoardLatest(boardId);
+export function BoardPanel({ boardName }: { boardName: string }) {
+  const buf = useBoardBuffer(boardName);
+  const latest = useBoardLatest(boardName);
   const windowMs = useWindowMs();
 
   const windowFrames = useMemo(
@@ -83,7 +77,7 @@ export function BoardPanel({
   return (
     <section className="rounded-lg border bg-white p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="font-semibold">{title}</h3>
+        <h3 className="font-semibold">{boardName}</h3>
       </div>
 
       <div className="grid grid-cols-12 gap-3">

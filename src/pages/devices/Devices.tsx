@@ -50,16 +50,16 @@ export default function Devices() {
     onError: (error) => console.error("Failed to remove device:", error),
   });
 
-  const disconnectDeviceMutation = useMutation({
-    mutationFn: (deviceId: string) => commands.devices.disconnectDevice(deviceId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
-    onError: (error) => console.error("Failed to disconnect device:", error),
-  });
-
   const selectDeviceForSessionMutation = useMutation({
     mutationFn: (deviceId: string) => commands.devices.selectDevice(deviceId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
     onError: (error) => console.error("Failed to connect device:", error),
+  });
+
+  const unselectDeviceForSessionMutation = useMutation({
+    mutationFn: (deviceId: string) => commands.devices.unselectDevice(deviceId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
+    onError: (error) => console.error("Failed to disconnect device:", error),
   });
 
   const scanDevicesMutation = useMutation({
@@ -195,7 +195,7 @@ export default function Devices() {
 
         <DeviceSessionList
           connectedDevices={selectedDevices}
-          handleDisconnectDevice={(deviceId) => disconnectDeviceMutation.mutate(deviceId)}
+          handleUnselectDevice={(deviceId) => unselectDeviceForSessionMutation.mutate(deviceId)}
         />
       </div>
 

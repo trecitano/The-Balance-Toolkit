@@ -19,7 +19,7 @@ export default function DeviceRow({
   handleSaveDeviceName,
   handleRemoveDevice,
   handleSelectDeviceForSession,
-  handleConnectDevice,
+  handleDisconnectDevice
 }: DeviceRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const connectTooltip = device.isConnected ? "" : "Device is disconnected";

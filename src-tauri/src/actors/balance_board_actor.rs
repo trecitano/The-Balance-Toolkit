@@ -1,8 +1,8 @@
-use crate::processing;
+use crate::{file_system, processing};
 use crate::processing::lsl_writer::LslConnectionSettings;
 use anyhow::Result;
 use chrono::Utc;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "mock")]
 use processing::board_hid_reader_mock as board_hid_reader;
 #[cfg(not(feature = "mock"))]
@@ -121,16 +121,26 @@ impl ProcessedBoardData {
 }
 
 
-#[derive(Clone, Debug)]
-pub struct BalanceBoardSessionSettings {
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SessionSettings {
     pub output_directory: Option<SettingWithMode<String>>,
-    pub frontend_channel: Option<SettingWithMode<Sender<BalanceBoardOutput>>>,
     pub lsl_connection: Option<SettingWithMode<LslConnectionSettings>>,
     pub tcp_connection_string: Option<SettingWithMode<String>>,
     pub processing_settings: Option<ProcessingSettings>,
 }
 
-#[derive(Clone, Debug)]
+impl Default for SessionSettings {
+    fn default() -> Self {
+        SessionSettings {
+            output_directory: Some(SettingWithMode { value: file_system::app_dir().to_str().unwrap().to_string(), mode: SettingMode::all() }),
+            lsl_connection: None,
+            tcp_connection_string: None,
+            processing_settings: Some(ProcessingSettings::default())
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SettingMode {
     pub receive_raw: bool,
     pub receive_processed: bool,
@@ -150,7 +160,7 @@ impl SettingMode {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SettingWithMode<T> {
     pub value: T,
     pub mode: SettingMode,
