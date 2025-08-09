@@ -1,13 +1,8 @@
-import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import {MultiSelect} from "@/components/MultiSelect.tsx";
-
-type BoardOption = { id: string; label: string };
-type UserOption = { id: string; name: string };
+import { MultiSelect } from "@/components/MultiSelect.tsx";
 
 export type SessionPanelValue = {
-  boardIds: string[]; // multi-select
-  userId: string | null;
+  user: string;
   lsl: boolean;
   tcp: boolean;
   saveDir: string | null;
@@ -17,33 +12,22 @@ export type SessionPanelValue = {
 export function SessionPanel({
                                boards,
                                users,
-                               initial,
+                               value,
                                onChange,
                                onRecordToggle,
                              }: {
-  boards: BoardOption[];
-  users: UserOption[];
-  initial?: Partial<SessionPanelValue>;
-  onChange?: (v: SessionPanelValue) => void;
+  boards: string[];
+  users: string;
+  value: SessionPanelValue;
+  onChange: (v: SessionPanelValue) => void;
   onRecordToggle?: (recording: boolean, state: SessionPanelValue) => void;
 }) {
-  const [value, setValue] = useState<SessionPanelValue>({
-    boardIds:
-      initial?.boardIds ?? (boards.length ? [boards[0].id] : []),
-    userId: initial?.userId ?? (users[0]?.id ?? null),
-    lsl: initial?.lsl ?? false,
-    tcp: initial?.tcp ?? false,
-    saveDir: initial?.saveDir ?? null,
-    recording: initial?.recording ?? false,
-  });
-
   const update = <K extends keyof SessionPanelValue>(
     key: K,
     val: SessionPanelValue[K]
   ) => {
     const next = { ...value, [key]: val };
-    setValue(next);
-    onChange?.(next);
+    onChange(next);
   };
 
   const pickDirectory = async () => {
@@ -58,11 +42,10 @@ export function SessionPanel({
   };
 
   const toggleRecording = () => {
-    const next = !value.recording;
-    const state = { ...value, recording: next };
-    setValue(state);
-    onChange?.(state);
-    onRecordToggle?.(next, state);
+    const nextRecording = !value.recording;
+    const nextState = { ...value, recording: nextRecording };
+    onChange(nextState);
+    onRecordToggle?.(nextRecording, nextState);
   };
 
   const selectCls =

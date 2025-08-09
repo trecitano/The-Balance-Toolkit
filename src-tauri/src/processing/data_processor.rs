@@ -6,7 +6,7 @@ use tokio::sync::mpsc::Sender;
 use rustfft::{FftPlanner, num_complex::Complex};
 use std::f32::consts::PI;
 use std::thread;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 struct CenterOfPressurePoint {
@@ -15,7 +15,7 @@ struct CenterOfPressurePoint {
     y: f32,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProcessingSettings {
     balance_board_x_size: f32,      // X distance (mm) of the Balance Board Force transducer.
     balance_board_y_size: f32,      // Y distance (mm) of the Balance Board Force transducer.
@@ -46,14 +46,14 @@ impl ProcessingSettings {
     }
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum InterpolationSetting {
     Linear,
     Cubic,
     Polynomial,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AnalysisConfiguration {
     pub sway_metrics: bool,
     pub area_metrics: bool,

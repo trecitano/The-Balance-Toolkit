@@ -1,11 +1,12 @@
 use anyhow::Result;
 use lsl::{ChannelFormat, Pushable};
 use std::thread;
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use crate::actors::balance_board_actor::BalanceBoardOutput;
 
-#[derive(Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LslConnectionSettings {
     pub stream_name: String,
     pub stream_type: String,

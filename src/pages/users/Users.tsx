@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
-import { UserType, defaultUser } from "../../types";
+import React, {useState, useEffect, useRef, useMemo} from "react";
+import { UserType } from "@/types.ts";
 import "./Users.css";
 import defaultUserIcon from "../../assets/user-icon.svg";
 import editIcon from "../../assets/edit-icon.svg";
 import deleteIcon from "../../assets/trash-icon.svg";
-import { v4 as uuidv4 } from "uuid";
 import personIcon from "../../assets/user-icon.svg";
 import paletteIcon from "../../assets/palette-icon.svg";
 import calendarIcon from "../../assets/calendar-icon.svg";
@@ -14,42 +13,23 @@ import weightIcon from "../../assets/weight-icon.svg";
 import handIcon from "../../assets/hand-icon.svg";
 import searchIcon from "../../assets/search-icon.svg";
 import { commands } from "@/utils/requests.ts";
-import {useQuery} from "@tanstack/react-query";
-
-function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  const debounced = (...args: Parameters<F>) => {
-    if (timeout !== null) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(() => func(...args), waitFor);
-  };
-
-  return debounced;
-}
+import {useQuery, useQueryClient} from "@tanstack/react-query";
 
 const USERS_QUERY_KEY = ["users"];
 
 export default function Users() {
-  const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editingUserData, setEditingUserData] = useState<UserType | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [leftFadeOpacity, setLeftFadeOpacity] = useState(0);
   const [rightFadeOpacity, setRightFadeOpacity] = useState(1);
-  const [carouselScrollPosition, setCarouselScrollPosition] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [searchResults, setSearchResults] = useState<UserType[]>([]);
-  const [isSearching, setIsSearching] = useState<boolean>(false);
   const [showColorDropdown, setShowColorDropdown] = useState<boolean>(false);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const userListRef = useRef<HTMLUListElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
   const isAutoScrolling = useRef<boolean>(false);
   const colorPickerRef = useRef<HTMLDivElement>(null);
-
-  const selectedUser = useRef<string | null>(null);
+  const queryClient = useQueryClient();
 
   const fixedColors = [
     "#e55d82",
@@ -65,16 +45,38 @@ export default function Users() {
   const { data, isLoading, error } = useQuery({
     queryKey: USERS_QUERY_KEY,
     queryFn: async () => {
-      const users = await commands.users.fetchUsers();
+      const { users, selectedUser } = await commands.users.userPageInformation();
 
-      console.log("result: ", users);
-
-      return { users };
+      return {users, selectedUser};
     },
-    initialData: { users: [] }
+    initialData: { users: [], selectedUser: '' }
   });
 
-  const { users } = data ?? {};
+  const users = data.users ?? [];
+  const [selectedUser, setSelectedUser] = useState<string>(data.selectedUser);
+  const isSearching = searchTerm.trim().length > 0;
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => {
+      if (a.isDefault) return -1;
+      if (b.isDefault) return 1;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }, [users]);
+  const searchResults = useMemo(() => {
+    if (!searchTerm.trim()) return [];
+    return users.filter(user =>
+      user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [users, searchTerm]);
+  const displayUser = useMemo(() => {
+    if (editingUserData) return editingUserData;
+    return users.find(user => user.name === selectedUser) || null;
+  }, [editingUserData, users, selectedUser]);
+  const currentIndex = useMemo(
+    () => sortedUsers.findIndex(user => user.name === selectedUser),
+    [sortedUsers, selectedUser]
+  );
+
 
   useEffect(() => {
     const adjustCardWidths = () => {
@@ -116,42 +118,43 @@ export default function Users() {
     };
   }, [users.length, selectedUser]);
 
-  useEffect(() => {
-    if (userListRef.current && selectedUser) {
+  const scrollToSelectedUser= (userId: string) => {
+    requestAnimationFrame(() => {
+      if (!userListRef.current || !selectedUser) return;
       const selectedUserElement = userListRef.current.querySelector(
-        `[data-userid="${selectedUser}"]`,
+        `[data-userid="${userId}"]`
       ) as HTMLLIElement;
 
-      if (selectedUserElement) {
-        setTimeout(() => {
-          const listElement = userListRef.current;
-          if (!listElement) return;
+      if (!selectedUserElement) return;
 
-          const listRect = listElement.getBoundingClientRect();
-          const elementRect = selectedUserElement.getBoundingClientRect();
+      setTimeout(() => {
+        const listElement = userListRef.current;
+        if (!listElement) return;
 
-          const listCenter = listRect.left + listRect.width / 2;
-          const elementCenter = elementRect.left + elementRect.width / 2;
-          const offset = elementCenter - listCenter;
+        const listRect: DOMRect = listElement.getBoundingClientRect();
+        const elementRect: DOMRect = selectedUserElement.getBoundingClientRect();
 
-          if (Math.abs(offset) > 2) {
-            isAutoScrolling.current = true;
+        const listCenter: number = listRect.left + listRect.width / 2;
+        const elementCenter: number = elementRect.left + elementRect.width / 2;
+        const offset: number = elementCenter - listCenter;
 
-            const newScrollLeft = listElement.scrollLeft + offset;
+        if (Math.abs(offset) > 2) {
+          isAutoScrolling.current = true;
 
-            listElement.scrollTo({
-              left: newScrollLeft,
-              behavior: "smooth",
-            });
+          const newScrollLeft: number = listElement.scrollLeft + offset;
 
-            setTimeout(() => {
-              isAutoScrolling.current = false;
-            }, 600);
-          }
-        }, 50);
-      }
-    }
-  }, [selectedUser, users]);
+          listElement.scrollTo({
+            left: newScrollLeft,
+            behavior: "smooth",
+          });
+
+          setTimeout(() => {
+            isAutoScrolling.current = false;
+          }, 600);
+        }
+      }, 50);
+    });
+  }
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -160,6 +163,7 @@ export default function Users() {
     if (!container || !list) return;
 
     const handleWheel = (e: WheelEvent) => {
+      console.log("Handle wheeee");
       e.preventDefault();
 
       const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
@@ -169,7 +173,6 @@ export default function Users() {
 
       const firstItem = items[0] as HTMLElement;
       const itemWidth = firstItem.offsetWidth;
-      const containerWidth = list.clientWidth;
 
       const scrollAmount = Math.sign(delta) * (itemWidth + 26);
 
@@ -188,255 +191,75 @@ export default function Users() {
     };
   }, []);
 
-  useEffect(() => {
-    const listElement = userListRef.current;
-    if (!listElement) return;
-
-    const stableSetCurrentUser = selectedUser;
-
-    const updateSelectionOnScroll = () => {
-      if (isAutoScrolling.current) return;
-
-      const listElement = userListRef.current;
-      if (!listElement) return;
-
-      const viewportCenter = listElement.getBoundingClientRect().left + listElement.clientWidth / 2;
-      let closestElementId: string | null = null;
-      let minDistance = Infinity;
-      let minDistancePercent = 100;
-
-      Array.from(listElement.children).forEach((child) => {
-        const element = child as HTMLLIElement;
-        if (!element.dataset.userid) return;
-        const elementBounds = element.getBoundingClientRect();
-        const elementCenter = elementBounds.left + elementBounds.width / 2;
-        const distance = Math.abs(viewportCenter - elementCenter);
-        const distancePercent = (distance / elementBounds.width) * 100;
-
-        if (distance < minDistance) {
-          minDistance = distance;
-          minDistancePercent = distancePercent;
-          closestElementId = element.dataset.userid || null;
-        }
-      });
-
-      if (
-        closestElementId &&
-        closestElementId !== selectedUser &&
-        minDistancePercent < 30
-      ) {
-        stableSetCurrentUser(closestElementId);
-      }
-    };
-
-    const debouncedUpdate = debounce(updateSelectionOnScroll, 150);
-
-    const handleScroll = () => {
-      const listElement = userListRef.current;
-      if (!listElement) return;
-
-      const { scrollLeft, scrollWidth, clientWidth } = listElement;
-
-      setCarouselScrollPosition(scrollLeft);
-
-      const maxFadeScroll = 50;
-      const leftOpacity = Math.min(scrollLeft / maxFadeScroll, 1);
-      setLeftFadeOpacity(leftOpacity);
-      const scrollRight = scrollWidth - clientWidth - scrollLeft;
-      const rightOpacity = Math.max(0, Math.min(scrollRight / maxFadeScroll, 1));
-      setRightFadeOpacity(rightOpacity);
-
-      debouncedUpdate();
-    };
-
-    listElement.addEventListener("scroll", handleScroll);
-    handleScroll();
-
-    return () => {
-      listElement.removeEventListener("scroll", handleScroll);
-    };
-  }, [users, selectedUser]);
-
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const term = e.target.value;
-    setSearchTerm(term);
-
-    if (!term.trim()) {
-      setIsSearching(false);
-      setSearchResults([]);
-      return;
-    }
-
-    setIsSearching(true);
-
-    const filtered = users.filter(
-      (user) =>
-        user.name.toLowerCase().includes(term.toLowerCase()) ||
-        user.id.toLowerCase().includes(term.toLowerCase()),
-    );
-
-    setSearchResults(filtered);
+    setSearchTerm(e.target.value);
   };
 
   const handleSelectSearchResult = (userId: string) => {
     handleSelectUser(userId);
     setSearchTerm("");
-    setIsSearching(false);
-    setSearchResults([]);
   };
 
-  const handleSelectUser = (userId: string, event?: React.MouseEvent) => {
-    if (editingIdx !== null) {
-      if (
-        window.confirm("You have unsaved changes. Discard changes and select a different user?")
-      ) {
-        setEditingIdx(null);
+  const handleSelectUser = (userId: string) => {
+    if (editingUserData) {
+      if (window.confirm("You have unsaved changes. Discard changes and select a different user?")) {
         setEditingUserData(null);
       } else {
         return;
       }
     }
 
-    selectedUser.current = userId;
-
-    if (event) {
-      event.stopPropagation();
-
-      const selectedElement = userListRef.current?.querySelector(
-        `[data-userid="${userId}"]`,
-      ) as HTMLLIElement;
-
-      if (selectedElement && userListRef.current) {
-        isAutoScrolling.current = true;
-
-        const listElement = userListRef.current;
-        const listRect = listElement.getBoundingClientRect();
-        const elementRect = selectedElement.getBoundingClientRect();
-
-        const listCenter = listRect.left + listRect.width / 2;
-        const elementCenter = elementRect.left + elementRect.width / 2;
-        const offset = elementCenter - listCenter;
-
-        const newScrollLeft = listElement.scrollLeft + offset;
-
-        listElement.scrollTo({
-          left: newScrollLeft,
-          behavior: "smooth",
-        });
-
-        setTimeout(() => {
-          isAutoScrolling.current = false;
-        }, 500);
-      }
-    }
-
-    setEditingIdx(null);
+    setSelectedUser(userId);
     setEditingUserData(null);
+    scrollToSelectedUser(userId);
   };
 
-  const handleAddUser = async () => {
-    if (editingIdx !== null) {
+  const handleAddUser = async (usersArg: UserType[]) => {
+    if (editingUserData !== null) {
       alert("Please save or cancel current edits before adding a new user.");
       return;
     }
+
     const newUser: UserType = {
-      ...defaultUser,
-      id: uuidv4(),
-      name: `New User ${users.filter((u) => u.name.startsWith("New User")).length + 1}`,
+      name: `New User ${usersArg.filter((u) => u.name.startsWith("New User")).length + 1}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      color: `#${Math.floor(Math.random() * 16777215)
-        .toString(16)
-        .padStart(6, "0")}`,
+      color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, "0")}`,
+      isDefault: false,
     };
 
     await commands.users.addUser(newUser);
-    const users = await commands.users.fetchUsers();
+    await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
-    selectedUser.current = newUser.id;
-    const newIndex = users.length;
-    setEditingIdx(newIndex);
+    setSelectedUser(newUser.name);
     setEditingUserData({ ...newUser });
-    if (formRef.current) formRef.current.reset();
-  };
-
-  const isDefaultUser = (user: UserType) => {
-    return (
-      user.id === defaultUser.id || (user.name === "Default User" && user.id.startsWith("default"))
-    );
+    scrollToSelectedUser(newUser.name);
   };
 
   const handleDeleteUser = async (userIdToDelete: string) => {
     await commands.users.deleteUser(userIdToDelete);
-    const users = await commands.users.fetchUsers();
+    await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
-    if (selectedUser.current === userIdToDelete) {
-      selectedUser.current = users.length > 1
-        ? users.filter((u) => u.id !== userIdToDelete)[0]?.id || null
-        : null;
+    if (selectedUser === userIdToDelete) {
+      setSelectedUser(users[0].name)
     }
-    if (editingUserData?.id === userIdToDelete) {
-      setEditingIdx(null);
+    if (editingUserData?.name === userIdToDelete) {
       setEditingUserData(null);
     }
     setShowDeleteConfirm(null);
+    scrollToSelectedUser(users[0].name);
   };
 
-  /*
-  useEffect(() => {
-    const defaultUserExists = users.some(
-      (user) =>
-        user.id === defaultUser.id || (user.name === "Default User" && user.submitted === true),
-    );
-
-    if (!defaultUserExists) {
-      const defaultUserId = defaultUser.id || "default-user-" + uuidv4();
-
-      const newDefaultUser: UserType = {
-        ...defaultUser,
-        id: defaultUserId,
-        name: "Default User",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        color: "#397aac",
-        submitted: true,
-      };
-
-      users((prevUsers) => {
-        const filteredUsers = prevUsers.filter((user) => user.name !== "Default User");
-        return [...filteredUsers, newDefaultUser];
-      });
-
-      if (!selectedUser.current) {
-        selectedUser.current = defaultUserId;
-      }
-    }
-  }, []);
-  */
-
-  if (isLoading) {
-    return <div></div>;
-  }
-
-  if (error) {
-    return (
-      <div>
-      </div>
-    );
-  }
-
   const handleEditUser = (userId: string) => {
-    const userToEdit = users.find((user) => user.id === userId);
-    const userIndex = users.findIndex((user) => user.id === userId);
+    const userToEdit = users.find((user) => user.name === userId);
+    const userIndex = users.findIndex((user) => user.name === userId);
     if (userToEdit && userIndex !== -1) {
       setEditingUserData({ ...userToEdit });
-      setEditingIdx(userIndex);
-      selectedUser.current = userId;
+      setSelectedUser(selectedUser);
     }
   };
 
   const handleCancelEdit = () => {
-    setEditingIdx(null);
     setEditingUserData(null);
   };
 
@@ -459,7 +282,7 @@ export default function Users() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!editingUserData || editingUserData.id === null) return;
+    if (!editingUserData || editingUserData.name === null) return;
 
     if (!editingUserData.weight) {
       const weightField = document.querySelector(".form-field.required-field");
@@ -467,41 +290,23 @@ export default function Users() {
       return;
     }
 
-    const updatedUser = {
-      ...editingUserData,
-      lastUpdatedOn: new Date().toISOString(),
-      submitted: true,
-    };
+    await commands.users.updateUser(editingUserData);
+    await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
-    await commands.users.updateUser(updatedUser);
-    const users = await commands.users.fetchUsers();
-    selectedUser.current = updatedUser.id;
-    setEditingIdx(null);
+
+    setSelectedUser(editingUserData.name)
+    scrollToSelectedUser(editingUserData.name);
     setEditingUserData(null);
   };
 
-  console.log("test");
-  console.log(users);
-
-  const currentUserData =
-    users.find((user) => user.id === selectedUser.current) ||
-    editingUserData ||
-    (users.length > 0 ? users[0] : null);
-  const displayUser = editingUserData || currentUserData;
-
   const renderCarouselIndicators = () => {
-    if (!users.length) return null;
-
-    const sortedUsers = getSortedUsers();
-    const currentIndex = sortedUsers.findIndex((user) => user.id === selectedUser.current);
-
     return (
       <div className="carousel-indicators">
         {sortedUsers.map((user, index) => {
           const distance = Math.abs(index - currentIndex);
           let className = "carousel-indicator-dot";
 
-          if (user.id === selectedUser.current) {
+          if (user.name === selectedUser) {
             className += " active";
           } else if (distance <= 2) {
             className += " nearby";
@@ -509,9 +314,9 @@ export default function Users() {
 
           return (
             <div
-              key={user.id}
+              key={user.name}
               className={className}
-              onClick={() => handleSelectUser(user.id)}
+              onClick={() => handleSelectUser(user.name)}
               title={user.name}
             />
           );
@@ -542,15 +347,16 @@ export default function Users() {
     setShowColorDropdown(false);
   };
 
-  const getSortedUsers = () => {
-    return [...users].sort((a, b) => {
-      if (isDefaultUser(a)) return -1;
+  if (isLoading) {
+    return <div></div>;
+  }
 
-      if (isDefaultUser(b)) return 1;
-
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-  };
+  if (error) {
+    return (
+      <div>
+      </div>
+    );
+  }
 
   return (
     <div className="inside-page">
@@ -573,9 +379,9 @@ export default function Users() {
             <div className="search-results">
               {searchResults.map((user) => (
                 <div
-                  key={user.id}
+                  key={user.name}
                   className="search-result-item"
-                  onClick={() => handleSelectSearchResult(user.id)}
+                  onClick={() => handleSelectSearchResult(user.name)}
                 >
                   <img
                     src={defaultUserIcon}
@@ -584,7 +390,7 @@ export default function Users() {
                     style={{ border: `2px solid ${user.color || "#ccc"}` }}
                   />
                   <span className="search-result-name">{user.name}</span>
-                  <span className="search-result-id">{user.id.substring(0, 8)}...</span>
+                  <span className="search-result-id">{user.name.substring(0, 8)}...</span>
                 </div>
               ))}
             </div>
@@ -597,7 +403,7 @@ export default function Users() {
         </div>
 
         <button
-          onClick={handleAddUser}
+          onClick={() => handleAddUser(users)}
           className="btn btn--primary add-user-btn"
           aria-label="Add new user"
         >
@@ -613,16 +419,16 @@ export default function Users() {
               style={{ opacity: leftFadeOpacity }}
             />
             <ul className="users-list" ref={userListRef}>
-              {getSortedUsers().map((user) => (
+              {sortedUsers.map((user) => (
                 <li
-                  key={user.id}
-                  data-userid={user.id}
-                  className={`user-carousel-item ${selectedUser.current === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""} ${isDefaultUser(user) ? "default-user" : ""}`}
-                  onClick={(e) => handleSelectUser(user.id, e)}
+                  key={user.name}
+                  data-userid={user.name}
+                  className={`user-carousel-item ${selectedUser === user.name ? "selected" : ""} ${editingUserData?.name === user.name ? "editing" : ""} ${user.isDefault ? "default-user" : ""}`}
+                  onClick={() => handleSelectUser(user.name)}
                 >
                   <div className="user-selection-status">
-                    {selectedUser.current === user.id &&
-                      (isDefaultUser(user) ? "Default" : "Selected")}
+                    {selectedUser === user.name &&
+                      (user.isDefault ? "Default" : "Selected")}
                   </div>
                   <img
                     src={defaultUserIcon}
@@ -637,12 +443,9 @@ export default function Users() {
                       {new Date(user.updatedAt).toLocaleDateString()}
                     </span>
                   </span>
-                  {selectedUser.current === user.id && editingIdx === null && (
+                  {selectedUser === user.name && editingUserData === null && (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditUser(user.id);
-                      }}
+                      onClick={() => handleEditUser(user.name)}
                       className="user-action-btn btn--icon-only"
                       aria-label="Edit user"
                     >
@@ -675,7 +478,7 @@ export default function Users() {
                   <div className="user-metadata">
                     <span className="metadata-item">
                       <span className="metadata-label">ID:</span>
-                      <span className="metadata-value">{displayUser.id.substring(0, 10)}...</span>
+                      <span className="metadata-value">{displayUser.name.substring(0, 10)}...</span>
                     </span>
                     <span className="metadata-item">
                       <span className="metadata-label">Created:</span>
@@ -722,10 +525,10 @@ export default function Users() {
                       >
                         Cancel
                       </button>
-                      {!isDefaultUser(displayUser) && displayUser.id !== defaultUser.id && (
+                      {!displayUser.isDefault && (
                         <button
                           type="button"
-                          onClick={() => setShowDeleteConfirm(displayUser.id)}
+                          onClick={() => setShowDeleteConfirm(displayUser.name)}
                           className="btn btn--delete"
                         >
                           <img src={deleteIcon} alt="Delete" /> Delete
@@ -735,15 +538,15 @@ export default function Users() {
                   ) : (
                     <>
                       <button
-                        onClick={() => handleEditUser(displayUser.id)}
+                        onClick={() => handleEditUser(displayUser.name)}
                         className="btn btn--primary"
                         aria-label="Edit user"
                       >
                         <img src={editIcon} alt="Edit" /> Edit
                       </button>
-                      {!isDefaultUser(displayUser) && (
+                      {!displayUser.isDefault && (
                         <button
-                          onClick={() => setShowDeleteConfirm(displayUser.id)}
+                          onClick={() => setShowDeleteConfirm(displayUser.name)}
                           className="btn btn--delete"
                           aria-label="Delete user"
                         >
@@ -998,10 +801,10 @@ export default function Users() {
             <h4>Confirm Delete</h4>
             <p>
               Are you sure you want to delete user "
-              {users.find((u) => u.id === showDeleteConfirm)?.name}"?
+              {users.find((u) => u.name === showDeleteConfirm)?.name}"?
             </p>
 
-            {users.find((u) => u.id === showDeleteConfirm && isDefaultUser(u)) && (
+            {users.find((u) => u.name === showDeleteConfirm && u.isDefault) && (
               <p className="default-user-warning">Default User cannot be deleted!</p>
             )}
 
@@ -1010,7 +813,7 @@ export default function Users() {
                 onClick={() => handleDeleteUser(showDeleteConfirm)}
                 className="btn btn--delete btn--medium"
                 disabled={
-                  users.find((u) => u.id === showDeleteConfirm && isDefaultUser(u)) !== undefined
+                  users.find((u) => u.name === showDeleteConfirm && u.isDefault) !== undefined
                 }
               >
                 <span className="btn__icon btn__icon--left">

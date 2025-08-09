@@ -1,10 +1,10 @@
 import { create } from "zustand";
-import { ProcessedBoardData } from "../types";
+import { BalanceBoardEvent } from "../types";
 
 const MAX_FRAMES = 10_000;
 
 export type BoardBuffer = {
-  frames: (ProcessedBoardData | undefined)[];
+  frames: (BalanceBoardEvent | undefined)[];
   head: number;
   len: number;
 };
@@ -14,8 +14,8 @@ type LiveState = {
   windowMs: number;
   boards: Record<string, BoardBuffer>;
 
-  pushFrame: (f: ProcessedBoardData) => void;
-  pushFramesBatch: (fs: ProcessedBoardData[]) => void;
+  pushFrame: (f: BalanceBoardEvent) => void;
+  pushFramesBatch: (fs: BalanceBoardEvent[]) => void;
   clear: () => void;
 };
 

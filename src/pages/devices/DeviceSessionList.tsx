@@ -15,12 +15,12 @@ import battery100Icon from "@/assets/battery-100-icon.svg";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
-  handleDisconnectDevice: (macAddress: string) => void;
+  handleUnselectDevice: (deviceId: string) => void;
 }
 
 export default function DeviceSessionList({
   connectedDevices,
-  handleDisconnectDevice,
+  handleUnselectDevice,
 }: DeviceSessionListProps) {
   const getBatteryIcon = (batteryLevel: number) => {
     if (batteryLevel <= 12) return battery0Icon;
@@ -98,7 +98,7 @@ export default function DeviceSessionList({
 
                 <div className="side-panel-actions">
                   <button
-                    onClick={() => handleDisconnectDevice(device.macAddress)}
+                    onClick={() => handleUnselectDevice(device.id)}
                     className="side-panel-btn disconnect"
                     disabled={!!isPanelDisabled}
                   >

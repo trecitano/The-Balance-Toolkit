@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-ro
 import Navigation from "@/components/navigation/Navigation";
 import Home from "@/pages/home/Home.tsx";
 import DevicesPage, { DevicesQuery } from "@/pages/devices/Devices";
-import UsersPage from "@/pages/users/Users";
+import UsersPage from "@/pages/users/Users";                        
 import SessionPage from "@/pages/new_session/SessionPage";
 import Activities from "@/pages/activities/Activities";
 import "./App.css";

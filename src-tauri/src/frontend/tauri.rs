@@ -1,6 +1,6 @@
 use std::time::Duration;
 use crate::file_system::UserFileSystem;
-use crate::types::{NintendoDevice, User};
+use crate::types::{NintendoDevice, SessionInformation, User, UserPageInformation};
 use crate::file_system;
 
 use tokio::sync::{mpsc, oneshot};
@@ -8,7 +8,7 @@ use tauri::{Emitter, Manager, State};
 use tauri::ipc::Channel;
 use tauri_plugin_fs::FsExt;
 use tokio::sync::mpsc::{Sender, Receiver};
-use crate::actors::balance_board_actor::{BalanceBoardOutput, BalanceBoardSessionSettings, BoardAction, SettingMode, SettingWithMode};
+use crate::actors::balance_board_actor::{BalanceBoardOutput, SessionSettings, BoardAction, SettingMode, SettingWithMode};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
 use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
 use crate::processing::data_processor::ProcessingSettings;
@@ -41,7 +41,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            user_fetch_all_users,
+            user_page_information,
             user_add,
             user_update,
             user_delete,
@@ -67,9 +67,21 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
 // --- USER COMMANDS ---
 
 #[tauri::command]
-pub fn user_fetch_all_users() -> Result<Vec<User>, String> {
+async fn user_page_information(state: State<'_, AppState>) -> Result<UserPageInformation, String> {
     println!(">> fetch_all_users");
-    UserFileSystem::get_users().map_err(|e| e.to_string())
+
+    let users = UserFileSystem::get_users().map_err(|e| e.to_string())?;
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::GetSelectedUser { response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let result = response_rx.await.map_err(|e| e.to_string())?;
+
+    let response = UserPageInformation {
+        users,
+        selected_user: result,
+    };
+
+    Ok(response)
 }
 
 #[tauri::command]
@@ -85,9 +97,9 @@ pub fn user_update(user: User) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn user_delete(user_id: String) -> Result<(), String> {
-    println!(">> user_delete: {}", user_id);
-    UserFileSystem::remove_user(user_id).map_err(|e| e.to_string())
+pub fn user_delete(user_name: String) -> Result<(), String> {
+    println!(">> user_delete: {}", user_name);
+    UserFileSystem::remove_user(user_name).map_err(|e| e.to_string())
 }
 
 // --- DEVICE COMMANDS ---
@@ -258,6 +270,23 @@ pub async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<
     Ok(result)
 }
 
+// ========================
+// --- SESSION COMMANDS ---
+// ========================
+
+async fn session_information(state: State<'_, AppState>) -> Result<SessionInformation, String> {
+    println!(">> session_information");
+
+    // When we receive a balance board reading, we send it to the frontend.
+    let (tx, mut rx) = oneshot::channel();
+    let command = ToolkitCommand::SessionInformation { response: tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let result = rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< session_information. {:?}", result);
+    Ok(result)
+}
+
 #[tauri::command(async)]
 pub async fn session_start_session(state: State<'_, AppState>, session_channel: Channel<BalanceBoardOutput>) -> Result<(), String> {
     println!(">> session_start_session");
@@ -270,13 +299,7 @@ pub async fn session_start_session(state: State<'_, AppState>, session_channel: 
         };
     });
 
-    let command = ToolkitCommand::StartSession { settings: BalanceBoardSessionSettings {
-        output_directory: Some(SettingWithMode { value: file_system::app_dir().to_str().unwrap().to_string(), mode: SettingMode::all() }),
-        frontend_channel: Some(SettingWithMode { value: balance_board_tx, mode: SettingMode::processed_only() }),
-        lsl_connection: None,
-        tcp_connection_string: None,
-        processing_settings: Some(ProcessingSettings::default())
-    }};
+    let command = ToolkitCommand::StartSession { frontend_channel: balance_board_tx };
     state.manager_tx.send(command)
         .await
         .map_err(|e| e.to_string())?;

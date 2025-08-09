@@ -1,33 +1,33 @@
 import { useEffect, useRef } from "react";
 import { Channel } from "@tauri-apps/api/core";
-import { ProcessedBoardData } from "../types";
+import { BalanceBoardEvent } from "../types";
 import { useLiveStore } from "../store/liveStore";
 import { commands } from "@/utils/requests";
 
 // rAF-batched stream hook
 export function useSessionStream(enabled: boolean) {
   const pushBatch = useLiveStore((s) => s.pushFramesBatch);
-  const chanRef = useRef<Channel<ProcessedBoardData> | null>(null);
+  const chanRef = useRef<Channel<BalanceBoardEvent> | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
 
-    const chan = new Channel<ProcessedBoardData>();
+    const chan = new Channel<BalanceBoardEvent>();
     chanRef.current = chan;
 
-    let buf: ProcessedBoardData[] = [];
+    let buf: BalanceBoardEvent[] = [];
     let scheduled = false;
 
     const flush = () => {
       scheduled = false;
       if (buf.length) {
-        // single state update for N frames
         pushBatch(buf);
         buf = [];
       }
     };
 
     chan.onmessage = (msg) => {
+      console.log("Received event!:", msg);
       buf.push(msg);
       if (!scheduled) {
         scheduled = true;

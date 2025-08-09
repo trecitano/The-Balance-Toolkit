@@ -1,13 +1,15 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
-use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, BalanceBoardSessionSettings, BoardAction, SettingMode};
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, SessionSettings, BoardAction, SettingMode};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothHandler};
-use crate::file_system::DeviceFileSystem;
-use crate::types::{MacAddress, NintendoDevice};
+use crate::file_system::{DeviceFileSystem, SessionFileSystem};
+use crate::types::{MacAddress, NintendoDevice, SessionInformation, User};
 use anyhow::Result;
 use tokio::sync::mpsc::Sender;
+use file_system::UserFileSystem;
 use crate::actors::balance_board_actor;
+use crate::file_system;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
 
 // Commands that can be sent to the ConnectionManager
@@ -29,6 +31,9 @@ pub enum ToolkitCommand {
         device_id: String,
     },
 
+    GetSelectedUser {
+        response: oneshot::Sender<String>
+    },
     SelectBoardForSession {
         device_id: String,
     },
@@ -39,8 +44,11 @@ pub enum ToolkitCommand {
         response: oneshot::Sender<Vec<String>>,
     },
 
+    SessionInformation {
+        response: oneshot::Sender<SessionInformation>,
+    },
     StartSession {
-        settings: BalanceBoardSessionSettings
+        frontend_channel: Sender<BalanceBoardOutput>
     },
     StopSession,
 
@@ -57,20 +65,31 @@ pub enum ToolkitResponse {
 pub struct ConnectionManager {
     rx: mpsc::Receiver<ToolkitCommand>,
     tx: mpsc::Sender<ToolkitResponse>,
+    bluetooth_manager_tx: mpsc::Sender<BluetoothCommand>,
+
+    selected_user: User,
+    session_settings: SessionSettings,
     connections: HashMap<String, mpsc::Sender<BoardAction>>,
     selected_boards: HashSet<String>,
-    bluetooth_manager_tx: mpsc::Sender<BluetoothCommand>,
+    is_recording: bool,
 }
 
 impl ConnectionManager {
-    pub fn new(rx: mpsc::Receiver<ToolkitCommand>, tx: mpsc::Sender<ToolkitResponse>) -> Self {
-        Self {
+    pub fn new(rx: mpsc::Receiver<ToolkitCommand>, tx: mpsc::Sender<ToolkitResponse>) -> Result<Self> {
+        let selected_user = UserFileSystem::get_or_create_default_user()?;
+        let session_settings = SessionFileSystem::get_or_create_default_session_settings()?;
+
+        Ok(Self {
             rx,
             tx,
+            bluetooth_manager_tx: BluetoothHandler::start_bluetooth_handler(),
+
+            selected_user,
+            session_settings,
             connections: HashMap::new(),
             selected_boards: HashSet::new(),
-            bluetooth_manager_tx: BluetoothHandler::start_bluetooth_handler(),
-        }
+            is_recording: false,
+        })
     }
 
     pub async fn run(mut self) -> Result<()> {
@@ -95,6 +114,9 @@ impl ConnectionManager {
                 }
 
 
+                ToolkitCommand::GetSelectedUser { response } => {
+                    response.send(self.selected_user.name.clone()).unwrap();
+                }
                 ToolkitCommand::SelectBoardForSession { device_id } => {
                     self.selected_boards.insert(device_id);
                 }
@@ -105,10 +127,25 @@ impl ConnectionManager {
                     response.send(self.selected_boards.iter().cloned().collect()).unwrap();
                 }
 
+                ToolkitCommand::SessionInformation { response } => {
+                    let session_information = SessionInformation {
+                        selected_user: self.selected_user.name.clone(),
+                        available_users: UserFileSystem::get_users()?.into_iter().map(|user| user.name).collect(),
+                        selected_boards: self.selected_boards.iter().cloned().collect(),
+                        enabled_lsl: self.session_settings.lsl_connection.is_some(),
+                        enabled_tcp: self.session_settings.tcp_connection_string.is_some(),
+                        output_directory: match &self.session_settings.output_directory {
+                            Some(config) => Some(config.value.clone()),
+                            None => None,
+                        },
+                        is_recording: self.is_recording,
+                    };
+                    response.send(session_information).unwrap();
+                }
+                ToolkitCommand::StartSession { frontend_channel } => {
+                    let settings = self.session_settings.clone();
 
-                ToolkitCommand::StartSession { settings } => {
-                    println!("Sending start recording command to boards: {:?}", self.selected_boards);
-                    start_session(settings, &self.selected_boards, &self.connections).await;
+                    start_session(settings, frontend_channel, &self.selected_boards, &self.connections).await;
                 },
                 ToolkitCommand::StopSession => {
                     for board in &self.selected_boards {
@@ -270,7 +307,8 @@ struct SessionMapping {
     observers_raw: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
     observers_processed: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
 }
-async fn start_session(settings: BalanceBoardSessionSettings,
+async fn start_session(settings: SessionSettings,
+                       frontend_channel: Sender<BalanceBoardOutput>,
                        selected_boards: &HashSet<String>,
                        hid_board_rx_map: &HashMap<String, mpsc::Sender<BoardAction>>) {
     let mut observer_list: Vec<SessionMapping> = vec!();
@@ -317,11 +355,9 @@ async fn start_session(settings: BalanceBoardSessionSettings,
     };
 
     // 1 Frontend Observer
-    if let Some(config) = settings.frontend_channel {
-        let tx = initialize_frontend_observer(config.value);
-        for mut session_mapping in observer_list.iter_mut() {
-            add_observer_to_device_list(tx.clone(), ObserverType::FrontendObserver, &config.mode, &mut session_mapping);
-        }
+    let tx = initialize_frontend_observer(frontend_channel);
+    for mut session_mapping in observer_list.iter_mut() {
+        add_observer_to_device_list(tx.clone(), ObserverType::FrontendObserver, &SettingMode::all(), &mut session_mapping);
     }
 
     // N Data Processors (one per board)
