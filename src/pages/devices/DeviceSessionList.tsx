@@ -1,10 +1,7 @@
-import React from "react";
-import { Link } from "react-router-dom";
 import { Device } from "@/types";
 import bluetoothIcon from "@/assets/bluetooth-connected-icon.svg";
 import rippleIcon from "@/assets/ripple-icon.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
-import signalIcon from "@/assets/bluetooth-connected-icon.svg";
 import temperatureIcon from "@/assets/temperature.svg";
 import "./DeviceSessionList.css";
 import battery0Icon from "@/assets/battery-0-icon.svg";
@@ -12,6 +9,7 @@ import battery25Icon from "@/assets/battery-25-icon.svg";
 import battery50Icon from "@/assets/battery-50-icon.svg";
 import battery75Icon from "@/assets/battery-75-icon.svg";
 import battery100Icon from "@/assets/battery-100-icon.svg";
+import {Button} from "@/components/Button.tsx";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
@@ -30,13 +28,10 @@ export default function DeviceSessionList({
     return battery100Icon;
   };
 
-  const isScanning = false;
-
   return (
     <div className="static-side-panel">
       {[0, 1].map((index) => {
         const device = connectedDevices[index];
-        const isPanelDisabled = device && isScanning;
 
         return (
           <div className="side-panel-square" key={`side-panel-${index}`}>
@@ -45,27 +40,11 @@ export default function DeviceSessionList({
                 <div className="side-panel-header">
                   <img src={bluetoothIcon} alt="Bluetooth" className="side-panel-bt-icon" />
                   <div className="side-panel-header-info">
-                    {"editingDeviceId" === device.id ? (
-                      <div className="device-name-edit-container">
-                        <input
-                          type="text"
-                          value={editingDeviceName}
-                          onChange={handleNameInputChange}
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveName();
-                            if (e.key === "Escape") handleCancelEditName();
-                          }}
-                          className="device-name-edit-input side-panel-name-edit-input"
-                        />
-                      </div>
-                    ) : (
-                      <div className="side-panel-device-name-container">
-                        <span className="side-panel-device-name-text" title={device.name}>
-                          {device.name}
-                        </span>
-                      </div>
-                    )}
+                    <div className="side-panel-device-name-container">
+                      <span className="side-panel-device-name-text" title={device.name}>
+                        {device.name}
+                      </span>
+                    </div>
                     <span className="side-panel-device-mac">{device.macAddress}</span>
                   </div>
                 </div>
@@ -97,26 +76,19 @@ export default function DeviceSessionList({
                 </div>
 
                 <div className="side-panel-actions">
-                  <button
+                  <Button
+                    type={"button"}
+                    variant="red"
                     onClick={() => handleUnselectDevice(device.id)}
-                    className="side-panel-btn disconnect"
-                    disabled={!!isPanelDisabled}
                   >
-                    {" "}
                     Disconnect
-                  </button>
-                  <Link
+                  </Button>
+                  <Button
                     to="/session"
-                    state={{ initialSelectedBoard: device.name }}
-                    className={`side-panel-btn go-to-session ${isPanelDisabled ? "disabled-link" : ""}`}
-                    onClick={(e) => {
-                      if (isPanelDisabled) e.preventDefault();
-                    }}
-                    aria-disabled={isPanelDisabled}
-                    tabIndex={isPanelDisabled ? -1 : undefined}
+                    variant="blue"
                   >
-                    Go to Session &rarr;
-                  </Link>
+                    Go to Session →
+                  </Button>
                 </div>
               </>
             ) : (

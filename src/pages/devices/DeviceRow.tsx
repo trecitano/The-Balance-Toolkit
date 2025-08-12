@@ -3,26 +3,28 @@ import { Device } from "@/types";
 import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import "./DeviceRow.css";
+import {Button} from "@/components/Button.tsx";
 
 interface DeviceRowProps {
   device: Device;
-  handleIdentifyClick: (deviceId: string) => void;
+  isEditing: boolean;
+  handleStartEditName: (deviceId: string) => void;
   handleSaveDeviceName: (deviceId: string, deviceName: string) => void;
+  handleIdentifyClick: (deviceId: string) => void;
   handleRemoveDevice: (deviceId: string) => void;
-  handleDisconnectDevice: (deviceId: string) => void;
   handleSelectDeviceForSession: (deviceId: string) => void;
 }
 
 export default function DeviceRow({
   device,
-  handleIdentifyClick,
+  isEditing,
+  handleStartEditName,
   handleSaveDeviceName,
+  handleIdentifyClick,
   handleRemoveDevice,
-  handleSelectDeviceForSession,
-  handleDisconnectDevice,
+  handleSelectDeviceForSession
 }: DeviceRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const connectTooltip = device.isConnected ? "" : "Device is disconnected";
 
   const formatLastConnected = (dateString: string | undefined) => {
     if (!dateString) return "N/A";
@@ -48,7 +50,7 @@ export default function DeviceRow({
 
   return (
     <div className="device-row">
-      <div className={`device-container${device.isConnected ? " " : "disconnected"}`}>
+      <div className={`device-container${device.isConnected ? "" : " disconnected"}`}>
         <button onClick={() => handleRemoveDevice(device.id)} className="remove-device-btn">
           ✕
         </button>
@@ -67,7 +69,7 @@ export default function DeviceRow({
         </div>
 
         <div className="device-info">
-          {"editingDeviceId" === device.id ? (
+          {isEditing ? (
             <div className="device-name-edit-container">
               <input
                 ref={inputRef}
@@ -75,27 +77,28 @@ export default function DeviceRow({
                 defaultValue={device.name}
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === "Enter")
+                  console.log("Key down:", e.key);
+                  if (e.key === "Enter") {
                     handleSaveDeviceName(device.id, inputRef.current?.value || "");
+                  }
                   if (e.key === "Escape") {
-                    // TODO ?
-                    //handleAction("cancel");
+                    // Cancel edit
+                    handleSaveDeviceName(device.id, device.name);
                   }
                 }}
-                onBlur={() => handleSaveDeviceName(device.id, inputRef.current?.value || "")}
+                onBlur={() =>
+                  handleSaveDeviceName(device.id, inputRef.current?.value || "")
+                }
                 className="device-name-edit-input"
               />
             </div>
           ) : (
             <div className="device-name-container">
-              <span className="device-name-text" title={device.name}>
-                {device.name}
-              </span>
+    <span className="device-name-text" title={device.name}>
+      {device.name}
+    </span>
               <button
-                onClick={
-                  () => ""
-                  //handleStartEditName(device.id, device.name)
-                }
+                onClick={() => handleStartEditName(device.id)}
                 className="device-edit-name-btn"
                 title="Edit name"
               >
@@ -120,24 +123,13 @@ export default function DeviceRow({
             ID
           </button>
           {device.isConnected ? (
-            <button
-              onClick={() => handleSelectDeviceForSession(device.id)}
-              className="device-action-btn disconnect"
-            >
-              Connect
-            </button>
+              <Button type="button" variant="blue" onClick={() => handleSelectDeviceForSession(device.id)}>
+                Connect
+              </Button>
           ) : (
-            <button
-              onClick={() => handleConnectDevice(device.id)}
-              className="device-action-btn connect"
-              title={connectTooltip}
-            >
+            <Button type="button" variant="blue" disabled={true}>
               Connect
-              {/* TODO: Original code was below
-              {connectingDeviceMacAddresses.includes(device.id)
-                ? "Wait..."
-                : "Connect"} */}
-            </button>
+            </Button>
           )}
         </div>
       </div>

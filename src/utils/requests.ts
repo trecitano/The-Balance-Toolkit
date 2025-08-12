@@ -2,13 +2,18 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import {
   BalanceBoardEvent,
-  Device,
+  Device, GeneralSettings,
   SessionInformation,
   UserPageInformation,
   UserType,
 } from "@/types.ts";
 
 export const commands = {
+  settings: {
+    getSettings: async () => invoke<GeneralSettings>("settings_get_settings"),
+    setSettings: async (settings: GeneralSettings) => invoke<void>("settings_set_settings", { settings: settings }),
+  },
+
   users: {
     userPageInformation: async () => invoke<UserPageInformation>("user_page_information"),
     selectUser: async (userName: string) => invoke<void>("user_select_user", { userName: userName }),
@@ -34,7 +39,7 @@ export const commands = {
     updateDeviceName: async (deviceId: string, deviceName: string) => {
       return invoke<void>("devices_update_device_name", {
         deviceId: deviceId,
-        device_name: deviceName,
+        deviceName: deviceName,
       });
     },
     identifyDevice: async (deviceId: string) =>

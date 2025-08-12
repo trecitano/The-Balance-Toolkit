@@ -3,6 +3,7 @@ import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import { ActivityConfig, getDefaultBlocksByTitle } from "@/config/activities.config.ts";
+import {Button} from "@/components/Button.tsx";
 
 /**
  * ActivityCard component displays an activity with its details
@@ -298,9 +299,12 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
             {/* Add Action Row */}
             <div className="add-action-row">
               {!showAddForm ? (
-                <button className="add-action-btn" onClick={() => setShowAddForm(true)}>
-                  + Add Action
-                </button>
+                  <Button type="button"
+                          variant={"blue"}
+                          onClick={() => setShowAddForm(true)}
+                  >
+                    + Add ActionSave
+                  </Button>
               ) : (
                 <>
                   <input
@@ -392,38 +396,28 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
           }}
         >
           {!maximized ? (
-            <button className="activity-start-btn" onClick={handleStartClick}>
-              Start
-            </button>
+              <Button type="button"
+                      variant={"blue"}
+                      onClick={handleStartClick}
+              >
+                Start
+              </Button>
           ) : (
             <>
-              <button
-                className="add-action-btn"
-                style={{ background: "var(--primary)", color: "var(--white)" }}
-                onClick={() => {
-                  /* Save logic placeholder */
-                }}
+              <Button type="button"
+                      variant={"blue"}
+                      onClick={() => {
+                        /* Save logic placeholder */
+                      }}
               >
                 Save
-              </button>
-              <button
-                className="add-action-btn add-action-cancel"
-                style={{
-                  background: "var(--bg-light)",
-                  color: "var(--text-dark)",
-                  border: "1px solid var(--border)",
-                }}
-                onClick={() => setTimelineBlocks(defaultBlocksRef.current)}
-              >
+              </Button>
+              <Button type="button"
+                      onClick={() => setTimelineBlocks(defaultBlocksRef.current)}
+                      variant={"grey"}>
                 Reset to Default
-              </button>
-              <button
-                className="activity-start-btn"
-                onClick={onMinimize}
-                style={{ background: "#e5e7eb", color: "#374151" }}
-              >
-                Close
-              </button>
+              </Button>
+              <Button type="button" onClick={onMinimize} variant={"grey"}> Close </Button>
             </>
           )}
         </div>

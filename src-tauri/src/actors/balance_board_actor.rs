@@ -26,7 +26,7 @@ pub enum BalanceBoardCommands {
     TurnOnLed,
     TurnOffLed,
     ApplyTare,
-    StartRecording(mpsc::Sender<BalanceBoardCalibratedReading>),
+    StartRecording(Sender<BalanceBoardCalibratedReading>),
     FinishRecording,
 }
 
@@ -43,6 +43,37 @@ pub struct BalanceBoardCalibratedReading {
     pub bottom_right: f32,
     pub top_left: f32,
     pub bottom_left: f32,
+}
+
+impl BalanceBoardCalibratedReading {
+    pub fn calculate_cop(&self) -> CenterOfPressure {
+        let x_value = 216.5; // TODO FIX THIS HARDCODED VALUE!
+        let y_value = 119.0;
+
+        let total_force = self.top_right + self.bottom_right + self.top_left + self.bottom_left;
+        if total_force.abs() < 0.1 {
+            return CenterOfPressure {
+                x: 0.0,
+                y: 0.0
+            }
+        }
+
+        let center_of_pressure_x =
+            x_value * ((self.top_right + self.bottom_right) - (self.top_left + self.bottom_left)) / total_force;
+
+        let center_of_pressure_y =
+            y_value * ((self.top_right + self.top_left) - (self.bottom_right + self.bottom_left)) / total_force;
+
+        CenterOfPressure {
+            x: center_of_pressure_x,
+            y: center_of_pressure_y,
+        }
+    }
+}
+
+pub struct CenterOfPressure {
+    pub x: f32,
+    pub y: f32,
 }
 
 impl BalanceBoardOutput {
@@ -118,52 +149,6 @@ impl ProcessedBoardData {
 
         buf
     }
-}
-
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct SessionSettings {
-    pub output_directory: Option<SettingWithMode<String>>,
-    pub lsl_connection: Option<SettingWithMode<LslConnectionSettings>>,
-    pub tcp_connection_string: Option<SettingWithMode<String>>,
-    pub processing_settings: Option<ProcessingSettings>,
-}
-
-impl Default for SessionSettings {
-    fn default() -> Self {
-        SessionSettings {
-            output_directory: Some(SettingWithMode { value: file_system::app_dir().to_str().unwrap().to_string(), mode: SettingMode::all() }),
-            lsl_connection: None,
-            tcp_connection_string: None,
-            processing_settings: Some(ProcessingSettings::default())
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct SettingMode {
-    pub receive_raw: bool,
-    pub receive_processed: bool,
-}
-
-impl SettingMode {
-    pub fn raw_only() -> SettingMode {
-        SettingMode { receive_raw: true, receive_processed: false }
-    }
-
-    pub fn processed_only() -> SettingMode {
-        SettingMode { receive_raw: false, receive_processed: true }
-    }
-    
-    pub fn all() -> SettingMode {
-        SettingMode { receive_raw: true, receive_processed: true }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct SettingWithMode<T> {
-    pub value: T,
-    pub mode: SettingMode,
 }
 
 pub fn initialize(device_serial_number: &str) -> Result<Sender<BoardAction>> {

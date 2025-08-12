@@ -1,3 +1,16 @@
+export interface GeneralSettings {
+  tcpConnectionString: string;
+  tcpSendRawData: boolean;
+  tcpSendProcessedData: boolean;
+  lslStreamName: string;
+  lslSourceID: string;
+  lslSendRawData: boolean;
+  lslSendProcessedData: boolean;
+  storeFilesDefaultDirectory: boolean;
+  storeRawSession: boolean;
+  storeProcessedData: boolean;
+}
+
 export interface UserType {
   name: string;
   age?: number;
@@ -43,24 +56,29 @@ export type BalanceBoardEvent = RawBalanceBoardEvent | ProcessedBoardEvent;
 
 export type RawBalanceBoardEvent = {
   event: "raw";
+  boardId: string;
+  timestamp: number;
   data: {
-    cop_x: number;
-    cop_y: number;
+    copX: number;
+    copY: number;
   };
 };
 
-type ProcessedBoardEvent = {
+export type ProcessedBoardEvent = {
   event: "processed";
+  boardId: string;
   data: {
     timestamp: number;
+    velocityCopX: number;
+    velocityCopY: number;
     swayMetrics?: {
       meanVelocity: number;
       totalPathLength: number;
       velocityMoment: number;
     };
     areaMetrics?: {
-      confidenceEllipseArea: number;
-      convexHullArea: number;
+      confidenceEllipseArea: number[];
+      convexHullArea: number[];
     };
     dfaAlpha?: number;
     jerk?: number;

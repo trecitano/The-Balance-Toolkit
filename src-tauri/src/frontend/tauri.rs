@@ -1,17 +1,18 @@
-use std::time::Duration;
-use crate::file_system::UserFileSystem;
-use crate::types::{NintendoDevice, SessionInformation, User, UserPageInformation};
 use crate::file_system;
+use crate::file_system::UserFileSystem;
+use crate::types::{GeneralSettings, NintendoDevice, SessionInformation, User, UserPageInformation};
+use serde::Serialize;
+use std::time::Duration;
 
-use tokio::sync::{mpsc, oneshot};
-use tauri::{Emitter, Manager, State};
-use tauri::ipc::Channel;
-use tauri_plugin_fs::FsExt;
-use tokio::sync::mpsc::{Sender, Receiver};
-use crate::actors::balance_board_actor::{BalanceBoardOutput, SessionSettings, BoardAction, SettingMode, SettingWithMode};
+use crate::actors::balance_board_actor::{BalanceBoardOutput, BoardAction};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
 use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
-use crate::processing::data_processor::ProcessingSettings;
+use crate::processing::data_processor::ProcessedBoardData;
+use tauri::ipc::Channel;
+use tauri::{Emitter, Manager, State};
+use tauri_plugin_fs::FsExt;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::{mpsc, oneshot};
 
 pub struct AppState {
     pub manager_tx: Sender<ToolkitCommand>,
@@ -41,6 +42,8 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            settings_get_settings,
+            settings_set_settings,
             user_page_information,
             user_select_user,
             user_add,
@@ -53,11 +56,13 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             devices_is_scanning,
             devices_select_device,
             devices_unselect_device,
+            devices_update_device_name,
             devices_remove_device,
             devices_identify_device,
             devices_tare_device,
             session_start_session,
-            session_stop_session
+            session_stop_session,
+            session_information
         ])
         .manage(AppState { manager_tx })
         .run(tauri::generate_context!())
@@ -66,6 +71,27 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
 
 
 // --- USER COMMANDS ---
+#[tauri::command(async)]
+async fn settings_get_settings(state: State<'_, AppState>) -> Result<GeneralSettings, String> {
+    println!(">> settings_get_settings");
+
+    let (tx, rx) = oneshot::channel();
+    let command = ToolkitCommand::GetSettings { response: tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let result = rx.await.map_err(|e| e.to_string())?;
+
+    Ok(result)
+}
+
+#[tauri::command(async)]
+async fn settings_set_settings(settings: GeneralSettings, state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> settings_get_settings");
+
+    let command = ToolkitCommand::SaveSettings { settings };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+
+    Ok(())
+}
 
 #[tauri::command]
 async fn user_page_information(state: State<'_, AppState>) -> Result<UserPageInformation, String> {
@@ -198,6 +224,20 @@ pub async fn devices_remove_device(device_id: String, state: State<'_, AppState>
 }
 
 #[tauri::command(async)]
+async fn devices_update_device_name(device_id: String,
+                                    device_name: String,
+                                    state: State<'_, AppState>)
+    -> Result<(), String> {
+    println!(">> devices_update_device_name: {} -> {}", device_id, device_name);
+
+    let command = ToolkitCommand::UpdateBoardName { device_id, device_name };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+
+    println!("<< devices_update_device_name");
+    Ok(())
+}
+
+#[tauri::command(async)]
 pub async fn devices_identify_device(
     device_id: String,
     state: State<'_, AppState>,
@@ -285,6 +325,7 @@ pub async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<
 // --- SESSION COMMANDS ---
 // ========================
 
+#[tauri::command(async)]
 async fn session_information(state: State<'_, AppState>) -> Result<SessionInformation, String> {
     println!(">> session_information");
 
@@ -298,15 +339,64 @@ async fn session_information(state: State<'_, AppState>) -> Result<SessionInform
     Ok(result)
 }
 
+#[derive(Serialize, Debug, Clone)]
+#[serde(tag = "event", rename_all = "camelCase")]
+enum FrontendBalanceBoardEvent {
+    Raw(FrontendRawReadingData),
+    Processed(FrontendProcessedReadingData),
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct FrontendRawReadingData {
+    timestamp: i64,
+    board_id: String,
+    data: FrontendRawReadingCopData,
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct FrontendRawReadingCopData {
+    cop_x: f32,
+    cop_y: f32,
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct FrontendProcessedReadingData {
+    board_id: String,
+    data: ProcessedBoardData,
+}
+
 #[tauri::command(async)]
-pub async fn session_start_session(state: State<'_, AppState>, session_channel: Channel<BalanceBoardOutput>) -> Result<(), String> {
+pub async fn session_start_session(state: State<'_, AppState>, session_channel: Channel<FrontendBalanceBoardEvent>) -> Result<(), String> {
     println!(">> session_start_session");
 
     // When we receive a balance board reading, we send it to the frontend.
     let (balance_board_tx, mut balance_board_rx) = mpsc::channel(100);
     tokio::spawn(async move {
         while let Some(data) = balance_board_rx.recv().await {
-            session_channel.send(data);
+            match data {
+                BalanceBoardOutput::Raw(data) => {
+                    let cop = data.calculate_cop();
+                    let reading = FrontendRawReadingData {
+                        timestamp: data.timestamp.timestamp_millis(),
+                        board_id: "Board One".to_string(),
+                        data: FrontendRawReadingCopData {
+                            cop_x: cop.x,
+                            cop_y: cop.y,
+                        }
+                    };
+                    session_channel.send(FrontendBalanceBoardEvent::Raw(reading));
+                }
+                BalanceBoardOutput::Processed(data) => {
+                    let reading = FrontendProcessedReadingData {
+                        board_id: "Board One".to_string(),
+                        data,
+                    };
+                    session_channel.send(FrontendBalanceBoardEvent::Processed(reading));
+                }
+            }
         };
     });
 

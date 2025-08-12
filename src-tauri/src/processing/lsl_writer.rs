@@ -9,9 +9,7 @@ use crate::actors::balance_board_actor::BalanceBoardOutput;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LslConnectionSettings {
     pub stream_name: String,
-    pub stream_type: String,
-    pub channel_count: u32,
-    pub nominal_srate: f64,
+    pub source_id: String,
 }
 
 pub fn initialize(settings: LslConnectionSettings) -> Sender<BalanceBoardOutput> {
@@ -27,13 +25,14 @@ pub fn initialize(settings: LslConnectionSettings) -> Sender<BalanceBoardOutput>
 fn lsl_stream_loop(mut rx: Receiver<BalanceBoardOutput>, 
                    settings: LslConnectionSettings) -> Result<()> {
     println!("LSL writer execution start.");
+
     let info = lsl::StreamInfo::new(
         settings.stream_name.as_str(),
-        settings.stream_type.as_str(),
-        settings.channel_count,
-        settings.nominal_srate,
+        "MoCap", // Might have to change this!
+        4,
+        100.0,
         ChannelFormat::Double64,
-        "The-Balance-Toolkit"
+        settings.source_id.as_str(),
     )?;
     let outlet = lsl::StreamOutlet::new(&info, 0, 360)?;
 

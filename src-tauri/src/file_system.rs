@@ -1,4 +1,4 @@
-use crate::types::{NintendoDevice, User};
+use crate::types::{GeneralSettings, NintendoDevice, User};
 use serde::Serialize;
 use std::fs;
 use std::fs::File;
@@ -7,7 +7,6 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::de::DeserializeOwned;
-use crate::actors::balance_board_actor::SessionSettings;
 
 #[derive(Serialize)]
 pub struct FileMetadata {
@@ -68,34 +67,61 @@ impl UserFileSystem {
 const NINTENDO_DEVICES_FILE: &str = "nintendo_devices.json";
 pub struct DeviceFileSystem;
 impl DeviceFileSystem {
-    pub fn get_stored_devices() -> Result<Vec<NintendoDevice>> {
-        let file_path = app_dir().join(NINTENDO_DEVICES_FILE);
+    pub fn get_users() -> Result<Vec<User>> {
+        let users: Vec<User> = FileStore::load(NINTENDO_DEVICES_FILE)?;
+        Ok(users)
+    }
 
-        if !file_path.exists() {
-            return Ok(Vec::new());
+    pub fn get_stored_devices() -> Result<Vec<NintendoDevice>> {
+        let devices: Vec<NintendoDevice> = FileStore::load(NINTENDO_DEVICES_FILE)?;
+        Ok(devices)
+    }
+
+    pub fn update_board_name(device_id: String, device_board_name: String) -> Result<()> {
+        let mut devices = Self::get_stored_devices()?;
+
+        if let Some(device) = devices.iter_mut().find(|device| device.id == device_id) {
+            device.name = device_board_name;
         }
 
-        let file = File::open(&file_path)
-            .with_context(|| format!("Failed to open file for reading: {:?}", file_path))?;
+        FileStore::save(NINTENDO_DEVICES_FILE, &devices)
+    }
 
-        let reader = BufReader::new(file);
-        let devices = match serde_json::from_reader(reader) {
-            Ok(devices) => devices,
-            Err(e) if e.is_eof() => Vec::new(),
-            Err(e) => return Err(e.into()),
-        };
+    pub fn update_file_system_boards(devices: &Vec<NintendoDevice>) -> Result<()> {
+        // Check if we really need to update the file system.
+        // If the boards in the file system and in our argument are the same, we return.
+        let file_system_devices = Self::get_stored_devices()?;
 
-        Ok(devices)
+        let mut sorted_file_system = file_system_devices.clone();
+        let mut sorted_devices = devices.clone();
+        sorted_file_system.sort();
+        sorted_devices.sort();
+
+        if sorted_file_system == sorted_devices {
+            return Ok(());
+        }
+
+        FileStore::save(NINTENDO_DEVICES_FILE, &devices)
     }
 }
 
-const SESSION_FILE: &str = "session_settings.json";
-pub struct SessionFileSystem;
-impl SessionFileSystem {
-    pub fn get_or_create_default_session_settings() -> Result<SessionSettings> {
-        let session_settings: SessionSettings = FileStore::load(SESSION_FILE)?;
+const SETTINGS_FILE: &str = "settings.json";
+pub struct SettingsFileSystem;
+impl SettingsFileSystem {
+    pub fn get_or_create_default_settings() -> Result<GeneralSettings> {
+        let settings: GeneralSettings = FileStore::load(SETTINGS_FILE)?;
 
-        Ok(session_settings)
+        Ok(settings)
+    }
+
+    pub fn save_settings(settings: GeneralSettings) -> Result<()> {
+        let old_settings: GeneralSettings = FileStore::load(SETTINGS_FILE)?;
+
+        if old_settings == settings {
+            return Ok(());
+        }
+
+        FileStore::save(SETTINGS_FILE, &settings)
     }
 }
 
@@ -129,7 +155,7 @@ impl FileStore {
         Ok(data)
     }
 
-    pub fn save<T>(file_name: &str, data: &[T]) -> Result<()>
+    pub fn save<T>(file_name: &str, data: T) -> Result<()>
     where
         T: Serialize,
     {
@@ -141,7 +167,7 @@ impl FileStore {
 
         let file = File::create(&file_path)
             .with_context(|| format!("Failed to create file: {:?}", file_path))?;
-        serde_json::to_writer_pretty(file, data)
+        serde_json::to_writer_pretty(file, &data)
             .with_context(|| format!("Failed to save file: {:?}", file_path))?;
 
         Ok(())

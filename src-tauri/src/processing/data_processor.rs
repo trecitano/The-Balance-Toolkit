@@ -15,7 +15,7 @@ struct CenterOfPressurePoint {
     y: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ProcessingSettings {
     balance_board_x_size: f32,      // X distance (mm) of the Balance Board Force transducer.
     balance_board_y_size: f32,      // Y distance (mm) of the Balance Board Force transducer.
@@ -46,14 +46,14 @@ impl ProcessingSettings {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum InterpolationSetting {
     Linear,
     Cubic,
     Polynomial,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AnalysisConfiguration {
     pub sway_metrics: bool,
     pub area_metrics: bool,

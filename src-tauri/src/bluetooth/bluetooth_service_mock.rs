@@ -1,3 +1,4 @@
+use std::string::ToString;
 use std::sync::Mutex;
 use std::time::Duration;
 use anyhow::Result;
@@ -19,37 +20,37 @@ static MOCK_DATA: Lazy<Mutex<MockedData>> = Lazy::new(|| Mutex::new(MockedData {
         is_active: true,
         devices: vec![
             Ok(BluetoothPeripheral {
-                id: "One".to_string(),
+                id: mock_device_id("One".to_string()),
                 name: NINTENDO_BOARD_ID.to_string(),
-                mac_address: create_random_mac_address(),
+                mac_address: [0x37, 0xfe, 0xa1, 0x2b, 0xfd, 0xf4],
                 is_paired: true,
                 is_connected: true,
             }),
             Ok(BluetoothPeripheral {
-                id: "Two".to_string(),
+                id: mock_device_id("Two".to_string()),
                 name: NINTENDO_BOARD_ID.to_string(),
-                mac_address: create_random_mac_address(),
+                mac_address: [0x57, 0xc2, 0xcb, 0xb2, 0x7b, 0x49],
                 is_paired: true,
                 is_connected: false,
             }),
             Ok(BluetoothPeripheral {
-                id: "Three".to_string(),
+                id: mock_device_id("Three".to_string()),
                 name: NINTENDO_BOARD_ID.to_string(),
-                mac_address: create_random_mac_address(),
+                mac_address: [0x89, 0x7e, 0x4e, 0xe5, 0x0d, 0xd3],
                 is_paired: true,
                 is_connected: false,
             }),
             Ok(BluetoothPeripheral {
-                id: "Four".to_string(),
+                id: mock_device_id("Four".to_string()),
                 name: NINTENDO_BOARD_ID.to_string(),
-                mac_address: create_random_mac_address(),
+                mac_address: [0x12, 0xe9, 0xcd, 0xb9, 0x71, 0x54],
                 is_paired: true,
                 is_connected: true,
             }),
             Ok(BluetoothPeripheral {
-                id: "Five".to_string(),
+                id: mock_device_id("Five".to_string()),
                 name: NINTENDO_BOARD_ID.to_string(),
-                mac_address: create_random_mac_address(),
+                mac_address: [0xf9, 0x80, 0xbd, 0x31, 0xf8, 0xec],
                 is_paired: true,
                 is_connected: true,
             }),
@@ -94,7 +95,7 @@ pub async fn scan_and_pair_nintendo() -> Result<BluetoothPeripheral> {
     let device_id = format!("Board {}", number_devices);
     
     let new_device = BluetoothPeripheral { 
-        id: device_id,
+        id: mock_device_id(device_id),
         name: NINTENDO_BOARD_ID.to_string(),
         mac_address: create_random_mac_address(),
         is_paired: true,
@@ -118,6 +119,10 @@ pub async fn remove_device(device_id: String) -> Result<()> {
     });
     
     Ok(())
+}
+
+fn mock_device_id(device_id: String) -> String {
+    format!("TBB_MOCKED_DEVICE_ID: {}", device_id)
 }
 
 fn create_random_mac_address() -> MacAddress {

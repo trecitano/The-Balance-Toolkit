@@ -1,20 +1,26 @@
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
-use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, SessionSettings, BoardAction, SettingMode};
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, BoardAction};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothHandler};
-use crate::file_system::{DeviceFileSystem, SessionFileSystem};
-use crate::types::{MacAddress, NintendoDevice, SessionInformation, User};
+use crate::file_system::{DeviceFileSystem, SettingsFileSystem};
+use crate::types::{GeneralSettings, MacAddress, NintendoDevice, SessionInformation};
 use anyhow::Result;
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
 use file_system::UserFileSystem;
 use crate::actors::balance_board_actor;
 use crate::file_system;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
+use crate::processing::lsl_writer::LslConnectionSettings;
 
 // Commands that can be sent to the ConnectionManager
 #[derive(Debug)]
 pub enum ToolkitCommand {
+    GetSettings { response: oneshot::Sender<GeneralSettings> },
+    SaveSettings { settings: GeneralSettings },
+
     // Manager main actions
     BluetoothAction(BluetoothCommand),
 
@@ -29,6 +35,10 @@ pub enum ToolkitCommand {
     },
     IdentifyBoard {
         device_id: String,
+    },
+    UpdateBoardName {
+        device_id: String,
+        device_name: String,
     },
 
     SelectUser {
@@ -67,26 +77,42 @@ pub enum ToolkitResponse {
 
 pub struct ConnectionManager {
     rx: mpsc::Receiver<ToolkitCommand>,
-    tx: mpsc::Sender<ToolkitResponse>,
-    bluetooth_manager_tx: mpsc::Sender<BluetoothCommand>,
+    tx: Sender<ToolkitResponse>,
+    bluetooth_manager_tx: Sender<BluetoothCommand>,
 
     selected_user: String,
+    general_settings: GeneralSettings,
     session_settings: SessionSettings,
-    connections: HashMap<String, mpsc::Sender<BoardAction>>,
+    connections: HashMap<String, Sender<BoardAction>>,
     selected_boards: HashSet<String>,
     is_recording: bool,
 }
 
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SessionSettings {
+    pub output_directory: String,
+    pub lsl_enabled: bool,
+    pub tcp_enabled: bool,
+}
+
+
 impl ConnectionManager {
-    pub fn new(rx: mpsc::Receiver<ToolkitCommand>, tx: mpsc::Sender<ToolkitResponse>) -> Result<Self> {
+    pub fn new(rx: mpsc::Receiver<ToolkitCommand>, tx: Sender<ToolkitResponse>) -> Result<Self> {
         let selected_user = UserFileSystem::get_or_create_default_user()?.name;
-        let session_settings = SessionFileSystem::get_or_create_default_session_settings()?;
+        let general_settings = SettingsFileSystem::get_or_create_default_settings()?;
+        let session_settings = SessionSettings {
+            output_directory: general_settings.store_files_default_directory.clone(),
+            lsl_enabled: false,
+            tcp_enabled: false,
+        };
 
         Ok(Self {
             rx,
             tx,
             bluetooth_manager_tx: BluetoothHandler::start_bluetooth_handler(),
 
+            general_settings,
             selected_user,
             session_settings,
             connections: HashMap::new(),
@@ -100,20 +126,31 @@ impl ConnectionManager {
         
         while let Some(command) = self.rx.recv().await {
             match command {
-                ToolkitCommand::BluetoothAction(action)=> {
+                ToolkitCommand::GetSettings { response  } => {
+                    response.send(self.general_settings.clone()).unwrap();
+                }
+                ToolkitCommand::SaveSettings { settings } => {
+                    self.general_settings = settings.clone();
+                    SettingsFileSystem::save_settings(settings)?
+                }
+
+                ToolkitCommand::BluetoothAction(action) => {
                     self.bluetooth_manager_tx.send(action).await?;
                 }
                 ToolkitCommand::GetBoardsSystemView { responder } => {
                     let result = self.boards_system_view().await?;
                     responder.send(result).unwrap();
-                },
+                }
 
                 ToolkitCommand::Connect { device_id, mac_address, response } => {
-                    self.connect(&device_id, mac_address).await;
+                    self.connect(&device_id, mac_address).await?;
                     response.send(true).unwrap();
                 }
                 ToolkitCommand::IdentifyBoard { device_id } => {
                     self.identify_board(device_id);
+                }
+                ToolkitCommand::UpdateBoardName { device_id, device_name } => {
+                    DeviceFileSystem::update_board_name(device_id, device_name)?
                 }
 
                 ToolkitCommand::SelectUser { user_name } => {
@@ -133,24 +170,30 @@ impl ConnectionManager {
                 }
 
                 ToolkitCommand::SessionInformation { response } => {
+                    let output_directory = if self.general_settings.store_processed_data || !self.general_settings.store_raw_session {
+                        Some(self.session_settings.output_directory.clone())
+                    } else {
+                        None
+                    };
+
                     let session_information = SessionInformation {
                         selected_user: self.selected_user.clone(),
                         available_users: UserFileSystem::get_users()?.into_iter().map(|user| user.name).collect(),
                         selected_boards: self.selected_boards.iter().cloned().collect(),
-                        enabled_lsl: self.session_settings.lsl_connection.is_some(),
-                        enabled_tcp: self.session_settings.tcp_connection_string.is_some(),
-                        output_directory: match &self.session_settings.output_directory {
-                            Some(config) => Some(config.value.clone()),
-                            None => None,
-                        },
+                        enabled_lsl: self.session_settings.lsl_enabled,
+                        enabled_tcp: self.session_settings.tcp_enabled,
+                        output_directory,
                         is_recording: self.is_recording,
                     };
                     response.send(session_information).unwrap();
                 }
                 ToolkitCommand::StartSession { frontend_channel } => {
-                    let settings = self.session_settings.clone();
-
-                    start_session(settings, frontend_channel, &self.selected_boards, &self.connections).await;
+                    start_session(frontend_channel,
+                                  &self.general_settings,
+                                  &self.session_settings,
+                                  &self.selected_boards,
+                                  &self.connections)
+                        .await;
                 },
                 ToolkitCommand::StopSession => {
                     for board in &self.selected_boards {
@@ -206,6 +249,8 @@ impl ConnectionManager {
                 result.push(device);
             }
         }
+
+        DeviceFileSystem::update_file_system_boards(&result);
 
         Ok(result)
     }
@@ -277,7 +322,6 @@ impl ConnectionManager {
     }
 }
 
-
 // In a session, we have 2 producers:
 //   - HID board - raw data
 //   - Data processor - Processed data
@@ -307,15 +351,17 @@ enum ObserverType {
     TcpWriter,
     LslWriter,
 }
+
 struct SessionMapping {
     device_id: String,
     observers_raw: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
     observers_processed: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
 }
-async fn start_session(settings: SessionSettings,
-                       frontend_channel: Sender<BalanceBoardOutput>,
+async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
+                       general_settings: &GeneralSettings,
+                       session_settings: &SessionSettings,
                        selected_boards: &HashSet<String>,
-                       hid_board_rx_map: &HashMap<String, mpsc::Sender<BoardAction>>) {
+                       hid_board_rx_map: &HashMap<String, Sender<BoardAction>>) {
     let mut observer_list: Vec<SessionMapping> = vec!();
     for board_id in selected_boards {   
         observer_list.push(SessionMapping {
@@ -326,43 +372,65 @@ async fn start_session(settings: SessionSettings,
     }
 
     // N file writers (one per board)
-    if let Some(config) = settings.output_directory {
-        let processing_settings = settings.processing_settings.clone();
-        let config_mode = config.mode;
-
+    let store_files = general_settings.store_raw_session || general_settings.store_processed_data;
+    if store_files {
         for mut session_mapping in observer_list.iter_mut() {
-            let output_directory = &config.value;
-            let tx = file_writer::initialize(
-                output_directory.clone(),
-                config_mode.clone(),
-                session_mapping.device_id.clone(),
-                processing_settings.clone()
-            );
+            let output_directory = session_settings.output_directory.clone();
+            let session_name = Utc::now().format("%Y-%m-%dT%H-%M-%SZ").to_string();
 
-            add_observer_to_device_list(tx, ObserverType::FileWriter, &config_mode, &mut session_mapping);
+            let tx = file_writer::initialize(
+                output_directory,
+                session_name,
+                general_settings.store_raw_session,
+                general_settings.store_processed_data,
+                session_mapping.device_id.clone(),
+                general_settings.processing_settings.clone()
+            );
+            add_observer_to_device_list(&mut session_mapping,
+                                        tx,
+                                        ObserverType::FileWriter,
+                                        general_settings.store_raw_session,
+                                        general_settings.store_processed_data,
+                                        );
         }
     }
 
     // 1 LSL Writer
-    if let Some(config) = settings.lsl_connection {
-        let tx = lsl_writer::initialize(config.value);
+    let should_use_lsl = session_settings.lsl_enabled &&
+        (general_settings.lsl_send_raw_data || general_settings.lsl_send_processed_data);
+    if should_use_lsl {
+        let config = LslConnectionSettings {
+            stream_name: general_settings.lsl_stream_name.clone(),
+            source_id: general_settings.lsl_source_id.clone()
+        };
+        let tx = lsl_writer::initialize(config);
         for mut session_mapping in observer_list.iter_mut() {
-            add_observer_to_device_list(tx.clone(), ObserverType::LslWriter, &config.mode, &mut session_mapping);
+            add_observer_to_device_list(&mut session_mapping,
+                                        tx.clone(),
+                                        ObserverType::LslWriter,
+                                        general_settings.lsl_send_raw_data,
+                                        general_settings.lsl_send_processed_data);
         }
     }
 
     // 1 TCP Writer
-    if let Some(config) = settings.tcp_connection_string {
-        let tx = tcp_writer::initialize(config.value);
+    let should_use_tcp = session_settings.tcp_enabled &&
+        (general_settings.tcp_send_raw_data || general_settings.tcp_send_processed_data);
+    if should_use_tcp {
+        let tx = tcp_writer::initialize(general_settings.tcp_connection_string.clone());
         for mut session_mapping in observer_list.iter_mut() {
-            add_observer_to_device_list(tx.clone(), ObserverType::TcpWriter, &config.mode, &mut session_mapping);
+            add_observer_to_device_list(&mut session_mapping,
+                                        tx.clone(),
+                                        ObserverType::TcpWriter,
+                                        general_settings.tcp_send_raw_data,
+                                        general_settings.tcp_send_processed_data);
         }
     };
 
     // 1 Frontend Observer
     let tx = initialize_frontend_observer(frontend_channel);
     for mut session_mapping in observer_list.iter_mut() {
-        add_observer_to_device_list(tx.clone(), ObserverType::FrontendObserver, &SettingMode::all(), &mut session_mapping);
+        add_observer_to_device_list(&mut session_mapping, tx.clone(), ObserverType::FrontendObserver, true, true);
     }
 
     // N Data Processors (one per board)
@@ -372,7 +440,7 @@ async fn start_session(settings: SessionSettings,
             .collect();
 
         if observers.len() > 0 {
-            let tx = data_processor::initialize(observers, settings.processing_settings.clone().unwrap());
+            let tx = data_processor::initialize(observers, general_settings.processing_settings.clone());
             device_mapping.observers_raw.push( (ObserverType::DataProcessor, tx));
         }
     }
@@ -409,6 +477,7 @@ async fn start_session(settings: SessionSettings,
     }
 }
 
+
 fn initialize_frontend_observer(frontend_channel: Sender<BalanceBoardOutput>) -> Sender<BalanceBoardOutput> {
     let (tx, mut rx) = mpsc::channel(100);
 
@@ -440,28 +509,16 @@ fn initialize_raw_data_forwarder(mut raw_data_rx: mpsc::Receiver<BalanceBoardCal
     });
 }
 
-fn add_observer_to_device_list(observer: Sender<BalanceBoardOutput>,
+fn add_observer_to_device_list(session_mapping: &mut SessionMapping,
+                               observer: Sender<BalanceBoardOutput>,
                                observer_type: ObserverType,
-                               setting_mode: &SettingMode,
-                               session_mapping: &mut SessionMapping) {
-    if setting_mode.receive_raw {
+                               observe_raw_data: bool,
+                               observe_processed_data: bool) {
+    if observe_raw_data {
         session_mapping.observers_raw.push((observer_type.clone(), observer.clone()) );
     }
-    if setting_mode.receive_processed {
+    if observe_processed_data {
         session_mapping.observers_processed.push( (observer_type.clone(), observer.clone()) );
-    }
-}
-
-
-fn add_observer_to_vecs(observer: Sender<BalanceBoardOutput>,
-                        setting_mode: &SettingMode,
-                        raw_data_observers: &mut Vec<Sender<BalanceBoardOutput>>,
-                        processed_data_observers: &mut Vec<Sender<BalanceBoardOutput>>) {
-    if setting_mode.receive_raw {
-        raw_data_observers.push(observer.clone());
-    }
-    if setting_mode.receive_processed {
-        processed_data_observers.push(observer);
     }
 }
 
