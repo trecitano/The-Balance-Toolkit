@@ -3,10 +3,11 @@ import Navigation from "@/components/navigation/Navigation";
 import Home from "@/pages/home/Home.tsx";
 import DevicesPage, { DevicesQuery } from "@/pages/devices/Devices";
 import UsersPage from "@/pages/users/Users";
-import SessionPage from "@/pages/new_session/SessionPage";
+import SessionPage from "@/pages/session/SessionPage";
 import Activities from "@/pages/activities/Activities";
 import "./App.css";
 import { QueryClient, QueryClientProvider, usePrefetchQuery } from "@tanstack/react-query";
+import {SettingsQuery} from "@/components/settings/Settings.tsx";
 
 function AppContent() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ function AppContent() {
     }
   };
 
+  usePrefetchQuery(SettingsQuery);
   usePrefetchQuery(DevicesQuery);
 
   return (

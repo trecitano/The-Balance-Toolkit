@@ -8,6 +8,7 @@ import { commands } from "@/utils/requests.ts";
 import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
 import "./Devices.css";
 import DeviceScanner from "@/pages/devices/DeviceScanner.tsx";
+import {Button} from "@/components/Button.tsx";
 
 const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
@@ -27,6 +28,7 @@ export default function Devices() {
   const [showIdentifyPopup, setShowIdentifyPopup] = useState(false);
   const [identifyDeviceName, setIdentifyDeviceName] = useState<string | null>(null);
   const [foundDevicesCount, setFoundDevicesCount] = useState(0);
+  const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
   const unlistenRef = useRef<(() => void) | null>(null);
   const queryClient = useQueryClient();
 
@@ -84,9 +86,16 @@ export default function Devices() {
     onError: (error) => console.error("Failed to cancel device scan:", error),
   });
 
+
+  const handleStartEditName = (deviceId: string) => {
+    console.log("Starting edit for device:", deviceId);
+    setEditingDeviceId(deviceId);
+  };
+
   // Handlers that need parameter transformation or additional logic
   const handleSaveDeviceName = (deviceId: string, deviceName: string) => {
     updateDeviceNameMutation.mutate({ deviceId, deviceName });
+    setEditingDeviceId(null);
   };
 
   const handleScanDevices = () => {
@@ -147,26 +156,27 @@ export default function Devices() {
   };
 
   const { devices, selectedDeviceIds, isScanning } = data ?? {
-    devices: [],
-    selectedDeviceIds: [],
+    devices: [] as Device[],
+    selectedDeviceIds: [] as string[],
     isScanning: false,
   };
 
   const sortedDevices = sortDevices(devices);
   const noDevices = sortedDevices.length === 0;
-  const selectedDevices = devices!.filter((d) => selectedDeviceIds.includes(d.id));
+  const selectedDevices = devices!.filter((d) => selectedDeviceIds!.includes(d.id));
 
   return (
     <div className="inside-page">
       <div className="page-header">
         <span className="page-title">Devices</span>
-        <button
+        <Button
+          type="button"
+          variant="grey"
           onClick={handleScanDevices}
-          className="scan-btn"
           disabled={scanDevicesMutation.isPending || isScanning}
         >
           {scanDevicesMutation.isPending || isScanning ? "Scanning..." : "Scan for Devices"}
-        </button>
+        </Button>
       </div>
 
       <div className="main-content">
@@ -188,10 +198,11 @@ export default function Devices() {
             <DeviceRow
               key={device.id}
               device={device}
-              handleIdentifyClick={(deviceId) => identifyDeviceMutation.mutate(deviceId)}
+              isEditing={editingDeviceId === device.id}
+              handleStartEditName={handleStartEditName}
               handleSaveDeviceName={handleSaveDeviceName}
+              handleIdentifyClick={(deviceId) => identifyDeviceMutation.mutate(deviceId)}
               handleRemoveDevice={(deviceId) => removeDeviceMutation.mutate(deviceId)}
-              handleDisconnectDevice={(deviceId) => disconnectDeviceMutation.mutate(deviceId)}
               handleSelectDeviceForSession={(deviceId) =>
                 selectDeviceForSessionMutation.mutate(deviceId)
               }

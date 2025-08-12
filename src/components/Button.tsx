@@ -1,24 +1,46 @@
 import React from "react";
+import {Link} from "react-router-dom";
 
-type Variant = "primary" | "outline" | "ghost";
+type Variant = "grey" | "blue" | "red";
 type Size = "sm" | "md" | "lg";
 
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+type BaseProps = {
   variant?: Variant;
   size?: Size;
   fullWidth?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  className?: string;
+  children: React.ReactNode;
 };
 
+type ButtonAsButton = BaseProps &
+  React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  to?: undefined;
+};
+
+type ButtonAsLink = BaseProps &
+  React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+  to: string;
+  state?: any;
+};
+
+type ButtonProps = ButtonAsButton | ButtonAsLink;
+
 const base =
-  "inline-flex items-center justify-center rounded-full transition-colors " +
-  "focus:outline-none focus:ring-2 focus:ring-red-300 disabled:opacity-60 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center gap-[5px] " +
+  "px-4 py-2 rounded-md border-0 cursor-pointer font-semibold " +
+  "transition-all shadow-md min-w-[var(--btn-min-width)] " +
+  "relative overflow-hidden " +
+  "enabled:hover:-translate-y-[1px] " +
+  "enabled:active:translate-y-[1px] enabled:active:shadow-inner " +
+  "disabled:opacity-60 disabled:cursor-not-allowed " +
+  "enabled:focus:outline-none enabled:focus:shadow-[var(--shadow-focus)]"
 
 const byVariant: Record<Variant, string> = {
-  primary: "bg-red-600 text-white hover:bg-red-700",
-  outline: "border-2 border-red-600 text-red-600 bg-white hover:bg-red-50",
-  ghost: "text-red-600 hover:bg-red-50",
+  grey: "bg-[var(--secondary)] text-[var(--white)] enabled:hover:bg-[var(--secondary-dark)]",
+  blue: "bg-[var(--primary)] text-[var(--white)] enabled:hover:bg-[var(--primary-dark)]",
+  red:  "bg-[var(--red)] text-[var(--white)] enabled:hover:bg-[var(--red-dark)]",
 };
 
 const bySize: Record<Size, string> = {
@@ -28,29 +50,34 @@ const bySize: Record<Size, string> = {
 };
 
 export function Button({
-  variant = "primary",
+  variant = "red",
   size = "md",
-  fullWidth,
   leftIcon,
   rightIcon,
   className = "",
   children,
   ...props
 }: ButtonProps) {
+  const classes = [
+    base,
+    byVariant[variant],
+    bySize[size],
+    className,
+  ].join(" ");
+
+  if ("to" in props && props.to) {
+    const { to, state, ...rest } = props as ButtonAsLink;
+    return (
+      <Link to={to} state={state} className={classes} {...rest}>
+        <span>{children}</span>
+      </Link>
+    );
+  }
+
+  const buttonProps = props as ButtonAsButton;
   return (
-    <button
-      className={[
-        base,
-        byVariant[variant],
-        bySize[size],
-        fullWidth ? "w-full" : "",
-        className,
-      ].join(" ")}
-      {...props}
-    >
-      {leftIcon ? <span className="mr-2 h-5 w-5">{leftIcon}</span> : null}
+    <button className={classes} {...buttonProps}>
       <span>{children}</span>
-      {rightIcon ? <span className="ml-2 h-5 w-5">{rightIcon}</span> : null}
     </button>
   );
 }

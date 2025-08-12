@@ -1,15 +1,3 @@
-.device-edit-name-btn,
-.side-panel-edit-btn {
-  background: none;
-  border: none;
-  color: var(--text-light);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  padding: 0;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
 .device-name-edit-container {
   display: flex;
   align-items: center;
@@ -102,16 +90,6 @@
   background: var(--red-dark);
 }
 
-.side-panel-btn.go-to-session {
-  background: var(--primary);
-  color: var(--white);
-  font-weight: 700;
-}
-
-.side-panel-btn.go-to-session:hover:not(:disabled) {
-  background: var(--primary-dark);
-}
-
 .side-panel-btn:active:not(:disabled) {
   box-shadow: var(--shadow-inset);
   background: #e3e8ef;
@@ -169,10 +147,6 @@
   min-width: 0;
   max-width: 20vw;
   flex-shrink: 1;
-}
-
-.side-panel-edit-btn {
-  font-size: var(--space-lg);
 }
 
 .side-panel-header {

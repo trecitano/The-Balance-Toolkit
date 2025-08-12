@@ -13,7 +13,7 @@ export default function Activities() {
       <div className="page-header">
         <span className="page-title">Activities</span>
       </div>
-      <div className="main-content" style={{ position: "relative" }}>
+      <div className="main-content">
         <div className="activities-grid">
           {Object.values(activitiesConfig).map((activity, idx) => (
             <ActivityCard

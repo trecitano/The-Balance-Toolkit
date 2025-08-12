@@ -1,5 +1,44 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use crate::file_system;
+use crate::processing::data_processor::ProcessingSettings;
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct GeneralSettings {
+    pub tcp_connection_string: String,
+    pub tcp_send_raw_data: bool,
+    pub tcp_send_processed_data: bool,
+    pub lsl_stream_name: String,
+    pub lsl_source_id: String,
+    pub lsl_send_raw_data: bool,
+    pub lsl_send_processed_data: bool,
+    pub store_files_default_directory: String,
+    pub store_raw_session: bool,
+    pub store_processed_data: bool,
+    pub processing_settings: ProcessingSettings
+}
+
+impl Default for GeneralSettings {
+    fn default() -> GeneralSettings {
+        GeneralSettings {
+            tcp_connection_string: "localhost:4567".to_string(),
+            tcp_send_raw_data: true,
+            tcp_send_processed_data: true,
+
+            lsl_stream_name: "The Balance Toolkit".to_string(),
+            lsl_source_id: "The-Balance-Toolkit".to_string(),
+            lsl_send_raw_data: true,
+            lsl_send_processed_data: true,
+
+            store_files_default_directory: file_system::app_dir().to_str().unwrap().to_string(),
+            store_raw_session: true,
+            store_processed_data: true,
+
+            processing_settings: ProcessingSettings::default(),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -56,7 +95,7 @@ pub struct SessionInformation {
     pub is_recording: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
 pub struct NintendoDevice {
     pub id: String,

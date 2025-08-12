@@ -222,7 +222,7 @@
 }
 
 .device-status-connected {
-  background: var(--primary);
+  background: var(--secondary);
   color: var(--white);
 }
 

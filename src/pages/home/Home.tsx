@@ -1,6 +1,5 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
-  ChevronRightIcon,
   QuestionMarkCircleIcon,
   DocumentTextIcon,
   DocumentIcon,
@@ -24,7 +23,7 @@ interface StatusIndicator {
 
 const Home: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className=" bg-gray-50">
       {/* Header */}
       <Header />
 
@@ -40,21 +39,17 @@ const Home: React.FC = () => {
 
         {/* Middle Column */}
         <div className="row-span-3 rounded-lg border-2 border-red-500 p-5">
-          {" "}
           <ConnectionCard />{" "}
         </div>
 
         {/* Right Column */}
         <div className="row-span-1 rounded-lg border-2 border-red-500 p-5">
-          {" "}
           <HelpSupportCard />{" "}
         </div>
         <div className="row-span-1 rounded-lg border-2 border-red-500 p-5">
-          {" "}
           <DocumentationCard />{" "}
         </div>
         <div className="row-span-1 rounded-lg border-2 border-red-500 p-5">
-          {" "}
           <OtherResourcesCard />{" "}
         </div>
       </div>
@@ -94,7 +89,6 @@ const Header: React.FC = () => {
           >
             <DocumentIcon className="h-5 w-5" />
             <span className="text-base">Cite</span>
-            <ChevronRightIcon className="h-5 w-5" />
           </button>
 
           <button
@@ -103,7 +97,6 @@ const Header: React.FC = () => {
           >
             <CodeBracketIcon className="h-5 w-5" />
             <span className="text-base">Source Code</span>
-            <ChevronRightIcon className="h-5 w-5" />
           </button>
         </div>
       </div>
@@ -127,11 +120,10 @@ const LastSessionCard: React.FC = () => {
             <span className="font-medium">Username</span>
           </div>
 
-          <div className="text-sm text-gray-600 space-y-1">
+          <div className="text-xs text-gray-600 space-y-1">
             <div>Weight:</div>
             <div>Sex:</div>
             <div>Age:</div>
-            <div>Handedness:</div>
           </div>
         </div>
 
@@ -141,9 +133,8 @@ const LastSessionCard: React.FC = () => {
             <DocumentTextIcon className="w-4 h-4 text-red-600" />
             <span className="font-medium">Stats</span>
           </div>
-          <div className="text-sm text-gray-600 space-y-1">
+          <div className="text-xs text-gray-600 space-y-1">
             <div>Duration:</div>
-            <div>Something else:</div>
             <div>Something else:</div>
           </div>
         </div>
@@ -158,8 +149,6 @@ const LastSessionCard: React.FC = () => {
           <div>
             <div className="text-xs text-gray-500">/location of file</div>
           </div>
-
-          <Button variant="outline">Resume</Button>
         </div>
       </div>
     </>
@@ -167,112 +156,90 @@ const LastSessionCard: React.FC = () => {
 };
 
 const ActivitiesCard: React.FC = () => {
-  const [selected, setSelected] = useState(1); // start at second
-  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState(0);
+  const listRef = useRef<HTMLUListElement>(null);
 
-  // derive a width array (active wider)
-  const widths = useMemo(
-    () => activitiesConfig.map((_, i) => (i === selected ? 130 : 110)),
-    [activitiesConfig, selected],
-  );
-
-  // compute cumulative X of each card's left edge
-  const leftOffsets = useMemo(() => {
-    const arr: number[] = [];
-    let x = 0;
-    for (let i = 0; i < widths.length; i++) {
-      arr.push(x);
-      x += widths[i] + 5;
-    }
-    return arr;
-  }, [widths]);
-
-  const totalWidth = widths.reduce((a, b) => a + b, 0) + 5 * Math.max(0, widths.length - 1);
-
-  const scrollToCenter = (index: number) => {
-    const scroller = scrollerRef.current;
-    if (!scroller) {
-      return;
-    }
-    const viewport = scroller.clientWidth;
-
-    // target center position for the selected card
-    const cardLeft = leftOffsets[index] ?? 0;
-    const cardWidth = widths[index] ?? 80;
-    const targetCenter = cardLeft + cardWidth / 2;
-
-    const newScrollLeft = Math.max(0, Math.min(targetCenter - viewport / 2, totalWidth - viewport));
-
-    console.log("scroller position: ", scroller);
-    console.log("Viewport: ", viewport);
-    console.log("New scroll left: ", newScrollLeft);
-
-    scroller.scrollTo({ left: newScrollLeft, behavior: "smooth" });
+  const scrollToActivity = (index: number) => {
+    const el = listRef.current?.querySelector(
+      `[data-activityid="${activitiesConfig[index].id}"]`
+    );
+    el?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
   };
 
-  const onCardClick = (index: number) => {
+  const handleSelectActivity = (index: number) => {
     setSelected(index);
-    scrollToCenter(index);
+    scrollToActivity(index);
   };
 
   return (
     <div className="h-full flex flex-col">
       <h2 className="text-2xl font-semibold text-neutral-900">Activities</h2>
 
-      <div className="mt-4 flex items-center gap-4">
-        <div ref={scrollerRef} className="relative w-full overflow-x-hidden overflow-y-hidden">
-          <div className="flex h-40 items-center gap-1" style={{ width: totalWidth }}>
-            {activitiesConfig.map((s, i) => {
-              const active = i === selected;
-
-              const cardBase =
-                "relative rounded-2xl border transition-all duration-600 " +
-                "flex shrink-0 flex-col items-center justify-center text-center bg-[var(--bg-light)]";
-
-              const cardSize = active
-                ? `w-[130px] h-[130px] border-2 border-[var(--primary)] shadow-[0_6px_20px_rgba(0,0,0,0.12)]`
-                : `w-[110px] h-[110px] border-neutral-200 opacity-70 hover:border-sky-700`;
-
-              return (
-                <button
-                  key={String(s.id)}
-                  onClick={() => onCardClick(i)}
-                  className={`${cardBase} ${cardSize}`}
-                  type="button"
+      <div className="mt-4">
+        <ul
+          ref={listRef}
+          className="
+            flex gap-8
+            overflow-hidden
+            px-[calc(50%-65px)] py-[2.5vh]
+            activities-list
+          "
+        >
+          {activitiesConfig.map((activity, i) => {
+            const active = i === selected;
+            return (
+              <li
+                key={activity.id}
+                data-activityid={activity.id}
+                onClick={() => handleSelectActivity(i)}
+                className={`
+                  flex flex-col items-center justify-between
+                  cursor-pointer transition-all
+                  bg-[var(--light)] rounded-lg p-4 shadow
+                  w-[110px] aspect-square flex-shrink-0
+                  snap-center opacity-45
+                  hover:bg-[#e9eef5] hover:shadow-lg
+                  ${active ? "bg-[#e0eafc] font-bold shadow-lg opacity-100 scale-115 border-2 border-[var(--primary)] z-10" : ""}
+                `}
+              >
+                <div className="h-[70%] flex items-center justify-center">
+                  <img
+                    src={activity.staticImage}
+                    alt=""
+                    draggable={false}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+                <div
+                  className={`mt-2 font-semibold h-[30%] ${
+                    active
+                      ? "text-base text-neutral-900"
+                      : "text-sm text-neutral-500"
+                  }`}
                 >
-                  <div className="h-[70%]">
-                    <img
-                      src={s.staticImage}
-                      alt=""
-                      draggable={false}
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  </div>
-                  <div
-                    className={`mt-2 font-semibold h-[30%] ${
-                      active ? "text-base text-neutral-900" : "text-sm text-neutral-500"
-                    }`}
-                  >
-                    {s.title}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                  {activity.title}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
+      {/* Dot indicators */}
       <div className="mt-4 flex justify-center gap-2">
         {activitiesConfig.map((_, i) => {
           const active = i === selected;
           return (
             <button
               key={i}
-              onClick={() => {
-                setSelected(i);
-                scrollToCenter(i);
-              }}
-              className={`h-3 w-3 rounded-full ${active ? "bg-red-600" : "bg-neutral-400"}`}
+              onClick={() => handleSelectActivity(i)}
+              className={`h-3 w-3 rounded-full ${
+                active ? "bg-red-600" : "bg-neutral-400"
+              }`}
               type="button"
             />
           );
@@ -280,7 +247,7 @@ const ActivitiesCard: React.FC = () => {
       </div>
 
       <div className="mt-auto">
-        <Button rightIcon={<ChevronRightIcon className="h-4 w-4" />}>Explore More</Button>
+        <Button to="/activities" variant={"grey"}> Explore More →</Button>
       </div>
     </div>
   );
@@ -369,7 +336,7 @@ const ConnectionCard: React.FC = () => {
       </div>
 
       <div className="mt-auto">
-        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>Manage</Button>
+        <Button to="/devices" variant={"grey"}> Manage →</Button>
       </div>
     </div>
   );
@@ -391,7 +358,7 @@ const HelpSupportCard: React.FC = () => {
       </p>
 
       <div className="mt-auto flex justify-end">
-        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>Go to Tutorial</Button>
+        <Button variant={"grey"}>Go to Tutorial →</Button>
       </div>
     </>
   );
@@ -409,7 +376,7 @@ const DocumentationCard: React.FC = () => {
       </div>
 
       <div className="mt-auto flex justify-end">
-        <Button rightIcon={<ChevronRightIcon className="w-4 h-4" />}>Read More</Button>
+        <Button variant={"grey"}>Read More →</Button>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-use crate::actors::balance_board_actor::{BalanceBoardOutput, SettingMode};
+use crate::actors::balance_board_actor::BalanceBoardOutput;
 use crate::processing::data_processor::ProcessingSettings;
 use anyhow::Result;
 use chrono::Utc;
@@ -10,13 +10,22 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 pub fn initialize(output_directory: String,
-                  setting_mode: SettingMode,
+                  session_name: String,
+                  observe_raw_data: bool,
+                  observe_processed_data: bool,
                   device_name: String,
-                  processing_settings: Option<ProcessingSettings>) -> Sender<BalanceBoardOutput> {
+                  processing_settings: ProcessingSettings) -> Sender<BalanceBoardOutput> {
     let (tx, rx) = mpsc::channel(100);
     
     tokio::spawn(async move {
-        file_write_loop(rx, output_directory, setting_mode, device_name, processing_settings).await
+        file_write_loop(rx,
+                        session_name,
+                        output_directory,
+                        observe_raw_data,
+                        observe_processed_data,
+                        device_name,
+                        processing_settings
+        ).await
     });
 
     tx
@@ -24,25 +33,26 @@ pub fn initialize(output_directory: String,
 
 async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
                          output_directory: String,
-                         setting_mode: SettingMode,
+                         session_name: String,
+                         observe_raw_data: bool,
+                         observe_processed_data: bool,
                          device_name: String,
-                         processing_settings: Option<ProcessingSettings>) -> Result<()> {
+                         processing_settings: ProcessingSettings) -> Result<()> {
     println!("File writer execution start.");
     let path = PathBuf::from(output_directory);
-    let time_format = Utc::now().format("%Y-%m-%dT%H-%M-%SZ").to_string();
-    let prepared_file_name = format!("{time_format}-{device_name}");
+    let prepared_file_name = format!("{session_name}-{device_name}");
 
     // Create a file to store the session processing settings;
-    if setting_mode.receive_processed {
+    if observe_processed_data {
         let file_path = path.join(format!("{prepared_file_name}-settings.txt"));
         println!("Storing settings in {:?}", file_path);
         let mut file = create_file(file_path).await?;
-        let content = toml::to_string_pretty(&processing_settings.unwrap())?;
+        let content = toml::to_string_pretty(&processing_settings)?;
         file.write_all(content.as_ref()).await?;
     }
 
     // Create a file to optionally store the raw values;
-    let mut raw_values_file = if setting_mode.receive_raw {
+    let mut raw_values_file = if observe_raw_data {
         let file_path = path.join(format!("{prepared_file_name}-raw-values.txt"));
         println!("Storing processed session in {:?}", file_path);
         let mut file = create_file(file_path).await?;
@@ -53,7 +63,7 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
     };
 
     // Create a file to optionally store the processed values;
-    let mut processed_values_file = if setting_mode.receive_processed {
+    let mut processed_values_file = if observe_processed_data {
         let file_path = path.join(format!("{prepared_file_name}-processed-values.txt"));
         let mut file = create_file(file_path).await?;
         file.write_all(b"timestamp,mean_velocity,total_path_length,velocity_moment,confidence_ellipse_area,convex_hull_area,mean_power_frequency,center_of_spectrum,frequency_total_power,dfa_alpha,jerk\n").await?;

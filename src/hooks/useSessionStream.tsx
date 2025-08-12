@@ -1,38 +1,30 @@
 import { useEffect, useRef } from "react";
 import { Channel } from "@tauri-apps/api/core";
-import { BalanceBoardEvent } from "../types";
-import { useLiveStore } from "../store/liveStore";
+import { RawBalanceBoardEvent, ProcessedBoardEvent } from "@/types";
+import { useSessionActions} from "@/store/sessionDataStore.tsx";
 import { commands } from "@/utils/requests";
 
-// rAF-batched stream hook
 export function useSessionStream(enabled: boolean) {
-  const pushBatch = useLiveStore((s) => s.pushFramesBatch);
-  const chanRef = useRef<Channel<BalanceBoardEvent> | null>(null);
+  const pushRaw = useSessionActions().pushRawFrame;
+  const pushProcessed = useSessionActions().pushProcessedFrame;
+  const chanRef = useRef<Channel<RawBalanceBoardEvent | ProcessedBoardEvent> | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
 
-    const chan = new Channel<BalanceBoardEvent>();
+    const chan = new Channel<RawBalanceBoardEvent | ProcessedBoardEvent>();
     chanRef.current = chan;
 
-    let buf: BalanceBoardEvent[] = [];
-    let scheduled = false;
-
-    const flush = () => {
-      scheduled = false;
-      if (buf.length) {
-        pushBatch(buf);
-        buf = [];
-      }
-    };
-
     chan.onmessage = (msg) => {
-      console.log("Received event!:", msg);
-      buf.push(msg);
-      if (!scheduled) {
-        scheduled = true;
-        requestAnimationFrame(flush);
-      }
+      // Debug log
+      console.log("Received message:", msg);
+      requestAnimationFrame(() => {
+        if (msg.event === "raw") {
+          pushRaw(msg as RawBalanceBoardEvent);
+        } else if (msg.event === "processed") {
+          pushProcessed(msg as ProcessedBoardEvent);
+        }
+      });
     };
 
     (async () => {
@@ -47,5 +39,5 @@ export function useSessionStream(enabled: boolean) {
       commands.session.stopSession().catch(() => {});
       chanRef.current = null;
     };
-  }, [enabled, pushBatch]);
+  }, [enabled, pushRaw, pushProcessed]);
 }

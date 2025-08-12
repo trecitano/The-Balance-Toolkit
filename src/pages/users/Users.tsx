@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { UserType } from "@/types.ts";
 import "./Users.css";
-import defaultUserIcon from "@/assets/user-icon.svg";
-import editIcon from "@/assets/edit-icon.svg";
-import deleteIcon from "@/assets/trash-icon.svg";
+import PersonIcon from "@/assets/user-icon.svg?react";
 import personIcon from "@/assets/user-icon.svg";
 import paletteIcon from "@/assets/palette-icon.svg";
 import calendarIcon from "@/assets/calendar-icon.svg";
@@ -14,6 +12,7 @@ import handIcon from "@/assets/hand-icon.svg";
 import searchIcon from "@/assets/search-icon.svg";
 import { commands } from "@/utils/requests.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {Button} from "@/components/Button.tsx";
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -242,7 +241,7 @@ export default function Users() {
     }
 
     const newUser: UserType = {
-      name: `New User ${usersArg.filter((u) => u.name.startsWith("New User")).length + 1}`,
+      name: createNewUniqueUsername(usersArg),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       color: `#${Math.floor(Math.random() * 16777215)
@@ -259,23 +258,30 @@ export default function Users() {
     scrollToSelectedUser(newUser.name);
   };
 
+  const createNewUniqueUsername = (usersArg: UserType[]) => {
+    let baseNumber = usersArg.length;
+    while (true) {
+      const newUsername = `New User ${baseNumber}`;
+      if (!usersArg.some((u) => u.name === newUsername)) {
+        return newUsername;
+      }
+      baseNumber++;
+    }
+  }
+
   const handleDeleteUser = async (userIdToDelete: string) => {
+    const nextSelectedUser = sortedUsers[currentIndex - 1]
     await commands.users.deleteUser(userIdToDelete);
+    await commands.users.selectUser(nextSelectedUser.name);
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
-    if (editingUserData?.name === userIdToDelete) {
-      setEditingUserData(null);
-    }
+    setEditingUserData(null);
     setShowDeleteConfirm(null);
-    scrollToSelectedUser(users[0].name);
+    scrollToSelectedUser(nextSelectedUser.name);
   };
 
-  const handleEditUser = (userId: string) => {
-    const userToEdit = users.find((user) => user.name === userId);
-    const userIndex = users.findIndex((user) => user.name === userId);
-    if (userToEdit && userIndex !== -1) {
-      setEditingUserData({ ...userToEdit });
-    }
+  const handleEditUser = (user: UserType) => {
+    setEditingUserData(user);
   };
 
   const handleCancelEdit = () => {
@@ -285,8 +291,23 @@ export default function Users() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    console.log("Lets go");
-    const updatedUser = Object.fromEntries(formData.entries()) as UserType;
+
+    const formValues = Object.fromEntries(formData.entries());
+    const updatedUser: UserType = {
+      name: formValues.name as string,
+      createdAt: selectedUserData.createdAt,
+      updatedAt: new Date().toISOString(),
+      isDefault: selectedUserData.isDefault,
+      age: formValues.age ? Number(formValues.age) : undefined,
+      gender: formValues.gender as string,
+      customGender: formValues.customGender as string,
+      height: formValues.height ? Number(formValues.height) : undefined,
+      heightMetric: formValues.heightMetric as string,
+      weight: formValues.weight ? Number(formValues.weight) : undefined,
+      weightMetric: formValues.metric as string,
+      handedness: formValues.handedness as UserType["handedness"],
+      color: formValues.color as string,
+    };
 
     if (!updatedUser.weight) {
       document.querySelector(".form-field.required-field")?.scrollIntoView({
@@ -300,7 +321,10 @@ export default function Users() {
     await commands.users.updateUser(updatedUser);
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
-    scrollToSelectedUser(updatedUser.name);
+    // Need to wait for the DOM to be updated
+    setTimeout(() => {
+      scrollToSelectedUser(updatedUser.name);
+    }, 0);
     setEditingUserData(null);
   };
 
@@ -330,6 +354,19 @@ export default function Users() {
     );
   };
 
+  const renderUserIcon = (user: UserType, extraClasses: string) => {
+    return (
+      <>
+        <div
+          className={`${extraClasses} rounded-full mb-2 flex items-center justify-center`}
+          style={{ backgroundColor: user.color || "#ccc" }}
+        >
+          <PersonIcon className="w-[60%] h-[60%] text-white"/>
+        </div>
+      </>
+    )
+  }
+
   const handleColorClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       e.preventDefault();
@@ -343,22 +380,12 @@ export default function Users() {
     setShowColorDropdown(false);
   };
 
-  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!editingUserData) return;
-    const { name, value } = e.target;
-
-    setEditingUserData((prev) => (prev ? { ...prev, [name]: value } : null));
-
-    setShowColorDropdown(false);
-  };
-
   return (
     <div className="inside-page">
-      {}
-      <header className="page-header">
+      <header className="relative flex items-center justify-between w-full z-50 mb-5">
         <h1 className="page-title">Users</h1>
 
-        <div className="search-container">
+        <div className="absolute left-1/2 -translate-x-1/2 w-[25vw] mx-auto grow-0 shrink-0 flex items-center">
           <span className="search-icon">
             <img src={searchIcon} alt="Search" />
           </span>
@@ -378,7 +405,7 @@ export default function Users() {
                   onClick={() => handleSelectSearchResult(user.name)}
                 >
                   <img
-                    src={defaultUserIcon}
+                    src={personIcon}
                     alt=""
                     className="search-result-icon"
                     style={{ border: `2px solid ${user.color || "#ccc"}` }}
@@ -396,69 +423,54 @@ export default function Users() {
           )}
         </div>
 
-        <button
+        <Button
+          type="button"
+          variant="blue"
+          className={"w-40 h-15"}
           onClick={() => handleAddUser(users)}
-          className="btn btn--primary add-user-btn"
-          aria-label="Add new user"
         >
-          Add New User
-        </button>
+          Add new user
+        </Button>
       </header>
 
       <div className="users-main-content">
         <div className="users-list-panel">
-          <div className="user-carousel-scroll-container">
-            <ul className="users-list" ref={userListRef}>
-              {sortedUsers.map((user) => (
-                <li
-                  key={user.name}
-                  data-userid={user.name}
-                  ref={(el) => {
-                    if (
-                      el &&
-                      user.name === selectedUser &&
-                      !hasInitialScroll.current
-                    ) {
-                      hasInitialScroll.current = true;
-                      el.scrollIntoView({
-                        behavior: "instant",
-                        inline: "center",
-                        block: "center",
-                      });
-                    }
-                  }}
-                  className={`user-carousel-item ${selectedUser === user.name ? "selected" : ""} ${editingUserData?.name === user.name ? "editing" : ""} ${user.isDefault ? "default-user" : ""}`}
-                  onClick={() => handleSelectUser(user.name)}
-                >
-                  <div className="user-selection-status">
-                    {selectedUser === user.name && (user.isDefault ? "Default" : "Selected")}
-                  </div>
-                  <img
-                    src={defaultUserIcon}
-                    alt="User"
-                    className="user-carousel-icon"
-                    style={{ border: `3px solid ${user.color || "#ccc"}` }}
-                  />
-                  <span className="user-carousel-name">{user.name}</span>
-                  <span className="user-carousel-date">
-                    <span className="user-carousel-date-label">Updated</span>
-                    <span className="user-carousel-date-value">
-                      {new Date(user.updatedAt).toLocaleDateString()}
-                    </span>
+          <ul className="users-list gap-4" ref={userListRef}>
+            {sortedUsers.map((user) => (
+              <li
+                key={user.name}
+                data-userid={user.name}
+                ref={(el) => {
+                  if (
+                    el &&
+                    user.name === selectedUser &&
+                    !hasInitialScroll.current
+                  ) {
+                    hasInitialScroll.current = true;
+                    el.scrollIntoView({
+                      behavior: "instant",
+                      inline: "center",
+                      block: "center",
+                    });
+                  }
+                }}
+                className={`user-carousel-item ${selectedUser === user.name ? "selected" : ""} ${editingUserData?.name === user.name ? "editing" : ""} ${user.isDefault ? "default-user" : ""}`}
+                onClick={() => handleSelectUser(user.name)}
+              >
+                <div className="user-selection-status">
+                  {selectedUser === user.name && (user.isDefault ? "Default" : "Selected")}
+                </div>
+                {renderUserIcon(user, "w-[5vw] h-[5vw]")}
+                <span className="user-carousel-name">{user.name}</span>
+                <span className="user-carousel-date">
+                  <span className="user-carousel-date-label">Updated</span>
+                  <span className="user-carousel-date-value">
+                    {new Date(user.updatedAt).toLocaleDateString()}
                   </span>
-                  {selectedUser === user.name && editingUserData === null && (
-                    <button
-                      onClick={() => handleEditUser(user.name)}
-                      className="user-action-btn btn--icon-only"
-                      aria-label="Edit user"
-                    >
-                      <img src={editIcon} alt="Edit" />
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
+                </span>
+              </li>
+            ))}
+          </ul>
           {renderCarouselIndicators()}
         </div>
 
@@ -466,21 +478,10 @@ export default function Users() {
           <form className="user-details-panel" onSubmit={handleSubmit}>
             <div className="user-display">
               <div className="user-display-header">
-                <img
-                  src={defaultUserIcon}
-                  alt="User"
-                  className="user-display-icon"
-                  style={{ borderColor: selectedUserData.color || "#ccc" }}
-                />
+                {renderUserIcon(selectedUserData, "w-[3.5vw] h-[3.5vw]")}
                 <div className="user-header-info">
                   <h2>{selectedUserData.name}</h2>
                   <div className="user-metadata">
-                    <span className="metadata-item">
-                      <span className="metadata-label">ID:</span>
-                      <span className="metadata-value">
-                        {selectedUserData.name.substring(0, 10)}...
-                      </span>
-                    </span>
                     <span className="metadata-item">
                       <span className="metadata-label">Created:</span>
                       <span className="metadata-value">
@@ -496,26 +497,37 @@ export default function Users() {
                   </div>
                 </div>
                 <div className="user-display-actions">
-                  <button type="submit" className="btn btn--primary">
+                  <Button
+                    type="submit"
+                    variant="blue"
+                  >
                     Save
-                  </button>
-                  <button type="button" onClick={handleCancelEdit} className="btn btn--secondary">
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="grey"
+                    onClick={handleCancelEdit}
+                  >
                     Cancel
-                  </button>
+                  </Button>
+
                   {!selectedUserData.isDefault && (
-                    <button
+                    <Button
                       type="button"
+                      variant="red"
                       onClick={() => setShowDeleteConfirm(selectedUserData.name)}
-                      className="btn btn--delete"
                     >
-                      <img src={deleteIcon} alt="Delete" /> Delete
-                    </button>
+                      Delete
+                    </Button>
                   )}
                 </div>
               </div>
 
               {/* Editable fields */}
               <div className="user-info-fields">
+
+                {/* Name */}
                 <div className="form-field">
                   <label>
                     <img src={personIcon} alt="" className="info-grid-icon" />
@@ -524,25 +536,54 @@ export default function Users() {
                   <input
                     type="text"
                     name="name"
-                    defaultValue={editingUserData?.name ?? ""}
+                    value={editingUserData.name}
+                    onChange={(e) =>
+                      setEditingUserData((prev) => ({ ...prev!, name: e.target.value }))
+                    }
                     required
                   />
                 </div>
 
+                {/* Age */}
                 <div className="form-field">
                   <label>
                     <img src={calendarIcon} alt="" className="info-grid-icon" />
                     Age:
                   </label>
-                  <input type="number" name="age" defaultValue={editingUserData?.age} />
+                  <input
+                    type="number"
+                    name="age"
+                    value={editingUserData.age ?? ""}
+                    onChange={(e) =>
+                      setEditingUserData((prev) => ({
+                        ...prev!,
+                        age: e.target.value ? Number(e.target.value) : undefined,
+                      }))
+                    }
+                  />
                 </div>
 
+                {/* Gender */}
                 <div className="form-field">
                   <label>
                     <img src={sexIcon} alt="" className="info-grid-icon" />
                     Gender:
                   </label>
-                  <select name="gender" defaultValue={editingUserData?.gender ?? ""}>
+                  <select
+                    name="gender"
+                    value={
+                      ["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "")
+                        ? editingUserData.gender
+                        : "Other"
+                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setEditingUserData((prev) => ({
+                        ...prev!,
+                        gender: value === "Other" ? "" : value, // Clear if "Other" so user can type
+                      }));
+                    }}
+                  >
                     <option value="">Select...</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
@@ -552,7 +593,8 @@ export default function Users() {
                   </select>
                 </div>
 
-                {editingUserData?.gender === "Other" && (
+                {/* Custom gender input if "Other" */}
+                {!["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "") && (
                   <div className="form-field">
                     <label>
                       <img src={sexIcon} alt="" className="info-grid-icon" />
@@ -560,22 +602,45 @@ export default function Users() {
                     </label>
                     <input
                       type="text"
-                      name="customGender"
-                      defaultValue={editingUserData?.customGender}
+                      name="gender" // same name so it overwrites gender
+                      value={editingUserData.gender ?? ""}
+                      onChange={(e) =>
+                        setEditingUserData((prev) => ({
+                          ...prev!,
+                          gender: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                 )}
 
+                {/* Height */}
                 <div className="form-field">
                   <label>
                     <img src={heightIcon} alt="" className="info-grid-icon" />
                     Height:
                   </label>
                   <div className="user-weight-row">
-                    <input type="number" name="height" defaultValue={editingUserData?.height} />
+                    <input
+                      type="number"
+                      name="height"
+                      value={editingUserData.height ?? ""}
+                      onChange={(e) =>
+                        setEditingUserData((prev) => ({
+                          ...prev!,
+                          height: e.target.value ? Number(e.target.value) : undefined,
+                        }))
+                      }
+                    />
                     <select
                       name="heightMetric"
-                      defaultValue={editingUserData?.heightMetric || "cm"}
+                      value={editingUserData.heightMetric ?? "cm"}
+                      onChange={(e) =>
+                        setEditingUserData((prev) => ({
+                          ...prev!,
+                          heightMetric: e.target.value,
+                        }))
+                      }
                       className="metric-select"
                     >
                       <option value="cm">cm</option>
@@ -584,36 +649,69 @@ export default function Users() {
                   </div>
                 </div>
 
+                {/* Weight */}
                 <div className="form-field required-field">
                   <label>
                     <img src={weightIcon} alt="" className="info-grid-icon" />
                     Weight:
                   </label>
                   <div className="user-weight-row">
-                    <input type="number" name="weight" defaultValue={editingUserData?.weight} />
+                    <input
+                      type="number"
+                      name="weight"
+                      value={editingUserData.weight ?? ""}
+                      onChange={(e) =>
+                        setEditingUserData((prev) => ({
+                          ...prev!,
+                          weight: e.target.value ? Number(e.target.value) : undefined,
+                        }))
+                      }
+                    />
                     <select
                       name="metric"
-                      defaultValue={editingUserData?.weightMetric}
+                      value={editingUserData.weightMetric ?? "kg"}
+                      onChange={(e) =>
+                        setEditingUserData((prev) => ({
+                          ...prev!,
+                          weightMetric: e.target.value,
+                        }))
+                      }
                       className="metric-select"
                     >
                       <option value="kg">kg</option>
                       <option value="lb">lb</option>
                     </select>
                   </div>
+                  {!editingUserData.weight && (
+                    <div className="mt-1 text-sm text-red-600">
+                      Weight is required
+                    </div>
+                  )}
                 </div>
 
+                {/* Handedness */}
                 <div className="form-field">
                   <label>
                     <img src={handIcon} alt="" className="info-grid-icon" />
                     Handedness:
                   </label>
-                  <select name="handedness" defaultValue={editingUserData?.handedness}>
-                    <option value="right">Right</option>
-                    <option value="left">Left</option>
-                    <option value="ambidextrous">Ambidextrous</option>
+                  <select
+                    name="handedness"
+                    value={editingUserData.handedness ?? ""}
+                    onChange={(e) =>
+                      setEditingUserData((prev) => ({
+                        ...prev!,
+                        handedness: e.target.value as UserType["handedness"],
+                      }))
+                    }
+                  >
+                    <option value="Right">Right</option>
+                    <option value="Left">Left</option>
+                    <option value="Ambidextrous">Ambidextrous</option>
                   </select>
                 </div>
 
+                {/* Color */}
                 <div className="form-field">
                   <label>
                     <img src={paletteIcon} alt="" className="info-grid-icon" />
@@ -624,14 +722,19 @@ export default function Users() {
                       type="color"
                       id="color"
                       name="color"
-                      defaultValue={editingUserData?.color || "#397aac"}
-                      onChange={handleColorChange}
+                      value={editingUserData.color || "#397aac"}
+                      onChange={(e) =>
+                        setEditingUserData((prev) => ({
+                          ...prev!,
+                          color: e.target.value,
+                        }))
+                      }
                     />
                     <div
                       className="color-swatch-trigger"
                       onClick={handleColorClick}
                       style={{
-                        backgroundColor: editingUserData?.color || "#397aac",
+                        backgroundColor: editingUserData.color || "#397aac",
                       }}
                     ></div>
                     {showColorDropdown && (
@@ -658,21 +761,10 @@ export default function Users() {
           <div className="user-details-panel">
             <div className="user-display">
               <div className="user-display-header">
-                <img
-                  src={defaultUserIcon}
-                  alt="User"
-                  className="user-display-icon"
-                  style={{ borderColor: selectedUserData.color || "#ccc" }}
-                />
+                {renderUserIcon(selectedUserData, "w-[3.5vw] h-[3.5vw]")}
                 <div className="user-header-info">
                   <h2>{selectedUserData.name}</h2>
                   <div className="user-metadata">
-                    <span className="metadata-item">
-                      <span className="metadata-label">ID:</span>
-                      <span className="metadata-value">
-                        {selectedUserData.name.substring(0, 10)}...
-                      </span>
-                    </span>
                     <span className="metadata-item">
                       <span className="metadata-label">Created:</span>
                       <span className="metadata-value">
@@ -688,26 +780,28 @@ export default function Users() {
                   </div>
                 </div>
                 <div className="user-display-actions">
-                  <button
+                  <Button
                     type="button"
-                    onClick={() => handleEditUser(selectedUserData.name)}
-                    className="btn btn--primary"
+                    variant="blue"
+                    onClick={() => handleEditUser(selectedUserData)}
                   >
-                    <img src={editIcon} alt="Edit" /> Edit
-                  </button>
+                    Edit
+                  </Button>
                   {!selectedUserData.isDefault && (
-                    <button
+                    <Button
                       type="button"
+                      variant="red"
                       onClick={() => setShowDeleteConfirm(selectedUserData.name)}
-                      className="btn btn--delete"
                     >
-                      <img src={deleteIcon} alt="Delete" /> Delete
-                    </button>
+                      Delete
+                    </Button>
                   )}
                 </div>
               </div>
 
               <div className="user-info-fields">
+
+                {/* Name */}
                 <div className="form-field">
                   <label>
                     <img src={personIcon} alt="" className="info-grid-icon" />
@@ -716,6 +810,7 @@ export default function Users() {
                   <div className="display-value">{selectedUserData.name}</div>
                 </div>
 
+                {/* Age */}
                 <div className="form-field">
                   <label>
                     <img src={calendarIcon} alt="" className="info-grid-icon" />
@@ -724,18 +819,16 @@ export default function Users() {
                   <div className="display-value">{selectedUserData.age || "N/A"}</div>
                 </div>
 
+                {/* Gender */}
                 <div className="form-field">
                   <label>
                     <img src={sexIcon} alt="" className="info-grid-icon" />
                     Gender:
                   </label>
-                  <div className="display-value">
-                    {selectedUserData.gender === "Other"
-                      ? selectedUserData.customGender
-                      : selectedUserData.gender || "N/A"}
-                  </div>
+                  <div className="display-value">{selectedUserData.gender || "N/A"}</div>
                 </div>
 
+                {/* Height */}
                 <div className="form-field">
                   <label>
                     <img src={heightIcon} alt="" className="info-grid-icon" />
@@ -748,6 +841,7 @@ export default function Users() {
                   </div>
                 </div>
 
+                {/* Weight */}
                 <div className="form-field">
                   <label>
                     <img src={weightIcon} alt="" className="info-grid-icon" />
@@ -760,6 +854,7 @@ export default function Users() {
                   </div>
                 </div>
 
+                {/* Handedness */}
                 <div className="form-field">
                   <label>
                     <img src={handIcon} alt="" className="info-grid-icon" />
@@ -768,6 +863,7 @@ export default function Users() {
                   <div className="display-value">{selectedUserData.handedness || "N/A"}</div>
                 </div>
 
+                {/* Color */}
                 <div className="form-field">
                   <label>
                     <img src={paletteIcon} alt="" className="info-grid-icon" />
@@ -796,29 +892,22 @@ export default function Users() {
               {users.find((u) => u.name === showDeleteConfirm)?.name}"?
             </p>
 
-            {users.find((u) => u.name === showDeleteConfirm && u.isDefault) && (
-              <p className="default-user-warning">Default User cannot be deleted!</p>
-            )}
-
             <div className="delete-confirm-actions">
-              <button
+              <Button
+                type="button"
+                variant="red"
                 onClick={() => handleDeleteUser(showDeleteConfirm)}
-                className="btn btn--delete btn--medium"
-                disabled={
-                  users.find((u) => u.name === showDeleteConfirm && u.isDefault) !== undefined
-                }
               >
-                <span className="btn__icon btn__icon--left">
-                  <img src={deleteIcon} alt="" />
-                </span>
                 Delete
-              </button>
-              <button
+              </Button>
+
+              <Button
+                type="button"
+                variant="grey"
                 onClick={() => setShowDeleteConfirm(null)}
-                className="btn btn--secondary btn--medium"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
