@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { UserType } from "@/types.ts";
+import { GeneralSettings, UserType } from "@/types.ts";
 import "./Users.css";
 import PersonIcon from "@/assets/user-icon.svg?react";
 import personIcon from "@/assets/user-icon.svg";
@@ -13,6 +13,7 @@ import searchIcon from "@/assets/search-icon.svg";
 import { commands } from "@/utils/requests.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {Button} from "@/components/Button.tsx";
+import { Input } from "@/components/Input.tsx";
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -380,6 +381,10 @@ export default function Users() {
     setShowColorDropdown(false);
   };
 
+  const handleEditUpdate = <K extends keyof UserType>(field: K, value: UserType[K]) => {
+    setEditingUserData((prev) => prev && { ...prev, [field]: value });
+  };
+
   return (
     <div className="inside-page">
       <header className="relative flex items-center justify-between w-full z-50 mb-5">
@@ -528,40 +533,22 @@ export default function Users() {
               <div className="user-info-fields">
 
                 {/* Name */}
-                <div className="form-field">
-                  <label>
-                    <img src={personIcon} alt="" className="info-grid-icon" />
-                    Name:
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={editingUserData.name}
-                    onChange={(e) =>
-                      setEditingUserData((prev) => ({ ...prev!, name: e.target.value }))
-                    }
-                    required
-                  />
-                </div>
+                <Input
+                  label="Name"
+                  icon={<img src={personIcon} alt="" className="w-4 h-4" />}
+                  value={editingUserData.name}
+                  onChange={(e) => handleEditUpdate('name', e.target.value)}
+                  requiredField
+                />
 
                 {/* Age */}
-                <div className="form-field">
-                  <label>
-                    <img src={calendarIcon} alt="" className="info-grid-icon" />
-                    Age:
-                  </label>
-                  <input
-                    type="number"
-                    name="age"
-                    value={editingUserData.age ?? ""}
-                    onChange={(e) =>
-                      setEditingUserData((prev) => ({
-                        ...prev!,
-                        age: e.target.value ? Number(e.target.value) : undefined,
-                      }))
-                    }
-                  />
-                </div>
+                <Input
+                  label="Age"
+                  type="number"
+                  icon={<img src={calendarIcon} alt="" className="w-4 h-4" />}
+                  value={editingUserData.age ?? ""}
+                  onChange={(e) => handleEditUpdate('age', Number(e.target.value))}
+                />
 
                 {/* Gender */}
                 <div className="form-field">

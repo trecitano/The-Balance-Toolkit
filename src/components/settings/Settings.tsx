@@ -1,8 +1,9 @@
-import { useRef, useEffect, useState } from "react";
+import React, { ReactNode, useRef, useState } from "react";
 import "./Settings.css";
 import {commands} from "@/utils/requests.ts";
 import {useQuery} from "@tanstack/react-query";
-import {Device, GeneralSettings} from "@/types.ts";
+import { GeneralSettings, ProcessingSettings } from "@/types.ts";
+import { open } from "@tauri-apps/plugin-dialog";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -16,6 +17,22 @@ export const SettingsQuery = {
     const loadedSettings = await commands.settings.getSettings();
     return { loadedSettings };
   }
+};
+
+interface SettingFieldProps {
+  label: string;
+  children: ReactNode;
+}
+
+const SettingField: React.FC<SettingFieldProps> = ({ label, children }) => {
+  return (
+    <div className="setting-item">
+      <label>
+        <span>{label}</span>
+        {children}
+      </label>
+    </div>
+  );
 };
 
 function Settings({ isOpen, onClose }: SettingsProps) {
@@ -32,9 +49,22 @@ function Settings({ isOpen, onClose }: SettingsProps) {
 
   const settingsRef = useRef<HTMLDivElement>(null);
 
-  const handleChange = (field: keyof GeneralSettings, value: any) => {
+  const handleGeneralSettingsUpdate = <K extends keyof GeneralSettings>(field: K, value: GeneralSettings[K]) => {
     setTempSettings((prev) => prev && { ...prev, [field]: value });
   };
+
+  const handleProcessedSettingsUpdate = <K extends keyof ProcessingSettings>(field: K, value: ProcessingSettings[K]) => {
+    setTempSettings(
+      (prev) =>
+        prev && {
+          ...prev,
+          processingSettings: {
+            ...prev.processingSettings,
+            [field]: value,
+          },
+        }
+    );
+  }
 
   const saveChanges = async () => {
     if (tempSettings) {
@@ -60,102 +90,192 @@ function Settings({ isOpen, onClose }: SettingsProps) {
 
         <div className="settings-content">
           <div className="settings-section">
-            <h3>Session</h3>
+            <h3>TCP Settings</h3>
 
-            <div className="setting-item">
-              <label>
-                <span>TCP Connection String</span>
-                <input
-                  type="text"
-                  value={tempSettings.tcpConnectionString}
-                  onChange={(e) =>
-                    handleChange("tcpConnectionString", e.target.value)
-                  }
-                />
-              </label>
-            </div>
-
-            <div className="setting-item">
-              <label>
-                <span>LSL Stream Name</span>
-                <input
-                  type="text"
-                  value={tempSettings.lslStreamName}
-                  onChange={(e) =>
-                    handleChange("lslStreamName", e.target.value)
-                  }
-                />
-              </label>
-            </div>
-
-            <div className="setting-item">
-              <label>
-                <span>LSL Source ID</span>
-                <input
-                  type="text"
-                  value={tempSettings.lslSourceID}
-                  onChange={(e) =>
-                    handleChange("lslSourceID", e.target.value)
-                  }
-                />
-              </label>
-            </div>
+            <SettingField label={"TCP Connection String"}>
+              <input
+                type="text"
+                value={tempSettings.tcpConnectionString}
+                onChange={(e) =>
+                  handleGeneralSettingsUpdate("tcpConnectionString", e.target.value)
+                }
+              />
+            </SettingField>
+            <SettingField label={"Send Raw Data?"}>
+              <input
+                type="checkbox"
+                checked={tempSettings.tcpSendRawData}
+                onChange={(e) =>
+                  handleGeneralSettingsUpdate("tcpSendRawData", e.target.checked)
+                }
+              />
+            </SettingField>
+            <SettingField label={"Send Processed Data?"}>
+              <input
+                type="checkbox"
+                checked={tempSettings.tcpSendProcessedData}
+                onChange={(e) =>
+                  handleGeneralSettingsUpdate("tcpSendProcessedData", e.target.checked)
+                }
+              />
+            </SettingField>
           </div>
 
           <div className="settings-section">
-            <h3>Data</h3>
+            <h3>LSL Settings</h3>
 
-            <div className="setting-item">
-              <label>
-                <span>Default save location</span>
-                <div>
-                  <span className="location-text">
-                    {tempSettings.defaultSaveLocation}
-                  </span>
-                  <button
-                    className="browse-btn"
-                    onClick={() => {
-                      const newLocation = prompt(
-                        "Enter save location:",
-                        tempSettings.defaultSaveLocation
-                      );
-                      if (newLocation) {
-                        handleChange("defaultSaveLocation", newLocation);
-                      }
-                    }}
-                  >
-                    Browse...
-                  </button>
-                </div>
-              </label>
-            </div>
-
-            <div className="setting-item">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={tempSettings.storeRawSession}
-                  onChange={(e) =>
-                    handleChange("storeRawSession", e.target.checked)
-                  }
-                />
-                <span>Store Raw Data</span>
-              </label>
-            </div>
-
-            <div className="setting-item">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={tempSettings.storeProcessedData}
-                  onChange={(e) =>
-                    handleChange("storeProcessedData", e.target.checked)
-                  }
-                />
-                <span>Store Processed Data</span>
-              </label>
-            </div>
+            <SettingField label={"LSL Stream Name"}>
+              <input
+                type="text"
+                value={tempSettings.lslStreamName}
+                onChange={(e) =>
+                  handleGeneralSettingsUpdate("lslStreamName", e.target.value)
+                }
+              />
+            </SettingField>
+            <SettingField label={"LSL Source ID"}>
+              <input
+                type="text"
+                value={tempSettings.lslSourceID}
+                onChange={(e) =>
+                  handleGeneralSettingsUpdate("lslSourceID", e.target.value)
+                }
+              />
+            </SettingField>
+            <SettingField label={"Send Raw Data?"}>
+              <input
+                type="checkbox"
+                checked={tempSettings.lslSendRawData}
+                onChange={(e) =>
+                  handleGeneralSettingsUpdate("lslSendRawData", e.target.checked)
+                }
+              />
+            </SettingField>
+            <SettingField label={"Send Processed Data?"}>
+              <input
+                type="checkbox"
+                checked={tempSettings.lslSendProcessedData}
+                onChange={(e) =>
+                  handleGeneralSettingsUpdate("lslSendProcessedData", e.target.checked)
+                }
+              />
+            </SettingField>
           </div>
+
+          <div className="settings-section">
+            <h3>Save Session Data</h3>
+
+            <SettingField label={"Default save location"}>
+              <button
+                className="browse-btn"
+                onClick={ async () => {
+                  const selected = await open({
+                    directory: true,
+                    multiple: false,
+                    title: "Select save directory",
+                  });
+                  if (typeof selected === "string") {
+                    handleGeneralSettingsUpdate("storeFilesDefaultDirectory", selected);
+                  }
+                }}
+              >
+                Browse
+              </button>
+            </SettingField>
+            <SettingField label={"Store Raw Data"}>
+              <input
+                type="checkbox"
+                checked={tempSettings.storeRawSession}
+                onChange={(e) =>
+                  handleGeneralSettingsUpdate("storeRawSession", e.target.checked)
+                }
+              />
+            </SettingField>
+            <SettingField label={"Store Processed Data"}>
+              <input
+                type="checkbox"
+                checked={tempSettings.storeProcessedData}
+                onChange={(e) =>
+                  handleGeneralSettingsUpdate("storeProcessedData", e.target.checked)
+                }
+              />
+            </SettingField>
+          </div>
+
+          <div className="settings-section">
+            <h3>Session Processing Configuration</h3>
+
+            <SettingField label={"Balance Board X Size (mm)"}>
+              <input
+                type="number"
+                value={tempSettings.processingSettings.balanceBoardXSize}
+                onChange={(e) =>
+                  handleProcessedSettingsUpdate("balanceBoardXSize", Number(e.target.value))
+                }
+              />
+            </SettingField>
+            <SettingField label={"Balance Board Y Size (mm)"}>
+              <input
+                type="number"
+                value={tempSettings.processingSettings.balanceBoardYSize}
+                onChange={(e) =>
+                  handleProcessedSettingsUpdate("balanceBoardYSize", Number(e.target.value))
+                }
+              />
+            </SettingField>
+            <SettingField label={"Window size (ms)"}>
+              <input
+                type="number"
+                value={tempSettings.processingSettings.windowSizeMs}
+                onChange={(e) =>
+                  handleProcessedSettingsUpdate("windowSizeMs", Number(e.target.value))
+                }
+              />
+            </SettingField>
+            <SettingField label={"Window Slide size (ms)"}>
+              <input
+                type="number"
+                value={tempSettings.processingSettings.windowSlideMs}
+                onChange={(e) =>
+                  handleProcessedSettingsUpdate("windowSlideMs", Number(e.target.value))
+                }
+              />
+            </SettingField>
+            <SettingField label={"Sampling Number"}>
+              <input
+                type="number"
+                value={tempSettings.processingSettings.samplingNumber}
+                onChange={(e) =>
+                  handleProcessedSettingsUpdate("samplingNumber", Number(e.target.value))
+                }
+              />
+            </SettingField>
+            <SettingField label={"Sampling Number"}>
+              <select value={tempSettings.processingSettings.interpolation}
+                      onChange={(e) =>
+                        handleProcessedSettingsUpdate("interpolation", e.target.value) }>
+                <option value="Linear">Linear</option>
+                <option value="Cubic">Cubic</option>
+                <option value="Polynomial">Polynomial</option>
+              </select>
+            </SettingField>
+          </div>
+
+          <div className="settings-section">
+            <h3>Demo Mode</h3>
+
+            <SettingField label={"Enable Demo Mode"}>
+              <input
+                type="checkbox"
+                checked={tempSettings.mockDataMode}
+                onChange={(e) =>
+                  handleGeneralSettingsUpdate("mockDataMode", e.target.checked)
+                }
+              />
+            </SettingField>
+          </div>
+
+
         </div>
 
         <div className="settings-footer">

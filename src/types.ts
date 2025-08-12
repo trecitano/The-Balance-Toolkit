@@ -6,9 +6,29 @@ export interface GeneralSettings {
   lslSourceID: string;
   lslSendRawData: boolean;
   lslSendProcessedData: boolean;
-  storeFilesDefaultDirectory: boolean;
+  storeFilesDefaultDirectory: string;
   storeRawSession: boolean;
   storeProcessedData: boolean;
+  processingSettings: ProcessingSettings;
+  mockDataMode: boolean;
+}
+
+export interface ProcessingSettings {
+  balanceBoardXSize: number;
+  balanceBoardYSize: number;
+  windowSizeMs: number;
+  windowSlideMs: number;
+  samplingNumber: number;
+  interpolation: string;
+  analysisConfiguration: AnalysisConfiguration;
+}
+
+export interface AnalysisConfiguration {
+  swayMetrics: boolean;
+  areaMetrics: boolean;
+  frequencyMetrics: boolean;
+  dfa: boolean;
+  jerk: boolean;
 }
 
 export interface UserType {

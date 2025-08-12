@@ -20,7 +20,10 @@ export default defineConfig(
     },
     ...tseslint.config({
       files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
-      extends: [...tseslint.configs.recommended, pluginReact.configs.flat.recommended],
+      extends: [
+        ...tseslint.configs.recommended,
+        pluginReact.configs.flat.recommended,
+        pluginReact.configs.flat["jsx-runtime"]],
     }),
     {
       files: ["**/*.md"],
@@ -32,10 +35,7 @@ export default defineConfig(
       files: ["**/*.css"],
       plugins: { css },
       language: "css/css",
-      extends: ["css/recommended"],
-      rules: {
-        "css/no-invalid-properties": "off",
-      },
+      extends: ["css/recommended"]
     },
   ],
   eslintConfigPrettier,
