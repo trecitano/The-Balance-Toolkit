@@ -85,7 +85,7 @@ async fn settings_get_settings(state: State<'_, AppState>) -> Result<GeneralSett
 
 #[tauri::command(async)]
 async fn settings_set_settings(settings: GeneralSettings, state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> settings_get_settings");
+    println!(">> settings_set_settings");
 
     let command = ToolkitCommand::SaveSettings { settings };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;

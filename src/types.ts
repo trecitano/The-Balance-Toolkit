@@ -11,6 +11,7 @@ export interface GeneralSettings {
   storeProcessedData: boolean;
   processingSettings: ProcessingSettings;
   mockDataMode: boolean;
+  isDemoMode: boolean;
 }
 
 export interface ProcessingSettings {

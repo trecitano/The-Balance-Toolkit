@@ -16,18 +16,19 @@ pub struct GeneralSettings {
     pub store_files_default_directory: String,
     pub store_raw_session: bool,
     pub store_processed_data: bool,
-    pub processing_settings: ProcessingSettings
+    pub processing_settings: ProcessingSettings,
+    pub is_demo_mode: bool,
 }
 
 impl Default for GeneralSettings {
     fn default() -> GeneralSettings {
         GeneralSettings {
-            tcp_connection_string: "localhost:4567".to_string(),
+            tcp_connection_string: "localhost:11223".to_string(),
             tcp_send_raw_data: true,
             tcp_send_processed_data: true,
 
-            lsl_stream_name: "The Balance Toolkit".to_string(),
-            lsl_source_id: "The-Balance-Toolkit".to_string(),
+            lsl_stream_name: "the-balance-toolkit".to_string(),
+            lsl_source_id: "the-balance-toolkit".to_string(),
             lsl_send_raw_data: true,
             lsl_send_processed_data: true,
 
@@ -36,6 +37,7 @@ impl Default for GeneralSettings {
             store_processed_data: true,
 
             processing_settings: ProcessingSettings::default(),
+            is_demo_mode: false,
         }
     }
 }
