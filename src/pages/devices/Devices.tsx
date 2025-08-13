@@ -8,7 +8,7 @@ import { commands } from "@/utils/requests.ts";
 import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
 import "./Devices.css";
 import DeviceScanner from "@/pages/devices/DeviceScanner.tsx";
-import {Button} from "@/components/Button.tsx";
+import { Button } from "@/components/Button.tsx";
 
 const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
@@ -86,7 +86,6 @@ export default function Devices() {
     onError: (error) => console.error("Failed to cancel device scan:", error),
   });
 
-
   const handleStartEditName = (deviceId: string) => {
     console.log("Starting edit for device:", deviceId);
     setEditingDeviceId(deviceId);
@@ -147,9 +146,7 @@ export default function Devices() {
     const connected = devices.filter((d) => d.isConnected);
     const disconnected = devices.filter((d) => !d.isConnected);
 
-    connected.sort(
-      (a, b) => new Date(a.lastConnected).getTime() - new Date(b.lastConnected).getTime(),
-    );
+    connected.sort((a, b) => new Date(a.lastConnected).getTime() - new Date(b.lastConnected).getTime());
     disconnected.sort((a, b) => a.name.localeCompare(b.name));
 
     return [...connected, ...disconnected];
@@ -182,12 +179,8 @@ export default function Devices() {
       <div className="main-content">
         <div className="devices-list" onScroll={handleGradientDevicesScroll}>
           {noDevices && (
-            <div className="h-full flex flex-col items-center justify-center text-center p-8 mt-8 bg-gray-100 rounded-lg shadow-inner">
-              <img
-                src={bluetoothDisconnectedIcon}
-                alt="No devices found"
-                className="w-20 h-20 mb-6 opacity-50"
-              />
+            <div className="mt-8 flex h-full flex-col items-center justify-center rounded-lg bg-gray-100 p-8 text-center shadow-inner">
+              <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />
               <p className="text-xl text-gray-600">No devices found.</p>
               <p className="text-base text-gray-400">
                 Click the "Scan for Devices" button to search for nearby devices.
@@ -203,9 +196,7 @@ export default function Devices() {
               handleSaveDeviceName={handleSaveDeviceName}
               handleIdentifyClick={(deviceId) => identifyDeviceMutation.mutate(deviceId)}
               handleRemoveDevice={(deviceId) => removeDeviceMutation.mutate(deviceId)}
-              handleSelectDeviceForSession={(deviceId) =>
-                selectDeviceForSessionMutation.mutate(deviceId)
-              }
+              handleSelectDeviceForSession={(deviceId) => selectDeviceForSessionMutation.mutate(deviceId)}
             />
           ))}
         </div>
@@ -216,9 +207,7 @@ export default function Devices() {
         />
       </div>
 
-      {isScanning && (
-        <DeviceScanner foundDevicesCount={foundDevicesCount} handleCancelScan={handleCancelScan} />
-      )}
+      {isScanning && <DeviceScanner foundDevicesCount={foundDevicesCount} handleCancelScan={handleCancelScan} />}
 
       {showIdentifyPopup && (
         <div className="identify-popup-overlay" onClick={handleClosePopup}>

@@ -23,17 +23,17 @@ interface StatusIndicator {
 
 const Home: React.FC = () => {
   return (
-    <div className=" bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
       <Header />
 
       {/* Main Content */}
-      <div className="grid grid-flow-col grid-cols-3 grid-rows-3 gap-6 max-w-7xl mx-auto mt-6">
+      <div className="mx-auto mt-6 grid max-w-7xl grid-flow-col grid-cols-3 grid-rows-3 gap-6">
         {/* Left Column */}
-        <div className="row-span-1 col-span-1 rounded-lg border-2 border-red-500 p-5">
+        <div className="col-span-1 row-span-1 rounded-lg border-2 border-red-500 p-5">
           <LastSessionCard />
         </div>
-        <div className="row-span-2 col-span-1 rounded-lg border-2 border-red-500 p-5">
+        <div className="col-span-1 row-span-2 rounded-lg border-2 border-red-500 p-5">
           <ActivitiesCard />
         </div>
 
@@ -63,7 +63,7 @@ const Header: React.FC = () => {
       <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
         {/* Left: Greeting */}
         <div className="mb-auto md:flex-1">
-          <h1 className="text-6xl font-bold leading-tight">Hello!</h1>
+          <h1 className="text-6xl leading-tight font-bold">Hello!</h1>
           <p className="mt-2 text-xl opacity-90">Welcome back to the balance tool kit</p>
         </div>
 
@@ -83,18 +83,12 @@ const Header: React.FC = () => {
 
         {/* Right: Links */}
         <div className="mt-auto flex w-full flex-col items-end gap-3 md:w-auto md:flex-1 md:items-end">
-          <button
-            className="inline-flex items-center gap-2 text-white/95 hover:text-white"
-            type="button"
-          >
+          <button className="inline-flex items-center gap-2 text-white/95 hover:text-white" type="button">
             <DocumentIcon className="h-5 w-5" />
             <span className="text-base">Cite</span>
           </button>
 
-          <button
-            className="inline-flex items-center gap-2 text-white/95 hover:text-white"
-            type="button"
-          >
+          <button className="inline-flex items-center gap-2 text-white/95 hover:text-white" type="button">
             <CodeBracketIcon className="h-5 w-5" />
             <span className="text-base">Source Code</span>
           </button>
@@ -108,19 +102,19 @@ const Header: React.FC = () => {
 const LastSessionCard: React.FC = () => {
   return (
     <>
-      <h2 className="text-xl font-semibold mb-4">Last session</h2>
+      <h2 className="mb-4 text-xl font-semibold">Last session</h2>
 
       <div className="flex justify-between">
         {/* User Section */}
         <div>
           <div className="flex">
-            <div className="w-4 h-4">
+            <div className="h-4 w-4">
               <img src={userIcon} draggable={false} />
             </div>
             <span className="font-medium">Username</span>
           </div>
 
-          <div className="text-xs text-gray-600 space-y-1">
+          <div className="space-y-1 text-xs text-gray-600">
             <div>Weight:</div>
             <div>Sex:</div>
             <div>Age:</div>
@@ -129,11 +123,11 @@ const LastSessionCard: React.FC = () => {
 
         {/* Stats Section */}
         <div>
-          <div className="flex items-center space-x-2 mb-2">
-            <DocumentTextIcon className="w-4 h-4 text-red-600" />
+          <div className="mb-2 flex items-center space-x-2">
+            <DocumentTextIcon className="h-4 w-4 text-red-600" />
             <span className="font-medium">Stats</span>
           </div>
-          <div className="text-xs text-gray-600 space-y-1">
+          <div className="space-y-1 text-xs text-gray-600">
             <div>Duration:</div>
             <div>Something else:</div>
           </div>
@@ -141,7 +135,7 @@ const LastSessionCard: React.FC = () => {
 
         {/* File */}
         <div>
-          <div className="flex w-4 h-4 mb-2">
+          <div className="mb-2 flex h-4 w-4">
             <img src={fileIcon} draggable={false} />
             <span className="text-xs">Name of file</span>
           </div>
@@ -160,9 +154,7 @@ const ActivitiesCard: React.FC = () => {
   const listRef = useRef<HTMLUListElement>(null);
 
   const scrollToActivity = (index: number) => {
-    const el = listRef.current?.querySelector(
-      `[data-activityid="${activitiesConfig[index].id}"]`
-    );
+    const el = listRef.current?.querySelector(`[data-activityid="${activitiesConfig[index].id}"]`);
     el?.scrollIntoView({
       behavior: "smooth",
       inline: "center",
@@ -176,19 +168,11 @@ const ActivitiesCard: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       <h2 className="text-2xl font-semibold text-neutral-900">Activities</h2>
 
       <div className="mt-4">
-        <ul
-          ref={listRef}
-          className="
-            flex gap-8
-            overflow-hidden
-            px-[calc(50%-65px)] py-[2.5vh]
-            activities-list
-          "
-        >
+        <ul ref={listRef} className="activities-list flex gap-8 overflow-hidden px-[calc(50%-65px)] py-[2.5vh]">
           {activitiesConfig.map((activity, i) => {
             const active = i === selected;
             return (
@@ -196,17 +180,9 @@ const ActivitiesCard: React.FC = () => {
                 key={activity.id}
                 data-activityid={activity.id}
                 onClick={() => handleSelectActivity(i)}
-                className={`
-                  flex flex-col items-center justify-between
-                  cursor-pointer transition-all
-                  bg-[var(--light)] rounded-lg p-4 shadow
-                  w-[110px] aspect-square flex-shrink-0
-                  snap-center opacity-45
-                  hover:bg-[#e9eef5] hover:shadow-lg
-                  ${active ? "bg-[#e0eafc] font-bold shadow-lg opacity-100 scale-115 border-2 border-[var(--primary)] z-10" : ""}
-                `}
+                className={`flex aspect-square w-[110px] flex-shrink-0 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-[var(--light)] p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 border-2 border-[var(--primary)] bg-[#e0eafc] font-bold opacity-100 shadow-lg" : ""} `}
               >
-                <div className="h-[70%] flex items-center justify-center">
+                <div className="flex h-[70%] items-center justify-center">
                   <img
                     src={activity.staticImage}
                     alt=""
@@ -215,10 +191,8 @@ const ActivitiesCard: React.FC = () => {
                   />
                 </div>
                 <div
-                  className={`mt-2 font-semibold h-[30%] ${
-                    active
-                      ? "text-base text-neutral-900"
-                      : "text-sm text-neutral-500"
+                  className={`mt-2 h-[30%] font-semibold ${
+                    active ? "text-base text-neutral-900" : "text-sm text-neutral-500"
                   }`}
                 >
                   {activity.title}
@@ -237,9 +211,7 @@ const ActivitiesCard: React.FC = () => {
             <button
               key={i}
               onClick={() => handleSelectActivity(i)}
-              className={`h-3 w-3 rounded-full ${
-                active ? "bg-red-600" : "bg-neutral-400"
-              }`}
+              className={`h-3 w-3 rounded-full ${active ? "bg-red-600" : "bg-neutral-400"}`}
               type="button"
             />
           );
@@ -247,7 +219,10 @@ const ActivitiesCard: React.FC = () => {
       </div>
 
       <div className="mt-auto">
-        <Button to="/activities" variant={"grey"}> Explore More →</Button>
+        <Button to="/activities" variant={"grey"}>
+          {" "}
+          Explore More →
+        </Button>
       </div>
     </div>
   );
@@ -296,14 +271,14 @@ const ConnectionCard: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex h-full flex-col">
+      <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-semibold">Connection</h2>
       </div>
 
       <div className="mb-10">
         <select
-          className="w-full p-2 border border-gray-300 rounded-lg"
+          className="w-full rounded-lg border border-gray-300 p-2"
           value={selectedDevice}
           onChange={handleDeviceChange}
         >
@@ -314,20 +289,17 @@ const ConnectionCard: React.FC = () => {
       </div>
 
       {/* Balance Board Illustration */}
-      <div className="flex justify-center mb-6">
+      <div className="mb-6 flex justify-center">
         <img src={wbbIconLine} alt="Balance Board" draggable={false} />
       </div>
 
       {/* Status Indicators */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="mb-6 grid grid-cols-3 gap-4">
         {statusIndicators.map((indicator: StatusIndicator, index: number) => {
           const IconComponent = indicator.icon;
           return (
-            <div
-              key={index}
-              className={`border rounded-lg p-3 text-center ${getStatusClasses(indicator.color)}`}
-            >
-              <IconComponent className="w-6 h-6 mx-auto mb-1" />
+            <div key={index} className={`rounded-lg border p-3 text-center ${getStatusClasses(indicator.color)}`}>
+              <IconComponent className="mx-auto mb-1 h-6 w-6" />
               <div className="text-sm font-semibold">{indicator.value}</div>
               <div className="text-xs">{indicator.label}</div>
             </div>
@@ -336,7 +308,10 @@ const ConnectionCard: React.FC = () => {
       </div>
 
       <div className="mt-auto">
-        <Button to="/devices" variant={"grey"}> Manage →</Button>
+        <Button to="/devices" variant={"grey"}>
+          {" "}
+          Manage →
+        </Button>
       </div>
     </div>
   );
@@ -346,14 +321,14 @@ const ConnectionCard: React.FC = () => {
 const HelpSupportCard: React.FC = () => {
   return (
     <>
-      <div className="flex items-center space-x-2 mb-4">
-        <div className="bg-red-600 text-white rounded-full p-1">
-          <QuestionMarkCircleIcon className="w-4 h-4" />
+      <div className="mb-4 flex items-center space-x-2">
+        <div className="rounded-full bg-red-600 p-1 text-white">
+          <QuestionMarkCircleIcon className="h-4 w-4" />
         </div>
         <h2 className="text-xl font-semibold">Help and Support</h2>
       </div>
 
-      <p className="text-gray-600 mb-4">
+      <p className="mb-4 text-gray-600">
         Go through a quick tutorial and see how you can make the most of The Balance Toolkit
       </p>
 
@@ -367,10 +342,10 @@ const HelpSupportCard: React.FC = () => {
 // Documentation Card
 const DocumentationCard: React.FC = () => {
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center space-x-2 mb-4">
-        <div className="bg-red-600 text-white rounded p-1">
-          <DocumentTextIcon className="w-4 h-4" />
+    <div className="flex h-full flex-col">
+      <div className="mb-4 flex items-center space-x-2">
+        <div className="rounded bg-red-600 p-1 text-white">
+          <DocumentTextIcon className="h-4 w-4" />
         </div>
         <h2 className="text-xl font-semibold">Documentation</h2>
       </div>
@@ -422,7 +397,7 @@ const OtherResourcesCard: React.FC = () => {
 
   return (
     <>
-      <h2 className="text-xl font-semibold mb-4">Other Resources</h2>
+      <h2 className="mb-4 text-xl font-semibold">Other Resources</h2>
 
       <div className="space-y-3">
         {resourceLinks.map((link: ResourceLink, index: number) => {
@@ -430,11 +405,11 @@ const OtherResourcesCard: React.FC = () => {
           return (
             <button
               key={index}
-              className="flex items-center space-x-3 text-gray-600 hover:text-gray-800 w-full text-left"
+              className="flex w-full items-center space-x-3 text-left text-gray-600 hover:text-gray-800"
               onClick={link.onClick}
               type="button"
             >
-              <IconComponent className="w-5 h-5" />
+              <IconComponent className="h-5 w-5" />
               <span>{link.text}</span>
             </button>
           );

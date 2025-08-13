@@ -1,5 +1,5 @@
 import React from "react";
-import {Link} from "react-router-dom";
+import { Link } from "react-router-dom";
 
 type Variant = "grey" | "blue" | "red";
 type Size = "sm" | "md" | "lg";
@@ -16,14 +16,14 @@ type BaseProps = {
 
 type ButtonAsButton = BaseProps &
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  to?: undefined;
-};
+    to?: undefined;
+  };
 
 type ButtonAsLink = BaseProps &
   React.AnchorHTMLAttributes<HTMLAnchorElement> & {
-  to: string;
-  state?: any;
-};
+    to: string;
+    state?: any;
+  };
 
 type ButtonProps = ButtonAsButton | ButtonAsLink;
 
@@ -35,12 +35,12 @@ const base =
   "enabled:hover:-translate-y-[1px] " +
   "enabled:active:translate-y-[1px] enabled:active:shadow-inner " +
   "disabled:opacity-60 disabled:cursor-not-allowed " +
-  "enabled:focus:outline-none enabled:focus:shadow-[var(--shadow-focus)]"
+  "enabled:focus:outline-none enabled:focus:shadow-[var(--shadow-focus)]";
 
 const byVariant: Record<Variant, string> = {
   grey: "bg-[var(--secondary)] text-[var(--white)] enabled:hover:bg-[var(--secondary-dark)]",
   blue: "bg-[var(--primary)] text-[var(--white)] enabled:hover:bg-[var(--primary-dark)]",
-  red:  "bg-[var(--red)] text-[var(--white)] enabled:hover:bg-[var(--red-dark)]",
+  red: "bg-[var(--red)] text-[var(--white)] enabled:hover:bg-[var(--red-dark)]",
 };
 
 const bySize: Record<Size, string> = {
@@ -58,12 +58,7 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const classes = [
-    base,
-    byVariant[variant],
-    bySize[size],
-    className,
-  ].join(" ");
+  const classes = [base, byVariant[variant], bySize[size], className].join(" ");
 
   if ("to" in props && props.to) {
     const { to, state, ...rest } = props as ButtonAsLink;

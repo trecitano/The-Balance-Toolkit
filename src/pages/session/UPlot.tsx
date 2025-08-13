@@ -1,8 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
-import {useSessionDataStore, BoardBuffer, SessionState, useSessionRawDataBuffer} from "@/store/sessionDataStore.tsx";
-import {ProcessedBoardEvent, RawBalanceBoardEvent} from "@/types.ts";
+import { useSessionDataStore, BoardBuffer, SessionState, useSessionRawDataBuffer } from "@/store/sessionDataStore.tsx";
+import { ProcessedBoardEvent, RawBalanceBoardEvent } from "@/types.ts";
 
 type DataSelector<T> = (state: any) => BoardBuffer<T> | undefined;
 type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: number[] };
@@ -12,10 +12,10 @@ const BLACK_COLOUR = "#000";
 const BLUE_COLOUR = "#3b82f6";
 
 function UPlotLineGeneric<T>({
-                               uPlotOptions,
-                               dataSelector,
-                               dataMapper,
-                             }: {
+  uPlotOptions,
+  dataSelector,
+  dataMapper,
+}: {
   uPlotOptions: uPlot.Options;
   dataSelector: DataSelector<T>;
   dataMapper: DataMapper<T>;
@@ -24,7 +24,7 @@ function UPlotLineGeneric<T>({
   const plotRef = useRef<uPlot | null>(null);
   const widthRef = useRef(0);
 
-  console.log("NEW RENDER?!")
+  console.log("NEW RENDER?!");
 
   // Mount uPlot once
   useLayoutEffect(() => {
@@ -57,7 +57,6 @@ function UPlotLineGeneric<T>({
     const unsub = useSessionDataStore.subscribe(
       (state) => dataSelector(state),
       (buffer) => {
-
         if (!plotRef || buffer === undefined) {
           return;
         }
@@ -69,8 +68,8 @@ function UPlotLineGeneric<T>({
         equalityFn: (a, b) => {
           // console.log("Equality check:", { a: a?.len, b: b?.len });
           return a === b; // Try simple reference equality first
-        }
-      }
+        },
+      },
     );
 
     return () => unsub();
@@ -79,15 +78,9 @@ function UPlotLineGeneric<T>({
   return <div ref={hostRef} className="w-full" />;
 }
 
-
-export const UPlot = React.memo(
-  UPlotLineGeneric,
-  (prevProps, nextProps) => {
-    return (
-      JSON.stringify(prevProps.uPlotOptions) === JSON.stringify(nextProps.uPlotOptions)
-    );
-  }
-);
+export const UPlot = React.memo(UPlotLineGeneric, (prevProps, nextProps) => {
+  return JSON.stringify(prevProps.uPlotOptions) === JSON.stringify(nextProps.uPlotOptions);
+});
 
 export function copYPlotSettings(boardId: string) {
   console.log("I WAS INVOKED?!");
@@ -109,18 +102,18 @@ export function copYPlotSettings(boardId: string) {
           return [now - 10, now + pad];
         },
       },
-      y: { range: [-50, 50] }
+      y: { range: [-50, 50] },
     },
     axes: [
       {
         scale: "x",
         grid: { show: false },
         values: () => [],
-        ticks: { show: false }
+        ticks: { show: false },
       },
       {
         scale: "y",
-        grid: {show: false },
+        grid: { show: false },
         values: (u, splits) => {
           return splits.map((v, i) => {
             if (i === 0) return "Back"; // bottom tick
@@ -128,20 +121,17 @@ export function copYPlotSettings(boardId: string) {
             if (i === splits.length - 1) return "Front"; // top tick
             return ""; // hide all other labels
           });
-        }
+        },
       },
     ],
-    series: [
-      {},
-      { label, stroke: color, width: 2},
-    ],
+    series: [{}, { label, stroke: color, width: 2 }],
     hooks: {
       draw: [
         (u) => {
           drawHorizontalAxis(u, BLACK_COLOUR);
           drawVerticalAxisStationary(u, BLACK_COLOUR);
-          drawPlotLastPointAsCircle(u, color)
-        }
+          drawPlotLastPointAsCircle(u, color);
+        },
       ],
     },
   };
@@ -159,7 +149,7 @@ export function copYPlotSettings(boardId: string) {
       const f = buf.frames[idx];
       if (f) {
         if (t0 === null) t0 = f.timestamp / 1000;
-        t.push((f.timestamp / 1000) - t0); // relative seconds
+        t.push(f.timestamp / 1000 - t0); // relative seconds
         y.push(f.data.copY);
       }
     }
@@ -225,16 +215,6 @@ function drawPlotLastPointAsCircle(u: uPlot, color: string) {
   ctx.stroke();
   ctx.restore();
 }
-
-
-
-
-
-
-
-
-
-
 
 // CoPx vs Time (time on Y, CoPx on X)
 // - Vertical axis fixed at x = 0 (center), labeled "CoPx" at the top
@@ -302,7 +282,7 @@ export function copXPlotSettings(boardId: string) {
 
   const dataSelector = (state: SessionState) => {
     console.log("Checking board ID ", boardId);
-    return state.rawSessionData["Board One"]
+    return state.rawSessionData["Board One"];
   };
 
   const dataMapper = (buf: BoardBuffer<RawBalanceBoardEvent>) => {
@@ -311,8 +291,7 @@ export function copXPlotSettings(boardId: string) {
     let t0: number | null = null;
 
     for (let i = 0; i < buf.len; i++) {
-      const idx =
-        (buf.head - (buf.len - 1 - i) + buf.frames.length) % buf.frames.length;
+      const idx = (buf.head - (buf.len - 1 - i) + buf.frames.length) % buf.frames.length;
       const f = buf.frames[idx];
       if (f) {
         if (t0 === null) t0 = f.timestamp / 1000;
@@ -371,17 +350,11 @@ function drawTopAxisLabels(u: uPlot, centerLabel: string) {
   ctx.restore();
 }
 
-function drawVerticalZeroAxis(
-  u: uPlot,
-  color: string,
-  minX: number,
-  maxX: number,
-) {
+function drawVerticalZeroAxis(u: uPlot, color: string, minX: number, maxX: number) {
   const { ctx } = u;
   const { left, top, height, width } = u.bbox;
 
-  const xZero =
-    left + ((0 - minX) / (maxX - minX)) * (width <= 0 ? 1 : width);
+  const xZero = left + ((0 - minX) / (maxX - minX)) * (width <= 0 ? 1 : width);
 
   ctx.save();
   ctx.strokeStyle = "#7a7a7a";
@@ -394,12 +367,7 @@ function drawVerticalZeroAxis(
 }
 
 // Map CoP-X value -> horizontal px
-function xPxFromCoPx(
-  u: uPlot,
-  value: number,
-  minX: number,
-  maxX: number,
-): number {
+function xPxFromCoPx(u: uPlot, value: number, minX: number, maxX: number): number {
   const { left, width } = u.bbox;
   const ratio = (value - minX) / (maxX - minX);
   return left + ratio * width;
@@ -414,12 +382,7 @@ function yPxFromTime(u: uPlot, t: number): number {
 }
 
 // Draw the CoP-X trace with time flowing downward.
-function drawTransposedSeries(
-  u: uPlot,
-  color: string,
-  minX: number,
-  maxX: number,
-) {
+function drawTransposedSeries(u: uPlot, color: string, minX: number, maxX: number) {
   const t = u.data[0] as number[];
   const xVals = u.data[1] as number[];
   if (!t.length) return;
@@ -442,12 +405,7 @@ function drawTransposedSeries(
   ctx.restore();
 }
 
-function drawLastPointTransposed(
-  u: uPlot,
-  color: string,
-  minX: number,
-  maxX: number,
-) {
+function drawLastPointTransposed(u: uPlot, color: string, minX: number, maxX: number) {
   const t = u.data[0] as number[];
   const xVals = u.data[1] as number[];
   if (!t.length) return;
@@ -467,8 +425,6 @@ function drawLastPointTransposed(
   ctx.stroke();
   ctx.restore();
 }
-
-
 
 export function vCopXPlotSettings(boardId: string) {
   const width = 150;
@@ -525,8 +481,7 @@ export function vCopXPlotSettings(boardId: string) {
     },
   };
 
-  const dataSelector = (state: SessionState) =>
-    state.processedSessionData[boardId];
+  const dataSelector = (state: SessionState) => state.processedSessionData[boardId];
 
   const dataMapper = (buf: BoardBuffer<ProcessedBoardEvent>) => {
     const t: number[] = [];
@@ -534,9 +489,7 @@ export function vCopXPlotSettings(boardId: string) {
     let t0: number | null = null;
 
     for (let i = 0; i < buf.len; i++) {
-      const idx =
-        (buf.head - (buf.len - 1 - i) + buf.frames.length) %
-        buf.frames.length;
+      const idx = (buf.head - (buf.len - 1 - i) + buf.frames.length) % buf.frames.length;
       const f = buf.frames[idx];
       if (!f) continue;
 
@@ -613,8 +566,7 @@ export function confidenceEllipseAreaPlotSettings(boardId: string) {
     },
   };
 
-  const dataSelector = (state: SessionState) =>
-    state.processedSessionData[boardId];
+  const dataSelector = (state: SessionState) => state.processedSessionData[boardId];
 
   const dataMapper = (buf: BoardBuffer<ProcessedBoardEvent>) => {
     const t: number[] = [];
@@ -622,9 +574,7 @@ export function confidenceEllipseAreaPlotSettings(boardId: string) {
     let t0: number | null = null;
 
     for (let i = 0; i < buf.len; i++) {
-      const idx =
-        (buf.head - (buf.len - 1 - i) + buf.frames.length) %
-        buf.frames.length;
+      const idx = (buf.head - (buf.len - 1 - i) + buf.frames.length) % buf.frames.length;
       const f = buf.frames[idx];
       if (!f) continue;
 
@@ -704,8 +654,7 @@ export function convexHullAreaPlotSettings(boardId: string) {
     },
   };
 
-  const dataSelector = (state: SessionState) =>
-    state.processedSessionData[boardId];
+  const dataSelector = (state: SessionState) => state.processedSessionData[boardId];
 
   const dataMapper = (buf: BoardBuffer<ProcessedBoardEvent>) => {
     const t: number[] = [];
@@ -713,9 +662,7 @@ export function convexHullAreaPlotSettings(boardId: string) {
     let t0: number | null = null;
 
     for (let i = 0; i < buf.len; i++) {
-      const idx =
-        (buf.head - (buf.len - 1 - i) + buf.frames.length) %
-        buf.frames.length;
+      const idx = (buf.head - (buf.len - 1 - i) + buf.frames.length) % buf.frames.length;
       const f = buf.frames[idx];
       if (!f) continue;
 

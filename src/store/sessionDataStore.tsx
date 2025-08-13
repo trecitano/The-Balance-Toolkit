@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { RawBalanceBoardEvent, ProcessedBoardEvent } from "@/types";
-import {subscribeWithSelector} from "zustand/middleware";
+import { subscribeWithSelector } from "zustand/middleware";
 
 const MAX_FRAMES = 10_000;
 
@@ -8,7 +8,7 @@ export type BoardBuffer<T> = {
   frames: (T | undefined)[];
   head: number;
   len: number;
-}
+};
 
 export type SessionState = {
   windowMs: number;
@@ -19,7 +19,7 @@ export type SessionState = {
     pushRawFrame: (f: RawBalanceBoardEvent) => void;
     pushProcessedFrame: (f: ProcessedBoardEvent) => void;
     clear: () => void;
-  }
+  };
 };
 
 // Helper to create a new empty buffer
@@ -75,14 +75,13 @@ export const useSessionDataStore = create(
 
       clear: () => set({ rawSessionData: {}, processedSessionData: {} }),
     },
-  })
-));
+  })),
+);
 
 // Selectors
 export const useSessionActions = () => useSessionDataStore((s) => s.actions);
 
-export const useSessionRawDataBuffer = (boardId: string) =>
-  useSessionDataStore((s) => s.rawSessionData[boardId]);
+export const useSessionRawDataBuffer = (boardId: string) => useSessionDataStore((s) => s.rawSessionData[boardId]);
 
 export const useSessionProcessedDataBuffer = (boardId: string) =>
   useSessionDataStore((s) => s.processedSessionData[boardId]);

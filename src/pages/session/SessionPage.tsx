@@ -4,7 +4,7 @@ import BoardPanel from "./BoardPanel";
 import { SessionPanel, SessionPanelValue } from "./SessionPanel";
 import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import { useSessionDataStore} from "@/store/sessionDataStore.tsx";
+import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
 
 const SESSION_QUERY_KEY = ["session_key"];
 export const SessionQuery = {
@@ -49,7 +49,7 @@ export default function SessionPage() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 p-4">
       <SessionPanel
         boardDisplaySelected={boardDisplaySelected}
         onBoardDisplayChange={setBoardDisplaySelected}
@@ -61,7 +61,7 @@ export default function SessionPage() {
           console.log("Recording toggled:", recording, state);
           setSessionState(state);
           if (!recording) {
-            clearLiveData()
+            clearLiveData();
           }
         }}
       />

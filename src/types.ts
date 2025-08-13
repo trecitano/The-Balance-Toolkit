@@ -3,7 +3,7 @@ export interface GeneralSettings {
   tcpSendRawData: boolean;
   tcpSendProcessedData: boolean;
   lslStreamName: string;
-  lslSourceID: string;
+  lslSourceId: string;
   lslSendRawData: boolean;
   lslSendProcessedData: boolean;
   storeFilesDefaultDirectory: string;

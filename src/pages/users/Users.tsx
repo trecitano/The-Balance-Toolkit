@@ -12,8 +12,8 @@ import handIcon from "@/assets/hand-icon.svg";
 import searchIcon from "@/assets/search-icon.svg";
 import { commands } from "@/utils/requests.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {Button} from "@/components/Button.tsx";
-import { Input } from "@/components/Input.tsx";
+import { Button } from "@/components/Button.tsx";
+import { Input, InputField } from "@/components/InputField.tsx";
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -27,16 +27,7 @@ export default function Users() {
   const userListRef = useRef<HTMLUListElement>(null);
   const queryClient = useQueryClient();
 
-  const fixedColors = [
-    "#e55d82",
-    "#409edb",
-    "#e8bd00",
-    "#894c2f",
-    "#dd2020",
-    "#2a2a2a",
-    "#989898",
-    "#9bbc0f",
-  ];
+  const fixedColors = ["#e55d82", "#409edb", "#e8bd00", "#894c2f", "#dd2020", "#2a2a2a", "#989898", "#9bbc0f"];
 
   const { data, isLoading, error } = useQuery({
     queryKey: USERS_QUERY_KEY,
@@ -56,9 +47,7 @@ export default function Users() {
     return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
   });
   const searchResults = searchTerm.trim()
-    ? users.filter((user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    ? users.filter((user) => user.name.toLowerCase().includes(searchTerm.toLowerCase()))
     : [];
   const currentIndex = sortedUsers.findIndex((user) => user.name === selectedUser);
 
@@ -92,23 +81,23 @@ export default function Users() {
   useEffect(() => {
     const handleGlobalKeyDown = async (e: KeyboardEvent) => {
       const activeElement = document.activeElement;
-      const isInputFocused = activeElement && (
-        activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.tagName === 'SELECT'
-      );
+      const isInputFocused =
+        activeElement &&
+        (activeElement.tagName === "INPUT" ||
+          activeElement.tagName === "TEXTAREA" ||
+          activeElement.tagName === "SELECT");
 
       if (editingUserData || isInputFocused) {
         return;
       }
 
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         e.preventDefault();
 
         if (sortedUsers.length <= 1) return;
 
         let newIndex;
-        if (e.key === 'ArrowLeft') {
+        if (e.key === "ArrowLeft") {
           newIndex = currentIndex > 0 ? currentIndex - 1 : sortedUsers.length - 1;
         } else {
           newIndex = currentIndex < sortedUsers.length - 1 ? currentIndex + 1 : 0;
@@ -121,10 +110,10 @@ export default function Users() {
       }
     };
 
-    document.addEventListener('keydown', handleGlobalKeyDown);
+    document.addEventListener("keydown", handleGlobalKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', handleGlobalKeyDown);
+      document.removeEventListener("keydown", handleGlobalKeyDown);
     };
   }, [sortedUsers]);
 
@@ -132,18 +121,18 @@ export default function Users() {
   useEffect(() => {
     const handleGlobalWheel = async (e: WheelEvent) => {
       const activeElement = document.activeElement;
-      const isInputFocused = activeElement && (
-        activeElement.tagName === 'INPUT' ||
-        activeElement.tagName === 'TEXTAREA' ||
-        activeElement.tagName === 'SELECT'
-      );
+      const isInputFocused =
+        activeElement &&
+        (activeElement.tagName === "INPUT" ||
+          activeElement.tagName === "TEXTAREA" ||
+          activeElement.tagName === "SELECT");
 
       if (editingUserData || isInputFocused) {
         return;
       }
 
       const target = e.target as Element;
-      const isOverUserListPanel = target.closest('.users-list-panel');
+      const isOverUserListPanel = target.closest(".users-list-panel");
 
       if (!isOverUserListPanel) {
         return;
@@ -170,10 +159,10 @@ export default function Users() {
       }
     };
 
-    document.addEventListener('wheel', handleGlobalWheel, { passive: false });
+    document.addEventListener("wheel", handleGlobalWheel, { passive: false });
 
     return () => {
-      document.removeEventListener('wheel', handleGlobalWheel);
+      document.removeEventListener("wheel", handleGlobalWheel);
     };
   }, [sortedUsers]);
 
@@ -188,9 +177,7 @@ export default function Users() {
   const scrollToSelectedUser = (userId: string) => {
     if (!userListRef.current) return;
 
-    const selectedUserElement = userListRef.current.querySelector(
-      `[data-userid="${userId}"]`,
-    ) as HTMLLIElement | null;
+    const selectedUserElement = userListRef.current.querySelector(`[data-userid="${userId}"]`) as HTMLLIElement | null;
 
     if (selectedUserElement) {
       selectedUserElement.scrollIntoView({
@@ -211,10 +198,8 @@ export default function Users() {
   };
 
   const handleSelectUser = async (userName: string) => {
-    if (editingUserData) {
-      if (
-        window.confirm("You have unsaved changes. Discard changes and select a different user?")
-      ) {
+    if (editingUserData && editingUserData.name != userName) {
+      if (window.confirm("You have unsaved changes. Discard changes and select a different user?")) {
         setEditingUserData(null);
       } else {
         return;
@@ -227,7 +212,7 @@ export default function Users() {
 
       return {
         ...oldData,
-        selectedUser: userName
+        selectedUser: userName,
       };
     });
 
@@ -256,7 +241,6 @@ export default function Users() {
 
     setEditingUserData({ ...newUser });
     await handleSelectUser(newUser.name);
-    scrollToSelectedUser(newUser.name);
   };
 
   const createNewUniqueUsername = (usersArg: UserType[]) => {
@@ -268,10 +252,10 @@ export default function Users() {
       }
       baseNumber++;
     }
-  }
+  };
 
   const handleDeleteUser = async (userIdToDelete: string) => {
-    const nextSelectedUser = sortedUsers[currentIndex - 1]
+    const nextSelectedUser = sortedUsers[currentIndex - 1];
     await commands.users.deleteUser(userIdToDelete);
     await commands.users.selectUser(nextSelectedUser.name);
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
@@ -291,26 +275,10 @@ export default function Users() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
 
-    const formValues = Object.fromEntries(formData.entries());
-    const updatedUser: UserType = {
-      name: formValues.name as string,
-      createdAt: selectedUserData.createdAt,
-      updatedAt: new Date().toISOString(),
-      isDefault: selectedUserData.isDefault,
-      age: formValues.age ? Number(formValues.age) : undefined,
-      gender: formValues.gender as string,
-      customGender: formValues.customGender as string,
-      height: formValues.height ? Number(formValues.height) : undefined,
-      heightMetric: formValues.heightMetric as string,
-      weight: formValues.weight ? Number(formValues.weight) : undefined,
-      weightMetric: formValues.metric as string,
-      handedness: formValues.handedness as UserType["handedness"],
-      color: formValues.color as string,
-    };
+    if (!editingUserData) return;
 
-    if (!updatedUser.weight) {
+    if (!editingUserData.weight) {
       document.querySelector(".form-field.required-field")?.scrollIntoView({
         behavior: "smooth",
         block: "center",
@@ -319,14 +287,15 @@ export default function Users() {
       return;
     }
 
-    await commands.users.updateUser(updatedUser);
+    await commands.users.updateUser(editingUserData);
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
     // Need to wait for the DOM to be updated
     setTimeout(() => {
-      scrollToSelectedUser(updatedUser.name);
+      const newUsername = editingUserData.name;
+      setEditingUserData(null);
+      handleSelectUser(newUsername);
     }, 0);
-    setEditingUserData(null);
   };
 
   const renderCarouselIndicators = () => {
@@ -343,12 +312,7 @@ export default function Users() {
           }
 
           return (
-            <div
-              key={user.name}
-              className={className}
-              onClick={() => handleSelectUser(user.name)}
-              title={user.name}
-            />
+            <div key={user.name} className={className} onClick={() => handleSelectUser(user.name)} title={user.name} />
           );
         })}
       </div>
@@ -359,14 +323,14 @@ export default function Users() {
     return (
       <>
         <div
-          className={`${extraClasses} rounded-full mb-2 flex items-center justify-center`}
+          className={`${extraClasses} mb-2 flex items-center justify-center rounded-full`}
           style={{ backgroundColor: user.color || "#ccc" }}
         >
-          <PersonIcon className="w-[60%] h-[60%] text-white"/>
+          <PersonIcon className="h-[60%] w-[60%] text-white" />
         </div>
       </>
-    )
-  }
+    );
+  };
 
   const handleColorClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -387,10 +351,10 @@ export default function Users() {
 
   return (
     <div className="inside-page">
-      <header className="relative flex items-center justify-between w-full z-50 mb-5">
+      <header className="relative z-50 mb-5 flex w-full items-center justify-between">
         <h1 className="page-title">Users</h1>
 
-        <div className="absolute left-1/2 -translate-x-1/2 w-[25vw] mx-auto grow-0 shrink-0 flex items-center">
+        <div className="absolute left-1/2 mx-auto flex w-[25vw] shrink-0 grow-0 -translate-x-1/2 items-center">
           <span className="search-icon">
             <img src={searchIcon} alt="Search" />
           </span>
@@ -404,11 +368,7 @@ export default function Users() {
           {isSearching && searchResults.length > 0 && (
             <div className="search-results">
               {searchResults.map((user) => (
-                <div
-                  key={user.name}
-                  className="search-result-item"
-                  onClick={() => handleSelectSearchResult(user.name)}
-                >
+                <div key={user.name} className="search-result-item" onClick={() => handleSelectSearchResult(user.name)}>
                   <img
                     src={personIcon}
                     alt=""
@@ -428,12 +388,7 @@ export default function Users() {
           )}
         </div>
 
-        <Button
-          type="button"
-          variant="blue"
-          className={"w-40 h-15"}
-          onClick={() => handleAddUser(users)}
-        >
+        <Button type="button" variant="blue" className={"h-15 w-40"} onClick={() => handleAddUser(users)}>
           Add new user
         </Button>
       </header>
@@ -446,11 +401,7 @@ export default function Users() {
                 key={user.name}
                 data-userid={user.name}
                 ref={(el) => {
-                  if (
-                    el &&
-                    user.name === selectedUser &&
-                    !hasInitialScroll.current
-                  ) {
+                  if (el && user.name === selectedUser && !hasInitialScroll.current) {
                     hasInitialScroll.current = true;
                     el.scrollIntoView({
                       behavior: "instant",
@@ -469,9 +420,7 @@ export default function Users() {
                 <span className="user-carousel-name">{user.name}</span>
                 <span className="user-carousel-date">
                   <span className="user-carousel-date-label">Updated</span>
-                  <span className="user-carousel-date-value">
-                    {new Date(user.updatedAt).toLocaleDateString()}
-                  </span>
+                  <span className="user-carousel-date-value">{new Date(user.updatedAt).toLocaleDateString()}</span>
                 </span>
               </li>
             ))}
@@ -502,27 +451,16 @@ export default function Users() {
                   </div>
                 </div>
                 <div className="user-display-actions">
-                  <Button
-                    type="submit"
-                    variant="blue"
-                  >
+                  <Button type="submit" variant="blue">
                     Save
                   </Button>
 
-                  <Button
-                    type="button"
-                    variant="grey"
-                    onClick={handleCancelEdit}
-                  >
+                  <Button type="button" variant="grey" onClick={handleCancelEdit}>
                     Cancel
                   </Button>
 
                   {!selectedUserData.isDefault && (
-                    <Button
-                      type="button"
-                      variant="red"
-                      onClick={() => setShowDeleteConfirm(selectedUserData.name)}
-                    >
+                    <Button type="button" variant="red" onClick={() => setShowDeleteConfirm(selectedUserData.name)}>
                       Delete
                     </Button>
                   )}
@@ -531,23 +469,23 @@ export default function Users() {
 
               {/* Editable fields */}
               <div className="user-info-fields">
-
                 {/* Name */}
-                <Input
-                  label="Name"
-                  icon={<img src={personIcon} alt="" className="w-4 h-4" />}
+                <InputField
+                  label="Name:"
+                  icon={<img src={personIcon} alt="" />}
                   value={editingUserData.name}
-                  onChange={(e) => handleEditUpdate('name', e.target.value)}
+                  onChange={(e) => handleEditUpdate("name", e.target.value)}
+                  editable
                   requiredField
                 />
 
                 {/* Age */}
-                <Input
-                  label="Age"
-                  type="number"
-                  icon={<img src={calendarIcon} alt="" className="w-4 h-4" />}
+                <InputField
+                  label="Age:"
+                  icon={<img src={calendarIcon} alt="" />}
                   value={editingUserData.age ?? ""}
-                  onChange={(e) => handleEditUpdate('age', Number(e.target.value))}
+                  onChange={(e) => handleEditUpdate("age", Number(e.target.value))}
+                  editable
                 />
 
                 {/* Gender */}
@@ -612,22 +550,17 @@ export default function Users() {
                       type="number"
                       name="height"
                       value={editingUserData.height ?? ""}
-                      onChange={(e) =>
-                        setEditingUserData((prev) => ({
-                          ...prev!,
-                          height: e.target.value ? Number(e.target.value) : undefined,
-                        }))
-                      }
+                      onChange={(e) => {
+                        handleEditUpdate("height", Number(e.target.value));
+                        if (!editingUserData?.heightMetric) {
+                          handleEditUpdate("heightMetric", "cm");
+                        }
+                      }}
                     />
                     <select
                       name="heightMetric"
                       value={editingUserData.heightMetric ?? "cm"}
-                      onChange={(e) =>
-                        setEditingUserData((prev) => ({
-                          ...prev!,
-                          heightMetric: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => handleEditUpdate("heightMetric", e.target.value)}
                       className="metric-select"
                     >
                       <option value="cm">cm</option>
@@ -647,15 +580,15 @@ export default function Users() {
                       type="number"
                       name="weight"
                       value={editingUserData.weight ?? ""}
-                      onChange={(e) =>
-                        setEditingUserData((prev) => ({
-                          ...prev!,
-                          weight: e.target.value ? Number(e.target.value) : undefined,
-                        }))
-                      }
+                      onChange={(e) => {
+                        handleEditUpdate("weight", Number(e.target.value));
+                        if (!editingUserData?.weightMetric) {
+                          handleEditUpdate("weightMetric", "kg");
+                        }
+                      }}
                     />
                     <select
-                      name="metric"
+                      name="weightMetric"
                       value={editingUserData.weightMetric ?? "kg"}
                       onChange={(e) =>
                         setEditingUserData((prev) => ({
@@ -669,11 +602,7 @@ export default function Users() {
                       <option value="lb">lb</option>
                     </select>
                   </div>
-                  {!editingUserData.weight && (
-                    <div className="mt-1 text-sm text-red-600">
-                      Weight is required
-                    </div>
-                  )}
+                  {!editingUserData.weight && <div className="mt-1 text-sm text-red-600">Weight is required</div>}
                 </div>
 
                 {/* Handedness */}
@@ -767,19 +696,11 @@ export default function Users() {
                   </div>
                 </div>
                 <div className="user-display-actions">
-                  <Button
-                    type="button"
-                    variant="blue"
-                    onClick={() => handleEditUser(selectedUserData)}
-                  >
+                  <Button type="button" variant="blue" onClick={() => handleEditUser(selectedUserData)}>
                     Edit
                   </Button>
                   {!selectedUserData.isDefault && (
-                    <Button
-                      type="button"
-                      variant="red"
-                      onClick={() => setShowDeleteConfirm(selectedUserData.name)}
-                    >
+                    <Button type="button" variant="red" onClick={() => setShowDeleteConfirm(selectedUserData.name)}>
                       Delete
                     </Button>
                   )}
@@ -787,68 +708,39 @@ export default function Users() {
               </div>
 
               <div className="user-info-fields">
-
                 {/* Name */}
-                <div className="form-field">
-                  <label>
-                    <img src={personIcon} alt="" className="info-grid-icon" />
-                    Name:
-                  </label>
-                  <div className="display-value">{selectedUserData.name}</div>
-                </div>
+                <InputField label="Name:" icon={<img src={personIcon} />} value={selectedUserData.name || "N/A"} />
 
                 {/* Age */}
-                <div className="form-field">
-                  <label>
-                    <img src={calendarIcon} alt="" className="info-grid-icon" />
-                    Age:
-                  </label>
-                  <div className="display-value">{selectedUserData.age || "N/A"}</div>
-                </div>
+                <InputField label="Age:" icon={<img src={calendarIcon} />} value={selectedUserData.age || "N/A"} />
 
                 {/* Gender */}
-                <div className="form-field">
-                  <label>
-                    <img src={sexIcon} alt="" className="info-grid-icon" />
-                    Gender:
-                  </label>
-                  <div className="display-value">{selectedUserData.gender || "N/A"}</div>
-                </div>
+                <InputField label="Gender:" icon={<img src={sexIcon} />} value={selectedUserData.gender || "N/A"} />
 
                 {/* Height */}
-                <div className="form-field">
-                  <label>
-                    <img src={heightIcon} alt="" className="info-grid-icon" />
-                    Height:
-                  </label>
-                  <div className="display-value">
-                    {selectedUserData.height
-                      ? `${selectedUserData.height} ${selectedUserData.heightMetric || "cm"}`
-                      : "N/A"}
-                  </div>
-                </div>
+                <InputField
+                  label="Height:"
+                  icon={<img src={heightIcon} />}
+                  value={
+                    selectedUserData.height ? `${selectedUserData.height} ${selectedUserData.heightMetric}` : "N/A"
+                  }
+                />
 
                 {/* Weight */}
-                <div className="form-field">
-                  <label>
-                    <img src={weightIcon} alt="" className="info-grid-icon" />
-                    Weight:
-                  </label>
-                  <div className="display-value">
-                    {selectedUserData.weight
-                      ? `${selectedUserData.weight} ${selectedUserData.weightMetric}`
-                      : "N/A"}
-                  </div>
-                </div>
+                <InputField
+                  label="Weight:"
+                  icon={<img src={weightIcon} />}
+                  value={
+                    selectedUserData.weight ? `${selectedUserData.weight} ${selectedUserData.weightMetric}` : "N/A"
+                  }
+                />
 
                 {/* Handedness */}
-                <div className="form-field">
-                  <label>
-                    <img src={handIcon} alt="" className="info-grid-icon" />
-                    Handedness:
-                  </label>
-                  <div className="display-value">{selectedUserData.handedness || "N/A"}</div>
-                </div>
+                <InputField
+                  label="Handedness:"
+                  icon={<img src={handIcon} />}
+                  value={selectedUserData.handedness || "N/A"}
+                />
 
                 {/* Color */}
                 <div className="form-field">
@@ -874,25 +766,14 @@ export default function Users() {
         <div className="delete-confirm-overlay">
           <div className="delete-confirm-dialog">
             <h4>Confirm Delete</h4>
-            <p>
-              Are you sure you want to delete user "
-              {users.find((u) => u.name === showDeleteConfirm)?.name}"?
-            </p>
+            <p>Are you sure you want to delete user "{users.find((u) => u.name === showDeleteConfirm)?.name}"?</p>
 
             <div className="delete-confirm-actions">
-              <Button
-                type="button"
-                variant="red"
-                onClick={() => handleDeleteUser(showDeleteConfirm)}
-              >
+              <Button type="button" variant="red" onClick={() => handleDeleteUser(showDeleteConfirm)}>
                 Delete
               </Button>
 
-              <Button
-                type="button"
-                variant="grey"
-                onClick={() => setShowDeleteConfirm(null)}
-              >
+              <Button type="button" variant="grey" onClick={() => setShowDeleteConfirm(null)}>
                 Cancel
               </Button>
             </div>

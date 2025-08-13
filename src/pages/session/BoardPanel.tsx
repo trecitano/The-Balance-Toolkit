@@ -1,7 +1,6 @@
-import {copXPlotSettings, copXTopDownPlotSettings, copYPlotSettings, UPlot} from "./UPlot.tsx";
+import { copXPlotSettings, copXTopDownPlotSettings, copYPlotSettings, UPlot } from "./UPlot.tsx";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
-import {BalanceBoardWithCoPOverlay} from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
-
+import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
 
 export function BoardPanel({ boardName }: { boardName: string }) {
   return (
@@ -19,12 +18,10 @@ export function BoardPanel({ boardName }: { boardName: string }) {
         </div>
 
         <div className="col-span-5">
-          <div className="rounded border p-3 space-y-3">
+          <div className="space-y-3 rounded border p-3">
             <div>
               <div className="text-sm text-gray-500">Stability Index</div>
-              <div className="text-2xl font-semibold">
-                {"—"}
-              </div>
+              <div className="text-2xl font-semibold">{"—"}</div>
             </div>
             <div>
               <div className="text-sm text-gray-500">User</div>
@@ -44,7 +41,7 @@ export function BoardPanel({ boardName }: { boardName: string }) {
         </div>
         <div className="col-span-6">
           <div className="rounded border p-2">
-            <UPlot {... copXPlotSettings(boardName)} />
+            <UPlot {...copXPlotSettings(boardName)} />
           </div>
         </div>
 
@@ -56,12 +53,9 @@ export function BoardPanel({ boardName }: { boardName: string }) {
         </div>
         <div className="col-span-6">
           <div className="rounded border p-2">
-            <UPlot {... copXPlotSettings(boardName)} />
+            <UPlot {...copXPlotSettings(boardName)} />
           </div>
         </div>
-
-
-
       </div>
     </section>
   );

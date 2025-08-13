@@ -7,7 +7,7 @@ import SessionPage from "@/pages/session/SessionPage";
 import Activities from "@/pages/activities/Activities";
 import "./App.css";
 import { QueryClient, QueryClientProvider, usePrefetchQuery } from "@tanstack/react-query";
-import {SettingsQuery} from "@/components/settings/Settings.tsx";
+import { SettingsQuery } from "@/components/settings/Settings.tsx";
 
 function AppContent() {
   const navigate = useNavigate();
@@ -25,10 +25,7 @@ function AppContent() {
 
   return (
     <div className={`app`}>
-      <Navigation
-        activeView={location.pathname.substring(1) || "home"}
-        onViewChange={handleViewChange}
-      />
+      <Navigation activeView={location.pathname.substring(1) || "home"} onViewChange={handleViewChange} />
       <main className="main-page">
         <Routes>
           <Route path="/" element={<Home />} />

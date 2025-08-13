@@ -9,17 +9,14 @@ import battery25Icon from "@/assets/battery-25-icon.svg";
 import battery50Icon from "@/assets/battery-50-icon.svg";
 import battery75Icon from "@/assets/battery-75-icon.svg";
 import battery100Icon from "@/assets/battery-100-icon.svg";
-import {Button} from "@/components/Button.tsx";
+import { Button } from "@/components/Button.tsx";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
   handleUnselectDevice: (deviceId: string) => void;
 }
 
-export default function DeviceSessionList({
-  connectedDevices,
-  handleUnselectDevice,
-}: DeviceSessionListProps) {
+export default function DeviceSessionList({ connectedDevices, handleUnselectDevice }: DeviceSessionListProps) {
   const getBatteryIcon = (batteryLevel: number) => {
     if (batteryLevel <= 12) return battery0Icon;
     if (batteryLevel <= 37) return battery25Icon;
@@ -51,11 +48,7 @@ export default function DeviceSessionList({
 
                 <div className="side-panel-icon-container">
                   <img src={rippleIcon} alt="Ripple effect" className="side-panel-ripple-icon" />
-                  <img
-                    src={wbbIconBlue}
-                    alt={`${device.name} icon`}
-                    className="side-panel-device-image"
-                  />
+                  <img src={wbbIconBlue} alt={`${device.name} icon`} className="side-panel-device-image" />
                 </div>
 
                 <div className="side-panel-info-squares">
@@ -76,17 +69,10 @@ export default function DeviceSessionList({
                 </div>
 
                 <div className="side-panel-actions">
-                  <Button
-                    type={"button"}
-                    variant="red"
-                    onClick={() => handleUnselectDevice(device.id)}
-                  >
+                  <Button type={"button"} variant="red" onClick={() => handleUnselectDevice(device.id)}>
                     Disconnect
                   </Button>
-                  <Button
-                    to="/session"
-                    variant="blue"
-                  >
+                  <Button to="/session" variant="blue">
                     Go to Session →
                   </Button>
                 </div>

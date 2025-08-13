@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Channel } from "@tauri-apps/api/core";
 import { RawBalanceBoardEvent, ProcessedBoardEvent } from "@/types";
-import { useSessionActions} from "@/store/sessionDataStore.tsx";
+import { useSessionActions } from "@/store/sessionDataStore.tsx";
 import { commands } from "@/utils/requests";
 
 export function useSessionStream(enabled: boolean) {

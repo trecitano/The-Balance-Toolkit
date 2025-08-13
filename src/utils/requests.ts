@@ -2,7 +2,8 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 import {
   BalanceBoardEvent,
-  Device, GeneralSettings,
+  Device,
+  GeneralSettings,
   SessionInformation,
   UserPageInformation,
   UserType,
@@ -27,23 +28,18 @@ export const commands = {
     scanDevices: async () => invoke<Device[]>("devices_scan_without_timeout"),
     cancelScanDevices: async () => invoke<void>("devices_cancel_scan"),
     isScanning: async () => invoke<boolean>("devices_is_scanning"),
-    selectDevice: async (deviceId: string) =>
-      invoke<void>("devices_select_device", { deviceId: deviceId }),
-    unselectDevice: async (deviceId: string) =>
-      invoke<void>("devices_unselect_device", { deviceId: deviceId }),
+    selectDevice: async (deviceId: string) => invoke<void>("devices_select_device", { deviceId: deviceId }),
+    unselectDevice: async (deviceId: string) => invoke<void>("devices_unselect_device", { deviceId: deviceId }),
     selectedDevices: async () => invoke<void>("devices_get_selected_devices"),
-    removeDevice: async (deviceId: string) =>
-      invoke<void>("devices_remove_device", { deviceId: deviceId }),
-    disconnectDevice: async (deviceId: string) =>
-      invoke<void>("devices_disconnect_device", { deviceId: deviceId }),
+    removeDevice: async (deviceId: string) => invoke<void>("devices_remove_device", { deviceId: deviceId }),
+    disconnectDevice: async (deviceId: string) => invoke<void>("devices_disconnect_device", { deviceId: deviceId }),
     updateDeviceName: async (deviceId: string, deviceName: string) => {
       return invoke<void>("devices_update_device_name", {
         deviceId: deviceId,
         deviceName: deviceName,
       });
     },
-    identifyDevice: async (deviceId: string) =>
-      invoke<void>("devices_identify_device", { deviceId: deviceId }),
+    identifyDevice: async (deviceId: string) => invoke<void>("devices_identify_device", { deviceId: deviceId }),
   },
 
   session: {

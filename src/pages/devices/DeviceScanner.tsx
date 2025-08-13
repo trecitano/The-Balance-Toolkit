@@ -10,15 +10,9 @@ export default function DeviceScanner({ foundDevicesCount, handleCancelScan }: D
         <span className="spinner" />
         <span className="scan-overlay-text">Scanning...</span>
 
-        {foundDevicesCount > 0 && (
-          <p className="scan-overlay-count">Found {foundDevicesCount} devices so far...</p>
-        )}
+        {foundDevicesCount > 0 && <p className="scan-overlay-count">Found {foundDevicesCount} devices so far...</p>}
 
-        <button
-          className="scan-btn"
-          style={{ marginTop: 24, minWidth: 120 }}
-          onClick={handleCancelScan}
-        >
+        <button className="scan-btn" style={{ marginTop: 24, minWidth: 120 }} onClick={handleCancelScan}>
           Cancel
         </button>
       </div>

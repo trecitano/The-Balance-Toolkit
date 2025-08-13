@@ -168,13 +168,7 @@ const activitiesConfig: ActivityConfig[] = [
     id: "dynamic-weight-shifting",
     title: "Dynamic weight shifting",
     staticImage: dynamicWeight3,
-    sequenceImages: [
-      dynamicWeight3,
-      dynamicWeight4,
-      dynamicWeight5,
-      dynamicWeight6,
-      dynamicWeight7,
-    ],
+    sequenceImages: [dynamicWeight3, dynamicWeight4, dynamicWeight5, dynamicWeight6, dynamicWeight7],
     hoverImages: [activitiesIcon, sessionIcon, activitiesIcon],
     boardsRequired: 1,
     description: "Assess controlled weight shifting ability",
@@ -204,9 +198,7 @@ export const defaultActionBlocks: ActionBlock[] = [
  */
 export function getDefaultBlocksByTitle(activityTitle: string): ActionBlock[] {
   // First try to find the activity by exact title match
-  const activity = Object.values(activitiesConfig).find(
-    (activity) => activity.title === activityTitle,
-  );
+  const activity = Object.values(activitiesConfig).find((activity) => activity.title === activityTitle);
 
   // If found, return a copy of its default blocks
   if (activity) {
