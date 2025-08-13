@@ -16,12 +16,13 @@ struct CenterOfPressurePoint {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct ProcessingSettings {
     balance_board_x_size: f32,      // X distance (mm) of the Balance Board Force transducer.
     balance_board_y_size: f32,      // Y distance (mm) of the Balance Board Force transducer.
-    window_size_ms: i64,            // Window size used for calculations
-    window_slide_ms: i64,           // How much the window moves
-    sampling_window_size_ms: i64,   // Sampling size to create a time series (using a specific interpolation)
+    window_size_ms: u64,            // Window size used for calculations
+    window_slide_ms: u64,           // How much the window moves
+    sampling_number: u64,           // Sampling size to create a time series (using a specific interpolation)
     interpolation: InterpolationSetting,
     analysis_configuration: AnalysisConfiguration
 }
@@ -33,7 +34,7 @@ impl ProcessingSettings {
             balance_board_y_size:  238.0,
             window_size_ms: 1000,
             window_slide_ms: 1000,
-            sampling_window_size_ms: 20,
+            sampling_number: 20,
             interpolation: InterpolationSetting::Cubic,
             analysis_configuration: AnalysisConfiguration {
                 sway_metrics: true,
@@ -97,9 +98,9 @@ fn data_process_loop(
     let update_rate = std::time::Duration::from_millis(100);
 
     // Window size of 5 seconds
-    let window_size = std::time::Duration::from_millis(settings.window_size_ms as u64);
-    let window_slide_size = std::time::Duration::from_millis(settings.window_slide_ms as u64);
-    let sampling_size = TimeDelta::milliseconds(settings.sampling_window_size_ms);
+    let window_size = std::time::Duration::from_millis(settings.window_size_ms);
+    let window_slide_size = std::time::Duration::from_millis(settings.window_slide_ms);
+    let sampling_size_time_delta = TimeDelta::milliseconds(settings.window_size_ms as i64 / settings.sampling_number as i64);
 
     let cop_calculation_x_value = settings.balance_board_x_size / 2.0;
     let cop_calculation_y_value = settings.balance_board_y_size / 2.0;
@@ -140,9 +141,9 @@ fn data_process_loop(
         println!("Data processor: {:?}", &buffer.len());
 
         let points = match settings.interpolation {
-            InterpolationSetting::Linear => { linear_interpolation(&buffer, start_time, end_time, &sampling_size)}
-            InterpolationSetting::Cubic => { cubic_interpolation(&buffer, start_time, end_time, &sampling_size)}
-            InterpolationSetting::Polynomial => { polynomial_interpolation(&buffer, start_time, end_time, &sampling_size)}
+            InterpolationSetting::Linear => { linear_interpolation(&buffer, start_time, end_time, &sampling_size_time_delta)}
+            InterpolationSetting::Cubic => { cubic_interpolation(&buffer, start_time, end_time, &sampling_size_time_delta)}
+            InterpolationSetting::Polynomial => { polynomial_interpolation(&buffer, start_time, end_time, &sampling_size_time_delta)}
         };
 
         println!("Data processor: {:?}", &points.len());
