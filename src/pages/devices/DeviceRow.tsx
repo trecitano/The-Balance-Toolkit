@@ -3,7 +3,7 @@ import { Device } from "@/types";
 import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import "./DeviceRow.css";
-import {Button} from "@/components/Button.tsx";
+import { Button } from "@/components/Button.tsx";
 
 interface DeviceRowProps {
   device: Device;
@@ -22,7 +22,7 @@ export default function DeviceRow({
   handleSaveDeviceName,
   handleIdentifyClick,
   handleRemoveDevice,
-  handleSelectDeviceForSession
+  handleSelectDeviceForSession,
 }: DeviceRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -50,7 +50,7 @@ export default function DeviceRow({
 
   return (
     <div className="device-row">
-      <div className={`device-container${device.isConnected ? "" : " disconnected"}`}>
+      <div className={`device-container${device.isConnected ? "" : "disconnected"}`}>
         <button onClick={() => handleRemoveDevice(device.id)} className="remove-device-btn">
           ✕
         </button>
@@ -86,22 +86,16 @@ export default function DeviceRow({
                     handleSaveDeviceName(device.id, device.name);
                   }
                 }}
-                onBlur={() =>
-                  handleSaveDeviceName(device.id, inputRef.current?.value || "")
-                }
+                onBlur={() => handleSaveDeviceName(device.id, inputRef.current?.value || "")}
                 className="device-name-edit-input"
               />
             </div>
           ) : (
             <div className="device-name-container">
-    <span className="device-name-text" title={device.name}>
-      {device.name}
-    </span>
-              <button
-                onClick={() => handleStartEditName(device.id)}
-                className="device-edit-name-btn"
-                title="Edit name"
-              >
+              <span className="device-name-text" title={device.name}>
+                {device.name}
+              </span>
+              <button onClick={() => handleStartEditName(device.id)} className="device-edit-name-btn" title="Edit name">
                 ✎
               </button>
             </div>
@@ -123,9 +117,9 @@ export default function DeviceRow({
             ID
           </button>
           {device.isConnected ? (
-              <Button type="button" variant="blue" onClick={() => handleSelectDeviceForSession(device.id)}>
-                Connect
-              </Button>
+            <Button type="button" variant="blue" onClick={() => handleSelectDeviceForSession(device.id)}>
+              Connect
+            </Button>
           ) : (
             <Button type="button" variant="blue" disabled={true}>
               Connect

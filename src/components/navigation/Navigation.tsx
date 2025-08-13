@@ -35,7 +35,7 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
   };
 
   return (
-    <nav className={`menu-bar${activeView ? " menu-bar--active" : ""}`}>
+    <nav className={`menu-bar ${activeView ? "menu-bar--active" : ""}`}>
       <div>
         <img src={logo} alt="Logo" className="logo-placeholder" />
         <div className="menu-container">
@@ -43,7 +43,7 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
             {menuItems.map((item) => (
               <li
                 key={item.id}
-                className={`menu-item ${item.id}${activeView === item.id ? " active" : ""}`}
+                className={`menu-item ${item.id}${activeView === item.id ? "active" : ""}`}
                 onClick={() => onViewChange(item.id)}
               >
                 <span className="menu-item-icon">
@@ -57,11 +57,7 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
       </div>
       <div className="menu-bottom">
         {/* Settings */}
-        <button
-          className="menu-item settings unstyled-button"
-          title="Settings"
-          onClick={handleSettingsClick}
-        >
+        <button className="menu-item settings unstyled-button" title="Settings" onClick={handleSettingsClick}>
           <span className="menu-item-icon">
             <img src={settingsIcon} alt="Settings" className="nav-icon-sm" />
           </span>

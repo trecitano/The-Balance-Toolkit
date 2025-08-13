@@ -91,9 +91,7 @@ export function MultiSelect({
 
   return (
     <div ref={rootRef} className={className} onBlur={handleBlur} tabIndex={-1}>
-      {label ? (
-        <label className="mb-1 block text-xs font-semibold text-gray-700">{label}</label>
-      ) : null}
+      {label ? <label className="mb-1 block text-xs font-semibold text-gray-700">{label}</label> : null}
 
       {/* Relative wrapper so popup is absolutely positioned and doesn't shift layout */}
       <div className="relative">
@@ -121,9 +119,7 @@ export function MultiSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
         >
-          <span className={`truncate ${selectedLabels.length ? "text-gray-900" : "text-gray-500"}`}>
-            {display}
-          </span>
+          <span className={`truncate ${selectedLabels.length ? "text-gray-900" : "text-gray-500"}`}>{display}</span>
           <svg
             className="ml-2 h-4 w-4 shrink-0 text-gray-500"
             viewBox="0 0 20 20"
@@ -145,7 +141,7 @@ export function MultiSelect({
             role="listbox"
             tabIndex={0}
             onKeyDown={onListKeyDown}
-            className="absolute left-0 top-full z-40 mt-1 w-full overflow-hidden rounded-md border border-gray-300 bg-white shadow-lg focus:outline-none"
+            className="absolute top-full left-0 z-40 mt-1 w-full overflow-hidden rounded-md border border-gray-300 bg-white shadow-lg focus:outline-none"
             aria-multiselectable="true"
           >
             <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>

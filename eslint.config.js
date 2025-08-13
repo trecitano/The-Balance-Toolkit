@@ -23,7 +23,8 @@ export default defineConfig(
       extends: [
         ...tseslint.configs.recommended,
         pluginReact.configs.flat.recommended,
-        pluginReact.configs.flat["jsx-runtime"]],
+        pluginReact.configs.flat["jsx-runtime"],
+      ],
     }),
     {
       files: ["**/*.md"],
@@ -35,7 +36,7 @@ export default defineConfig(
       files: ["**/*.css"],
       plugins: { css },
       language: "css/css",
-      extends: ["css/recommended"]
+      extends: ["css/recommended"],
     },
   ],
   eslintConfigPrettier,

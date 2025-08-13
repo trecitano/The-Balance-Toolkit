@@ -31,9 +31,7 @@ export function getActivityImages(activityName: string): string[] {
   const images: ImageItem[] = [];
 
   // Match activity images by name pattern
-  const regex = new RegExp(
-    `/src/assets/activities/${activityName}.*/${activityName}[\\d\\w-]+\\.svg$`,
-  );
+  const regex = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}[\\d\\w-]+\\.svg$`);
 
   // Sort function to order by number in filename
   const sortByNumber = (a: string, b: string) => {
@@ -80,14 +78,10 @@ export function getActionImages(activityName: string, actionLabel: string): stri
 
   // Define patterns to match action-specific images
   // Pattern 1: activityName-actionLabel.svg or activityName-actionLabel-N.svg
-  const regex1 = new RegExp(
-    `/src/assets/activities/${activityName}.*/${activityName}-${actionLabel}(-\\d+)?\.svg$`,
-  );
+  const regex1 = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}-${actionLabel}(-\\d+)?\.svg$`);
 
   // Pattern 2: activityNameN-actionLabel.svg
-  const regex2 = new RegExp(
-    `/src/assets/activities/${activityName}.*/${activityName}\\d+-${actionLabel}\\.svg$`,
-  );
+  const regex2 = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}\\d+-${actionLabel}\\.svg$`);
 
   // Pattern 3: activityNameN.svg (general sequence images)
   const regex3 = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}\\d+\\.svg$`);
@@ -156,14 +150,10 @@ export function getActionImage(activityName: string, actionLabel: string): strin
   const actionSpecificImages: ImageItem[] = [];
 
   // Pattern 1: activityName-actionLabel.svg or activityName-actionLabel-N.svg
-  const regex1 = new RegExp(
-    `/src/assets/activities/${activityName}.*/${activityName}-${actionLabel}(-\\d+)?\.svg$`,
-  );
+  const regex1 = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}-${actionLabel}(-\\d+)?\.svg$`);
 
   // Pattern 2: activityNameN-actionLabel.svg
-  const regex2 = new RegExp(
-    `/src/assets/activities/${activityName}.*/${activityName}\\d+-${actionLabel}\\.svg$`,
-  );
+  const regex2 = new RegExp(`/src/assets/activities/${activityName}.*/${activityName}\\d+-${actionLabel}\\.svg$`);
 
   // Find all matching action-specific images
   Object.entries(activityImageModules).forEach(([path, imageUrl]) => {
@@ -226,12 +216,7 @@ const MIN_DURATION = 1;
  * Displays a draggable, resizable timeline of action blocks for an activity.
  * Each block represents a specific action in the balance assessment protocol.
  */
-export default function ActivityTimeline({
-  blocks,
-  onChange,
-  onBlockSelect,
-  activityName,
-}: ActivityTimelineProps) {
+export default function ActivityTimeline({ blocks, onChange, onBlockSelect, activityName }: ActivityTimelineProps) {
   // Load images for blocks when activityName changes
   useEffect(() => {
     if (activityName) {
@@ -387,18 +372,14 @@ export default function ActivityTimeline({
     setDragPreview({ x: e.clientX, y: e.clientY });
 
     // Get the timeline container dimensions
-    const timelineRect = (
-      document.querySelector(".activity-timeline") as HTMLElement
-    )?.getBoundingClientRect();
+    const timelineRect = (document.querySelector(".activity-timeline") as HTMLElement)?.getBoundingClientRect();
     if (!timelineRect) return;
 
     // Calculate cursor position relative to timeline
     const x = e.clientX - timelineRect.left;
 
     // Get all block elements
-    const timelineBlocks = Array.from(
-      document.querySelectorAll(".timeline-block"),
-    ) as HTMLElement[];
+    const timelineBlocks = Array.from(document.querySelectorAll(".timeline-block")) as HTMLElement[];
 
     // Calculate positions of all block boundaries
     let positions: number[] = [0]; // Start with position 0
@@ -719,9 +700,7 @@ export default function ActivityTimeline({
                     onBlur={() => {
                       const val = parseInt(durationInputValue, 10);
                       if (!isNaN(val) && val >= MIN_DURATION) {
-                        onChange(
-                          blocks.map((b) => (b.id === block.id ? { ...b, duration: val } : b)),
-                        );
+                        onChange(blocks.map((b) => (b.id === block.id ? { ...b, duration: val } : b)));
                       }
                       setEditingDurationId(null);
                     }}
@@ -729,9 +708,7 @@ export default function ActivityTimeline({
                       if (e.key === "Enter") {
                         const val = parseInt(durationInputValue, 10);
                         if (!isNaN(val) && val >= MIN_DURATION) {
-                          onChange(
-                            blocks.map((b) => (b.id === block.id ? { ...b, duration: val } : b)),
-                          );
+                          onChange(blocks.map((b) => (b.id === block.id ? { ...b, duration: val } : b)));
                         }
                         setEditingDurationId(null);
                       } else if (e.key === "Escape") {

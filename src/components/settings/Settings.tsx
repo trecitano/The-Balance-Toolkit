@@ -1,9 +1,12 @@
 import React, { ReactNode, useRef, useState } from "react";
 import "./Settings.css";
-import {commands} from "@/utils/requests.ts";
-import {useQuery} from "@tanstack/react-query";
+import { commands } from "@/utils/requests.ts";
+import { useQuery } from "@tanstack/react-query";
 import { GeneralSettings, ProcessingSettings } from "@/types.ts";
 import { open } from "@tauri-apps/plugin-dialog";
+import { Input } from "@/components/InputField.tsx";
+import clsx from "clsx";
+import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -16,7 +19,7 @@ export const SettingsQuery = {
   queryFn: async () => {
     const loadedSettings = await commands.settings.getSettings();
     return { loadedSettings };
-  }
+  },
 };
 
 interface SettingFieldProps {
@@ -28,7 +31,7 @@ const SettingField: React.FC<SettingFieldProps> = ({ label, children }) => {
   return (
     <div className="setting-item">
       <label>
-        <span>{label}</span>
+        <span className={"text-sm"}>{label}</span>
         {children}
       </label>
     </div>
@@ -39,9 +42,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   const { data, isLoading, error } = useQuery(SettingsQuery);
   const { loadedSettings } = data ?? {};
 
-  const [tempSettings, setTempSettings] = useState<GeneralSettings | null>(
-    () => loadedSettings ?? null
-  );
+  const [tempSettings, setTempSettings] = useState<GeneralSettings | null>(() => loadedSettings ?? null);
 
   if (!tempSettings && loadedSettings) {
     setTempSettings(loadedSettings);
@@ -53,7 +54,10 @@ function Settings({ isOpen, onClose }: SettingsProps) {
     setTempSettings((prev) => prev && { ...prev, [field]: value });
   };
 
-  const handleProcessedSettingsUpdate = <K extends keyof ProcessingSettings>(field: K, value: ProcessingSettings[K]) => {
+  const handleProcessedSettingsUpdate = <K extends keyof ProcessingSettings>(
+    field: K,
+    value: ProcessingSettings[K],
+  ) => {
     setTempSettings(
       (prev) =>
         prev && {
@@ -62,9 +66,9 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             ...prev.processingSettings,
             [field]: value,
           },
-        }
+        },
     );
-  }
+  };
 
   const saveChanges = async () => {
     if (tempSettings) {
@@ -93,30 +97,26 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             <h3>TCP Settings</h3>
 
             <SettingField label={"TCP Connection String"}>
-              <input
+              <InputPrimitive
                 type="text"
                 value={tempSettings.tcpConnectionString}
-                onChange={(e) =>
-                  handleGeneralSettingsUpdate("tcpConnectionString", e.target.value)
-                }
+                onChange={(e) => handleGeneralSettingsUpdate("tcpConnectionString", e.target.value)}
               />
             </SettingField>
             <SettingField label={"Send Raw Data?"}>
-              <input
+              <InputPrimitive
                 type="checkbox"
                 checked={tempSettings.tcpSendRawData}
-                onChange={(e) =>
-                  handleGeneralSettingsUpdate("tcpSendRawData", e.target.checked)
-                }
+                className={"min-w-4.5"}
+                onChange={(e) => handleGeneralSettingsUpdate("tcpSendRawData", e.target.checked)}
               />
             </SettingField>
             <SettingField label={"Send Processed Data?"}>
-              <input
+              <InputPrimitive
                 type="checkbox"
                 checked={tempSettings.tcpSendProcessedData}
-                onChange={(e) =>
-                  handleGeneralSettingsUpdate("tcpSendProcessedData", e.target.checked)
-                }
+                className={"min-w-4.5"}
+                onChange={(e) => handleGeneralSettingsUpdate("tcpSendProcessedData", e.target.checked)}
               />
             </SettingField>
           </div>
@@ -125,39 +125,32 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             <h3>LSL Settings</h3>
 
             <SettingField label={"LSL Stream Name"}>
-              <input
-                type="text"
+              <InputPrimitive
                 value={tempSettings.lslStreamName}
-                onChange={(e) =>
-                  handleGeneralSettingsUpdate("lslStreamName", e.target.value)
-                }
+                onChange={(e) => handleGeneralSettingsUpdate("lslStreamName", e.target.value)}
               />
             </SettingField>
             <SettingField label={"LSL Source ID"}>
-              <input
+              <InputPrimitive
                 type="text"
-                value={tempSettings.lslSourceID}
-                onChange={(e) =>
-                  handleGeneralSettingsUpdate("lslSourceID", e.target.value)
-                }
+                value={tempSettings.lslSourceId}
+                onChange={(e) => handleGeneralSettingsUpdate("lslSourceId", e.target.value)}
               />
             </SettingField>
             <SettingField label={"Send Raw Data?"}>
-              <input
+              <InputPrimitive
                 type="checkbox"
                 checked={tempSettings.lslSendRawData}
-                onChange={(e) =>
-                  handleGeneralSettingsUpdate("lslSendRawData", e.target.checked)
-                }
+                className={"min-w-4.5"}
+                onChange={(e) => handleGeneralSettingsUpdate("lslSendRawData", e.target.checked)}
               />
             </SettingField>
             <SettingField label={"Send Processed Data?"}>
-              <input
+              <InputPrimitive
                 type="checkbox"
                 checked={tempSettings.lslSendProcessedData}
-                onChange={(e) =>
-                  handleGeneralSettingsUpdate("lslSendProcessedData", e.target.checked)
-                }
+                className={"min-w-4.5"}
+                onChange={(e) => handleGeneralSettingsUpdate("lslSendProcessedData", e.target.checked)}
               />
             </SettingField>
           </div>
@@ -168,7 +161,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             <SettingField label={"Default save location"}>
               <button
                 className="browse-btn"
-                onClick={ async () => {
+                onClick={async () => {
                   const selected = await open({
                     directory: true,
                     multiple: false,
@@ -183,21 +176,19 @@ function Settings({ isOpen, onClose }: SettingsProps) {
               </button>
             </SettingField>
             <SettingField label={"Store Raw Data"}>
-              <input
+              <InputPrimitive
                 type="checkbox"
                 checked={tempSettings.storeRawSession}
-                onChange={(e) =>
-                  handleGeneralSettingsUpdate("storeRawSession", e.target.checked)
-                }
+                className={"min-w-4.5"}
+                onChange={(e) => handleGeneralSettingsUpdate("storeRawSession", e.target.checked)}
               />
             </SettingField>
             <SettingField label={"Store Processed Data"}>
-              <input
+              <InputPrimitive
                 type="checkbox"
                 checked={tempSettings.storeProcessedData}
-                onChange={(e) =>
-                  handleGeneralSettingsUpdate("storeProcessedData", e.target.checked)
-                }
+                className={"min-w-4.5"}
+                onChange={(e) => handleGeneralSettingsUpdate("storeProcessedData", e.target.checked)}
               />
             </SettingField>
           </div>
@@ -206,54 +197,45 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             <h3>Session Processing Configuration</h3>
 
             <SettingField label={"Balance Board X Size (mm)"}>
-              <input
+              <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.balanceBoardXSize}
-                onChange={(e) =>
-                  handleProcessedSettingsUpdate("balanceBoardXSize", Number(e.target.value))
-                }
+                onChange={(e) => handleProcessedSettingsUpdate("balanceBoardXSize", Number(e.target.value))}
               />
             </SettingField>
             <SettingField label={"Balance Board Y Size (mm)"}>
-              <input
+              <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.balanceBoardYSize}
-                onChange={(e) =>
-                  handleProcessedSettingsUpdate("balanceBoardYSize", Number(e.target.value))
-                }
+                onChange={(e) => handleProcessedSettingsUpdate("balanceBoardYSize", Number(e.target.value))}
               />
             </SettingField>
             <SettingField label={"Window size (ms)"}>
-              <input
+              <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.windowSizeMs}
-                onChange={(e) =>
-                  handleProcessedSettingsUpdate("windowSizeMs", Number(e.target.value))
-                }
+                onChange={(e) => handleProcessedSettingsUpdate("windowSizeMs", Number(e.target.value))}
               />
             </SettingField>
             <SettingField label={"Window Slide size (ms)"}>
-              <input
+              <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.windowSlideMs}
-                onChange={(e) =>
-                  handleProcessedSettingsUpdate("windowSlideMs", Number(e.target.value))
-                }
+                onChange={(e) => handleProcessedSettingsUpdate("windowSlideMs", Number(e.target.value))}
               />
             </SettingField>
             <SettingField label={"Sampling Number"}>
-              <input
+              <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.samplingNumber}
-                onChange={(e) =>
-                  handleProcessedSettingsUpdate("samplingNumber", Number(e.target.value))
-                }
+                onChange={(e) => handleProcessedSettingsUpdate("samplingNumber", Number(e.target.value))}
               />
             </SettingField>
             <SettingField label={"Sampling Number"}>
-              <select value={tempSettings.processingSettings.interpolation}
-                      onChange={(e) =>
-                        handleProcessedSettingsUpdate("interpolation", e.target.value) }>
+              <select
+                value={tempSettings.processingSettings.interpolation}
+                onChange={(e) => handleProcessedSettingsUpdate("interpolation", e.target.value)}
+              >
                 <option value="Linear">Linear</option>
                 <option value="Cubic">Cubic</option>
                 <option value="Polynomial">Polynomial</option>
@@ -265,17 +247,14 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             <h3>Demo Mode</h3>
 
             <SettingField label={"Enable Demo Mode"}>
-              <input
+              <InputPrimitive
                 type="checkbox"
                 checked={tempSettings.mockDataMode}
-                onChange={(e) =>
-                  handleGeneralSettingsUpdate("mockDataMode", e.target.checked)
-                }
+                className={"min-w-4.5"}
+                onChange={(e) => handleGeneralSettingsUpdate("mockDataMode", e.target.checked)}
               />
             </SettingField>
           </div>
-
-
         </div>
 
         <div className="settings-footer">

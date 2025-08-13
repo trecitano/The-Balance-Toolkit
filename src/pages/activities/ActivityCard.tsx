@@ -3,7 +3,7 @@ import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import { ActivityConfig, getDefaultBlocksByTitle } from "@/config/activities.config.ts";
-import {Button} from "@/components/Button.tsx";
+import { Button } from "@/components/Button.tsx";
 
 /**
  * ActivityCard component displays an activity with its details
@@ -17,12 +17,7 @@ interface ActivityCardProps {
   index?: number;
 }
 
-const ActivityCard: React.FC<ActivityCardProps> = ({
-  activity,
-  maximized = false,
-  onMaximize,
-  onMinimize,
-}) => {
+const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false, onMaximize, onMinimize }) => {
   // Image and animation state
   const [currentImageSrc, setCurrentImageSrc] = useState<string>(activity.staticImage);
   const [isHovering, setIsHovering] = useState(false);
@@ -62,13 +57,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
     } else {
       setCurrentImageSrc(activity.staticImage);
     }
-  }, [
-    activity.staticImage,
-    activity.sequenceImages,
-    activity.title,
-    activity.id,
-    currentActionLabel,
-  ]);
+  }, [activity.staticImage, activity.sequenceImages, activity.title, activity.id, currentActionLabel]);
 
   /**
    * Handles animation when hovering over the activity card
@@ -88,10 +77,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
       // If no action-specific images found or no action selected, fall back to default sequence
       if (animationImages.length === 0) {
         const hasSequence = activity.sequenceImages && activity.sequenceImages.length > 0;
-        animationImages =
-          hasSequence && activity.sequenceImages
-            ? activity.sequenceImages
-            : activity.hoverImages || [];
+        animationImages = hasSequence && activity.sequenceImages ? activity.sequenceImages : activity.hoverImages || [];
       }
 
       // Now use the determined images for animation
@@ -255,18 +241,14 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
   return (
     <div
       ref={cardRef}
-      className={`activity-card${maximized && showMaximizedClass ? " maximized" : ""}`}
+      className={`activity-card${maximized && showMaximizedClass ? "maximized" : ""}`}
       style={maximized ? maxStyle : undefined}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
       {!maximized && (
         <div className="activity-image-container">
-          <img
-            src={currentImageSrc}
-            alt={`${activity.title} illustration`}
-            className="activity-image"
-          />
+          <img src={currentImageSrc} alt={`${activity.title} illustration`} className="activity-image" />
         </div>
       )}
       <div className="activity-details" style={{ marginLeft: 0 }}>
@@ -274,8 +256,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
         <div
           className="activity-board-tag"
           style={{
-            backgroundColor:
-              activity.boardsRequired > 1 ? "var(--primary-light, #e0e7ff)" : "var(--bg-light)",
+            backgroundColor: activity.boardsRequired > 1 ? "var(--primary-light, #e0e7ff)" : "var(--bg-light)",
             position: maximized ? "absolute" : "relative",
             top: maximized ? "1vw" : "auto",
             right: maximized ? "1vw" : "auto",
@@ -299,12 +280,9 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
             {/* Add Action Row */}
             <div className="add-action-row">
               {!showAddForm ? (
-                  <Button type="button"
-                          variant={"blue"}
-                          onClick={() => setShowAddForm(true)}
-                  >
-                    + Add ActionSave
-                  </Button>
+                <Button type="button" variant={"blue"} onClick={() => setShowAddForm(true)}>
+                  + Add ActionSave
+                </Button>
               ) : (
                 <>
                   <input
@@ -332,11 +310,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
                   >
                     s
                   </span>
-                  <button
-                    className="add-action-btn"
-                    onClick={handleAddAction}
-                    disabled={!newActionName.trim()}
-                  >
+                  <button className="add-action-btn" onClick={handleAddAction} disabled={!newActionName.trim()}>
                     Add
                   </button>
                   <button className="add-action-btn add-action-cancel" onClick={handleCancelAdd}>
@@ -396,28 +370,27 @@ const ActivityCard: React.FC<ActivityCardProps> = ({
           }}
         >
           {!maximized ? (
-              <Button type="button"
-                      variant={"blue"}
-                      onClick={handleStartClick}
-              >
-                Start
-              </Button>
+            <Button type="button" variant={"blue"} onClick={handleStartClick}>
+              Start
+            </Button>
           ) : (
             <>
-              <Button type="button"
-                      variant={"blue"}
-                      onClick={() => {
-                        /* Save logic placeholder */
-                      }}
+              <Button
+                type="button"
+                variant={"blue"}
+                onClick={() => {
+                  /* Save logic placeholder */
+                }}
               >
                 Save
               </Button>
-              <Button type="button"
-                      onClick={() => setTimelineBlocks(defaultBlocksRef.current)}
-                      variant={"grey"}>
+              <Button type="button" onClick={() => setTimelineBlocks(defaultBlocksRef.current)} variant={"grey"}>
                 Reset to Default
               </Button>
-              <Button type="button" onClick={onMinimize} variant={"grey"}> Close </Button>
+              <Button type="button" onClick={onMinimize} variant={"grey"}>
+                {" "}
+                Close{" "}
+              </Button>
             </>
           )}
         </div>

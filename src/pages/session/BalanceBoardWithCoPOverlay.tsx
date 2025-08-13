@@ -19,11 +19,11 @@ type Props = {
 };
 
 export function BalanceBoardWithCoPOverlay({
-                                             boardId,
-                                             src,
-                                             alt = "Balance Board",
-                                             className = "flex h-[120px] items-center justify-center",
-                                           }: Props) {
+  boardId,
+  src,
+  alt = "Balance Board",
+  className = "flex h-[120px] items-center justify-center",
+}: Props) {
   // Outer container just centers content, as in your snippet
   const outerRef = useRef<HTMLDivElement | null>(null);
 
@@ -71,7 +71,7 @@ export function BalanceBoardWithCoPOverlay({
       (buffer) => {
         drawFrame(buffer, canvasRef.current);
       },
-      { equalityFn: (a, b) => a === b }
+      { equalityFn: (a, b) => a === b },
     );
 
     // Draw one frame on mount (in case data already exists)
@@ -88,13 +88,10 @@ export function BalanceBoardWithCoPOverlay({
           ref={imgRef}
           src={src}
           alt={alt}
-          className="pointer-events-none block h-full select-none object-contain"
+          className="pointer-events-none block h-full object-contain select-none"
           draggable={false}
         />
-        <canvas
-          ref={canvasRef}
-          className="pointer-events-none absolute inset-0"
-        />
+        <canvas ref={canvasRef} className="pointer-events-none absolute inset-0" />
       </div>
     </div>
   );
@@ -102,10 +99,7 @@ export function BalanceBoardWithCoPOverlay({
 
 // ----- drawing + data helpers -----
 
-function drawFrame(
-  buffer: BoardBuffer<RawBalanceBoardEvent> | undefined,
-  canvas: HTMLCanvasElement | null
-) {
+function drawFrame(buffer: BoardBuffer<RawBalanceBoardEvent> | undefined, canvas: HTMLCanvasElement | null) {
   if (!canvas) return;
 
   const ctx = canvas.getContext("2d");
@@ -162,10 +156,7 @@ function drawFrame(
   ctx.restore();
 }
 
-function getLastSeconds(
-  buf: BoardBuffer<RawBalanceBoardEvent>,
-  seconds: number
-) {
+function getLastSeconds(buf: BoardBuffer<RawBalanceBoardEvent>, seconds: number) {
   if (!buf || buf.len === 0) return [] as { x: number; y: number; t: number }[];
 
   const frames = buf.frames;
