@@ -1,8 +1,7 @@
-#[cfg(all(target_os = "linux", not(feature = "mock")))]
+#[cfg(target_os = "linux")]
 mod linux_bluetooth_service;
-#[cfg(all(target_os = "windows", not(feature = "mock")))]
+#[cfg(target_os = "windows")]
 pub mod windows_bluetooth_service;
-#[cfg(all(target_os = "macos", not(feature = "mock")))]
+#[cfg(target_os = "macos")]
 pub mod macos_bluetooth_service;
-#[cfg(feature = "mock")]
 pub mod bluetooth_service_mock;

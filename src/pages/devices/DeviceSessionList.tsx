@@ -13,7 +13,7 @@ import { Button } from "@/components/Button.tsx";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
-  handleUnselectDevice: (deviceId: string) => void;
+  handleUnselectDevice: (macAddress: number) => void;
 }
 
 export default function DeviceSessionList({ connectedDevices, handleUnselectDevice }: DeviceSessionListProps) {
@@ -69,7 +69,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                 </div>
 
                 <div className="side-panel-actions">
-                  <Button type={"button"} variant="red" onClick={() => handleUnselectDevice(device.id)}>
+                  <Button type={"button"} variant="red" onClick={() => handleUnselectDevice(device.macAddress)}>
                     Disconnect
                   </Button>
                   <Button to="/session" variant="blue">

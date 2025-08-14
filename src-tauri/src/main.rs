@@ -7,6 +7,7 @@ mod file_system;
 mod types;
 mod frontend;
 mod processing;
+mod utils;
 
 use tokio::sync::mpsc;
 use anyhow::Result;

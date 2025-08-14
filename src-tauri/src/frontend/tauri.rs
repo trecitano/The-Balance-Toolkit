@@ -1,6 +1,6 @@
 use crate::file_system;
 use crate::file_system::UserFileSystem;
-use crate::types::{GeneralSettings, NintendoDevice, SessionInformation, User, UserPageInformation};
+use crate::types::{GeneralSettings, MacAddress, NintendoDevice, SessionInformation, User, UserPageInformation};
 use serde::Serialize;
 use std::time::Duration;
 
@@ -85,10 +85,13 @@ async fn settings_get_settings(state: State<'_, AppState>) -> Result<GeneralSett
 
 #[tauri::command(async)]
 async fn settings_set_settings(settings: GeneralSettings, state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> settings_set_settings");
+    println!(">> settings_set_settings: {:?}", settings);
 
-    let command = ToolkitCommand::SaveSettings { settings };
+    let (tx, rx) = oneshot::channel();
+    let command = ToolkitCommand::SaveSettings { settings, response: tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    // Wait for possible toolkit restart
+    rx.await.map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -170,7 +173,7 @@ async fn devices_scan_without_timeout(state: State<'_, AppState>) -> Result<(), 
 
             tokio::time::sleep(Duration::from_millis(2000)).await; // TODO Improve
 
-            manager_tx_clone.send(ToolkitCommand::Connect { device_id: device.id.clone(), mac_address: device.mac_address, response: response_tx}).await.unwrap();
+            manager_tx_clone.send(ToolkitCommand::Connect { mac_address: device.mac_address, response: response_tx}).await.unwrap();
 
             match response_rx.await {
                 Ok(_) => { hid_connection_tx.send(device).await.unwrap() }
@@ -213,10 +216,10 @@ async fn devices_is_scanning(state: State<'_, AppState>) -> Result<bool, String>
 }
 
 #[tauri::command(async)]
-pub async fn devices_remove_device(device_id: String, state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> devices_remove_device: {}", device_id);
+pub async fn devices_remove_device(mac_address: MacAddress, state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> devices_remove_device: {}", mac_address);
 
-    let command = ToolkitCommand::BluetoothAction(BluetoothCommand::RemoveDevice { device_id });
+    let command = ToolkitCommand::BluetoothAction(BluetoothCommand::RemoveDevice { mac_address });
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
     println!("<< devices_remove_device\n");
@@ -224,13 +227,13 @@ pub async fn devices_remove_device(device_id: String, state: State<'_, AppState>
 }
 
 #[tauri::command(async)]
-async fn devices_update_device_name(device_id: String,
+async fn devices_update_device_name(mac_address: MacAddress,
                                     device_name: String,
                                     state: State<'_, AppState>)
     -> Result<(), String> {
-    println!(">> devices_update_device_name: {} -> {}", device_id, device_name);
+    println!(">> devices_update_device_name: {} -> {}", mac_address, device_name);
 
-    let command = ToolkitCommand::UpdateBoardName { device_id, device_name };
+    let command = ToolkitCommand::UpdateBoardName { mac_address, device_name };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
     println!("<< devices_update_device_name");
@@ -239,14 +242,12 @@ async fn devices_update_device_name(device_id: String,
 
 #[tauri::command(async)]
 pub async fn devices_identify_device(
-    device_id: String,
+    mac_address: MacAddress,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    println!(">> devices_identify_device: {}", device_id);
+    println!(">> devices_identify_device: {}", mac_address);
 
-    let command = ToolkitCommand::IdentifyBoard {
-        device_id,
-    };
+    let command = ToolkitCommand::IdentifyBoard { mac_address };
     state
         .manager_tx
         .send(command)
@@ -259,16 +260,12 @@ pub async fn devices_identify_device(
 
 #[tauri::command(async)]
 pub async fn devices_tare_device(
-    mac_address: String,
+    mac_address: MacAddress,
     state: State<'_, AppState>
 ) -> Result<(), String> {
     println!(">> devices_tare_device: {}", mac_address);
-    let device_id = convert_mac_address_string_to_device_id(&mac_address);
 
-    let command = ToolkitCommand::BoardAction {
-        device_id,
-        action: BoardAction::Tare,
-    };
+    let command = ToolkitCommand::BoardAction { mac_address, action: BoardAction::Tare };
     state
         .manager_tx
         .send(command)
@@ -282,12 +279,12 @@ pub async fn devices_tare_device(
 
 #[tauri::command(async)]
 pub async fn devices_select_device(
-    device_id: String,
+    mac_address: MacAddress,
     state: State<'_, AppState>
 ) -> Result<(), String> {
-    println!(">> devices_select_device: {}", device_id);
+    println!(">> devices_select_device: {}", mac_address);
 
-    let command = ToolkitCommand::SelectBoardForSession { device_id };
+    let command = ToolkitCommand::SelectBoardForSession { mac_address };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
     println!("<< devices_select_device: Tare command sent.");
@@ -296,12 +293,12 @@ pub async fn devices_select_device(
 
 #[tauri::command(async)]
 pub async fn devices_unselect_device(
-    device_id: String,
+    mac_address: MacAddress,
     state: State<'_, AppState>
 ) -> Result<(), String> {
-    println!(">> devices_deselect_device: {}", device_id);
+    println!(">> devices_deselect_device: {}", mac_address);
 
-    let command = ToolkitCommand::UnselectBoardForSession { device_id };
+    let command = ToolkitCommand::UnselectBoardForSession { mac_address };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
     println!("<< devices_deselect_device: Tare command sent.");
@@ -309,7 +306,7 @@ pub async fn devices_unselect_device(
 }
 
 #[tauri::command(async)]
-pub async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+pub async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<Vec<MacAddress>, String> {
     println!(">> devices_get_selected_devices");
 
     let (tx, rx) = oneshot::channel();

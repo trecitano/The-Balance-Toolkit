@@ -6,6 +6,7 @@ use hidapi::HidError::HidApiError;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
+use crate::types::MacAddress;
 
 // --- HID Command Constants ---
 const HID_INTERFACE_LED_INPUT: u8 = 0x11;
@@ -34,10 +35,10 @@ const BOARD_TURN_OFF_LED: [u8; 2] = [HID_INTERFACE_LED_INPUT, 0x00];
 const BOARD_START_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, HID_CMD_DATA_REPORT_MODE];
 const BOARD_STOP_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, 0x30];
 
-pub fn initialize(device_serial_number: &str) -> Result<Sender<BalanceBoardCommands>> {
+pub fn initialize(mac_address: MacAddress) -> Result<Sender<BalanceBoardCommands>> {
     let (tx, rx) = mpsc::channel(100);
     
-    let device = connect_via_hid(device_serial_number)?;
+    let device = connect_via_hid(mac_address)?;
     
     thread::spawn(move || {
         blocking_hid_loop(device, rx)
@@ -46,10 +47,13 @@ pub fn initialize(device_serial_number: &str) -> Result<Sender<BalanceBoardComma
     Ok(tx)
 }
 
-fn connect_via_hid(serial_number: &str) -> HidResult<HidDevice> {
+fn connect_via_hid(mac_address: MacAddress) -> HidResult<HidDevice> {
     let api = HidApi::new()?;
+
     // The serial number of a nintendo balance board is the string version of a mac address.
     // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
+    // Note: We must convert the mac address from u64 to the serial number format.
+    let serial_number = format!("{:012X}", mac_address);
     let balance_board_info = api
         .device_list()
         .find(|device| {

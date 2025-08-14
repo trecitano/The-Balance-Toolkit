@@ -1,4 +1,4 @@
-use crate::types::{GeneralSettings, NintendoDevice, User};
+use crate::types::{GeneralSettings, MacAddress, NintendoDevice, User};
 use serde::Serialize;
 use std::fs;
 use std::fs::File;
@@ -77,10 +77,10 @@ impl DeviceFileSystem {
         Ok(devices)
     }
 
-    pub fn update_board_name(device_id: String, device_board_name: String) -> Result<()> {
+    pub fn update_board_name(mac_address: MacAddress, device_board_name: String) -> Result<()> {
         let mut devices = Self::get_stored_devices()?;
 
-        if let Some(device) = devices.iter_mut().find(|device| device.id == device_id) {
+        if let Some(device) = devices.iter_mut().find(|device| device.mac_address == mac_address) {
             device.name = device_board_name;
         }
 
@@ -114,10 +114,10 @@ impl SettingsFileSystem {
         Ok(settings)
     }
 
-    pub fn save_settings(settings: GeneralSettings) -> Result<()> {
+    pub fn save_settings(settings: &GeneralSettings) -> Result<()> {
         let old_settings: GeneralSettings = FileStore::load(SETTINGS_FILE)?;
 
-        if old_settings == settings {
+        if old_settings == *settings {
             return Ok(());
         }
 
