@@ -271,6 +271,7 @@ name = "balance-toolkit-app"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "bluer",
  "chrono",
  "dirs",

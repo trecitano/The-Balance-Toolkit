@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, BoardAction};
-use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothHandler};
+use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothService};
 use crate::file_system::{DeviceFileSystem, SettingsFileSystem};
 use crate::types::{GeneralSettings, MacAddress, NintendoDevice, SessionInformation};
 use anyhow::Result;
@@ -19,7 +19,7 @@ use crate::processing::lsl_writer::LslConnectionSettings;
 #[derive(Debug)]
 pub enum ToolkitCommand {
     GetSettings { response: oneshot::Sender<GeneralSettings> },
-    SaveSettings { settings: GeneralSettings },
+    SaveSettings { settings: GeneralSettings, response: oneshot::Sender<bool> },
 
     // Manager main actions
     BluetoothAction(BluetoothCommand),
@@ -29,15 +29,14 @@ pub enum ToolkitCommand {
     },
 
     Connect {
-        device_id: String,
         mac_address: MacAddress,
         response: oneshot::Sender<bool>,
     },
     IdentifyBoard {
-        device_id: String,
+        mac_address: MacAddress,
     },
     UpdateBoardName {
-        device_id: String,
+        mac_address: MacAddress,
         device_name: String,
     },
 
@@ -48,13 +47,13 @@ pub enum ToolkitCommand {
         response: oneshot::Sender<String>
     },
     SelectBoardForSession {
-        device_id: String,
+        mac_address: MacAddress,
     },
     UnselectBoardForSession {
-        device_id: String,
+        mac_address: MacAddress,
     },
     SelectedBoardsForSession {
-        response: oneshot::Sender<Vec<String>>,
+        response: oneshot::Sender<Vec<MacAddress>>,
     },
 
     SessionInformation {
@@ -66,7 +65,7 @@ pub enum ToolkitCommand {
     StopSession,
 
     BoardAction {
-        device_id: String,
+        mac_address: MacAddress,
         action: BoardAction,
     },
 }
@@ -83,8 +82,8 @@ pub struct ConnectionManager {
     selected_user: String,
     general_settings: GeneralSettings,
     session_settings: SessionSettings,
-    connections: HashMap<String, Sender<BoardAction>>,
-    selected_boards: HashSet<String>,
+    connections: HashMap<MacAddress, Sender<BoardAction>>,
+    selected_boards: HashSet<MacAddress>,
     is_recording: bool,
 }
 
@@ -110,7 +109,7 @@ impl ConnectionManager {
         Ok(Self {
             rx,
             tx,
-            bluetooth_manager_tx: BluetoothHandler::start_bluetooth_handler(),
+            bluetooth_manager_tx: BluetoothService::start_bluetooth_handler(general_settings.is_demo_mode),
 
             general_settings,
             selected_user,
@@ -129,9 +128,9 @@ impl ConnectionManager {
                 ToolkitCommand::GetSettings { response  } => {
                     response.send(self.general_settings.clone()).unwrap();
                 }
-                ToolkitCommand::SaveSettings { settings } => {
-                    self.general_settings = settings.clone();
-                    SettingsFileSystem::save_settings(settings)?
+                ToolkitCommand::SaveSettings { settings, response } => {
+                    self.update_settings_and_restart_toolkit(settings).await?;
+                    response.send(true).unwrap();
                 }
 
                 ToolkitCommand::BluetoothAction(action) => {
@@ -142,15 +141,15 @@ impl ConnectionManager {
                     responder.send(result).unwrap();
                 }
 
-                ToolkitCommand::Connect { device_id, mac_address, response } => {
-                    self.connect(&device_id, mac_address).await?;
+                ToolkitCommand::Connect { mac_address, response } => {
+                    self.connect(mac_address).await?;
                     response.send(true).unwrap();
                 }
-                ToolkitCommand::IdentifyBoard { device_id } => {
-                    self.identify_board(device_id);
+                ToolkitCommand::IdentifyBoard { mac_address } => {
+                    self.identify_board(mac_address);
                 }
-                ToolkitCommand::UpdateBoardName { device_id, device_name } => {
-                    DeviceFileSystem::update_board_name(device_id, device_name)?
+                ToolkitCommand::UpdateBoardName { mac_address, device_name } => {
+                    DeviceFileSystem::update_board_name(mac_address, device_name)?
                 }
 
                 ToolkitCommand::SelectUser { user_name } => {
@@ -159,11 +158,11 @@ impl ConnectionManager {
                 ToolkitCommand::GetSelectedUser { response } => {
                     response.send(self.selected_user.clone()).unwrap();
                 }
-                ToolkitCommand::SelectBoardForSession { device_id } => {
-                    self.selected_boards.insert(device_id);
+                ToolkitCommand::SelectBoardForSession { mac_address } => {
+                    self.selected_boards.insert(mac_address);
                 }
-                ToolkitCommand::UnselectBoardForSession { device_id } => {
-                    self.selected_boards.remove(&device_id);
+                ToolkitCommand::UnselectBoardForSession { mac_address } => {
+                    self.selected_boards.remove(&mac_address);
                 }
                 ToolkitCommand::SelectedBoardsForSession { response } => {
                     response.send(self.selected_boards.iter().cloned().collect()).unwrap();
@@ -204,13 +203,45 @@ impl ConnectionManager {
                 }
 
 
-                ToolkitCommand::BoardAction { device_id, action } => {
-                    self.board_action(device_id, action).await;
+                ToolkitCommand::BoardAction { mac_address, action } => {
+                    self.board_action(mac_address, action).await;
                 }
             }
         }
         
         println!("Balance Walker Service stopped.");
+        Ok(())
+    }
+
+    // When we update the settings, it's simpler to restart every service to ensure that they are using
+    // the latest configuration.
+    async fn update_settings_and_restart_toolkit(&mut self, new_settings: GeneralSettings) -> Result<()> {
+        let old_settings = &self.general_settings;
+        println!("Updating settings: {:?}", new_settings);
+        println!("old settings: {:?}", self.general_settings);
+        let demo_mode_changed = old_settings.is_demo_mode != new_settings.is_demo_mode;
+        println!("demo mode changed: {:?}", demo_mode_changed);
+
+        if *old_settings == new_settings {
+            return Ok(())
+        }
+
+        SettingsFileSystem::save_settings(&new_settings)?;
+        self.general_settings = new_settings;
+
+        if !demo_mode_changed {
+            return Ok(())
+        }
+
+        // In the scenario where we changed the demo mode, we must restart the toolkit.
+        // We must also discard any mock devices that were created.
+        let non_mock_devices = DeviceFileSystem::get_stored_devices()?.into_iter().filter(|device| !device.is_demo_device()).collect();
+        DeviceFileSystem::update_file_system_boards(&non_mock_devices)?;
+
+        self.bluetooth_manager_tx = BluetoothService::start_bluetooth_handler(self.general_settings.is_demo_mode);
+        self.connections = HashMap::new();
+        self.selected_boards = HashSet::new();
+        self.boards_system_view().await?;
         Ok(())
     }
 
@@ -227,12 +258,9 @@ impl ConnectionManager {
 
         // Connect the manager to any missing devices.
         for device in &bluetooth_devices {
-            let device_id = &device.id;
             let mac_address = device.mac_address;
-            println!("Checking if device {} is connected.", device_id);
-            if !self.connections.contains_key(device_id) {
-                println!("NEED TO CONNECT {}", device_id);
-                self.connect(device_id, mac_address).await;
+            if !self.connections.contains_key(&mac_address) {
+                self.connect(mac_address).await;
             }
         }
 
@@ -255,28 +283,27 @@ impl ConnectionManager {
         Ok(result)
     }
 
-    async fn connect(&mut self, device_id: &str, mac_address: MacAddress) -> Result<()> {
-        if self.connections.contains_key(device_id) {
-            println!("Device {} is already connected.", device_id);
+    async fn connect(&mut self, mac_address: MacAddress) -> Result<()> {
+        if self.connections.contains_key(&mac_address) {
+            println!("Device {:?} is already connected.", mac_address);
             return Ok(());
         }
 
-        println!("Connecting to device: {}", device_id);
-        let serial_number = convert_mac_address_to_string(mac_address);
-        let board_connection = balance_board_actor::initialize(&serial_number)?;
+        println!("Connecting to device: {:?}", mac_address);
+        let board_connection = balance_board_actor::initialize(mac_address)?;
 
-        self.connections.insert(device_id.to_string(), board_connection);
+        self.connections.insert(mac_address, board_connection);
         // TODO
         //self.tx.send(ToolkitResponse::NewDeviceFound())
         Ok(())
     }
 
     // This is a long action, so we execute this in a background task
-    fn identify_board(&self, device_id: String) {
-        let board = match self.connections.get(&device_id) {
+    fn identify_board(&self, mac_address: MacAddress) {
+        let board = match self.connections.get(&mac_address) {
             Some(board) => board,
             None => {
-                eprintln!("Attempted to identify a non-existent device: {}", device_id);
+                eprintln!("Attempted to identify a non-existent device: {:?}", mac_address);
                 return;
             }
         };
@@ -307,17 +334,17 @@ impl ConnectionManager {
         });
     }
 
-    async fn board_action(&self, device_id: String, action: BoardAction) {
-        let board = match self.connections.get(&device_id) {
+    async fn board_action(&self, mac_address: MacAddress, action: BoardAction) {
+        let board = match self.connections.get(&mac_address) {
             Some(board) => board,
             None => {
-                eprintln!("Attempted to identify a non-existent device: {}", device_id);
+                eprintln!("Attempted to identify a non-existent device: {:?}", mac_address);
                 return;
             }
         };
 
         if let Err(e) = board.send(action).await {
-            eprintln!("Failed to forward action to device {}: {}", device_id, e);
+            eprintln!("Failed to forward action to device {:?}: {}", mac_address, e);
         }
     }
 }
@@ -353,19 +380,19 @@ enum ObserverType {
 }
 
 struct SessionMapping {
-    device_id: String,
+    mac_address: MacAddress,
     observers_raw: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
     observers_processed: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
 }
 async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
                        general_settings: &GeneralSettings,
                        session_settings: &SessionSettings,
-                       selected_boards: &HashSet<String>,
-                       hid_board_rx_map: &HashMap<String, Sender<BoardAction>>) {
+                       selected_boards: &HashSet<MacAddress>,
+                       hid_board_rx_map: &HashMap<MacAddress, Sender<BoardAction>>) {
     let mut observer_list: Vec<SessionMapping> = vec!();
-    for board_id in selected_boards {   
+    for mac_address in selected_boards {
         observer_list.push(SessionMapping {
-            device_id: board_id.clone(),
+            mac_address: *mac_address,
             observers_raw: vec!(),
             observers_processed: vec!(),
         })
@@ -383,7 +410,7 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
                 session_name,
                 general_settings.store_raw_session,
                 general_settings.store_processed_data,
-                session_mapping.device_id.clone(),
+                "TODO_UPDATE_SESSION_DEVICE_NAME".to_string(),
                 general_settings.processing_settings.clone()
             );
             add_observer_to_device_list(&mut session_mapping,
@@ -453,7 +480,7 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
         if observers.len() > 0 {
             let (raw_data_tx, raw_data_rx) = mpsc::channel(10);
             let command = BoardAction::StartRecording(raw_data_tx);
-            match hid_board_rx_map.get(&device_mapping.device_id) {
+            match hid_board_rx_map.get(&device_mapping.mac_address) {
                 Some(sender) => sender.send(command).await.unwrap(),
                 None => ()
             }
@@ -463,7 +490,7 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
 
     println!("Session Debug Information:");
     for device_mapping in observer_list {
-        println!(">> Board ID: {}", device_mapping.device_id);
+        println!(">> Board ID: {:?}", device_mapping.mac_address);
         println!("  Raw data observers: ");
         for (observer_type, _) in &device_mapping.observers_raw {
             print!("{:?} ", observer_type)
@@ -520,12 +547,4 @@ fn add_observer_to_device_list(session_mapping: &mut SessionMapping,
     if observe_processed_data {
         session_mapping.observers_processed.push( (observer_type.clone(), observer.clone()) );
     }
-}
-
-fn convert_mac_address_to_string(mac_address: MacAddress) -> String {
-    mac_address
-        .iter()
-        .map(|b| format!("{:02x}", b))
-        .collect::<Vec<String>>()
-        .join("")
 }

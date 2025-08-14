@@ -90,7 +90,7 @@ impl Default for User {
 pub struct SessionInformation {
     pub selected_user: String,
     pub available_users: Vec<String>,
-    pub selected_boards: Vec<String>,
+    pub selected_boards: Vec<MacAddress>,
     pub enabled_lsl: bool,
     pub enabled_tcp: bool,
     pub output_directory: Option<String>,
@@ -102,10 +102,17 @@ pub struct SessionInformation {
 pub struct NintendoDevice {
     pub id: String,
     pub name: String,
-    pub mac_address: String,
+    pub mac_address: u64,
     pub is_connected: bool,
     pub last_connected: Option<DateTime<Utc>>,
 }
 
-pub type MacAddress = [u8; 6];
+impl NintendoDevice {
+    pub fn is_demo_device (&self) -> bool {
+        self.id.starts_with("TBB_MOCKED_DEVICE_ID")
+    }
+}
+
+
+pub type MacAddress = u64;
 

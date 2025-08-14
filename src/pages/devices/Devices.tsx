@@ -10,7 +10,7 @@ import "./Devices.css";
 import DeviceScanner from "@/pages/devices/DeviceScanner.tsx";
 import { Button } from "@/components/Button.tsx";
 
-const DEVICES_QUERY_KEY = ["devices"];
+export const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
   queryKey: DEVICES_QUERY_KEY,
   queryFn: async () => {
@@ -35,31 +35,31 @@ export default function Devices() {
   const { data, isLoading, error } = useQuery(DevicesQuery);
 
   const identifyDeviceMutation = useMutation({
-    mutationFn: (deviceId: string) => commands.devices.identifyDevice(deviceId),
+    mutationFn: (macAddress: number) => commands.devices.identifyDevice(macAddress),
     onError: (error) => console.error("Failed to identify device:", error),
   });
 
   const updateDeviceNameMutation = useMutation({
-    mutationFn: ({ deviceId, deviceName }: { deviceId: string; deviceName: string }) =>
-      commands.devices.updateDeviceName(deviceId, deviceName),
+    mutationFn: ({ macAddress, deviceName }: { macAddress: number; deviceName: string }) =>
+      commands.devices.updateDeviceName(macAddress, deviceName),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
     onError: (error) => console.error("Failed to update device name:", error),
   });
 
   const removeDeviceMutation = useMutation({
-    mutationFn: (deviceId: string) => commands.devices.removeDevice(deviceId),
+    mutationFn: (macAddress: number) => commands.devices.removeDevice(macAddress),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
     onError: (error) => console.error("Failed to remove device:", error),
   });
 
   const selectDeviceForSessionMutation = useMutation({
-    mutationFn: (deviceId: string) => commands.devices.selectDevice(deviceId),
+    mutationFn: (macAddress: number) => commands.devices.selectDevice(macAddress),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
     onError: (error) => console.error("Failed to connect device:", error),
   });
 
   const unselectDeviceForSessionMutation = useMutation({
-    mutationFn: (deviceId: string) => commands.devices.unselectDevice(deviceId),
+    mutationFn: (macAddress: number) => commands.devices.unselectDevice(macAddress),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
     onError: (error) => console.error("Failed to disconnect device:", error),
   });
@@ -92,8 +92,8 @@ export default function Devices() {
   };
 
   // Handlers that need parameter transformation or additional logic
-  const handleSaveDeviceName = (deviceId: string, deviceName: string) => {
-    updateDeviceNameMutation.mutate({ deviceId, deviceName });
+  const handleSaveDeviceName = (macAddress: number, deviceName: string) => {
+    updateDeviceNameMutation.mutate({ macAddress, deviceName });
     setEditingDeviceId(null);
   };
 
@@ -194,16 +194,16 @@ export default function Devices() {
               isEditing={editingDeviceId === device.id}
               handleStartEditName={handleStartEditName}
               handleSaveDeviceName={handleSaveDeviceName}
-              handleIdentifyClick={(deviceId) => identifyDeviceMutation.mutate(deviceId)}
-              handleRemoveDevice={(deviceId) => removeDeviceMutation.mutate(deviceId)}
-              handleSelectDeviceForSession={(deviceId) => selectDeviceForSessionMutation.mutate(deviceId)}
+              handleIdentifyClick={(macAddress) => identifyDeviceMutation.mutate(macAddress)}
+              handleRemoveDevice={(macAddress) => removeDeviceMutation.mutate(macAddress)}
+              handleSelectDeviceForSession={(macAddress) => selectDeviceForSessionMutation.mutate(macAddress)}
             />
           ))}
         </div>
 
         <DeviceSessionList
           connectedDevices={selectedDevices}
-          handleUnselectDevice={(deviceId) => unselectDeviceForSessionMutation.mutate(deviceId)}
+          handleUnselectDevice={(macAddress) => unselectDeviceForSessionMutation.mutate(macAddress)}
         />
       </div>
 

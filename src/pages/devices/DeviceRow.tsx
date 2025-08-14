@@ -9,10 +9,10 @@ interface DeviceRowProps {
   device: Device;
   isEditing: boolean;
   handleStartEditName: (deviceId: string) => void;
-  handleSaveDeviceName: (deviceId: string, deviceName: string) => void;
-  handleIdentifyClick: (deviceId: string) => void;
-  handleRemoveDevice: (deviceId: string) => void;
-  handleSelectDeviceForSession: (deviceId: string) => void;
+  handleSaveDeviceName: (macAddress: number, deviceName: string) => void;
+  handleIdentifyClick: (macAddress: number) => void;
+  handleRemoveDevice: (macAddress: number) => void;
+  handleSelectDeviceForSession: (macAddress: number) => void;
 }
 
 export default function DeviceRow({
@@ -48,10 +48,18 @@ export default function DeviceRow({
     return date.toLocaleDateString();
   };
 
+  const convertNumberToMacAddress = (number: number): string => {
+    return number.toString(16)
+      .toUpperCase()
+      .padStart(12, "0")
+      .match(/.{1,2}/g)!
+      .join(":");
+  }
+
   return (
     <div className="device-row">
-      <div className={`device-container${device.isConnected ? "" : "disconnected"}`}>
-        <button onClick={() => handleRemoveDevice(device.id)} className="remove-device-btn">
+      <div className={`device-container ${device.isConnected ? "" : "disconnected"}`}>
+        <button onClick={() => handleRemoveDevice(device.macAddress)} className="remove-device-btn">
           ✕
         </button>
 
@@ -79,14 +87,14 @@ export default function DeviceRow({
                 onKeyDown={(e) => {
                   console.log("Key down:", e.key);
                   if (e.key === "Enter") {
-                    handleSaveDeviceName(device.id, inputRef.current?.value || "");
+                    handleSaveDeviceName(device.macAddress, inputRef.current?.value || "");
                   }
                   if (e.key === "Escape") {
                     // Cancel edit
-                    handleSaveDeviceName(device.id, device.name);
+                    handleSaveDeviceName(device.macAddress, device.name);
                   }
                 }}
-                onBlur={() => handleSaveDeviceName(device.id, inputRef.current?.value || "")}
+                onBlur={() => handleSaveDeviceName(device.macAddress, inputRef.current?.value || "")}
                 className="device-name-edit-input"
               />
             </div>
@@ -102,14 +110,14 @@ export default function DeviceRow({
           )}
           <div className="device-last-connected">
             {device.isConnected
-              ? `MAC: ${device.macAddress}`
+              ? `MAC: ${convertNumberToMacAddress(device.macAddress)}`
               : `Last seen: ${formatLastConnected(device.lastConnected)}`}
           </div>
         </div>
 
         <div className="device-actions">
           <button
-            onClick={() => handleIdentifyClick(device.id)}
+            onClick={() => handleIdentifyClick(device.macAddress)}
             className="device-action-btn btn-circle"
             disabled={!device.isConnected}
             title={device.isConnected ? "Identify Device" : "Device is disconnected"}
@@ -117,7 +125,7 @@ export default function DeviceRow({
             ID
           </button>
           {device.isConnected ? (
-            <Button type="button" variant="blue" onClick={() => handleSelectDeviceForSession(device.id)}>
+            <Button type="button" variant="blue" onClick={() => handleSelectDeviceForSession(device.macAddress)}>
               Connect
             </Button>
           ) : (

@@ -10,7 +10,6 @@ export interface GeneralSettings {
   storeRawSession: boolean;
   storeProcessedData: boolean;
   processingSettings: ProcessingSettings;
-  mockDataMode: boolean;
   isDemoMode: boolean;
 }
 
@@ -57,7 +56,7 @@ export interface Device {
   id: string;
   name: string;
   isConnected: boolean;
-  macAddress: string;
+  macAddress: number;
   battery?: number;
   temperature?: number;
   lastConnected: string; // ISO date string

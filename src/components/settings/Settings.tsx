@@ -1,12 +1,11 @@
 import React, { ReactNode, useRef, useState } from "react";
 import "./Settings.css";
 import { commands } from "@/utils/requests.ts";
-import { useQuery } from "@tanstack/react-query";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
 import { GeneralSettings, ProcessingSettings } from "@/types.ts";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Input } from "@/components/InputField.tsx";
-import clsx from "clsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
+import {DEVICES_QUERY_KEY} from "@/pages/devices/Devices.tsx";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -41,6 +40,7 @@ const SettingField: React.FC<SettingFieldProps> = ({ label, children }) => {
 function Settings({ isOpen, onClose }: SettingsProps) {
   const { data, isLoading, error } = useQuery(SettingsQuery);
   const { loadedSettings } = data ?? {};
+  const queryClient = useQueryClient();
 
   const [tempSettings, setTempSettings] = useState<GeneralSettings | null>(() => loadedSettings ?? null);
 
@@ -72,7 +72,10 @@ function Settings({ isOpen, onClose }: SettingsProps) {
 
   const saveChanges = async () => {
     if (tempSettings) {
-      await commands.settings.setSettings(tempSettings);
+      await Promise.all([
+        commands.settings.setSettings(tempSettings),
+        queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY })
+      ]);
       onClose();
     }
   };
@@ -249,9 +252,9 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             <SettingField label={"Enable Demo Mode"}>
               <InputPrimitive
                 type="checkbox"
-                checked={tempSettings.mockDataMode}
+                checked={tempSettings.isDemoMode}
                 className={"min-w-4.5"}
-                onChange={(e) => handleGeneralSettingsUpdate("mockDataMode", e.target.checked)}
+                onChange={(e) => handleGeneralSettingsUpdate("isDemoMode", e.target.checked)}
               />
             </SettingField>
           </div>

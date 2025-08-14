@@ -10,6 +10,7 @@ use processing::board_hid_reader;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use crate::processing::data_processor::{ProcessedBoardData, ProcessingSettings};
+use crate::types::MacAddress;
 
 // Board primitives
 #[derive(Debug, Clone)]
@@ -151,11 +152,11 @@ impl ProcessedBoardData {
     }
 }
 
-pub fn initialize(device_serial_number: &str) -> Result<Sender<BoardAction>> {
+pub fn initialize(mac_address: MacAddress) -> Result<Sender<BoardAction>> {
     let (tx, rx) = mpsc::channel(100);
 
     let board_hid_tx = board_hid_reader::initialize(
-        device_serial_number,
+        mac_address,
     )?;
     
     tokio::spawn(async move{
