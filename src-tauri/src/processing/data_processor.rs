@@ -19,12 +19,12 @@ struct CenterOfPressurePoint {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessingSettings {
-    balance_board_x_size: f32,      // X distance (mm) of the Balance Board Force transducer.
-    balance_board_y_size: f32,      // Y distance (mm) of the Balance Board Force transducer.
-    window_size_ms: u64,            // Window size used for calculations
-    window_slide_ms: u64,           // How much the window moves
-    sampling_number: u64,           // Sampling size to create a time series (using a specific interpolation)
-    interpolation: InterpolationSetting
+    pub balance_board_x_size: f32,      // X distance (mm) of the Balance Board Force transducer.
+    pub balance_board_y_size: f32,      // Y distance (mm) of the Balance Board Force transducer.
+    pub window_size_ms: u64,            // Window size used for calculations
+    pub window_slide_ms: u64,           // How much the window moves
+    pub sampling_rate: u64,           // Sampling size to create a time series (using a specific interpolation)
+    pub interpolation: InterpolationSetting
 }
 
 impl ProcessingSettings {
@@ -34,7 +34,7 @@ impl ProcessingSettings {
             balance_board_y_size:  238.0,
             window_size_ms: 1000,
             window_slide_ms: 100,
-            sampling_number: 20,
+            sampling_rate: 20,
             interpolation: InterpolationSetting::Cubic
         }
     }
@@ -92,7 +92,7 @@ fn data_process_loop(
     // Window size of 5 seconds
     let window_size = std::time::Duration::from_millis(settings.window_size_ms);
     let window_slide_size = std::time::Duration::from_millis(settings.window_slide_ms);
-    let sampling_size_time_delta = TimeDelta::milliseconds(settings.window_size_ms as i64 / settings.sampling_number as i64);
+    let sampling_size_time_delta = TimeDelta::milliseconds(settings.window_size_ms as i64 / settings.sampling_rate as i64);
 
     let cop_calculation_x_value = settings.balance_board_x_size / 2.0;
     let cop_calculation_y_value = settings.balance_board_y_size / 2.0;

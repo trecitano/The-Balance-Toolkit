@@ -13,6 +13,7 @@ use file_system::UserFileSystem;
 use crate::actors::balance_board_actor;
 use crate::file_system;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
+use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::lsl_writer::LslConnectionSettings;
 
 // Commands that can be sent to the ConnectionManager
@@ -60,7 +61,7 @@ pub enum ToolkitCommand {
         response: oneshot::Sender<SessionInformation>,
     },
     UpdateSessionInformation {
-        session_information: SessionInformation,
+        session_configuration: SessionConfiguration,
     },
     StartSession {
         frontend_channel: Sender<BalanceBoardOutput>
@@ -82,29 +83,39 @@ pub struct ConnectionManager {
     tx: Sender<ToolkitResponse>,
     bluetooth_manager_tx: Sender<BluetoothCommand>,
 
-    selected_user: String,
     general_settings: GeneralSettings,
-    session_settings: SessionSettings,
+    session_settings: SessionConfiguration,
     connections: HashMap<MacAddress, Sender<BoardAction>>,
     selected_boards: HashSet<MacAddress>,
     is_recording: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct SessionSettings {
-    pub output_directory: String,
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionConfiguration {
+    pub selected_user: String,
     pub lsl_enabled: bool,
     pub tcp_enabled: bool,
+    pub output_directory: String,
+    pub window_size_ms: u64,
+    pub window_slide_ms: u64,
+    pub sampling_rate: u64,
+    pub interpolation: InterpolationSetting
 }
 
 impl ConnectionManager {
     pub fn new(rx: mpsc::Receiver<ToolkitCommand>, tx: Sender<ToolkitResponse>) -> Result<Self> {
         let selected_user = UserFileSystem::get_or_create_default_user()?.name;
         let general_settings = SettingsFileSystem::get_or_create_default_settings()?;
-        let session_settings = SessionSettings {
-            output_directory: general_settings.store_files_default_directory.clone(),
+        let session_settings = SessionConfiguration {
+            selected_user: selected_user.clone(),
             lsl_enabled: false,
             tcp_enabled: false,
+            output_directory: general_settings.store_files_default_directory.clone(),
+            window_size_ms: general_settings.processing_settings.window_size_ms,
+            window_slide_ms: general_settings.processing_settings.window_slide_ms,
+            sampling_rate: general_settings.processing_settings.sampling_rate,
+            interpolation: general_settings.processing_settings.interpolation.clone()
         };
 
         Ok(Self {
@@ -113,7 +124,6 @@ impl ConnectionManager {
             bluetooth_manager_tx: BluetoothService::start_bluetooth_handler(general_settings.is_demo_mode),
 
             general_settings,
-            selected_user,
             session_settings,
             connections: HashMap::new(),
             selected_boards: HashSet::new(),
@@ -154,10 +164,10 @@ impl ConnectionManager {
                 }
 
                 ToolkitCommand::SelectUser { user_name } => {
-                    self.selected_user = user_name;
+                    self.session_settings.selected_user = user_name;
                 }
                 ToolkitCommand::GetSelectedUser { response } => {
-                    response.send(self.selected_user.clone()).unwrap();
+                    response.send(self.session_settings.selected_user.clone()).unwrap();
                 }
                 ToolkitCommand::SelectBoardForSession { mac_address } => {
                     self.selected_boards.insert(mac_address);
@@ -172,12 +182,6 @@ impl ConnectionManager {
                 }
 
                 ToolkitCommand::SessionInformation { response } => {
-                    let output_directory = if self.general_settings.store_processed_data || !self.general_settings.store_raw_session {
-                        Some(self.session_settings.output_directory.clone())
-                    } else {
-                        None
-                    };
-
                     let selected_boards = self.boards_system_view().await?
                         .iter()
                         .filter(|device| {
@@ -192,23 +196,32 @@ impl ConnectionManager {
                         .collect();
 
                     let session_information = SessionInformation {
-                        selected_user: self.selected_user.clone(),
                         available_users: UserFileSystem::get_users()?.into_iter().map(|user| user.name).collect(),
                         selected_boards,
-                        enabled_lsl: self.session_settings.lsl_enabled,
-                        enabled_tcp: self.session_settings.tcp_enabled,
-                        output_directory,
-                        is_recording: self.is_recording,
+                        session_configuration: SessionConfiguration {
+                            selected_user: self.session_settings.selected_user.clone(),
+                            lsl_enabled: self.session_settings.lsl_enabled,
+                            tcp_enabled: self.session_settings.tcp_enabled,
+                            output_directory: self.session_settings.output_directory.clone(),
+                            window_size_ms: self.session_settings.window_size_ms,
+                            window_slide_ms: self.session_settings.window_slide_ms,
+                            sampling_rate: self.session_settings.sampling_rate,
+                            interpolation: self.session_settings.interpolation.clone(),
+                        }
                     };
                     response.send(session_information).unwrap();
                 }
-                ToolkitCommand::UpdateSessionInformation { session_information } => {
-                    self.selected_user = session_information.selected_user;
-                    self.session_settings = SessionSettings {
-                        output_directory: session_information.output_directory.unwrap_or_else(|| self.session_settings.output_directory.clone()),
-                        lsl_enabled: session_information.enabled_lsl,
-                        tcp_enabled: session_information.enabled_tcp,
-                    }
+                ToolkitCommand::UpdateSessionInformation { session_configuration } => {
+                    self.session_settings = SessionConfiguration {
+                        selected_user: session_configuration.selected_user,
+                        lsl_enabled: session_configuration.lsl_enabled,
+                        tcp_enabled: session_configuration.tcp_enabled,
+                        output_directory: session_configuration.output_directory,
+                        window_size_ms: session_configuration.window_size_ms,
+                        window_slide_ms: session_configuration.window_slide_ms,
+                        sampling_rate: session_configuration.sampling_rate,
+                        interpolation: session_configuration.interpolation
+                    };
                 }
                 ToolkitCommand::StartSession { frontend_channel } => {
                     start_session(frontend_channel,
@@ -414,7 +427,7 @@ struct SessionMapping {
 }
 async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
                        general_settings: &GeneralSettings,
-                       session_settings: &SessionSettings,
+                       session_settings: &SessionConfiguration,
                        selected_boards: &HashSet<MacAddress>,
                        hid_board_rx_map: &HashMap<MacAddress, Sender<BoardAction>>) {
     if selected_boards.len() == 0 {
@@ -430,6 +443,15 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
         })
     }
 
+    let processing_settings = ProcessingSettings {
+        balance_board_x_size: general_settings.processing_settings.balance_board_x_size,
+        balance_board_y_size: general_settings.processing_settings.balance_board_y_size,
+        window_size_ms: session_settings.window_size_ms,
+        window_slide_ms: session_settings.window_slide_ms,
+        sampling_rate: session_settings.sampling_rate,
+        interpolation: session_settings.interpolation.clone()
+    };
+
     // N file writers (one per board)
     let store_files = general_settings.store_raw_session || general_settings.store_processed_data;
     if store_files {
@@ -443,7 +465,7 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
                 general_settings.store_raw_session,
                 general_settings.store_processed_data,
                 "TODO_UPDATE_SESSION_DEVICE_NAME".to_string(),
-                general_settings.processing_settings.clone()
+                processing_settings.clone()
             );
             add_observer_to_device_list(&mut session_mapping,
                                         tx,
@@ -499,7 +521,7 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
             .collect();
 
         if observers.len() > 0 {
-            let tx = data_processor::initialize(observers, device_mapping.mac_address, general_settings.processing_settings.clone());
+            let tx = data_processor::initialize(observers, device_mapping.mac_address, processing_settings.clone());
             device_mapping.observers_raw.push( (ObserverType::DataProcessor, tx));
         }
     }

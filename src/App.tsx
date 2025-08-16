@@ -24,14 +24,14 @@ function AppContent() {
   usePrefetchQuery(DevicesQuery);
 
   return (
-    <div className={`app`}>
+    <div className="box-border flex h-screen flex-row overflow-hidden bg-[var(--bg-primary)] text-[0.85em]">
       <Navigation activeView={location.pathname.substring(1) || "home"} onViewChange={handleViewChange} />
-      <main className="main-page">
+      <main className="h-full w-9/10 bg-[var(--bg-primary)] p-8">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/users" element={<UsersPage />} />
           <Route path="/devices" element={<DevicesPage />} />
           <Route path="/session" element={<SessionPage />} />
-          <Route path="/users" element={<UsersPage />} />
           <Route path="/activities" element={<Activities />} />
         </Routes>
       </main>

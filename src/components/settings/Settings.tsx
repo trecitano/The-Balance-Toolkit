@@ -1,11 +1,12 @@
 import React, { ReactNode, useRef, useState } from "react";
 import "./Settings.css";
 import { commands } from "@/utils/requests.ts";
-import {useQuery, useQueryClient} from "@tanstack/react-query";
-import { GeneralSettings, ProcessingSettings } from "@/types.ts";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { GeneralSettings, InterpolationOption, interpolationOptions, ProcessingSettings } from "@/types.ts";
 import { open } from "@tauri-apps/plugin-dialog";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
-import {DEVICES_QUERY_KEY} from "@/pages/devices/Devices.tsx";
+import { DEVICES_QUERY_KEY } from "@/pages/devices/Devices.tsx";
+import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -74,7 +75,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
     if (tempSettings) {
       await Promise.all([
         commands.settings.setSettings(tempSettings),
-        queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY })
+        queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
       ]);
       onClose();
     }
@@ -84,8 +85,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   if (isLoading) return <div className="inside-page">Loading settings...</div>;
   if (error) return <div className="inside-page">Failed to load settings.</div>;
   if (!tempSettings) return null;
-
-  debugger
 
   return (
     <div className="settings-overlay">
@@ -242,23 +241,20 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 onChange={(e) => handleProcessedSettingsUpdate("windowSlideMs", Number(e.target.value))}
               />
             </SettingField>
-            <SettingField label={"Sampling Number"}>
+            <SettingField label={"Sampling Rate"}>
               <InputPrimitive
                 type="number"
-                value={tempSettings.processingSettings.samplingNumber}
+                value={tempSettings.processingSettings.samplingRate}
                 editable
-                onChange={(e) => handleProcessedSettingsUpdate("samplingNumber", Number(e.target.value))}
+                onChange={(e) => handleProcessedSettingsUpdate("samplingRate", Number(e.target.value))}
               />
             </SettingField>
             <SettingField label={"Interpolation Type"}>
-              <select
+              <SelectPrimitive
                 value={tempSettings.processingSettings.interpolation}
-                onChange={(e) => handleProcessedSettingsUpdate("interpolation", e.target.value)}
-              >
-                <option value="Linear">Linear</option>
-                <option value="Cubic">Cubic</option>
-                <option value="Polynomial">Polynomial</option>
-              </select>
+                onChange={(v) => handleProcessedSettingsUpdate("interpolation", v as InterpolationOption)}
+                options={interpolationOptions.map((i) => ({ label: i, value: i }))}
+              />
             </SettingField>
           </div>
 

@@ -12,8 +12,10 @@ import handIcon from "@/assets/hand-icon.svg";
 import searchIcon from "@/assets/search-icon.svg";
 import { commands } from "@/utils/requests.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/Button.tsx";
-import { InputField } from "@/components/InputField.tsx";
+import { ToolkitButton } from "@/components/ToolkitButton.tsx";
+import { SingleColumn } from "@/components/SingleColumn.tsx";
+import { InputPrimitive } from "@/components/InputPrimitive.tsx";
+import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -265,27 +267,10 @@ export default function Users() {
     scrollToSelectedUser(nextSelectedUser.name);
   };
 
-  const handleEditUser = (user: UserType) => {
-    setEditingUserData(user);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingUserData(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!editingUserData) return;
-
-    if (!editingUserData.weight) {
-      document.querySelector(".form-field.required-field")?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-      alert("Weight is required");
-      return;
-    }
 
     await commands.users.updateUser(editingUserData);
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
@@ -350,9 +335,9 @@ export default function Users() {
   };
 
   return (
-    <div className="inside-page">
+    <>
       <header className="relative z-50 mb-5 flex w-full items-center justify-between">
-        <h1 className="page-title">Users</h1>
+        <h1 className="text-3xl font-bold">Users</h1>
 
         <div className="absolute left-1/2 mx-auto flex w-[25vw] shrink-0 grow-0 -translate-x-1/2 items-center">
           <span className="search-icon">
@@ -388,14 +373,14 @@ export default function Users() {
           )}
         </div>
 
-        <Button type="button" variant="blue" className={"h-15 w-40"} onClick={() => handleAddUser(users)}>
+        <ToolkitButton type="button" variant="blue" className={"h-15 w-40"} onClick={() => handleAddUser(users)}>
           Add new user
-        </Button>
+        </ToolkitButton>
       </header>
 
-      <div className="users-main-content">
-        <div className="users-list-panel">
-          <ul className="users-list gap-4" ref={userListRef}>
+      <div className="">
+        <div className="mb-10">
+          <ul className="flex gap-8 overflow-hidden px-[calc(50%-125px)] py-[3.5vh]" ref={userListRef}>
             {sortedUsers.map((user) => (
               <li
                 key={user.name}
@@ -451,18 +436,22 @@ export default function Users() {
                   </div>
                 </div>
                 <div className="user-display-actions">
-                  <Button type="submit" variant="blue">
+                  <ToolkitButton type="submit" variant="blue">
                     Save
-                  </Button>
+                  </ToolkitButton>
 
-                  <Button type="button" variant="grey" onClick={handleCancelEdit}>
+                  <ToolkitButton type="button" variant="grey" onClick={() => setEditingUserData(null)}>
                     Cancel
-                  </Button>
+                  </ToolkitButton>
 
                   {!selectedUserData.isDefault && (
-                    <Button type="button" variant="red" onClick={() => setShowDeleteConfirm(selectedUserData.name)}>
+                    <ToolkitButton
+                      type="button"
+                      variant="red"
+                      onClick={() => setShowDeleteConfirm(selectedUserData.name)}
+                    >
                       Delete
-                    </Button>
+                    </ToolkitButton>
                   )}
                 </div>
               </div>
@@ -470,76 +459,62 @@ export default function Users() {
               {/* Editable fields */}
               <div className="user-info-fields">
                 {/* Name */}
-                <InputField
-                  label="Name:"
-                  icon={<img src={personIcon} alt="" />}
-                  value={editingUserData.name}
-                  onChange={(e) => handleEditUpdate("name", e.target.value)}
-                  editable
-                  requiredField
-                />
+                <SingleColumn requiredField label="Name:" icon={<img src={personIcon} />}>
+                  <InputPrimitive
+                    editable
+                    required
+                    value={editingUserData.name}
+                    onChange={(e) => handleEditUpdate("name", e.target.value)}
+                  />
+                </SingleColumn>
 
                 {/* Age */}
-                <InputField
-                  label="Age:"
-                  type="number"
-                  icon={<img src={calendarIcon} alt="" />}
-                  value={editingUserData.age ?? ""}
-                  onChange={(e) => handleEditUpdate("age", Number(e.target.value))}
-                  editable
-                />
+                <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
+                  <InputPrimitive
+                    editable
+                    type="number"
+                    value={editingUserData.age}
+                    onChange={(e) => handleEditUpdate("age", Number(e.target.value))}
+                  />
+                </SingleColumn>
 
                 {/* Gender */}
-                <div className="form-field">
-                  <label>
-                    <img src={sexIcon} alt="" className="info-grid-icon" />
-                    Gender:
-                  </label>
-                  <select
-                    name="gender"
+                <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
+                  <SelectPrimitive
+                    editable
                     value={
                       ["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "")
                         ? editingUserData.gender
-                        : "Other"
+                        : "N/A"
                     }
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setEditingUserData((prev) => ({
-                        ...prev!,
-                        gender: value === "Other" ? "" : value, // Clear if "Other" so user can type
-                      }));
-                    }}
-                  >
-                    <option value="">Select...</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Non-binary">Non-binary</option>
-                    <option value="Other">Other</option>
-                    <option value="Prefer not to say">Prefer not to say</option>
-                  </select>
-                </div>
+                    onChange={(v) => handleEditUpdate("gender", v === "Other" ? "" : v)}
+                    options={[
+                      { label: "Male", value: "Male" },
+                      { label: "Female", value: "Female" },
+                      { label: "Non-binary", value: "Non-binary" },
+                      { label: "Other", value: "Other" },
+                      { label: "Prefer not to say", value: "Prefer not to say" },
+                    ]}
+                  />
+                </SingleColumn>
 
                 {/* Custom gender input if "Other" */}
-                {!["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "") && (
-                  <InputField
-                    label="Specify Gender:"
-                    icon={<img src={sexIcon} alt="" />}
-                    value={editingUserData.gender ?? ""}
-                    onChange={(e) => handleEditUpdate("gender", e.target.value)}
-                    editable
-                  />
+                {!["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "Male") && (
+                  <SingleColumn label="Specify Gender:" icon={<img src={sexIcon} alt="" />}>
+                    <InputPrimitive
+                      editable
+                      value={editingUserData.gender ?? ""}
+                      onChange={(e) => handleEditUpdate("gender", e.target.value)}
+                    />
+                  </SingleColumn>
                 )}
 
                 {/* Height */}
-                <div className="form-field">
-                  <label>
-                    <img src={heightIcon} alt="" className="info-grid-icon" />
-                    Height:
-                  </label>
-                  <div className="user-weight-row">
-                    <input
+                <SingleColumn label="Height:" icon={<img src={heightIcon} />}>
+                  <div className="flex justify-between gap-3">
+                    <InputPrimitive
+                      editable
                       type="number"
-                      name="height"
                       value={editingUserData.height ?? ""}
                       onChange={(e) => {
                         handleEditUpdate("height", Number(e.target.value));
@@ -548,75 +523,55 @@ export default function Users() {
                         }
                       }}
                     />
-                    <select
-                      name="heightMetric"
+                    <SelectPrimitive
                       value={editingUserData.heightMetric ?? "cm"}
-                      onChange={(e) => handleEditUpdate("heightMetric", e.target.value)}
-                      className="metric-select"
-                    >
-                      <option value="cm">cm</option>
-                      <option value="in">in</option>
-                    </select>
+                      onChange={(v) => handleEditUpdate("heightMetric", v)}
+                      options={[
+                        { label: "cm", value: "cm" },
+                        { label: "in", value: "in" },
+                      ]}
+                    />
                   </div>
-                </div>
+                </SingleColumn>
 
                 {/* Weight */}
-                <div className="form-field required-field">
-                  <label>
-                    <img src={weightIcon} alt="" className="info-grid-icon" />
-                    Weight:
-                  </label>
-                  <div className="user-weight-row">
-                    <input
+                <SingleColumn requiredField label="Weight:" icon={<img src={weightIcon} />}>
+                  <div className="flex justify-between gap-3">
+                    <InputPrimitive
+                      editable
+                      required
                       type="number"
-                      name="weight"
                       value={editingUserData.weight ?? ""}
                       onChange={(e) => {
                         handleEditUpdate("weight", Number(e.target.value));
-                        if (!editingUserData?.weightMetric) {
+                        if (!editingUserData?.heightMetric) {
                           handleEditUpdate("weightMetric", "kg");
                         }
                       }}
                     />
-                    <select
-                      name="weightMetric"
+                    <SelectPrimitive
                       value={editingUserData.weightMetric ?? "kg"}
-                      onChange={(e) =>
-                        setEditingUserData((prev) => ({
-                          ...prev!,
-                          weightMetric: e.target.value,
-                        }))
-                      }
-                      className="metric-select"
-                    >
-                      <option value="kg">kg</option>
-                      <option value="lb">lb</option>
-                    </select>
+                      onChange={(v) => handleEditUpdate("weightMetric", v)}
+                      options={[
+                        { label: "kg", value: "kg" },
+                        { label: "lb", value: "lb" },
+                      ]}
+                    />
                   </div>
-                  {!editingUserData.weight && <div className="mt-1 text-sm text-red-600">Weight is required</div>}
-                </div>
+                </SingleColumn>
 
                 {/* Handedness */}
-                <div className="form-field">
-                  <label>
-                    <img src={handIcon} alt="" className="info-grid-icon" />
-                    Handedness:
-                  </label>
-                  <select
-                    name="handedness"
+                <SingleColumn label="Handedness:" icon={<img src={handIcon} />}>
+                  <SelectPrimitive
                     value={editingUserData.handedness ?? ""}
-                    onChange={(e) =>
-                      setEditingUserData((prev) => ({
-                        ...prev!,
-                        handedness: e.target.value as UserType["handedness"],
-                      }))
-                    }
-                  >
-                    <option value="Right">Right</option>
-                    <option value="Left">Left</option>
-                    <option value="Ambidextrous">Ambidextrous</option>
-                  </select>
-                </div>
+                    onChange={(v) => handleEditUpdate("handedness", v as UserType["handedness"])}
+                    options={[
+                      { label: "Right", value: "Right" },
+                      { label: "Left", value: "Left" },
+                      { label: "Ambidextrous", value: "Ambidextrous" },
+                    ]}
+                  />
+                </SingleColumn>
 
                 {/* Color */}
                 <div className="form-field">
@@ -687,51 +642,59 @@ export default function Users() {
                   </div>
                 </div>
                 <div className="user-display-actions">
-                  <Button type="button" variant="blue" onClick={() => handleEditUser(selectedUserData)}>
+                  <ToolkitButton type="button" variant="blue" onClick={() => setEditingUserData(selectedUserData)}>
                     Edit
-                  </Button>
+                  </ToolkitButton>
                   {!selectedUserData.isDefault && (
-                    <Button type="button" variant="red" onClick={() => setShowDeleteConfirm(selectedUserData.name)}>
+                    <ToolkitButton
+                      type="button"
+                      variant="red"
+                      onClick={() => setShowDeleteConfirm(selectedUserData.name)}
+                    >
                       Delete
-                    </Button>
+                    </ToolkitButton>
                   )}
                 </div>
               </div>
 
               <div className="user-info-fields">
                 {/* Name */}
-                <InputField label="Name:" icon={<img src={personIcon} />} value={selectedUserData.name ?? "N/A"} />
+                <SingleColumn label="Name:" icon={<img src={personIcon} />}>
+                  <InputPrimitive value={selectedUserData.name ?? "N/A"} />
+                </SingleColumn>
 
                 {/* Age */}
-                <InputField label="Age:" icon={<img src={calendarIcon} />} value={selectedUserData.age ?? "N/A"} />
+                <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
+                  <InputPrimitive value={selectedUserData.age ?? "N/A"} />
+                </SingleColumn>
 
                 {/* Gender */}
-                <InputField label="Gender:" icon={<img src={sexIcon} />} value={selectedUserData.gender ?? "N/A"} />
+                <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
+                  <InputPrimitive value={selectedUserData.gender ?? "N/A"} />
+                </SingleColumn>
 
                 {/* Height */}
-                <InputField
-                  label="Height:"
-                  icon={<img src={heightIcon} />}
-                  value={
-                    selectedUserData.height ? `${selectedUserData.height} ${selectedUserData.heightMetric}` : "N/A"
-                  }
-                />
+                <SingleColumn label="Height:" icon={<img src={heightIcon} />}>
+                  <InputPrimitive
+                    value={
+                      selectedUserData.height ? `${selectedUserData.height} ${selectedUserData.heightMetric}` : "N/A"
+                    }
+                  />
+                </SingleColumn>
 
                 {/* Weight */}
-                <InputField
-                  label="Weight:"
-                  icon={<img src={weightIcon} />}
-                  value={
-                    selectedUserData.weight ? `${selectedUserData.weight} ${selectedUserData.weightMetric}` : "N/A"
-                  }
-                />
+                <SingleColumn label="Weight:" icon={<img src={weightIcon} />}>
+                  <InputPrimitive
+                    value={
+                      selectedUserData.weight ? `${selectedUserData.weight} ${selectedUserData.weightMetric}` : "N/A"
+                    }
+                  />
+                </SingleColumn>
 
                 {/* Handedness */}
-                <InputField
-                  label="Handedness:"
-                  icon={<img src={handIcon} />}
-                  value={selectedUserData.handedness ?? "N/A"}
-                />
+                <SingleColumn label="Handedness:" icon={<img src={handIcon} />}>
+                  <InputPrimitive value={selectedUserData.handedness ?? "N/A"} />
+                </SingleColumn>
 
                 {/* Color */}
                 <div className="form-field">
@@ -757,20 +720,20 @@ export default function Users() {
         <div className="delete-confirm-overlay">
           <div className="delete-confirm-dialog">
             <h4>Confirm Delete</h4>
-            <p>Are you sure you want to delete user "{users.find((u) => u.name === showDeleteConfirm)?.name}"?</p>
+            <p>{`Are you sure you want to delete user "${users.find((u) => u.name === showDeleteConfirm)?.name}"?`}</p>
 
             <div className="delete-confirm-actions">
-              <Button type="button" variant="red" onClick={() => handleDeleteUser(showDeleteConfirm)}>
+              <ToolkitButton type="button" variant="red" onClick={() => handleDeleteUser(showDeleteConfirm)}>
                 Delete
-              </Button>
+              </ToolkitButton>
 
-              <Button type="button" variant="grey" onClick={() => setShowDeleteConfirm(null)}>
+              <ToolkitButton type="button" variant="grey" onClick={() => setShowDeleteConfirm(null)}>
                 Cancel
-              </Button>
+              </ToolkitButton>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

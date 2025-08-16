@@ -8,7 +8,7 @@ import { commands } from "@/utils/requests.ts";
 import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
 import "./Devices.css";
 import DeviceScanner from "@/pages/devices/DeviceScanner.tsx";
-import { Button } from "@/components/Button.tsx";
+import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 
 export const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
@@ -165,14 +165,14 @@ export default function Devices() {
     <div className="inside-page">
       <div className="page-header">
         <span className="page-title">Devices</span>
-        <Button
+        <ToolkitButton
           type="button"
           variant="grey"
           onClick={handleScanDevices}
           disabled={scanDevicesMutation.isPending || isScanning}
         >
           {scanDevicesMutation.isPending || isScanning ? "Scanning..." : "Scan for Devices"}
-        </Button>
+        </ToolkitButton>
       </div>
 
       <div className="main-content">

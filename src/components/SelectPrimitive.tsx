@@ -1,28 +1,26 @@
 import React, { useMemo, useRef, useState } from "react";
 
-export type CheckboxOption = {
+export type SelectOption = {
   value: string;
   label: string;
   disabled?: boolean;
 };
 
-export function MultiSelect({
+export function SelectPrimitive({
   label,
   options,
   value,
   onChange,
-  placeholder = "None selected",
-  noOptionsMessage = "No options available",
+  placeholder = "Select an option",
   className = "",
   disabled = false,
   maxHeight = 260,
 }: {
   label?: string;
-  options: CheckboxOption[];
-  value: string[];
-  onChange: (next: string[]) => void;
+  options: SelectOption[];
+  value: string | null;
+  onChange: (next: string) => void;
   placeholder?: string;
-  noOptionsMessage?: string;
   className?: string;
   disabled?: boolean;
   maxHeight?: number;
@@ -34,18 +32,10 @@ export function MultiSelect({
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  const hasOptions = options.length > 0;
-  const isDisabled = disabled || !hasOptions;
-
-  const selectedLabels = useMemo(() => {
+  const selectedLabel = useMemo(() => {
     const map = new Map(options.map((o) => [o.value, o.label]));
-    return value.map((v) => map.get(v) ?? v);
+    return value ? (map.get(value) ?? value) : null;
   }, [options, value]);
-
-  const toggleValue = (v: string) => {
-    if (value.includes(v)) onChange(value.filter((x) => x !== v));
-    else onChange([...value, v]);
-  };
 
   const handleBlur: React.FocusEventHandler<HTMLDivElement> = (e) => {
     const next = e.relatedTarget as Node | null;
@@ -55,7 +45,7 @@ export function MultiSelect({
   };
 
   const onTriggerKeyDown: React.KeyboardEventHandler<HTMLButtonElement> = (e) => {
-    if (isDisabled) return;
+    if (disabled) return;
     if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       setActiveIdx(0);
@@ -83,16 +73,13 @@ export function MultiSelect({
     } else if (e.key === " " || e.key === "Enter") {
       e.preventDefault();
       const opt = options[activeIdx];
-      if (opt && !opt.disabled) toggleValue(opt.value);
+      if (opt && !opt.disabled) {
+        onChange(opt.value);
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
     }
   };
-
-  const display =
-    selectedLabels.length === 0
-      ? placeholder
-      : selectedLabels.length === 1
-        ? selectedLabels[0]
-        : `${selectedLabels.length} selected`;
 
   return (
     <div ref={rootRef} className={className} onBlur={handleBlur} tabIndex={-1}>
@@ -103,10 +90,10 @@ export function MultiSelect({
         <button
           ref={buttonRef}
           type="button"
-          disabled={isDisabled}
+          disabled={disabled}
           onMouseDown={(e) => {
             e.preventDefault();
-            if (isDisabled) return;
+            if (disabled) return;
             const willOpen = !open;
             setOpen(willOpen);
             if (willOpen) {
@@ -121,8 +108,8 @@ export function MultiSelect({
             open ? "ring-2 ring-blue-100" : ""
           }`}
         >
-          <span className={`truncate ${selectedLabels.length ? "text-gray-900" : "text-gray-500"}`}>
-            {hasOptions ? display : noOptionsMessage}
+          <span className={`truncate ${selectedLabel ? "text-gray-900" : "text-gray-500"}`}>
+            {selectedLabel ?? placeholder}
           </span>
           <svg className="ml-2 h-4 w-4 shrink-0 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -134,7 +121,7 @@ export function MultiSelect({
         </button>
 
         {/* Dropdown */}
-        {open && hasOptions ? (
+        {open ? (
           <div
             ref={listRef}
             role="listbox"
@@ -144,8 +131,8 @@ export function MultiSelect({
           >
             <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>
               {options.map((opt, idx) => {
-                const checked = value.includes(opt.value);
                 const active = idx === activeIdx;
+                const selected = value === opt.value;
                 return (
                   <button
                     key={opt.value}
@@ -154,20 +141,20 @@ export function MultiSelect({
                     onMouseEnter={() => setActiveIdx(idx)}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      if (!opt.disabled) toggleValue(opt.value);
+                      if (!opt.disabled) {
+                        onChange(opt.value);
+                        setOpen(false);
+                        buttonRef.current?.focus();
+                      }
                     }}
-                    className={`flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm ${
+                    className={`flex w-full cursor-pointer items-center px-3 py-2 text-left text-sm ${
                       active ? "bg-blue-50" : ""
-                    } ${opt.disabled ? "cursor-not-allowed opacity-50" : ""}`}
+                    } ${selected ? "font-semibold text-blue-600" : ""} ${
+                      opt.disabled ? "cursor-not-allowed opacity-50" : ""
+                    }`}
                     role="option"
                   >
-                    <input
-                      type="checkbox"
-                      readOnly
-                      checked={checked}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600"
-                    />
-                    <span className="truncate">{opt.label}</span>
+                    {opt.label}
                   </button>
                 );
               })}

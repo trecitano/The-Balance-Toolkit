@@ -16,8 +16,6 @@ export function useSessionStream(enabled: boolean) {
     chanRef.current = chan;
 
     chan.onmessage = (msg) => {
-      // Debug log
-      console.log("Received message:", msg);
       requestAnimationFrame(() => {
         if (msg.event === "raw") {
           pushRaw(msg as RawBalanceBoardEvent);

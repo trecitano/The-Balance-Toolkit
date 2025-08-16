@@ -382,7 +382,7 @@ export default function ActivityTimeline({ blocks, onChange, onBlockSelect, acti
     const timelineBlocks = Array.from(document.querySelectorAll(".timeline-block")) as HTMLElement[];
 
     // Calculate positions of all block boundaries
-    let positions: number[] = [0]; // Start with position 0
+    const positions: number[] = [0]; // Start with position 0
     let accWidth = 0;
     for (let i = 0; i < timelineBlocks.length; i++) {
       accWidth += timelineBlocks[i].offsetWidth;

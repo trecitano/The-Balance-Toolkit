@@ -1,13 +1,9 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { MultiSelect } from "@/components/MultiSelect.tsx";
-
-export type SessionPanelValue = {
-  selectedUser: string;
-  lsl: boolean;
-  tcp: boolean;
-  saveDir: string | null;
-  recording: boolean;
-};
+import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
+import { SingleColumn } from "@/components/SingleColumn.tsx";
+import { InputPrimitive } from "@/components/InputPrimitive.tsx";
+import { InterpolationOption, interpolationOptions, SessionConfiguration } from "@/types.ts";
 
 export function SessionPanel({
   boardDisplaySelected,
@@ -16,18 +12,18 @@ export function SessionPanel({
   userOptions,
   value,
   onChange,
-  onRecordToggle,
 }: {
   boardDisplaySelected: string[];
   onBoardDisplayChange: (ids: string[]) => void;
-  boardDisplayOptions: { value: string, label: string };
+  boardDisplayOptions: { value: string; label: string };
   userOptions: string[];
-  value: SessionPanelValue;
-  onChange: (v: SessionPanelValue) => void;
-  onRecordToggle?: (recording: boolean, state: SessionPanelValue) => void;
+  value: SessionConfiguration;
+  onChange: (v: SessionConfiguration) => void;
 }) {
-  const update = <K extends keyof SessionPanelValue>(key: K, val: SessionPanelValue[K]) => {
+  const update = <K extends keyof SessionConfiguration>(key: K, val: SessionConfiguration[K]) => {
     const next = { ...value, [key]: val };
+    console.log("Updating", key, val);
+    console.log("next", next);
     onChange(next);
   };
 
@@ -38,96 +34,99 @@ export function SessionPanel({
       title: "Select save directory",
     });
     if (typeof selected === "string") {
-      update("saveDir", selected);
+      update("outputDirectory", selected);
     }
   };
 
-  const toggleRecording = () => {
-    console.log("Is recording");
-    const nextRecording = !value.recording;
-    const nextState = { ...value, recording: nextRecording };
-    onChange(nextState);
-    onRecordToggle?.(nextRecording, nextState);
-  };
-
-  const selectCls =
-    "h-10 w-full rounded-md border border-gray-300 bg-white px-3 pr-8 text-sm " +
-    "focus:border-blue-500 focus:outline-none";
-  const shellCls = "flex h-10 items-center gap-2 rounded-md border border-gray-300 bg-white px-3 text-sm";
-
   return (
     <div className="rounded-xl border bg-white/70 p-3 shadow-sm">
-      <h1 className="pb-3 text-xl font-semibold">Session</h1>
-
       {/* Controls grid */}
       <div className="flex gap-6">
-        {/* Record / Recording button */}
-        <button
-          type="button"
-          onClick={toggleRecording}
-          className={`flex w-1/9 items-center gap-2 rounded-full px-4 py-2.5 text-white shadow transition ${
-            value.recording ? "bg-red-700 hover:bg-red-800" : "bg-red-600 hover:bg-red-700"
-          }`}
-        >
-          <span
-            className={`inline-block h-2.5 w-2.5 rounded-full bg-white ${value.recording ? "animate-pulse" : ""}`}
-          />
-          <span className="font-medium">{value.recording ? "Recording…" : "Record"}</span>
-        </button>
-
+        <h1 className="pb-3 text-xl font-semibold">Session</h1>
         {/* Board to Display (Multi-select) */}
-        <div className="w-1/5">
-          <MultiSelect
-            label="Board to Display"
-            options={boardDisplayOptions}
-            value={boardDisplaySelected}
-            onChange={onBoardDisplayChange}
-            placeholder="None selected"
-          />
+
+        <div className="w-2/10">
+          <SingleColumn label="Board to Display">
+            <MultiSelect
+              options={boardDisplayOptions}
+              noOptionsMessage={"No boards available."}
+              value={boardDisplaySelected}
+              onChange={onBoardDisplayChange}
+              placeholder="Choose a Board to diplay"
+            />
+          </SingleColumn>
+
+          {/* User (single select) */}
+          <SingleColumn label="User">
+            <SelectPrimitive
+              value={value.selectedUser ?? ""}
+              onChange={(v) => update("selectedUser", v ?? "")}
+              options={userOptions.map((u) => ({ label: u, value: u }))}
+            />
+          </SingleColumn>
         </div>
 
-        {/* User (single select) */}
-        <div className="w-1/5">
-          <label className="mb-1 block text-xs font-semibold text-gray-700">User</label>
-          <select
-            className={selectCls}
-            value={value.selectedUser ?? ""}
-            onChange={(e) => update("selectedUser", e.target.value || "")}
-          >
-            {userOptions.map((u) => (
-              <option key={u} value={u}>
-                {u}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* LSL */}
-        <div className="w-1/10">
-          <label className="mb-1 block text-xs font-semibold text-gray-700">LSL</label>
-          <label className={shellCls}>
-            <input
+        <div className="w-1/20">
+          {/* LSL */}
+          <SingleColumn label="LSL" className={"items-center"}>
+            <InputPrimitive
+              editable
               type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className={"w-5"}
               checked={value.lsl}
               onChange={(e) => update("lsl", e.target.checked)}
             />
-            <span>Enabled</span>
-          </label>
-        </div>
+          </SingleColumn>
 
-        {/* TCP */}
-        <div className="w-1/10">
-          <label className="mb-1 block text-xs font-semibold text-gray-700">TCP</label>
-          <label className={shellCls}>
-            <input
+          {/* TCP */}
+          <SingleColumn label="TCP">
+            <InputPrimitive
+              editable
               type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className={"w-5"}
               checked={value.tcp}
               onChange={(e) => update("tcp", e.target.checked)}
             />
-            <span>Enabled</span>
-          </label>
+          </SingleColumn>
+        </div>
+
+        <div className={"w-2/10"}>
+          <SingleColumn label="Window Size (ms)">
+            <InputPrimitive
+              editable
+              type="number"
+              value={value.windowSizeMs}
+              onChange={(e) => update("windowSizeMs", Number(e.target.value))}
+            />
+          </SingleColumn>
+
+          <SingleColumn label="Window Slide size (ms)">
+            <InputPrimitive
+              editable
+              type="number"
+              value={value.windowSlideMs}
+              onChange={(e) => update("windowSlideMs", Number(e.target.value))}
+            />
+          </SingleColumn>
+        </div>
+
+        <div className={"w-2/10"}>
+          <SingleColumn label="Sampling Rate">
+            <InputPrimitive
+              editable
+              type="number"
+              value={value.samplingRate}
+              onChange={(e) => update("samplingRate", Number(e.target.value))}
+            />
+          </SingleColumn>
+
+          <SingleColumn label="Window Slide size (ms):">
+            <SelectPrimitive
+              value={value.interpolation}
+              onChange={(v) => update("interpolation", v as InterpolationOption)}
+              options={interpolationOptions.map((i) => ({ label: i, value: i }))}
+            />
+          </SingleColumn>
         </div>
 
         {/* Save Location */}
@@ -141,7 +140,9 @@ export function SessionPanel({
             >
               Choose…
             </button>
-            <div className="min-w-0 flex-1 truncate text-sm text-gray-700">{value.saveDir ?? "No folder selected"}</div>
+            <div className="min-w-0 flex-1 truncate text-sm text-gray-700">
+              {value.outputDirectory ?? "No folder selected"}
+            </div>
           </div>
         </div>
       </div>

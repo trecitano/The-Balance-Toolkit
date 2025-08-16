@@ -18,9 +18,12 @@ export interface ProcessingSettings {
   balanceBoardYSize: number;
   windowSizeMs: number;
   windowSlideMs: number;
-  samplingNumber: number;
-  interpolation: string;
+  samplingRate: number;
+  interpolation: InterpolationOption;
 }
+
+export type InterpolationOption = "Linear" | "Cubic" | "Polynomial";
+export const interpolationOptions = ["Linear", "Cubic", "Polynomial"] as const;
 
 export interface UserType {
   name: string;
@@ -54,14 +57,21 @@ export interface Device {
 }
 
 export interface SessionInformation {
-  selectedUser: string;
   availableUsers: string[];
   selectedBoards: SelectedBoard[];
-  lslEnabled: boolean;
-  tcpEnabled: boolean;
-  fileLocation: string;
-  isRecording: boolean;
+  sessionConfiguration: SessionConfiguration;
 }
+
+export type SessionConfiguration = {
+  selectedUser: string;
+  lsl: boolean;
+  tcp: boolean;
+  outputDirectory: string | null;
+  windowSizeMs: number;
+  windowSlideMs: number;
+  samplingRate: number;
+  interpolation: string;
+};
 
 export interface SelectedBoard {
   name: string;
@@ -84,6 +94,17 @@ export type ProcessedBoardEvent = {
   timestamp: number;
   vCopX: number;
   vCopY: number;
-  confidenceEllipsePolygon: [number, number][],
-  convexHullPolygon: [number, number][],
+  confidenceEllipsePolygon: [number, number][];
+  convexHullPolygon: [number, number][];
+};
+
+export type ProcessedSessionData = {
+  timestamp: number;
+  vCopX: number;
+  vCopY: number;
+};
+
+export type ProcessedPolygonData = {
+  confidenceEllipsePolygon: [number, number][];
+  convexHullPolygon: [number, number][];
 };
