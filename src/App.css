@@ -99,19 +99,7 @@ body {
 
 body {
   font-family: "Segoe UI", "Inter", "Roboto", Arial, sans-serif;
-  user-select: none;
   -webkit-user-select: none;
-  -ms-user-select: none;
-}
-
-.app {
-  display: flex;
-  flex-direction: row;
-  height: 100vh;
-  overflow: hidden;
-  background: var(--bg-primary);
-  box-sizing: border-box;
-  font-size: 0.85em;
 }
 
 .menu-bar {
@@ -274,29 +262,6 @@ body {
   margin-bottom: 0;
 }
 
-.menu-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-round);
-  margin: 18px auto 10px auto;
-  object-fit: cover;
-  border: 2px solid var(--border-primary);
-  background: var(--white);
-  display: block;
-  font-size: 0.85em;
-}
-
-.main-page {
-  flex: 1;
-  padding: 20px;
-  width: 100%;
-  overflow: hidden;
-  background: var(--bg-primary);
-  border-top-left-radius: 22px;
-  border-bottom-left-radius: 22px;
-  font-size: 0.85em;
-}
-
 .inside-page {
   display: flex;
   flex-direction: column;
@@ -313,13 +278,6 @@ body {
   gap: 2vw;
   margin-bottom: 1.8vw;
   flex-shrink: 0;
-}
-
-.page-title {
-  font-size: var(--text-xl);
-  font-weight: bold;
-  margin-bottom: 0px;
-  color: var(--text-dark);
 }
 
 .main-content {

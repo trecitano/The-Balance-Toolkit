@@ -11,7 +11,7 @@ import balanceToolkitLogo from "@/assets/balance-icon.svg";
 import fileIcon from "@/assets/file-icon.svg";
 import userIcon from "@/assets/user-icon.svg";
 import wbbIconLine from "@/assets/wbb-icon-line.svg";
-import { Button } from "@/components/Button.tsx";
+import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import activitiesConfig from "@/config/activities.config.ts";
 
 interface StatusIndicator {
@@ -219,10 +219,10 @@ const ActivitiesCard: React.FC = () => {
       </div>
 
       <div className="mt-auto">
-        <Button to="/activities" variant={"grey"}>
+        <ToolkitButton to="/activities" variant={"grey"}>
           {" "}
           Explore More →
-        </Button>
+        </ToolkitButton>
       </div>
     </div>
   );
@@ -308,10 +308,10 @@ const ConnectionCard: React.FC = () => {
       </div>
 
       <div className="mt-auto">
-        <Button to="/devices" variant={"grey"}>
+        <ToolkitButton to="/devices" variant={"grey"}>
           {" "}
           Manage →
-        </Button>
+        </ToolkitButton>
       </div>
     </div>
   );
@@ -333,7 +333,7 @@ const HelpSupportCard: React.FC = () => {
       </p>
 
       <div className="mt-auto flex justify-end">
-        <Button variant={"grey"}>Go to Tutorial →</Button>
+        <ToolkitButton variant={"grey"}>Go to Tutorial →</ToolkitButton>
       </div>
     </>
   );
@@ -351,7 +351,7 @@ const DocumentationCard: React.FC = () => {
       </div>
 
       <div className="mt-auto flex justify-end">
-        <Button variant={"grey"}>Read More →</Button>
+        <ToolkitButton variant={"grey"}>Read More →</ToolkitButton>
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ import battery25Icon from "@/assets/battery-25-icon.svg";
 import battery50Icon from "@/assets/battery-50-icon.svg";
 import battery75Icon from "@/assets/battery-75-icon.svg";
 import battery100Icon from "@/assets/battery-100-icon.svg";
-import { Button } from "@/components/Button.tsx";
+import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
@@ -69,12 +69,12 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                 </div>
 
                 <div className="side-panel-actions">
-                  <Button type={"button"} variant="red" onClick={() => handleUnselectDevice(device.macAddress)}>
+                  <ToolkitButton type={"button"} variant="red" onClick={() => handleUnselectDevice(device.macAddress)}>
                     Disconnect
-                  </Button>
-                  <Button to="/session" variant="blue">
+                  </ToolkitButton>
+                  <ToolkitButton to="/session" variant="blue">
                     Go to Session →
-                  </Button>
+                  </ToolkitButton>
                 </div>
               </>
             ) : (

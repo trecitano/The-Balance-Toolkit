@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use crate::actors::balance_board_actor::{BalanceBoardOutput, BoardAction};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
-use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
+use crate::actors::toolkit_service::{SessionConfiguration, ToolkitCommand, ToolkitResponse};
 use crate::processing::data_processor::ProcessedBoardData;
 use tauri::ipc::Channel;
 use tauri::{Emitter, Manager, State};
@@ -338,10 +338,10 @@ async fn session_information(state: State<'_, AppState>) -> Result<SessionInform
 }
 
 #[tauri::command(async)]
-async fn session_update_session_configuration(session_information: SessionInformation, state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> session_update_session_configuration");
+async fn session_update_session_configuration(session_configuration: SessionConfiguration, state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> session_update_session_configuration: {:?}", session_configuration);
 
-    let command = ToolkitCommand::UpdateSessionInformation { session_information };
+    let command = ToolkitCommand::UpdateSessionInformation { session_configuration };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
     println!("<< session_update_session_configuration.");

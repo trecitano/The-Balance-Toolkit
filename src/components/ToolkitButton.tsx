@@ -8,8 +8,6 @@ type BaseProps = {
   variant?: Variant;
   size?: Size;
   fullWidth?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
 };
@@ -22,7 +20,6 @@ type ButtonAsButton = BaseProps &
 type ButtonAsLink = BaseProps &
   React.AnchorHTMLAttributes<HTMLAnchorElement> & {
     to: string;
-    state?: any;
   };
 
 type ButtonProps = ButtonAsButton | ButtonAsLink;
@@ -49,21 +46,13 @@ const bySize: Record<Size, string> = {
   lg: "px-6 py-3 text-base",
 };
 
-export function Button({
-  variant = "red",
-  size = "md",
-  leftIcon,
-  rightIcon,
-  className = "",
-  children,
-  ...props
-}: ButtonProps) {
+export function ToolkitButton({ variant = "red", size = "md", className = "", children, ...props }: ButtonProps) {
   const classes = [base, byVariant[variant], bySize[size], className].join(" ");
 
   if ("to" in props && props.to) {
-    const { to, state, ...rest } = props as ButtonAsLink;
+    const { to, ...rest } = props as ButtonAsLink;
     return (
-      <Link to={to} state={state} className={classes} {...rest}>
+      <Link to={to} className={classes} {...rest}>
         <span>{children}</span>
       </Link>
     );

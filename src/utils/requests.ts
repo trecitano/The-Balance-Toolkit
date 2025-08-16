@@ -4,6 +4,7 @@ import {
   BalanceBoardEvent,
   Device,
   GeneralSettings,
+  SessionConfiguration,
   SessionInformation,
   UserPageInformation,
   UserType,
@@ -32,7 +33,8 @@ export const commands = {
     unselectDevice: async (macAddress: number) => invoke<void>("devices_unselect_device", { macAddress: macAddress }),
     selectedDevices: async () => invoke<void>("devices_get_selected_devices"),
     removeDevice: async (macAddress: number) => invoke<void>("devices_remove_device", { macAddress: macAddress }),
-    disconnectDevice: async (macAddress: number) => invoke<void>("devices_disconnect_device", { macAddress: macAddress }),
+    disconnectDevice: async (macAddress: number) =>
+      invoke<void>("devices_disconnect_device", { macAddress: macAddress }),
     updateDeviceName: async (macAddress: number, deviceName: string) => {
       return invoke<void>("devices_update_device_name", {
         macAddress: macAddress,
@@ -44,7 +46,8 @@ export const commands = {
 
   session: {
     sessionInfo: async () => invoke<Promise<SessionInformation>>("session_information"),
-    updateSession: async (sessionInformation: SessionInformation) => invoke<void>("session_update_session_configuration", { sessionInformation: sessionInformation }),
+    updateSession: async (sessionConfiguration: SessionConfiguration) =>
+      invoke<void>("session_update_session_configuration", { sessionConfiguration: sessionConfiguration }),
     startSession: async (sessionChannel: Channel<BalanceBoardEvent>) => {
       return invoke<Promise<Device[]>>("session_start_session", { sessionChannel: sessionChannel });
     },

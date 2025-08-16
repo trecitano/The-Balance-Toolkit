@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use crate::actors::toolkit_service::SessionConfiguration;
 use crate::file_system;
 use crate::processing::data_processor::ProcessingSettings;
 
@@ -88,14 +89,11 @@ impl Default for User {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionInformation {
-    pub selected_user: String,
     pub available_users: Vec<String>,
     pub selected_boards: Vec<SelectedBoard>,
-    pub enabled_lsl: bool,
-    pub enabled_tcp: bool,
-    pub output_directory: Option<String>,
-    pub is_recording: bool,
+    pub session_configuration: SessionConfiguration,
 }
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]

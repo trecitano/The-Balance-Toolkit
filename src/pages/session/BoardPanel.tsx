@@ -1,11 +1,16 @@
 import {
-  confidenceEllipsePolygonPlotSettings, convexHullPolygonPlotSettings,
-  copXPlotSettings, copXTopDownPlotSettings, copYPlotSettings, UPlot, vCopXPlotSettings
+  confidenceEllipsePolygonPlotSettings,
+  convexHullPolygonPlotSettings,
+  copXPlotSettings,
+  copXTopDownPlotSettings,
+  copYPlotSettings,
+  UPlot,
+  vCopXPlotSettings,
 } from "./UPlot.tsx";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
 
-export function BoardPanel({ boardName, macAddress }: { boardName: string, macAddress: string }) {
+export function BoardPanel({ boardName, macAddress }: { boardName: string; macAddress: string }) {
   return (
     <section className="rounded-lg border bg-white p-3">
       <div className="mb-2 flex items-center justify-between">
@@ -61,6 +66,7 @@ export function BoardPanel({ boardName, macAddress }: { boardName: string, macAd
           </div>
         </div>
 
+        {/*
         <div className="col-span-6">
           <div className="rounded border p-2">
             <UPlot {...confidenceEllipsePolygonPlotSettings(macAddress)} />
@@ -72,6 +78,7 @@ export function BoardPanel({ boardName, macAddress }: { boardName: string, macAd
             <UPlot {...convexHullPolygonPlotSettings(macAddress)} />
           </div>
         </div>
+        */}
       </div>
     </section>
   );

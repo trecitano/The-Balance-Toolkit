@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { useSessionDataStore, BoardBuffer, SessionState, useSessionRawDataBuffer } from "@/store/sessionDataStore.tsx";
-import { ProcessedBoardEvent, RawBalanceBoardEvent } from "@/types.ts";
+import { ProcessedBoardEvent, ProcessedPolygonData, RawBalanceBoardEvent } from "@/types.ts";
 
 type DataSelector<T> = (state: any) => BoardBuffer<T> | undefined;
 type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: number[] };
@@ -23,8 +23,6 @@ function UPlotLineGeneric<T>({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
   const widthRef = useRef(0);
-
-  console.log("NEW RENDER?!");
 
   // Mount uPlot once
   useLayoutEffect(() => {
@@ -66,7 +64,6 @@ function UPlotLineGeneric<T>({
       },
       {
         equalityFn: (a, b) => {
-          // console.log("Equality check:", { a: a?.len, b: b?.len });
           return a === b; // Try simple reference equality first
         },
       },
@@ -272,18 +269,14 @@ export function copXPlotSettings(macAddress: number) {
   };
 }
 
-function makeDataMapper<T extends { timestamp: number }>(
-  selector: (data: T) => number
-) {
+function makeDataMapper<T extends { timestamp: number }>(selector: (data: T) => number) {
   return (buf: BoardBuffer<T>) => {
     const t: number[] = [];
     const y: number[] = [];
     let t0: number | null = null;
 
     for (let i = 0; i < buf.len; i++) {
-      const idx =
-        (buf.head - (buf.len - 1 - i) + buf.frames.length) %
-        buf.frames.length;
+      const idx = (buf.head - (buf.len - 1 - i) + buf.frames.length) % buf.frames.length;
       const f = buf.frames[idx];
       if (f) {
         const ts = f.timestamp / 1000;
@@ -441,13 +434,13 @@ export function vCopXPlotSettings(macAddress: number) {
         values: () => [],
         grid: { show: false },
         ticks: { show: false },
-        border: { show: true, stroke: color, width: 2  },
+        border: { show: true, stroke: color, width: 2 },
       },
       {
         scale: "y",
         grid: { show: false },
         ticks: { show: false },
-        border: { show: true, stroke: BLACK_COLOUR, width: 2  },
+        border: { show: true, stroke: BLACK_COLOUR, width: 2 },
       },
     ],
     series: [{}, { label, stroke: color, width: 2 }],
@@ -466,16 +459,6 @@ export function vCopXPlotSettings(macAddress: number) {
 
   return { uPlotOptions, dataSelector, dataMapper };
 }
-
-
-
-
-
-
-
-
-
-
 
 // ------------- Confidence Ellipse Area vs time -------------
 
@@ -565,142 +548,28 @@ export function confidenceEllipseAreaPlotSettings(boardId: string) {
   return { uPlotOptions, dataSelector, dataMapper };
 }
 
-// --------------- Convex Hull Area vs time ------------------
-
-export function convexHullAreaPlotSettings(boardId: string) {
-  const width = 150;
-  const height = 150;
-  const color = RED_COLOUR;
-  const label = "Hull Area";
-
-  const WINDOW_SEC = 10;
-  const PAD_SEC = 1.5;
-
-  const uPlotOptions: uPlot.Options = {
-    width,
-    height,
-    legend: { show: false },
-    cursor: { show: false },
-    scales: {
-      x: {
-        range: (_u, _min, max) => {
-          const now = max || 0;
-          return [now - WINDOW_SEC, now + PAD_SEC];
-        },
-      },
-      y: {
-        range: (_u, _min, max) => {
-          const top = Number.isFinite(max) ? (max as number) : 1;
-          return [0, top > 0 ? top * 1.1 : 1];
-        },
-      },
-    },
-    axes: [
-      {
-        scale: "x",
-        grid: { show: false },
-        values: () => [],
-        ticks: { show: false },
-      },
-      {
-        scale: "y",
-        grid: { show: false },
-        values: (_u, splits) => {
-          const out = splits.map(() => "");
-          if (splits.length > 0) out[0] = "0";
-          const mid = Math.floor(splits.length / 2);
-          if (splits.length > 0) out[mid] = label;
-          return out;
-        },
-      },
-    ],
-    series: [{}, { label, stroke: color, width: 2 }],
-    hooks: {
-      draw: [
-        (u) => {
-          drawHorizontalAxis(u, BLACK_COLOUR);
-          drawVerticalAxisStationary(u, BLACK_COLOUR);
-          drawPlotLastPointAsCircle(u, color);
-        },
-      ],
-    },
-  };
-
-  const dataSelector = (state: SessionState) => state.processedSessionData[boardId];
-
-  const dataMapper = (buf: BoardBuffer<ProcessedBoardEvent>) => {
-    const t: number[] = [];
-    const y: number[] = [];
-    let t0: number | null = null;
-
-    for (let i = 0; i < buf.len; i++) {
-      const idx = (buf.head - (buf.len - 1 - i) + buf.frames.length) % buf.frames.length;
-      const f = buf.frames[idx];
-      if (!f) continue;
-
-      const arr = f.convexHullPolygon;
-      if (!arr || arr.length === 0) continue;
-
-      const tsSec = f.timestamp / 1000;
-      if (t0 === null) t0 = tsSec;
-      t.push(tsSec - t0);
-      y.push(arr[arr.length - 1]);
-    }
-
-    return { t, y };
-  };
-
-  return { uPlotOptions, dataSelector, dataMapper };
-}
-
-
-
-
-
-
-
-
-
 // ========== Polygon helpers ==========
 
 // Extract the most recent polygon from a rolling buffer.
 function extractLatestPolygon(
-  buf: BoardBuffer<ProcessedBoardEvent>,
-  key: "confidenceEllipsePolygon" | "convexHullPolygon"
+  polygon: ProcessedPolygonData,
+  key: "confidenceEllipsePolygon" | "convexHullPolygon",
 ): { x: number[]; y: number[] } {
-  // Walk newest -> oldest to find the first frame that has the polygon.
-  for (let i = buf.len - 1; i >= 0; i--) {
-    const idx =
-      (buf.head - (buf.len - 1 - i) + buf.frames.length) % buf.frames.length;
-    const f = buf.frames[idx];
-    if (!f) continue;
+  const poly = polygon[key];
 
-    const poly = f[key];
-
-    if (Array.isArray(poly) && poly.length >= 2) {
-      const x: number[] = new Array(poly.length);
-      const y: number[] = new Array(poly.length);
-      for (let k = 0; k < poly.length; k++) {
-        // Expecting [x, y]
-        x[k] = poly[k][0];
-        y[k] = poly[k][1];
-      }
-      return { x, y };
-    }
+  const x: number[] = new Array(poly.length);
+  const y: number[] = new Array(poly.length);
+  for (let k = 0; k < poly.length; k++) {
+    // Expecting [x, y]
+    x[k] = poly[k][0];
+    y[k] = poly[k][1];
   }
-
-  return { x: [], y: [] };
+  return { x, y };
 }
 
 // Draws a polyline from u.data[0] (x) and u.data[1] (y).
 // If closePath is true, closes the polygon; if fill is provided, fills it.
-function drawPolylineXY(
-  u: uPlot,
-  color: string,
-  lineWidth: number,
-  closePath: boolean,
-  fill?: string
-) {
+function drawPolylineXY(u: uPlot, color: string, lineWidth: number, closePath: boolean, fill?: string) {
   const xs = (u.data[0] as number[]) || [];
   const ys = (u.data[1] as number[]) || [];
   if (xs.length === 0 || ys.length === 0 || xs.length !== ys.length) return;
@@ -778,16 +647,16 @@ export function confidenceEllipsePolygonPlotSettings(boardId: string) {
     scales: {
       x: {
         range: (_u, min, max) => {
-          return [-100, 100]
+          return [-100, 100];
           if (!Number.isFinite(min) || !Number.isFinite(max)) return [-1, 1];
           const span = Math.max(1e-3, (max as number) - (min as number));
           const pad = span * 0.05;
-          return [-100, 100]
+          return [-100, 100];
         },
       },
       y: {
         range: (_u, min, max) => {
-          return [-100, 100]
+          return [-100, 100];
           if (!Number.isFinite(min) || !Number.isFinite(max)) return [-1, 1];
           const span = Math.max(1e-3, (max as number) - (min as number));
           const pad = span * 0.05;
@@ -815,11 +684,10 @@ export function confidenceEllipsePolygonPlotSettings(boardId: string) {
     },
   };
 
-  const dataSelector = (state: SessionState) =>
-    state.processedSessionData[boardId];
+  const dataSelector = (state: SessionState) => state.processedSessionPolygonData[boardId];
 
-  const dataMapper = (buf: BoardBuffer<ProcessedBoardEvent>) => {
-    const { x, y } = extractLatestPolygon(buf, "confidenceEllipsePolygon");
+  const dataMapper = (polygon: ProcessedPolygonData) => {
+    const { x, y } = extractLatestPolygon(polygon, "confidenceEllipsePolygon");
     return { t: x, y };
   };
 
@@ -851,7 +719,7 @@ export function convexHullPolygonPlotSettings(boardId: string) {
       },
       y: {
         range: (_u, min, max) => {
-          return [-100, 100]
+          return [-100, 100];
         },
       },
     },
@@ -873,11 +741,10 @@ export function convexHullPolygonPlotSettings(boardId: string) {
     },
   };
 
-  const dataSelector = (state: SessionState) =>
-    state.processedSessionData[boardId];
+  const dataSelector = (state: SessionState) => state.processedSessionPolygonData[boardId];
 
-  const dataMapper = (buf: BoardBuffer<ProcessedBoardEvent>) => {
-    const { x, y } = extractLatestPolygon(buf, "convexHullPolygon");
+  const dataMapper = (polygon: ProcessedPolygonData) => {
+    const { x, y } = extractLatestPolygon(polygon, "convexHullPolygon");
     return { t: x, y };
   };
 

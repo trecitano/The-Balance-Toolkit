@@ -1,25 +1,22 @@
 import React from "react";
 import clsx from "clsx";
-import { InputPrimitive } from "./InputPrimitive";
 
 interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   icon?: React.ReactNode;
   error?: string;
-  editable?: boolean;
   requiredField?: boolean;
   containerClassName?: string;
+  children: React.ReactNode;
 }
 
-export const InputField: React.FC<InputFieldProps> = ({
+export const SingleColumn: React.FC<InputFieldProps> = ({
   label,
   icon,
   error,
   requiredField,
-  editable,
   containerClassName,
-  className,
-  ...props
+  children,
 }) => {
   return (
     <div className={clsx("flex flex-col gap-(--space-xs) rounded-md bg-gray-100 p-(--space-sm)", containerClassName)}>
@@ -31,7 +28,7 @@ export const InputField: React.FC<InputFieldProps> = ({
         </label>
       )}
 
-      <InputPrimitive editable={editable} error={error} className={className} {...props} />
+      {children}
 
       {error && <p className="mt-0.5 text-xs text-red-500">{error}</p>}
     </div>

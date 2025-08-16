@@ -3,7 +3,7 @@ import { Device } from "@/types";
 import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import "./DeviceRow.css";
-import { Button } from "@/components/Button.tsx";
+import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 
 interface DeviceRowProps {
   device: Device;
@@ -49,12 +49,13 @@ export default function DeviceRow({
   };
 
   const convertNumberToMacAddress = (number: number): string => {
-    return number.toString(16)
+    return number
+      .toString(16)
       .toUpperCase()
       .padStart(12, "0")
       .match(/.{1,2}/g)!
       .join(":");
-  }
+  };
 
   return (
     <div className="device-row">
@@ -125,13 +126,13 @@ export default function DeviceRow({
             ID
           </button>
           {device.isConnected ? (
-            <Button type="button" variant="blue" onClick={() => handleSelectDeviceForSession(device.macAddress)}>
+            <ToolkitButton type="button" variant="blue" onClick={() => handleSelectDeviceForSession(device.macAddress)}>
               Connect
-            </Button>
+            </ToolkitButton>
           ) : (
-            <Button type="button" variant="blue" disabled={true}>
+            <ToolkitButton type="button" variant="blue" disabled={true}>
               Connect
-            </Button>
+            </ToolkitButton>
           )}
         </div>
       </div>

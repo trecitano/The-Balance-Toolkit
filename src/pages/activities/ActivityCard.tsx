@@ -3,7 +3,7 @@ import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import { ActivityConfig, getDefaultBlocksByTitle } from "@/config/activities.config.ts";
-import { Button } from "@/components/Button.tsx";
+import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 
 /**
  * ActivityCard component displays an activity with its details
@@ -83,7 +83,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
       // Now use the determined images for animation
       if (animationImages && animationImages.length > 0) {
         // Start directly with the second image when hovering (if available)
-        let startIndex = animationImages.length > 1 ? 1 : 0;
+        const startIndex = animationImages.length > 1 ? 1 : 0;
         imageIndexRef.current = startIndex;
         setCurrentImageSrc(animationImages[imageIndexRef.current]);
 
@@ -280,9 +280,9 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
             {/* Add Action Row */}
             <div className="add-action-row">
               {!showAddForm ? (
-                <Button type="button" variant={"blue"} onClick={() => setShowAddForm(true)}>
+                <ToolkitButton type="button" variant={"blue"} onClick={() => setShowAddForm(true)}>
                   + Add ActionSave
-                </Button>
+                </ToolkitButton>
               ) : (
                 <>
                   <input
@@ -370,12 +370,12 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
           }}
         >
           {!maximized ? (
-            <Button type="button" variant={"blue"} onClick={handleStartClick}>
+            <ToolkitButton type="button" variant={"blue"} onClick={handleStartClick}>
               Start
-            </Button>
+            </ToolkitButton>
           ) : (
             <>
-              <Button
+              <ToolkitButton
                 type="button"
                 variant={"blue"}
                 onClick={() => {
@@ -383,14 +383,14 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
                 }}
               >
                 Save
-              </Button>
-              <Button type="button" onClick={() => setTimelineBlocks(defaultBlocksRef.current)} variant={"grey"}>
+              </ToolkitButton>
+              <ToolkitButton type="button" onClick={() => setTimelineBlocks(defaultBlocksRef.current)} variant={"grey"}>
                 Reset to Default
-              </Button>
-              <Button type="button" onClick={onMinimize} variant={"grey"}>
+              </ToolkitButton>
+              <ToolkitButton type="button" onClick={onMinimize} variant={"grey"}>
                 {" "}
                 Close{" "}
-              </Button>
+              </ToolkitButton>
             </>
           )}
         </div>

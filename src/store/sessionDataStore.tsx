@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { RawBalanceBoardEvent, ProcessedBoardEvent } from "@/types";
+import { RawBalanceBoardEvent, ProcessedBoardEvent, ProcessedPolygonData, ProcessedSessionData } from "@/types";
 import { subscribeWithSelector } from "zustand/middleware";
 
-const MAX_FRAMES = 10_000;
+const MAX_FRAMES = 2_000;
 
 export type BoardBuffer<T> = {
   frames: (T | undefined)[];
@@ -11,9 +11,9 @@ export type BoardBuffer<T> = {
 };
 
 export type SessionState = {
-  windowMs: number;
   rawSessionData: Record<string, BoardBuffer<RawBalanceBoardEvent>>;
-  processedSessionData: Record<string, BoardBuffer<ProcessedBoardEvent>>;
+  processedSessionData: Record<string, BoardBuffer<ProcessedSessionData>>;
+  processedSessionPolygonData: Record<string, ProcessedPolygonData>;
 
   actions: {
     pushRawFrame: (f: RawBalanceBoardEvent) => void;
@@ -42,9 +42,9 @@ function updateBuffer<T>(oldBuffer: BoardBuffer<T>, frame: T): BoardBuffer<T> {
 
 export const useSessionDataStore = create(
   subscribeWithSelector<SessionState>((set) => ({
-    windowMs: 10_000,
     rawSessionData: {},
     processedSessionData: {},
+    processedSessionPolygonData: {},
 
     actions: {
       pushRawFrame: (f) =>
@@ -62,18 +62,29 @@ export const useSessionDataStore = create(
 
       pushProcessedFrame: (f) =>
         set((state) => {
-          const oldBuffer = state.processedSessionData[f.macAddress] || createEmptyBuffer<ProcessedBoardEvent>();
-          const newBuffer = updateBuffer(oldBuffer, f);
+          const sessionData: ProcessedSessionData = { timestamp: f.timestamp, vCopX: f.vCopX, vCopY: f.vCopY };
+          const polygonData: ProcessedPolygonData = {
+            confidenceEllipsePolygon: f.confidenceEllipsePolygon,
+            convexHullPolygon: f.convexHullPolygon,
+          };
+
+          const oldSessionBuffer =
+            state.processedSessionData[f.macAddress] || createEmptyBuffer<ProcessedSessionData>();
+          const newSessionBuffer = updateBuffer(oldSessionBuffer, sessionData);
 
           return {
             processedSessionData: {
               ...state.processedSessionData,
-              [f.macAddress]: newBuffer, // ✅ new object reference
+              [f.macAddress]: newSessionBuffer, // ✅ new object reference
+            },
+            processedSessionPolygonData: {
+              ...state.processedSessionPolygonData,
+              [f.macAddress]: polygonData,
             },
           };
         }),
 
-      clear: () => set({ rawSessionData: {}, processedSessionData: {} }),
+      clear: () => set({ rawSessionData: {}, processedSessionData: {}, processedSessionPolygonData: {} }),
     },
   })),
 );
@@ -85,5 +96,3 @@ export const useSessionRawDataBuffer = (boardId: string) => useSessionDataStore(
 
 export const useSessionProcessedDataBuffer = (boardId: string) =>
   useSessionDataStore((s) => s.processedSessionData[boardId]);
-
-export const useWindowMs = () => useSessionDataStore((s) => s.windowMs);
