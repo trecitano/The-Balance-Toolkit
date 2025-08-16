@@ -20,15 +20,6 @@ export interface ProcessingSettings {
   windowSlideMs: number;
   samplingNumber: number;
   interpolation: string;
-  analysisConfiguration: AnalysisConfiguration;
-}
-
-export interface AnalysisConfiguration {
-  swayMetrics: boolean;
-  areaMetrics: boolean;
-  frequencyMetrics: boolean;
-  dfa: boolean;
-  jerk: boolean;
 }
 
 export interface UserType {
@@ -65,42 +56,34 @@ export interface Device {
 export interface SessionInformation {
   selectedUser: string;
   availableUsers: string[];
-  selectedBoards: string[];
+  selectedBoards: SelectedBoard[];
   lslEnabled: boolean;
   tcpEnabled: boolean;
   fileLocation: string;
   isRecording: boolean;
 }
 
+export interface SelectedBoard {
+  name: string;
+  macAddress: number;
+}
+
 export type BalanceBoardEvent = RawBalanceBoardEvent | ProcessedBoardEvent;
 
 export type RawBalanceBoardEvent = {
   event: "raw";
-  boardId: string;
+  macAddress: number;
   timestamp: number;
-  data: {
-    copX: number;
-    copY: number;
-  };
+  copX: number;
+  copY: number;
 };
 
 export type ProcessedBoardEvent = {
   event: "processed";
-  boardId: string;
-  data: {
-    timestamp: number;
-    velocityCopX: number;
-    velocityCopY: number;
-    swayMetrics?: {
-      meanVelocity: number;
-      totalPathLength: number;
-      velocityMoment: number;
-    };
-    areaMetrics?: {
-      confidenceEllipseArea: number[];
-      convexHullArea: number[];
-    };
-    dfaAlpha?: number;
-    jerk?: number;
-  };
+  macAddress: number;
+  timestamp: number;
+  vCopX: number;
+  vCopY: number;
+  confidenceEllipsePolygon: [number, number][],
+  convexHullPolygon: [number, number][],
 };

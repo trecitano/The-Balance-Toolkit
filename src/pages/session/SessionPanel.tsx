@@ -20,7 +20,7 @@ export function SessionPanel({
 }: {
   boardDisplaySelected: string[];
   onBoardDisplayChange: (ids: string[]) => void;
-  boardDisplayOptions: string[];
+  boardDisplayOptions: { value: string, label: string };
   userOptions: string[];
   value: SessionPanelValue;
   onChange: (v: SessionPanelValue) => void;
@@ -79,7 +79,7 @@ export function SessionPanel({
         <div className="w-1/5">
           <MultiSelect
             label="Board to Display"
-            options={boardDisplayOptions.map((b) => ({ value: b, label: b }))}
+            options={boardDisplayOptions}
             value={boardDisplaySelected}
             onChange={onBoardDisplayChange}
             placeholder="None selected"

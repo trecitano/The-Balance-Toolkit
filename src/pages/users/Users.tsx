@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { GeneralSettings, UserType } from "@/types.ts";
+import { UserType } from "@/types.ts";
 import "./Users.css";
 import PersonIcon from "@/assets/user-icon.svg?react";
 import personIcon from "@/assets/user-icon.svg";
@@ -13,7 +13,7 @@ import searchIcon from "@/assets/search-icon.svg";
 import { commands } from "@/utils/requests.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/Button.tsx";
-import { Input, InputField } from "@/components/InputField.tsx";
+import { InputField } from "@/components/InputField.tsx";
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -482,6 +482,7 @@ export default function Users() {
                 {/* Age */}
                 <InputField
                   label="Age:"
+                  type="number"
                   icon={<img src={calendarIcon} alt="" />}
                   value={editingUserData.age ?? ""}
                   onChange={(e) => handleEditUpdate("age", Number(e.target.value))}
@@ -520,23 +521,13 @@ export default function Users() {
 
                 {/* Custom gender input if "Other" */}
                 {!["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "") && (
-                  <div className="form-field">
-                    <label>
-                      <img src={sexIcon} alt="" className="info-grid-icon" />
-                      Specify Gender:
-                    </label>
-                    <input
-                      type="text"
-                      name="gender" // same name so it overwrites gender
-                      value={editingUserData.gender ?? ""}
-                      onChange={(e) =>
-                        setEditingUserData((prev) => ({
-                          ...prev!,
-                          gender: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
+                  <InputField
+                    label="Specify Gender:"
+                    icon={<img src={sexIcon} alt="" />}
+                    value={editingUserData.gender ?? ""}
+                    onChange={(e) => handleEditUpdate("gender", e.target.value)}
+                    editable
+                  />
                 )}
 
                 {/* Height */}
@@ -709,13 +700,13 @@ export default function Users() {
 
               <div className="user-info-fields">
                 {/* Name */}
-                <InputField label="Name:" icon={<img src={personIcon} />} value={selectedUserData.name || "N/A"} />
+                <InputField label="Name:" icon={<img src={personIcon} />} value={selectedUserData.name ?? "N/A"} />
 
                 {/* Age */}
-                <InputField label="Age:" icon={<img src={calendarIcon} />} value={selectedUserData.age || "N/A"} />
+                <InputField label="Age:" icon={<img src={calendarIcon} />} value={selectedUserData.age ?? "N/A"} />
 
                 {/* Gender */}
-                <InputField label="Gender:" icon={<img src={sexIcon} />} value={selectedUserData.gender || "N/A"} />
+                <InputField label="Gender:" icon={<img src={sexIcon} />} value={selectedUserData.gender ?? "N/A"} />
 
                 {/* Height */}
                 <InputField
@@ -739,7 +730,7 @@ export default function Users() {
                 <InputField
                   label="Handedness:"
                   icon={<img src={handIcon} />}
-                  value={selectedUserData.handedness || "N/A"}
+                  value={selectedUserData.handedness ?? "N/A"}
                 />
 
                 {/* Color */}
@@ -751,8 +742,8 @@ export default function Users() {
                   <div className="color-display" style={{ backgroundColor: "white" }}>
                     <div
                       className="color-swatch"
-                      style={{ backgroundColor: selectedUserData.color || "#ccc" }}
-                      title={selectedUserData.color || "No color selected"}
+                      style={{ backgroundColor: selectedUserData.color ?? "#ccc" }}
+                      title={selectedUserData.color ?? "No color selected"}
                     ></div>
                   </div>
                 </div>

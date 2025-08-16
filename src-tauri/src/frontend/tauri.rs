@@ -62,7 +62,8 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             devices_tare_device,
             session_start_session,
             session_stop_session,
-            session_information
+            session_information,
+            session_update_session_configuration
         ])
         .manage(AppState { manager_tx })
         .run(tauri::generate_context!())
@@ -287,7 +288,7 @@ pub async fn devices_select_device(
     let command = ToolkitCommand::SelectBoardForSession { mac_address };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
-    println!("<< devices_select_device: Tare command sent.");
+    println!("<< devices_select_device: ");
     Ok(())
 }
 
@@ -336,6 +337,17 @@ async fn session_information(state: State<'_, AppState>) -> Result<SessionInform
     Ok(result)
 }
 
+#[tauri::command(async)]
+async fn session_update_session_configuration(session_information: SessionInformation, state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> session_update_session_configuration");
+
+    let command = ToolkitCommand::UpdateSessionInformation { session_information };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+
+    println!("<< session_update_session_configuration.");
+    Ok(())
+}
+
 #[derive(Serialize, Debug, Clone)]
 #[serde(tag = "event", rename_all = "camelCase")]
 enum FrontendBalanceBoardEvent {
@@ -346,14 +358,8 @@ enum FrontendBalanceBoardEvent {
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 struct FrontendRawReadingData {
+    mac_address: MacAddress,
     timestamp: i64,
-    board_id: String,
-    data: FrontendRawReadingCopData,
-}
-
-#[derive(Serialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-struct FrontendRawReadingCopData {
     cop_x: f32,
     cop_y: f32,
 }
@@ -361,8 +367,12 @@ struct FrontendRawReadingCopData {
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 struct FrontendProcessedReadingData {
-    board_id: String,
-    data: ProcessedBoardData,
+    mac_address: MacAddress,
+    timestamp: i64,
+    v_cop_x: Option<f32>,
+    v_cop_y: Option<f32>,
+    confidence_ellipse_polygon: Option<Vec<(f32, f32)>>,
+    convex_hull_polygon: Option<Vec<(f32, f32)>>,
 }
 
 #[tauri::command(async)]
@@ -377,19 +387,21 @@ pub async fn session_start_session(state: State<'_, AppState>, session_channel: 
                 BalanceBoardOutput::Raw(data) => {
                     let cop = data.calculate_cop();
                     let reading = FrontendRawReadingData {
+                        mac_address: data.mac_address,
                         timestamp: data.timestamp.timestamp_millis(),
-                        board_id: "Board One".to_string(),
-                        data: FrontendRawReadingCopData {
-                            cop_x: cop.x,
-                            cop_y: cop.y,
-                        }
+                        cop_x: cop.x,
+                        cop_y: cop.y,
                     };
                     session_channel.send(FrontendBalanceBoardEvent::Raw(reading));
                 }
-                BalanceBoardOutput::Processed(data) => {
+                BalanceBoardOutput::Processed(mut data) => {
                     let reading = FrontendProcessedReadingData {
-                        board_id: "Board One".to_string(),
-                        data,
+                        mac_address: data.mac_address,
+                        timestamp: data.timestamp.timestamp_millis(),
+                        v_cop_x: data.sway_metrics.as_ref().map(|m| m.v_cop_x),
+                        v_cop_y: data.sway_metrics.as_ref().map(|m| m.v_cop_y),
+                        confidence_ellipse_polygon: data.area_metrics.as_ref().map(|m| m.confidence_ellipse_polygon.clone()),
+                        convex_hull_polygon: data.area_metrics.as_ref().map(|m| m.convex_hull_polygon.clone()),
                     };
                     session_channel.send(FrontendBalanceBoardEvent::Processed(reading));
                 }
@@ -416,18 +428,4 @@ pub async fn session_stop_session(state: State<'_, AppState>) -> Result<(), Stri
 
     println!("<< session_stop_session.");
     Ok(())
-}
-
-// --- UTILITY FUNCTIONS ---
-
-fn convert_mac_address_string_to_u8_bytes(mac_address: &str) -> [u8; 6] {
-    let bytes: Vec<u8> = mac_address
-        .split(':')
-        .map(|part| u8::from_str_radix(part, 16).unwrap_or(0))
-        .collect();
-    bytes.try_into().unwrap_or([0; 6])
-}
-
-fn convert_mac_address_string_to_device_id(mac_address: &str) -> String {
-    mac_address.replace(':', "")
 }

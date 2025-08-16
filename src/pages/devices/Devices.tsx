@@ -14,14 +14,13 @@ export const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
   queryKey: DEVICES_QUERY_KEY,
   queryFn: async () => {
-    const [devices, selectedDeviceIds, isScanning] = await Promise.all([
+    const [devices, selectedDevicesMacAddress, isScanning] = await Promise.all([
       commands.devices.fetchDevices(),
       commands.devices.selectedDevices(),
       commands.devices.isScanning(),
     ]);
-    return { devices, selectedDeviceIds, isScanning };
+    return { devices, selectedDevicesMacAddress, isScanning };
   },
-  staleTime: 10000,
 };
 
 export default function Devices() {
@@ -152,15 +151,15 @@ export default function Devices() {
     return [...connected, ...disconnected];
   };
 
-  const { devices, selectedDeviceIds, isScanning } = data ?? {
+  const { devices, selectedDevicesMacAddress, isScanning } = data ?? {
     devices: [] as Device[],
-    selectedDeviceIds: [] as string[],
+    selectedDevicesMacAddress: [] as number[],
     isScanning: false,
   };
 
   const sortedDevices = sortDevices(devices);
   const noDevices = sortedDevices.length === 0;
-  const selectedDevices = devices!.filter((d) => selectedDeviceIds!.includes(d.id));
+  const selectedDevices = devices!.filter((d) => selectedDevicesMacAddress!.includes(d.macAddress));
 
   return (
     <div className="inside-page">
