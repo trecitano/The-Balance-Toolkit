@@ -41,7 +41,7 @@ pub fn initialize(mac_address: MacAddress) -> Result<Sender<BalanceBoardCommands
     let device = connect_via_hid(mac_address)?;
     
     thread::spawn(move || {
-        blocking_hid_loop(device, rx)
+        blocking_hid_loop(device, mac_address, rx)
     });
     
     Ok(tx)
@@ -70,6 +70,7 @@ fn connect_via_hid(mac_address: MacAddress) -> HidResult<HidDevice> {
 
 fn blocking_hid_loop(
     device: HidDevice,
+    mac_address: MacAddress,
     mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>,
 ) -> anyhow::Result<()> {
     let mut buf = [0u8; 32];
@@ -124,7 +125,7 @@ fn blocking_hid_loop(
                     }
 
                     let tared_reading = reading.apply_tare(&tare_value);
-                    let calibrated_reading = tared_reading.calculate_weights(&calibration);
+                    let calibrated_reading = tared_reading.calculate_weights(&calibration, mac_address);
 
                     if let Some(tx) = &tx_channel {
                         tx.blocking_send(calibrated_reading)?;
@@ -247,9 +248,10 @@ impl BalanceBoardSensorRawReading {
         }
     }
 
-    fn calculate_weights(&self, cal: &BalanceBoardCalibrationData) -> BalanceBoardCalibratedReading {
+    fn calculate_weights(&self, cal: &BalanceBoardCalibrationData, mac_address: MacAddress) -> BalanceBoardCalibratedReading {
         BalanceBoardCalibratedReading {
             timestamp: Utc::now(),
+            mac_address: mac_address,
             top_right: self.calculate_single_weight(self.top_right, &cal.top_right),
             bottom_right: self.calculate_single_weight(self.bottom_right, &cal.bottom_right),
             top_left: self.calculate_single_weight(self.top_left, &cal.top_left),

@@ -6,7 +6,7 @@ interface InputPrimitiveProps extends React.InputHTMLAttributes<HTMLInputElement
   error?: string;
 }
 
-export const InputPrimitive: React.FC<InputPrimitiveProps> = ({ editable = true, error, className, ...props }) => {
+export const InputPrimitive: React.FC<InputPrimitiveProps> = ({ editable, error, className, ...props }) => {
   if (editable) {
     return (
       <input
@@ -18,6 +18,7 @@ export const InputPrimitive: React.FC<InputPrimitiveProps> = ({ editable = true,
           className,
         )}
         {...props}
+        value={props.value ?? ""}
       />
     );
   }

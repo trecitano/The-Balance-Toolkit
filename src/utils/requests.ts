@@ -44,6 +44,7 @@ export const commands = {
 
   session: {
     sessionInfo: async () => invoke<Promise<SessionInformation>>("session_information"),
+    updateSession: async (sessionInformation: SessionInformation) => invoke<void>("session_update_session_configuration", { sessionInformation: sessionInformation }),
     startSession: async (sessionChannel: Channel<BalanceBoardEvent>) => {
       return invoke<Promise<Device[]>>("session_start_session", { sessionChannel: sessionChannel });
     },

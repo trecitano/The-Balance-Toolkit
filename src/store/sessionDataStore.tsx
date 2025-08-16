@@ -49,26 +49,26 @@ export const useSessionDataStore = create(
     actions: {
       pushRawFrame: (f) =>
         set((state) => {
-          const oldBuffer = state.rawSessionData[f.boardId] || createEmptyBuffer<RawBalanceBoardEvent>();
+          const oldBuffer = state.rawSessionData[f.macAddress] || createEmptyBuffer<RawBalanceBoardEvent>();
           const newBuffer = updateBuffer(oldBuffer, f);
 
           return {
             rawSessionData: {
               ...state.rawSessionData,
-              [f.boardId]: newBuffer, // ✅ new object reference
+              [f.macAddress]: newBuffer, // ✅ new object reference
             },
           };
         }),
 
       pushProcessedFrame: (f) =>
         set((state) => {
-          const oldBuffer = state.processedSessionData[f.boardId] || createEmptyBuffer<ProcessedBoardEvent>();
+          const oldBuffer = state.processedSessionData[f.macAddress] || createEmptyBuffer<ProcessedBoardEvent>();
           const newBuffer = updateBuffer(oldBuffer, f);
 
           return {
             processedSessionData: {
               ...state.processedSessionData,
-              [f.boardId]: newBuffer, // ✅ new object reference
+              [f.macAddress]: newBuffer, // ✅ new object reference
             },
           };
         }),

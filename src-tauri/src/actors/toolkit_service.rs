@@ -4,7 +4,7 @@ use tokio::sync::{mpsc, oneshot};
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, BoardAction};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothService};
 use crate::file_system::{DeviceFileSystem, SettingsFileSystem};
-use crate::types::{GeneralSettings, MacAddress, NintendoDevice, SessionInformation};
+use crate::types::{GeneralSettings, MacAddress, NintendoDevice, SelectedBoard, SessionInformation};
 use anyhow::Result;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -59,6 +59,9 @@ pub enum ToolkitCommand {
     SessionInformation {
         response: oneshot::Sender<SessionInformation>,
     },
+    UpdateSessionInformation {
+        session_information: SessionInformation,
+    },
     StartSession {
         frontend_channel: Sender<BalanceBoardOutput>
     },
@@ -87,14 +90,12 @@ pub struct ConnectionManager {
     is_recording: bool,
 }
 
-
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SessionSettings {
     pub output_directory: String,
     pub lsl_enabled: bool,
     pub tcp_enabled: bool,
 }
-
 
 impl ConnectionManager {
     pub fn new(rx: mpsc::Receiver<ToolkitCommand>, tx: Sender<ToolkitResponse>) -> Result<Self> {
@@ -160,6 +161,8 @@ impl ConnectionManager {
                 }
                 ToolkitCommand::SelectBoardForSession { mac_address } => {
                     self.selected_boards.insert(mac_address);
+                    println!("Connections: {:?}",self.connections);
+                    println!("Selected boards: {:?}",self.selected_boards);
                 }
                 ToolkitCommand::UnselectBoardForSession { mac_address } => {
                     self.selected_boards.remove(&mac_address);
@@ -175,16 +178,37 @@ impl ConnectionManager {
                         None
                     };
 
+                    let selected_boards = self.boards_system_view().await?
+                        .iter()
+                        .filter(|device| {
+                            // Convert u64 to MacAddress before checking
+                            let mac = MacAddress::from(device.mac_address);
+                            self.selected_boards.contains(&mac)
+                        })
+                        .map(|device| SelectedBoard {
+                            name: device.name.clone(),
+                            mac_address: MacAddress::from(device.mac_address),
+                        })
+                        .collect();
+
                     let session_information = SessionInformation {
                         selected_user: self.selected_user.clone(),
                         available_users: UserFileSystem::get_users()?.into_iter().map(|user| user.name).collect(),
-                        selected_boards: self.selected_boards.iter().cloned().collect(),
+                        selected_boards,
                         enabled_lsl: self.session_settings.lsl_enabled,
                         enabled_tcp: self.session_settings.tcp_enabled,
                         output_directory,
                         is_recording: self.is_recording,
                     };
                     response.send(session_information).unwrap();
+                }
+                ToolkitCommand::UpdateSessionInformation { session_information } => {
+                    self.selected_user = session_information.selected_user;
+                    self.session_settings = SessionSettings {
+                        output_directory: session_information.output_directory.unwrap_or_else(|| self.session_settings.output_directory.clone()),
+                        lsl_enabled: session_information.enabled_lsl,
+                        tcp_enabled: session_information.enabled_tcp,
+                    }
                 }
                 ToolkitCommand::StartSession { frontend_channel } => {
                     start_session(frontend_channel,
@@ -196,9 +220,13 @@ impl ConnectionManager {
                 },
                 ToolkitCommand::StopSession => {
                     for board in &self.selected_boards {
-                        let connection = &self.connections.get(board).unwrap();
-                        let command = { BoardAction::StopRecording };       
-                        connection.send(command).await?
+                        match &self.connections.get(board) {
+                            Some(connection) => {
+                                let command = { BoardAction::StopRecording };
+                                connection.send(command).await?
+                            }
+                            None => ()
+                        }
                     }
                 }
 
@@ -290,7 +318,7 @@ impl ConnectionManager {
         }
 
         println!("Connecting to device: {:?}", mac_address);
-        let board_connection = balance_board_actor::initialize(mac_address)?;
+        let board_connection = balance_board_actor::initialize(mac_address, self.general_settings.is_demo_mode)?;
 
         self.connections.insert(mac_address, board_connection);
         // TODO
@@ -389,6 +417,10 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
                        session_settings: &SessionSettings,
                        selected_boards: &HashSet<MacAddress>,
                        hid_board_rx_map: &HashMap<MacAddress, Sender<BoardAction>>) {
+    if selected_boards.len() == 0 {
+        return;
+    }
+
     let mut observer_list: Vec<SessionMapping> = vec!();
     for mac_address in selected_boards {
         observer_list.push(SessionMapping {
@@ -467,7 +499,7 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
             .collect();
 
         if observers.len() > 0 {
-            let tx = data_processor::initialize(observers, general_settings.processing_settings.clone());
+            let tx = data_processor::initialize(observers, device_mapping.mac_address, general_settings.processing_settings.clone());
             device_mapping.observers_raw.push( (ObserverType::DataProcessor, tx));
         }
     }

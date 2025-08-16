@@ -7,6 +7,7 @@ use rustfft::{FftPlanner, num_complex::Complex};
 use std::f32::consts::PI;
 use std::thread;
 use serde::{Deserialize, Serialize};
+use crate::types::MacAddress;
 
 #[derive(Debug, Clone)]
 struct CenterOfPressurePoint {
@@ -23,8 +24,7 @@ pub struct ProcessingSettings {
     window_size_ms: u64,            // Window size used for calculations
     window_slide_ms: u64,           // How much the window moves
     sampling_number: u64,           // Sampling size to create a time series (using a specific interpolation)
-    interpolation: InterpolationSetting,
-    analysis_configuration: AnalysisConfiguration
+    interpolation: InterpolationSetting
 }
 
 impl ProcessingSettings {
@@ -33,16 +33,9 @@ impl ProcessingSettings {
             balance_board_x_size:  446.0,
             balance_board_y_size:  238.0,
             window_size_ms: 1000,
-            window_slide_ms: 1000,
+            window_slide_ms: 100,
             sampling_number: 20,
-            interpolation: InterpolationSetting::Cubic,
-            analysis_configuration: AnalysisConfiguration {
-                sway_metrics: true,
-                area_metrics: true,
-                frequency_metrics: true,
-                dfa: true,
-                jerk: true
-            }
+            interpolation: InterpolationSetting::Cubic
         }
     }
 }
@@ -53,32 +46,30 @@ pub enum InterpolationSetting {
     Cubic,
     Polynomial,
 }
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct AnalysisConfiguration {
-    pub sway_metrics: bool,
-    pub area_metrics: bool,
-    pub frequency_metrics: bool,
-    pub dfa: bool,
-    pub jerk: bool,
-}
-
 #[derive(Serialize, Debug, Clone)]
 pub struct ProcessedBoardData {
-    pub timestamp: chrono::DateTime<Utc>,
-    pub sway_metrics: Option<VelocityStats>,
+    pub timestamp: DateTime<Utc>,
+    pub mac_address: MacAddress,
+    pub sway_metrics: Option<SwayMetrics>,
     pub area_metrics: Option<AreaMetrics>,
     pub frequency_metrics: Option<FrequencyMetrics>,
     pub dfa_alpha: Option<f32>,
     pub jerk: Option<f32>,
 }
 
-pub fn initialize(observers: Vec<Sender<BalanceBoardOutput>>, settings: ProcessingSettings) -> Sender<BalanceBoardOutput> {
+pub fn initialize(observers: Vec<Sender<BalanceBoardOutput>>,
+                  mac_address: MacAddress,
+                  settings: ProcessingSettings) -> Sender<BalanceBoardOutput> {
     let (tx, rx) = mpsc::channel(3000);
 
     // This requires some heavy processing, so we dedicate a thread to it.
     thread::spawn(move || {
-        data_process_loop(rx, observers, settings)
+        match data_process_loop(rx, observers, mac_address, settings) {
+            Ok(_) => (),
+            Err(e) => {
+                println!("Error in data processing loop: {:?}", e);
+            }
+        }
     });
 
     tx
@@ -90,6 +81,7 @@ pub fn initialize(observers: Vec<Sender<BalanceBoardOutput>>, settings: Processi
 fn data_process_loop(
     mut rx: mpsc::Receiver<BalanceBoardOutput>,
     mut observers: Vec<Sender<BalanceBoardOutput>>,
+    mac_address: MacAddress,
     settings: ProcessingSettings
 ) -> Result<()> {
     println!("Data processing execution start.");
@@ -107,8 +99,6 @@ fn data_process_loop(
 
     // Initialization : We need to let the window build up first
     thread::sleep(window_size);
-
-    let chosen_calculations = settings.analysis_configuration;
 
     loop {
         thread::sleep(window_slide_size);
@@ -148,34 +138,15 @@ fn data_process_loop(
 
         println!("Data processor: {:?}", &points.len());
 
-        let sway_calculation = if chosen_calculations.sway_metrics {
-            calculate_basic_sway_metrics(&points)
-        } else {
-            None
-        };
-        let area_calculation = if chosen_calculations.area_metrics {
-            calculate_area_metrics(&points)
-        } else {
-            None
-        };
-        let frequency_calculation = if chosen_calculations.frequency_metrics {
-            calculate_frequency_metrics(&points)
-        } else {
-            None
-        };
-        let dfa_calculation = if chosen_calculations.dfa {
-            calculate_dfa_alpha(&points)
-        } else {
-            None
-        };
-        let jerk_calculation = if chosen_calculations.jerk {
-            calculate_jerk(&points)
-        } else {
-            None
-        };
+        let sway_calculation = calculate_basic_sway_metrics(&points);
+        let area_calculation = calculate_area_metrics(&points);
+        let frequency_calculation = calculate_frequency_metrics(&points);
+        let dfa_calculation = calculate_dfa_alpha(&points);
+        let jerk_calculation = calculate_jerk(&points);
 
         let result = ProcessedBoardData {
             timestamp: end_time,
+            mac_address,
             sway_metrics: sway_calculation,
             area_metrics: area_calculation,
             frequency_metrics: frequency_calculation,
@@ -264,7 +235,7 @@ fn linear_interpolation(
     result
 }
 
-pub fn cubic_interpolation(
+fn cubic_interpolation(
     points: &[CenterOfPressurePoint],
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
@@ -314,7 +285,7 @@ pub fn cubic_interpolation(
     result
 }
 
-pub fn polynomial_interpolation(
+fn polynomial_interpolation(
     points: &[CenterOfPressurePoint],
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
@@ -461,7 +432,7 @@ pub struct CenterOfPressureRMS {
     pub mean_y: f32,
 }
 
-pub fn calculate_cop_rms(points: &[CenterOfPressurePoint]) -> Option<CenterOfPressureRMS> {
+fn calculate_cop_rms(points: &[CenterOfPressurePoint]) -> Option<CenterOfPressureRMS> {
     if points.is_empty() {
         return None;
     }
@@ -500,7 +471,7 @@ pub fn calculate_cop_rms(points: &[CenterOfPressurePoint]) -> Option<CenterOfPre
     })
 }
 
-pub fn calculate_x_rms(points: &[CenterOfPressurePoint]) -> Option<f32> {
+fn calculate_x_rms(points: &[CenterOfPressurePoint]) -> Option<f32> {
     if points.is_empty() {
         return None;
     }
@@ -516,7 +487,7 @@ pub fn calculate_x_rms(points: &[CenterOfPressurePoint]) -> Option<f32> {
     Some((sum_squared / n).sqrt())
 }
 
-pub fn calculate_y_rms(points: &[CenterOfPressurePoint]) -> Option<f32> {
+fn calculate_y_rms(points: &[CenterOfPressurePoint]) -> Option<f32> {
     if points.is_empty() {
         return None;
     }
@@ -537,41 +508,53 @@ pub fn calculate_y_rms(points: &[CenterOfPressurePoint]) -> Option<f32> {
 // ============================================================================
 
 #[derive(Serialize, Debug, Clone)]
-pub struct VelocityStats {
+pub struct SwayMetrics {
+    pub v_cop_x: f32,
+    pub v_cop_y: f32,
     pub mean_velocity: f32,
     pub total_path_length: f32,
     pub velocity_moment: f32,
 }
 
-pub fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<VelocityStats> {
+fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<SwayMetrics> {
     if points.len() < 2 {
         return None;
     }
 
-    let mut velocities = Vec::new();
+    let mut velocities_x = Vec::new();
+    let mut velocities_y = Vec::new();
+    let mut velocities_total = Vec::new();
     let mut total_path_length = 0.0;
     let mut total_time = 0.0;
 
     for i in 1..points.len() {
-        let dt = (points[i].timestamp - points[i-1].timestamp).num_milliseconds() as f32 / 1000.0;
+        let dt = (points[i].timestamp - points[i - 1].timestamp).num_milliseconds() as f32
+            / 1000.0;
 
         if dt > 0.0 {
-            let dx = points[i].x - points[i-1].x;
-            let dy = points[i].y - points[i-1].y;
-            let distance = (dx * dx + dy * dy).sqrt();
-            let velocity = distance / dt;
+            let dx = points[i].x - points[i - 1].x;
+            let dy = points[i].y - points[i - 1].y;
 
-            velocities.push(velocity);
-            total_path_length += distance;
+            let v_x = dx / dt;
+            let v_y = dy / dt;
+            let v_total = (dx * dx + dy * dy).sqrt() / dt;
+
+            velocities_x.push(v_x.abs());
+            velocities_y.push(v_y.abs());
+            velocities_total.push(v_total);
+
+            total_path_length += (dx * dx + dy * dy).sqrt();
             total_time += dt;
         }
     }
 
-    if velocities.is_empty() {
+    if velocities_total.is_empty() {
         return None;
     }
 
-    let mean_velocity = velocities.iter().sum::<f32>() / velocities.len() as f32;
+    let v_cop_x = velocities_x.iter().sum::<f32>() / velocities_x.len() as f32;
+    let v_cop_y = velocities_y.iter().sum::<f32>() / velocities_y.len() as f32;
+    let mean_velocity = velocities_total.iter().sum::<f32>() / velocities_total.len() as f32;
 
     // Velocity Moment (normalized path length)
     let velocity_moment = if total_time > 0.0 {
@@ -580,7 +563,9 @@ pub fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<
         0.0
     };
 
-    Some(VelocityStats {
+    Some(SwayMetrics {
+        v_cop_x,
+        v_cop_y,
         mean_velocity,
         total_path_length,
         velocity_moment,
@@ -593,21 +578,24 @@ pub fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<
 
 #[derive(Serialize, Debug, Clone)]
 pub struct AreaMetrics {
-    pub confidence_ellipse_area: f32,
-    pub convex_hull_area: f32,
+    pub confidence_ellipse_polygon: Vec<(f32, f32)>,
+    pub convex_hull_polygon: Vec<(f32, f32)>,
 }
 
-pub fn calculate_area_metrics(points: &[CenterOfPressurePoint]) -> Option<AreaMetrics> {
+fn calculate_area_metrics(points: &[CenterOfPressurePoint]) -> Option<AreaMetrics> {
     if points.len() < 3 {
         return None;
     }
 
-    let confidence_ellipse_area = calculate_95_confidence_ellipse_area(points)?;
+    let confidence_ = calculate_95_confidence_ellipse_area(points)?;
     let convex_hull_area = calculate_convex_hull_area(points)?;
 
+    let confidence_ellipse_polygon = generate_confidence_ellipse_points(points, 0.95, 180)?;
+    let convex_hull_polygon = calculate_convex_hull_polygon(points)?;
+
     Some(AreaMetrics {
-        confidence_ellipse_area,
-        convex_hull_area,
+        confidence_ellipse_polygon,
+        convex_hull_polygon,
     })
 }
 
@@ -728,6 +716,95 @@ fn cross_product(o: (f32, f32), a: (f32, f32), b: (f32, f32)) -> f32 {
     (a.0 - o.0) * (b.1 - o.1) - (a.1 - o.1) * (b.0 - o.0)
 }
 
+fn calculate_convex_hull_polygon(
+    points: &[CenterOfPressurePoint],
+) -> Option<Vec<(f32, f32)>> {
+    if points.len() < 3 {
+        return None;
+    }
+    let mut coords: Vec<(f32, f32)> = points.iter().map(|p| (p.x, p.y)).collect();
+    let hull = convex_hull_graham_scan(&mut coords);
+    if hull.len() < 3 {
+        return None;
+    }
+    Some(hull)
+}
+
+fn generate_confidence_ellipse_points(
+    points: &[CenterOfPressurePoint],
+    confidence: f32,
+    num_points: usize,
+) -> Option<Vec<(f32, f32)>> {
+    if points.len() < 3 || num_points < 3 || !(0.0..1.0).contains(&confidence) {
+        return None;
+    }
+
+    // Means
+    let n = points.len() as f32;
+    let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n;
+    let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n;
+
+    // Sample covariance
+    let mut cov_xx = 0.0_f32;
+    let mut cov_yy = 0.0_f32;
+    let mut cov_xy = 0.0_f32;
+    for p in points {
+        let dx = p.x - mean_x;
+        let dy = p.y - mean_y;
+        cov_xx += dx * dx;
+        cov_yy += dy * dy;
+        cov_xy += dx * dy;
+    }
+    let denom = (n - 1.0).max(1.0); // guard
+    cov_xx /= denom;
+    cov_yy /= denom;
+    cov_xy /= denom;
+
+    // Eigen decomposition of covariance (2x2 closed-form)
+    let trace = cov_xx + cov_yy;
+    let det = cov_xx * cov_yy - cov_xy * cov_xy;
+    let disc = (trace * trace - 4.0 * det).max(0.0);
+    let lambda1 = 0.5 * (trace + disc.sqrt());
+    let lambda2 = 0.5 * (trace - disc.sqrt());
+
+    // Orientation (angle of first eigenvector)
+    let theta = 0.5 * (2.0 * cov_xy).atan2(cov_xx - cov_yy);
+    let cos_t = theta.cos();
+    let sin_t = theta.sin();
+
+    // Chi-square quantile for 2 DOF at given confidence
+    let chi2 = chi_square_quantile_2df(confidence)?;
+
+    // Semi-axes (radii) along principal components
+    let r1 = (chi2 * lambda1).max(0.0).sqrt();
+    let r2 = (chi2 * lambda2).max(0.0).sqrt();
+
+    // Sample the ellipse
+    let mut poly = Vec::with_capacity(num_points);
+    for k in 0..num_points {
+        let t = 2.0 * PI * (k as f32) / (num_points as f32);
+        let ct = t.cos();
+        let st = t.sin();
+
+        // x = cx + r1*ct*cosθ - r2*st*sinθ
+        // y = cy + r1*ct*sinθ + r2*st*cosθ
+        let x = mean_x + r1 * ct * cos_t - r2 * st * sin_t;
+        let y = mean_y + r1 * ct * sin_t + r2 * st * cos_t;
+        poly.push((x, y));
+    }
+
+    Some(poly)
+}
+
+/// Chi-square quantile for 2 degrees of freedom:
+/// χ²₂(p) = -2 ln(1 - p)
+fn chi_square_quantile_2df(p: f32) -> Option<f32> {
+    if p <= 0.0 || p >= 1.0 {
+        return None;
+    }
+    Some(-2.0 * (1.0 - p).ln())
+}
+
 // ============================================================================
 // FREQUENCY DOMAIN ANALYSIS
 // ============================================================================
@@ -740,7 +817,7 @@ pub struct FrequencyMetrics {
 }
 
 // https://en.wikipedia.org/wiki/Spectral_density#Power_spectral_density
-pub fn calculate_frequency_metrics(points: &[CenterOfPressurePoint]) -> Option<FrequencyMetrics> {
+fn calculate_frequency_metrics(points: &[CenterOfPressurePoint]) -> Option<FrequencyMetrics> {
     if points.len() < 8 {
         return None;
     }
@@ -819,7 +896,7 @@ pub fn calculate_frequency_metrics(points: &[CenterOfPressurePoint]) -> Option<F
 // ============================================================================
 
 // https://en.wikipedia.org/wiki/Detrended_fluctuation_analysis
-pub fn calculate_dfa_alpha(points: &[CenterOfPressurePoint]) -> Option<f32> {
+fn calculate_dfa_alpha(points: &[CenterOfPressurePoint]) -> Option<f32> {
     if points.len() < 16 {
         return None;
     }
@@ -935,7 +1012,7 @@ pub fn calculate_dfa_alpha(points: &[CenterOfPressurePoint]) -> Option<f32> {
 // ============================================================================
 
 // https://en.wikipedia.org/wiki/Jerk_(physics)
-pub fn calculate_jerk(points: &[CenterOfPressurePoint]) -> Option<f32> {
+fn calculate_jerk(points: &[CenterOfPressurePoint]) -> Option<f32> {
     if points.len() < 4 {
         return None;
     }

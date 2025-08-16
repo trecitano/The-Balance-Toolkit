@@ -116,15 +116,12 @@ export function MultiSelect({
           className={`relative flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 text-left text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
             open ? "ring-2 ring-blue-100" : ""
           }`}
-          aria-haspopup="listbox"
-          aria-expanded={open}
         >
           <span className={`truncate ${selectedLabels.length ? "text-gray-900" : "text-gray-500"}`}>{display}</span>
           <svg
             className="ml-2 h-4 w-4 shrink-0 text-gray-500"
             viewBox="0 0 20 20"
             fill="currentColor"
-            aria-hidden="true"
           >
             <path
               fillRule="evenodd"
@@ -142,7 +139,6 @@ export function MultiSelect({
             tabIndex={0}
             onKeyDown={onListKeyDown}
             className="absolute top-full left-0 z-40 mt-1 w-full overflow-hidden rounded-md border border-gray-300 bg-white shadow-lg focus:outline-none"
-            aria-multiselectable="true"
           >
             <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>
               {options.map((opt, idx) => {
@@ -162,7 +158,6 @@ export function MultiSelect({
                       active ? "bg-blue-50" : ""
                     } ${opt.disabled ? "cursor-not-allowed opacity-50" : ""}`}
                     role="option"
-                    aria-selected={checked}
                   >
                     <input
                       type="checkbox"

@@ -1,16 +1,13 @@
-use crate::{file_system, processing};
-use crate::processing::lsl_writer::LslConnectionSettings;
+use crate::processing::data_processor::ProcessedBoardData;
+use crate::types::MacAddress;
+use crate::processing;
 use anyhow::Result;
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "mock")]
-use processing::board_hid_reader_mock as board_hid_reader;
-#[cfg(not(feature = "mock"))]
 use processing::board_hid_reader;
+use processing::board_hid_reader_mock;
+use serde::Serialize;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use crate::processing::data_processor::{ProcessedBoardData, ProcessingSettings};
-use crate::types::MacAddress;
 
 // Board primitives
 #[derive(Debug, Clone)]
@@ -40,6 +37,7 @@ pub enum BalanceBoardOutput {
 #[derive(Serialize, Debug, Clone)]
 pub struct BalanceBoardCalibratedReading {
     pub timestamp: chrono::DateTime<Utc>,
+    pub mac_address: MacAddress,
     pub top_right: f32,
     pub bottom_right: f32,
     pub top_left: f32,
@@ -129,11 +127,6 @@ impl ProcessedBoardData {
             buf.extend_from_slice(&sway.velocity_moment.to_be_bytes());
         }
 
-        if let Some(ref area) = self.area_metrics {
-            buf.extend_from_slice(&area.confidence_ellipse_area.to_be_bytes());
-            buf.extend_from_slice(&area.convex_hull_area.to_be_bytes());
-        }
-
         if let Some(ref freq) = self.frequency_metrics {
             buf.extend_from_slice(&freq.mean_power_frequency.to_be_bytes());
             buf.extend_from_slice(&freq.center_of_spectrum.to_be_bytes());
@@ -152,12 +145,14 @@ impl ProcessedBoardData {
     }
 }
 
-pub fn initialize(mac_address: MacAddress) -> Result<Sender<BoardAction>> {
+pub fn initialize(mac_address: MacAddress, is_demo_mode: bool) -> Result<Sender<BoardAction>> {
     let (tx, rx) = mpsc::channel(100);
 
-    let board_hid_tx = board_hid_reader::initialize(
-        mac_address,
-    )?;
+    let board_hid_tx = if is_demo_mode {
+        board_hid_reader_mock::initialize(mac_address)?
+    } else {
+        board_hid_reader::initialize(mac_address)?
+    };
     
     tokio::spawn(async move{
         balance_board_actor_loop(rx, board_hid_tx).await

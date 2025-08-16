@@ -16,7 +16,7 @@ export const InputField: React.FC<InputFieldProps> = ({
   icon,
   error,
   requiredField,
-  editable = true,
+  editable,
   containerClassName,
   className,
   ...props
