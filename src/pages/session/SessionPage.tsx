@@ -1,4 +1,4 @@
-import { useState } from "react";
+import {useRef, useState} from "react";
 import BoardPanel from "./BoardPanel";
 import { SessionPanel } from "./SessionPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import activitiesConfig from "@/config/activities.config.ts";
 import { CheckboxOption } from "@/components/MultiSelect.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import clsx from "clsx";
+import {registerPlayhead, startTimeline, stopTimeline} from "@/pages/session/ProgressTimer.ts";
 
 const SESSION_QUERY_KEY = ["session_key"];
 export const SessionQuery = {
@@ -78,6 +79,7 @@ export default function SessionPage() {
     .map((mac) => sessionInformation.selectedBoards.find((b) => b.macAddress === mac))
     .filter(Boolean); // remove null/undefined if any
   const chosenActivity = activitiesConfig.find((a) => a.id === sessionInformation.sessionConfiguration.activityId);
+  const chosenActivityDuration = chosenActivity?.defaultBlocks?.reduce((acc, block) => acc + block.duration, 0);
   const canStartSession = sessionInformation.selectedBoards.length > 0;
 
   return (
@@ -105,10 +107,8 @@ export default function SessionPage() {
           <p className="text-xl text-gray-400">Choose a board from the panel above to get started.</p>
         </div>
       ) : selectedDisplayBoards.length === 1 ? (
-        <div className="flex justify-center">
-          <div className="w-full max-w-3xl">
+        <div className="flex justify-center mt-5">
             <BoardPanel boardName={selectedDisplayBoards[0].name} macAddress={selectedDisplayBoards[0].macAddress} />
-          </div>
         </div>
       ) : (
         <div
@@ -124,18 +124,42 @@ export default function SessionPage() {
       )}
 
       {/*  Timeline Panel                           */}
-      <div className="m-0 mt-auto flex w-full items-center justify-between rounded-[12px] bg-gray-100 px-0 py-[5px] shadow-sm">
+      <div className="mt-auto flex w-full py-3 items-center justify-between rounded-[12px] bg-gray-100 shadow-sm">
         {chosenActivity ? (
-          <ActivityTimeline
-            blocks={chosenActivity.defaultBlocks}
-            onChange={() => {}}
-            onBlockSelect={(block) => {}}
-            activityName={chosenActivity.title}
-          />
+          <div className={"relative w-9/10 p-5"}>
+            <ActivityTimeline
+              blocks={chosenActivity.defaultBlocks}
+              onChange={() => {}}
+              onBlockSelect={(block) => {}}
+              activityName={chosenActivity.id}
+            />
+            <div
+              ref={(el) => {
+                if (el) {
+                  el.style.transform = "translateX(0px)";
+                  registerPlayhead(el);
+                }
+              }}
+              className={clsx(
+                "absolute top-0 bottom-0 z-10 h-full w-[2px] bg-[var(--red)] transition-transform",
+                !sessionInformation.hasOngoingSession && "hidden"
+              )}
+            >
+              {/* Circle handle at the top */}
+              <div
+                className="
+      absolute left-1/2 -translate-x-1/2
+      w-5 h-4
+      bg-[var(--red)]
+      shadow-md
+      [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]
+    "
+              />
+            </div>
+          </div>
         ) : (
-          <div className="flex w-93/100 flex-col gap-2 pl-5">
-            <canvas className="h-[20px] rounded-lg bg-white shadow-[0_1px_4px_rgba(0,0,0,0.03)]" />
-            <canvas className="h-[20px] rounded-lg bg-white shadow-[0_1px_4px_rgba(0,0,0,0.03)]" />
+          <div className="w-9/10 text-center">
+            <p className="text-xl text-gray-400 mb-10">Choose an activity</p>
           </div>
         )}
 
@@ -150,8 +174,10 @@ export default function SessionPage() {
           onClick={async () => {
             if (!sessionInformation.hasOngoingSession) {
               await sessionChannelManager.start();
+              await startTimeline(chosenActivityDuration * 1000);
             } else {
               await sessionChannelManager.stop();
+              await stopTimeline();
             }
             await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
           }}

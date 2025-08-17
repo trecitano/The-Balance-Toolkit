@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { UserType } from "@/types.ts";
+import { UserPageInformation, UserType } from "@/types.ts";
 import "./Users.css";
 import PersonIcon from "@/assets/user-icon.svg?react";
 import personIcon from "@/assets/user-icon.svg";
@@ -210,7 +210,7 @@ export default function Users() {
     }
 
     await commands.users.selectUser(userName);
-    queryClient.setQueryData(USERS_QUERY_KEY, (oldData: any) => {
+    queryClient.setQueryData(USERS_QUERY_KEY, (oldData: UserPageInformation) => {
       if (!oldData) return oldData;
 
       return {
@@ -484,10 +484,9 @@ export default function Users() {
                   {/* Gender */}
                   <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
                     <SelectPrimitive
-                      editable
                       value={
                         ["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "")
-                          ? editingUserData.gender
+                          ? (editingUserData.gender ?? "")
                           : "N/A"
                       }
                       onChange={(v) => handleEditUpdate("gender", v === "Other" ? "" : v)}

@@ -2,11 +2,6 @@ import { Device } from "@/types";
 import bluetoothIcon from "@/assets/bluetooth-connected-icon.svg";
 import rippleIcon from "@/assets/ripple-icon.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
-import battery0Icon from "@/assets/battery-0-icon.svg";
-import battery25Icon from "@/assets/battery-25-icon.svg";
-import battery50Icon from "@/assets/battery-50-icon.svg";
-import battery75Icon from "@/assets/battery-75-icon.svg";
-import battery100Icon from "@/assets/battery-100-icon.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
 
@@ -16,14 +11,6 @@ interface DeviceSessionListProps {
 }
 
 export default function DeviceSessionList({ connectedDevices, handleUnselectDevice }: DeviceSessionListProps) {
-  const getBatteryIcon = (batteryLevel: number) => {
-    if (batteryLevel <= 12) return battery0Icon;
-    if (batteryLevel <= 37) return battery25Icon;
-    if (batteryLevel <= 62) return battery50Icon;
-    if (batteryLevel <= 87) return battery75Icon;
-    return battery100Icon;
-  };
-
   return (
     <div className="flex h-full basis-120 flex-col justify-center gap-6 overflow-y-hidden">
       {[0, 1].map((index) => {

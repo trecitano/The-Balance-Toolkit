@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, {useState, useRef, useEffect, useMemo} from "react";
 import "./ActivityTimeline.css";
 import balanceIcon from "../../assets/balance-icon.svg";
 
@@ -217,33 +217,22 @@ const MIN_DURATION = 1;
  * Each block represents a specific action in the balance assessment protocol.
  */
 export default function ActivityTimeline({ blocks, onChange, onBlockSelect, activityName }: ActivityTimelineProps) {
-  // Load images for blocks when activityName changes
-  useEffect(() => {
-    if (activityName) {
-      // Try to find images for each block based on activity and action label
-      const blocksWithImages = blocks.map((block) => {
-        if (!block.image) {
-          const image = getActionImage(activityName, block.label);
-          return image ? { ...block, image } : block;
-        }
-        return block;
-      });
-
-      // Only update if we found at least one new image
-      const hasNewImages = blocksWithImages.some((block, idx) => block.image !== blocks[idx].image);
-
-      if (hasNewImages) {
-        onChange(blocksWithImages);
-      }
-    }
-  }, [activityName, blocks, onChange]);
-
   // Drag & drop state
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
   const dragOverIdxRef = useRef<number | null>(null);
   const dragBlockIdx = useRef<number | null>(null);
+
+  const blocksWithImages = useMemo(() => {
+    return blocks.map((block) => {
+      if (!block.image) {
+        const image = getActionImage(activityName, block.label);
+        return image ? { ...block, image } : block;
+      }
+      return block;
+    });
+  }, [blocks, activityName]);
 
   // Resize state
   const [resizeInfo, setResizeInfo] = useState<{
@@ -464,18 +453,14 @@ export default function ActivityTimeline({ blocks, onChange, onBlockSelect, acti
   return (
     <>
       <div
-        className="activity-timeline"
+        className="flex flex-col h-20"
         style={{
-          width: "100%",
           cursor: draggedId !== null ? "grabbing" : "default",
-          position: "relative",
-          display: "flex",
-          flexDirection: "column",
         }}
       >
         {/* Main timeline blocks container */}
-        <div style={{ display: "flex", width: "100%" }}>
-          {blocks.map((block, idx) => (
+        <div className="flex h-full" >
+          {blocksWithImages.map((block, idx) => (
             <React.Fragment key={block.id}>
               {/* Drop indicator when dragging */}
               {draggedId !== null && dragOverIdx === idx && (
@@ -495,7 +480,7 @@ export default function ActivityTimeline({ blocks, onChange, onBlockSelect, acti
 
               {/* Timeline block */}
               <div
-                className="timeline-block"
+                className="timeline-block flex flex-row"
                 tabIndex={0}
                 data-block-id={block.id}
                 onMouseDown={(e) => handleBlockMouseDown(idx, e)}
