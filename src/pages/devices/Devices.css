@@ -14,12 +14,7 @@
 }
 
 .devices-list {
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
   scrollbar-width: none;
-  flex-grow: 1;
   mask-image: linear-gradient(
     to bottom,
     transparent 0%,

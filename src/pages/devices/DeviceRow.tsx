@@ -4,6 +4,7 @@ import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import "./DeviceRow.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
+import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
 
 interface DeviceRowProps {
   device: Device;
@@ -46,15 +47,6 @@ export default function DeviceRow({
     if (diffWeeks < 5) return `${diffWeeks} weeks ago`;
 
     return date.toLocaleDateString();
-  };
-
-  const convertNumberToMacAddress = (number: number): string => {
-    return number
-      .toString(16)
-      .toUpperCase()
-      .padStart(12, "0")
-      .match(/.{1,2}/g)!
-      .join(":");
   };
 
   return (

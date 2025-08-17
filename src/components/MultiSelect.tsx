@@ -3,7 +3,6 @@ import React, { useMemo, useRef, useState } from "react";
 export type CheckboxOption = {
   value: string;
   label: string;
-  disabled?: boolean;
 };
 
 export function MultiSelect({

@@ -90,7 +90,7 @@ export const useSessionDataStore = create(
 );
 
 // Selectors
-export const useSessionActions = () => useSessionDataStore((s) => s.actions);
+export const useSessionActions = () => useSessionDataStore.getState().actions;
 
 export const useSessionRawDataBuffer = (boardId: string) => useSessionDataStore((s) => s.rawSessionData[boardId]);
 

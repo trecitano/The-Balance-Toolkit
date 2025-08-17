@@ -9,6 +9,7 @@ import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
 import "./Devices.css";
 import DeviceScanner from "@/pages/devices/DeviceScanner.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
+import Heading from "@/components/PageTitle.tsx";
 
 export const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
@@ -21,6 +22,15 @@ export const DevicesQuery = {
     ]);
     return { devices, selectedDevicesMacAddress, isScanning };
   },
+};
+
+export const convertNumberToMacAddress = (number: number): string => {
+  return number
+    .toString(16)
+    .toUpperCase()
+    .padStart(12, "0")
+    .match(/.{1,2}/g)!
+    .join(":");
 };
 
 export default function Devices() {
@@ -122,19 +132,17 @@ export default function Devices() {
   };
 
   if (isLoading) {
-    return <div className="inside-page"></div>;
+    return <div className=""></div>;
   }
 
   if (error) {
     return (
-      <div className="inside-page">
-        <div className="page-header">
+      <div className="">
+        <div className="">
           <span className="page-title">Devices</span>
         </div>
-        <div className="main-content">
-          <div className="flex items-center justify-center p-8">
-            <p className="text-red-600">Failed to load devices: {error.message}</p>
-          </div>
+        <div className="flex items-center justify-center p-8">
+          <p className="text-red-600">Failed to load devices: {error.message}</p>
         </div>
       </div>
     );
@@ -162,9 +170,10 @@ export default function Devices() {
   const selectedDevices = devices!.filter((d) => selectedDevicesMacAddress!.includes(d.macAddress));
 
   return (
-    <div className="inside-page">
-      <div className="page-header">
-        <span className="page-title">Devices</span>
+    <>
+      <header className="mb-6 flex justify-between">
+        <Heading>Devices</Heading>
+
         <ToolkitButton
           type="button"
           variant="grey"
@@ -173,10 +182,13 @@ export default function Devices() {
         >
           {scanDevicesMutation.isPending || isScanning ? "Scanning..." : "Scan for Devices"}
         </ToolkitButton>
-      </div>
+      </header>
 
-      <div className="main-content">
-        <div className="devices-list" onScroll={handleGradientDevicesScroll}>
+      <div className="flex h-[75dvh] flex-1 gap-5 px-20">
+        <div
+          className="devices-list flex flex-1 flex-col gap-4 overflow-y-auto rounded-lg bg-white p-10"
+          onScroll={handleGradientDevicesScroll}
+        >
           {noDevices && (
             <div className="mt-8 flex h-full flex-col items-center justify-center rounded-lg bg-gray-100 p-8 text-center shadow-inner">
               <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />
@@ -220,6 +232,6 @@ export default function Devices() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

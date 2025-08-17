@@ -7,10 +7,13 @@ import sessionIcon from "@/assets/session-icon.svg";
 import settingsIcon from "@/assets/settings-icon.svg";
 import activitiesIcon from "@/assets/activities-icon.svg";
 import Settings from "@/components/settings/Settings.tsx";
+import "./Navigation.css";
+import clsx from "clsx";
 
 interface NavigationProps {
   activeView: string;
   onViewChange: (view: string) => void;
+  className?: string;
 }
 
 type MenuItemType = {
@@ -27,7 +30,7 @@ const menuItems: MenuItemType[] = [
   { id: "activities", label: "Activities", icon: activitiesIcon },
 ];
 
-function Navigation({ activeView, onViewChange }: NavigationProps) {
+function Navigation({ activeView, onViewChange, className }: NavigationProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleSettingsClick = () => {
@@ -35,7 +38,12 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
   };
 
   return (
-    <nav className={`menu-bar ${activeView ? "menu-bar--active" : ""}`}>
+    <nav
+      className={clsx(
+        "menu-bar menu-bar--active box-border flex h-screen min-w-[50px] flex-col justify-between border-r border-r-[var(--border-primary)] bg-[var(--red)] p-0 shadow-[2px_0_10px_rgba(0,0,0,0.04)]",
+        className,
+      )}
+    >
       <div>
         <img src={logo} alt="Logo" className="logo-placeholder" />
         <div className="menu-container">
