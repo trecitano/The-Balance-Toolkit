@@ -15,6 +15,7 @@ export function SelectPrimitive({
   className = "",
   disabled = false,
   maxHeight = 260,
+  noneOption,
 }: {
   label?: string;
   options: SelectOption[];
@@ -24,6 +25,7 @@ export function SelectPrimitive({
   className?: string;
   disabled?: boolean;
   maxHeight?: number;
+  noneOption?: string | false;
 }) {
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -130,6 +132,23 @@ export function SelectPrimitive({
             className="absolute top-full left-0 z-40 mt-1 w-full overflow-hidden rounded-md border border-gray-300 bg-white shadow-lg focus:outline-none"
           >
             <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>
+              {noneOption && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onChange("");
+                    setOpen(false);
+                    buttonRef.current?.focus();
+                  }}
+                  onMouseEnter={() => setActiveIdx(-1)} // 👈 track hover for keyboard nav
+                  className={`italic" flex w-full items-center px-3 py-2 text-left text-sm text-gray-400 ${activeIdx === -1 ? "bg-blue-50" : ""} `}
+                  role="option"
+                >
+                  {noneOption}
+                </button>
+              )}
+
               {options.map((opt, idx) => {
                 const active = idx === activeIdx;
                 const selected = value === opt.value;

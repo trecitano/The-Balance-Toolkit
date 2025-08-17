@@ -8,6 +8,8 @@ import { sessionChannelManager } from "@/services/SessionChannelManager.tsx";
 import ActivityTimeline from "@/pages/activities/ActivityTimeline.tsx";
 import activitiesConfig from "@/config/activities.config.ts";
 import { CheckboxOption } from "@/components/MultiSelect.tsx";
+import { ToolkitButton } from "@/components/ToolkitButton.tsx";
+import clsx from "clsx";
 
 const SESSION_QUERY_KEY = ["session_key"];
 export const SessionQuery = {
@@ -76,6 +78,7 @@ export default function SessionPage() {
     .map((mac) => sessionInformation.selectedBoards.find((b) => b.macAddress === mac))
     .filter(Boolean); // remove null/undefined if any
   const chosenActivity = activitiesConfig.find((a) => a.id === sessionInformation.sessionConfiguration.activityId);
+  const canStartSession = sessionInformation.selectedBoards.length > 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -88,8 +91,19 @@ export default function SessionPage() {
         onChange={(newState) => updateSession.mutate(newState)}
       />
 
-      {selectedDisplayBoards.length === 0 ? (
-        <div>No boards selected</div>
+      {sessionInformation.selectedBoards.length === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
+          <p className="text-3xl font-medium">No boards in session</p>
+          <p className="mb-4 text-xl text-gray-400">Connect to a board in the Devices page!</p>
+          <ToolkitButton to="/devices" variant="blue">
+            Go to Devices →
+          </ToolkitButton>
+        </div>
+      ) : selectedDisplayBoards.length === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
+          <p className="text-3xl font-medium">No boards selected</p>
+          <p className="text-xl text-gray-400">Choose a board from the panel above to get started.</p>
+        </div>
       ) : selectedDisplayBoards.length === 1 ? (
         <div className="flex justify-center">
           <div className="w-full max-w-3xl">
@@ -126,11 +140,13 @@ export default function SessionPage() {
         )}
 
         <button
-          className={`mr-2 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full p-0 transition-all ${
+          className={clsx(
+            "mr-2 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full p-0 transition-all",
             sessionInformation.hasOngoingSession
               ? "border-2 border-[#e50012] bg-[#e50012] text-white"
-              : "border-2 border-[#e50012] bg-white text-black"
-          }`}
+              : "border-2 border-[#e50012] bg-white text-black",
+            "disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-50",
+          )}
           onClick={async () => {
             if (!sessionInformation.hasOngoingSession) {
               await sessionChannelManager.start();
@@ -139,6 +155,7 @@ export default function SessionPage() {
             }
             await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
           }}
+          disabled={!canStartSession}
         >
           <span
             className={`block transition-all ${

@@ -49,12 +49,11 @@ export function SessionPanel({
       {/* Controls grid */}
       <div className="flex gap-6 rounded-xl bg-white/70 p-3 shadow-sm">
         {/* Board to Display (Multi-select) */}
-
         <div className="w-2/10">
-          <SingleColumn label="Board to Display">
+          <SingleColumn label="Board to Display" backgroundType="transparent">
             <MultiSelect
               options={boardDisplayOptions}
-              noOptionsMessage={"No boards available."}
+              noOptionsMessage={"No boards in session."}
               value={boardDisplaySelected}
               onChange={onBoardDisplayChange}
               placeholder="Choose a Board to diplay"
@@ -62,7 +61,7 @@ export function SessionPanel({
           </SingleColumn>
 
           {/* User (single select) */}
-          <SingleColumn label="User">
+          <SingleColumn label="User" backgroundType="transparent">
             <SelectPrimitive
               value={value.selectedUser ?? ""}
               onChange={(v) => update("selectedUser", v ?? "")}
@@ -73,30 +72,32 @@ export function SessionPanel({
 
         <div className="w-1/20">
           {/* LSL */}
-          <SingleColumn label="LSL" className={"items-center"}>
+          <SingleColumn label="LSL" backgroundType="transparent" direction="row">
             <InputPrimitive
               editable
               type="checkbox"
               className={"w-5"}
-              checked={value.lsl}
-              onChange={(e) => update("lsl", e.target.checked)}
+              checked={value.lslEnabled ?? false}
+              onChange={(e) => update("lslEnabled", e.target.checked)}
             />
+            <span className="font-semibold">{value.lslEnabled ? "ON" : "OFF"}</span>
           </SingleColumn>
 
           {/* TCP */}
-          <SingleColumn label="TCP">
+          <SingleColumn label="TCP" backgroundType="transparent" direction="row">
             <InputPrimitive
               editable
               type="checkbox"
               className={"w-5"}
-              checked={value.tcp}
-              onChange={(e) => update("tcp", e.target.checked)}
+              checked={value.tcpEnabled}
+              onChange={(e) => update("tcpEnabled", e.target.checked)}
             />
+            <span className="font-semibold">{value.tcpEnabled ? "ON" : "OFF"}</span>
           </SingleColumn>
         </div>
 
-        <div className={"w-2/10"}>
-          <SingleColumn label="Window Size (ms)">
+        <div className={"w-4/30"}>
+          <SingleColumn label="Window Size (ms)" backgroundType="transparent">
             <InputPrimitive
               editable
               type="number"
@@ -105,7 +106,7 @@ export function SessionPanel({
             />
           </SingleColumn>
 
-          <SingleColumn label="Window Slide size (ms)">
+          <SingleColumn label="Window Slide size (ms)" backgroundType="transparent">
             <InputPrimitive
               editable
               type="number"
@@ -115,8 +116,8 @@ export function SessionPanel({
           </SingleColumn>
         </div>
 
-        <div className={"w-2/10"}>
-          <SingleColumn label="Sampling Rate">
+        <div className={"w-3/20"}>
+          <SingleColumn label="Sampling Rate" backgroundType="transparent">
             <InputPrimitive
               editable
               type="number"
@@ -125,7 +126,7 @@ export function SessionPanel({
             />
           </SingleColumn>
 
-          <SingleColumn label="Window Slide size (ms):">
+          <SingleColumn label="Window Slide size (ms)" backgroundType="transparent">
             <SelectPrimitive
               value={value.interpolation}
               onChange={(v) => update("interpolation", v as InterpolationOption)}
@@ -135,13 +136,12 @@ export function SessionPanel({
         </div>
 
         {/* Save Location */}
-        <div className={"w-2/10"}>
-          <div className="mr-3 ml-auto">
-            <label className="mb-1 block text-xs font-semibold text-gray-700">Save Location</label>
+        <div className="flex-1">
+          <SingleColumn label="Save Location" backgroundType="transparent">
             <div className="flex h-10 items-center gap-2">
               <button
                 type="button"
-                className="h-10 rounded-md border border-gray-300 bg-gray-100 px-3 text-sm hover:bg-gray-200"
+                className="h-10 rounded-md border border-gray-300 px-3 text-sm hover:bg-gray-200"
                 onClick={pickDirectory}
               >
                 Choose…
@@ -150,13 +150,14 @@ export function SessionPanel({
                 {value.outputDirectory ?? "No folder selected"}
               </div>
             </div>
-          </div>
+          </SingleColumn>
 
-          <SingleColumn label="Activity">
+          <SingleColumn label="Activity" backgroundType="transparent" className="w-1/2">
             <SelectPrimitive
               value={value.activityId}
               onChange={(v) => update("activityId", v)}
               options={activitiesConfig.map((i) => ({ label: i.title, value: i.id }))}
+              noneOption="None"
             />
           </SingleColumn>
         </div>
