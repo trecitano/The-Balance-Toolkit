@@ -25,7 +25,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
   };
 
   return (
-    <div className="h-full flex flex-col justify-center gap-6 basis-120 overflow-y-hidden">
+    <div className="flex h-full basis-120 flex-col justify-center gap-6 overflow-y-hidden">
       {[0, 1].map((index) => {
         const device = connectedDevices[index];
 
@@ -35,7 +35,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
             key={`side-panel-${index}`}
           >
             {device ? (
-              <div className="flex flex-col p-5 h-full rounded-xl shadow-[var(--shadow-light)]">
+              <div className="flex h-full flex-col rounded-xl p-5 shadow-[var(--shadow-light)]">
                 <div className="mb-5 flex items-center gap-[var(--space-sm)]">
                   <img
                     src={bluetoothIcon}
@@ -57,7 +57,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                   </div>
                 </div>
 
-                <div className=" flex items-center justify-center">
+                <div className="flex items-center justify-center">
                   <div className="relative flex min-h-80 max-w-70 items-center justify-center">
                     <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-50" />
                     <img src={wbbIconBlue} className="z-10 h-4/5 w-4/5" />
@@ -74,8 +74,8 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                 </div>
               </div>
             ) : (
-              <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white shadow-sm hover:border-grey-400 hover:bg-gray-50 transition-colors">
-                <span className="text-gray-500 font-medium">Device slot available</span>
+              <div className="hover:border-grey-400 flex h-full items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white shadow-sm transition-colors hover:bg-gray-50">
+                <span className="font-medium text-gray-500">Device slot available</span>
               </div>
             )}
           </div>

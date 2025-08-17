@@ -65,8 +65,8 @@ export interface SessionInformation {
 
 export type SessionConfiguration = {
   selectedUser: string;
-  lsl: boolean;
-  tcp: boolean;
+  lslEnabled: boolean;
+  tcpEnabled: boolean;
   outputDirectory: string | null;
   windowSizeMs: number;
   windowSlideMs: number;

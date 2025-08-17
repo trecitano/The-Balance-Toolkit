@@ -6,8 +6,22 @@ interface InputPrimitiveProps extends React.InputHTMLAttributes<HTMLInputElement
   error?: string;
 }
 
-export const InputPrimitive: React.FC<InputPrimitiveProps> = ({ editable, error, className, ...props }) => {
+export const InputPrimitive: React.FC<InputPrimitiveProps> = ({ editable, error, className, type, ...props }) => {
   if (editable) {
+    if (type === "checkbox") {
+      return (
+        <input
+          type="checkbox"
+          className={clsx(
+            "h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-(length:--text-sm)",
+            error && "border-red-500 text-red-600 focus:ring-red-500",
+            className,
+          )}
+          {...props}
+        />
+      );
+    }
+
     return (
       <input
         className={clsx(

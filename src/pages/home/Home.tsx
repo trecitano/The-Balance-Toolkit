@@ -28,28 +28,28 @@ const Home: React.FC = () => {
       <Header />
 
       {/* Main Content */}
-      <div className=" mt-6 grid grid-flow-col grid-cols-3 grid-rows-3 gap-8">
+      <div className="mt-6 grid grid-flow-col grid-cols-3 grid-rows-3 gap-8">
         {/* Left Column */}
-        <div className="col-span-1 row-span-1 rounded-lg border-2 border-red-500 p-5 bg-white">
+        <div className="col-span-1 row-span-1 rounded-lg border-2 border-red-500 bg-white p-5">
           <LastSessionCard />
         </div>
-        <div className="col-span-1 row-span-2 rounded-lg border-2 border-red-500 p-5 bg-white">
+        <div className="col-span-1 row-span-2 rounded-lg border-2 border-red-500 bg-white p-5">
           <ActivitiesCard />
         </div>
 
         {/* Middle Column */}
-        <div className="row-span-3 rounded-lg border-2 border-red-500 p-5 bg-white">
+        <div className="row-span-3 rounded-lg border-2 border-red-500 bg-white p-5">
           <ConnectionCard />{" "}
         </div>
 
         {/* Right Column */}
-        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5 bg-white">
+        <div className="row-span-1 rounded-lg border-2 border-red-500 bg-white p-5">
           <HelpSupportCard />{" "}
         </div>
-        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5 bg-white">
+        <div className="row-span-1 rounded-lg border-2 border-red-500 bg-white p-5">
           <DocumentationCard />{" "}
         </div>
-        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5 bg-white">
+        <div className="row-span-1 rounded-lg border-2 border-red-500 bg-white p-5">
           <OtherResourcesCard />{" "}
         </div>
       </div>
