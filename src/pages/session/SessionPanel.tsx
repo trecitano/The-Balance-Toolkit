@@ -1,9 +1,11 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { MultiSelect } from "@/components/MultiSelect.tsx";
+import { CheckboxOption, MultiSelect } from "@/components/MultiSelect.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, SessionConfiguration } from "@/types.ts";
+import activitiesConfig from "@/config/activities.config.ts";
+import Heading from "@/components/PageTitle.tsx";
 
 export function SessionPanel({
   boardDisplaySelected,
@@ -15,7 +17,7 @@ export function SessionPanel({
 }: {
   boardDisplaySelected: string[];
   onBoardDisplayChange: (ids: string[]) => void;
-  boardDisplayOptions: { value: string; label: string };
+  boardDisplayOptions: CheckboxOption[];
   userOptions: string[];
   value: SessionConfiguration;
   onChange: (v: SessionConfiguration) => void;
@@ -39,10 +41,13 @@ export function SessionPanel({
   };
 
   return (
-    <div className="rounded-xl border bg-white/70 p-3 shadow-sm">
+    <>
+      <header className={"mb-6"}>
+        <Heading>Session</Heading>
+      </header>
+
       {/* Controls grid */}
-      <div className="flex gap-6">
-        <h1 className="pb-3 text-xl font-semibold">Session</h1>
+      <div className="flex gap-6 rounded-xl bg-white/70 p-3 shadow-sm">
         {/* Board to Display (Multi-select) */}
 
         <div className="w-2/10">
@@ -130,22 +135,32 @@ export function SessionPanel({
         </div>
 
         {/* Save Location */}
-        <div className="mr-3 ml-auto">
-          <label className="mb-1 block text-xs font-semibold text-gray-700">Save Location</label>
-          <div className="flex h-10 items-center gap-2">
-            <button
-              type="button"
-              className="h-10 rounded-md border border-gray-300 bg-gray-100 px-3 text-sm hover:bg-gray-200"
-              onClick={pickDirectory}
-            >
-              Choose…
-            </button>
-            <div className="min-w-0 flex-1 truncate text-sm text-gray-700">
-              {value.outputDirectory ?? "No folder selected"}
+        <div className={"w-2/10"}>
+          <div className="mr-3 ml-auto">
+            <label className="mb-1 block text-xs font-semibold text-gray-700">Save Location</label>
+            <div className="flex h-10 items-center gap-2">
+              <button
+                type="button"
+                className="h-10 rounded-md border border-gray-300 bg-gray-100 px-3 text-sm hover:bg-gray-200"
+                onClick={pickDirectory}
+              >
+                Choose…
+              </button>
+              <div className="min-w-0 flex-1 truncate text-sm text-gray-700">
+                {value.outputDirectory ?? "No folder selected"}
+              </div>
             </div>
           </div>
+
+          <SingleColumn label="Activity">
+            <SelectPrimitive
+              value={value.activityId}
+              onChange={(v) => update("activityId", v)}
+              options={activitiesConfig.map((i) => ({ label: i.title, value: i.id }))}
+            />
+          </SingleColumn>
         </div>
       </div>
-    </div>
+    </>
   );
 }

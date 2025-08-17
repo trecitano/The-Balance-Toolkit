@@ -87,9 +87,11 @@ pub struct ConnectionManager {
     session_settings: SessionConfiguration,
     connections: HashMap<MacAddress, Sender<BoardAction>>,
     selected_boards: HashSet<MacAddress>,
-    is_recording: bool,
+    has_ongoing_session: bool,
 }
 
+// TODO The activity_id for now is just the string ID in the frontend, since the activities are fully implemented
+// in the frontend. In near future, they should be implemented in the backend.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionConfiguration {
@@ -100,7 +102,8 @@ pub struct SessionConfiguration {
     pub window_size_ms: u64,
     pub window_slide_ms: u64,
     pub sampling_rate: u64,
-    pub interpolation: InterpolationSetting
+    pub interpolation: InterpolationSetting,
+    pub activity_id: Option<String>,
 }
 
 impl ConnectionManager {
@@ -115,7 +118,8 @@ impl ConnectionManager {
             window_size_ms: general_settings.processing_settings.window_size_ms,
             window_slide_ms: general_settings.processing_settings.window_slide_ms,
             sampling_rate: general_settings.processing_settings.sampling_rate,
-            interpolation: general_settings.processing_settings.interpolation.clone()
+            interpolation: general_settings.processing_settings.interpolation.clone(),
+            activity_id: None
         };
 
         Ok(Self {
@@ -127,7 +131,7 @@ impl ConnectionManager {
             session_settings,
             connections: HashMap::new(),
             selected_boards: HashSet::new(),
-            is_recording: false,
+            has_ongoing_session: false,
         })
     }
 
@@ -171,8 +175,6 @@ impl ConnectionManager {
                 }
                 ToolkitCommand::SelectBoardForSession { mac_address } => {
                     self.selected_boards.insert(mac_address);
-                    println!("Connections: {:?}",self.connections);
-                    println!("Selected boards: {:?}",self.selected_boards);
                 }
                 ToolkitCommand::UnselectBoardForSession { mac_address } => {
                     self.selected_boards.remove(&mac_address);
@@ -198,6 +200,7 @@ impl ConnectionManager {
                     let session_information = SessionInformation {
                         available_users: UserFileSystem::get_users()?.into_iter().map(|user| user.name).collect(),
                         selected_boards,
+                        has_ongoing_session: self.has_ongoing_session,
                         session_configuration: SessionConfiguration {
                             selected_user: self.session_settings.selected_user.clone(),
                             lsl_enabled: self.session_settings.lsl_enabled,
@@ -207,6 +210,7 @@ impl ConnectionManager {
                             window_slide_ms: self.session_settings.window_slide_ms,
                             sampling_rate: self.session_settings.sampling_rate,
                             interpolation: self.session_settings.interpolation.clone(),
+                            activity_id: self.session_settings.activity_id.clone()
                         }
                     };
                     response.send(session_information).unwrap();
@@ -220,10 +224,12 @@ impl ConnectionManager {
                         window_size_ms: session_configuration.window_size_ms,
                         window_slide_ms: session_configuration.window_slide_ms,
                         sampling_rate: session_configuration.sampling_rate,
-                        interpolation: session_configuration.interpolation
+                        interpolation: session_configuration.interpolation,
+                        activity_id: session_configuration.activity_id
                     };
                 }
                 ToolkitCommand::StartSession { frontend_channel } => {
+                    self.has_ongoing_session = true;
                     start_session(frontend_channel,
                                   &self.general_settings,
                                   &self.session_settings,
@@ -241,6 +247,7 @@ impl ConnectionManager {
                             None => ()
                         }
                     }
+                    self.has_ongoing_session = false;
                 }
 
 

@@ -143,22 +143,14 @@
 }
 
 .user-details-panel {
-  flex-grow: 1;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-light);
-  padding: 1vw 3vw;
-  display: flex;
-  flex-direction: column;
-  height: calc(100% - 2rem);
-  margin-bottom: 1vw;
 }
 
 .user-display {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  width: 100%;
 }
 
 .user-display-header {
@@ -192,9 +184,6 @@
   margin-top: var(--space-sm);
   width: 100%;
   align-content: start;
-  flex: 1;
-  height: calc(100% - 70px);
-  min-height: 0;
 }
 
 .form-field {

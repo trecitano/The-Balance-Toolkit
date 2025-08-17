@@ -23,33 +23,33 @@ interface StatusIndicator {
 
 const Home: React.FC = () => {
   return (
-    <div className="bg-gray-50">
+    <div className="h-full px-20">
       {/* Header */}
       <Header />
 
       {/* Main Content */}
-      <div className="mx-auto mt-6 grid max-w-7xl grid-flow-col grid-cols-3 grid-rows-3 gap-6">
+      <div className=" mt-6 grid grid-flow-col grid-cols-3 grid-rows-3 gap-8">
         {/* Left Column */}
-        <div className="col-span-1 row-span-1 rounded-lg border-2 border-red-500 p-5">
+        <div className="col-span-1 row-span-1 rounded-lg border-2 border-red-500 p-5 bg-white">
           <LastSessionCard />
         </div>
-        <div className="col-span-1 row-span-2 rounded-lg border-2 border-red-500 p-5">
+        <div className="col-span-1 row-span-2 rounded-lg border-2 border-red-500 p-5 bg-white">
           <ActivitiesCard />
         </div>
 
         {/* Middle Column */}
-        <div className="row-span-3 rounded-lg border-2 border-red-500 p-5">
+        <div className="row-span-3 rounded-lg border-2 border-red-500 p-5 bg-white">
           <ConnectionCard />{" "}
         </div>
 
         {/* Right Column */}
-        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5">
+        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5 bg-white">
           <HelpSupportCard />{" "}
         </div>
-        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5">
+        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5 bg-white">
           <DocumentationCard />{" "}
         </div>
-        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5">
+        <div className="row-span-1 rounded-lg border-2 border-red-500 p-5 bg-white">
           <OtherResourcesCard />{" "}
         </div>
       </div>
@@ -59,7 +59,7 @@ const Home: React.FC = () => {
 
 const Header: React.FC = () => {
   return (
-    <div className="mx-auto max-w-7xl bg-red-600 px-6 py-6 text-white">
+    <div className="bg-red-600 px-6 py-6 text-white">
       <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
         {/* Left: Greeting */}
         <div className="mb-auto md:flex-1">

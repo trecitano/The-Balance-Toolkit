@@ -1,11 +1,13 @@
-import { useRef, useState } from "react";
-import { useSessionStream } from "@/hooks/useSessionStream";
+import { useState } from "react";
 import BoardPanel from "./BoardPanel";
 import { SessionPanel } from "./SessionPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
 import { SessionConfiguration } from "@/types.ts";
+import { sessionChannelManager } from "@/services/SessionChannelManager.tsx";
+import ActivityTimeline from "@/pages/activities/ActivityTimeline.tsx";
+import activitiesConfig from "@/config/activities.config.ts";
+import { CheckboxOption } from "@/components/MultiSelect.tsx";
 
 const SESSION_QUERY_KEY = ["session_key"];
 export const SessionQuery = {
@@ -19,18 +21,13 @@ export const SessionQuery = {
 export default function SessionPage() {
   const { data, isLoading, error } = useQuery(SessionQuery);
   const queryClient = useQueryClient();
-  const clearLiveData = useSessionDataStore((s) => s.actions.clear);
   const [boardDisplaySelected, setBoardDisplaySelected] = useState<string[]>([]);
-  const isRecording = useRef(false);
 
   const { sessionInformation } = data ?? { sessionInformation: null };
 
   const sessionConfiguration: SessionConfiguration | null = sessionInformation
     ? sessionInformation.sessionConfiguration
     : null;
-
-  // Start/stop streaming when recording changes
-  useSessionStream(isRecording.current);
 
   const updateSession = useMutation({
     mutationFn: (newState: SessionConfiguration) => commands.session.updateSession(newState),
@@ -60,26 +57,25 @@ export default function SessionPage() {
   });
 
   if (isLoading) {
-    return <div className="inside-page"></div>;
+    return <div className=""></div>;
   }
 
   if (error) {
     return (
-      <div className="main-content">
-        <div className="flex items-center justify-center p-8">
-          <p className="text-red-600">Failed to Session page: {error.message}</p>
-        </div>
+      <div className="flex items-center justify-center p-8">
+        <p className="text-red-600">Failed to Session page: {error.message}</p>
       </div>
     );
   }
 
-  const boardDisplayOptions = sessionInformation.selectedBoards.map((board) => ({
+  const boardDisplayOptions: CheckboxOption[] = sessionInformation.selectedBoards.map((board) => ({
     value: board.macAddress,
     label: board.name,
   }));
   const selectedDisplayBoards = boardDisplaySelected
     .map((mac) => sessionInformation.selectedBoards.find((b) => b.macAddress === mac))
     .filter(Boolean); // remove null/undefined if any
+  const chosenActivity = activitiesConfig.find((a) => a.id === sessionInformation.sessionConfiguration.activityId);
 
   return (
     <div className="flex h-full flex-col">
@@ -112,21 +108,43 @@ export default function SessionPage() {
           ))}
         </div>
       )}
+
+      {/*  Timeline Panel                           */}
       <div className="m-0 mt-auto flex w-full items-center justify-between rounded-[12px] bg-gray-100 px-0 py-[5px] shadow-sm">
-        <div className="flex w-93/100 flex-col gap-2">
-          <canvas className="h-[20px] rounded-lg bg-white shadow-[0_1px_4px_rgba(0,0,0,0.03)]" />
-          <canvas className="h-[20px] rounded-lg bg-white shadow-[0_1px_4px_rgba(0,0,0,0.03)]" />
-        </div>
+        {chosenActivity ? (
+          <ActivityTimeline
+            blocks={chosenActivity.defaultBlocks}
+            onChange={() => {}}
+            onBlockSelect={(block) => {}}
+            activityName={chosenActivity.title}
+          />
+        ) : (
+          <div className="flex w-93/100 flex-col gap-2 pl-5">
+            <canvas className="h-[20px] rounded-lg bg-white shadow-[0_1px_4px_rgba(0,0,0,0.03)]" />
+            <canvas className="h-[20px] rounded-lg bg-white shadow-[0_1px_4px_rgba(0,0,0,0.03)]" />
+          </div>
+        )}
+
         <button
           className={`mr-2 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full p-0 transition-all ${
-            isRecording
+            sessionInformation.hasOngoingSession
               ? "border-2 border-[#e50012] bg-[#e50012] text-white"
               : "border-2 border-[#e50012] bg-white text-black"
           }`}
+          onClick={async () => {
+            if (!sessionInformation.hasOngoingSession) {
+              await sessionChannelManager.start();
+            } else {
+              await sessionChannelManager.stop();
+            }
+            await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+          }}
         >
           <span
             className={`block transition-all ${
-              isRecording ? "h-5 w-5 rounded-[3px] bg-white" : "h-[22px] w-[22px] rounded-full bg-[#e50012]"
+              sessionInformation.hasOngoingSession
+                ? "h-5 w-5 rounded-[3px] bg-white"
+                : "h-[22px] w-[22px] rounded-full bg-[#e50012]"
             }`}
           />
         </button>

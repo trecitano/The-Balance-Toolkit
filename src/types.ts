@@ -60,6 +60,7 @@ export interface SessionInformation {
   availableUsers: string[];
   selectedBoards: SelectedBoard[];
   sessionConfiguration: SessionConfiguration;
+  hasOngoingSession: boolean;
 }
 
 export type SessionConfiguration = {
@@ -71,6 +72,7 @@ export type SessionConfiguration = {
   windowSlideMs: number;
   samplingRate: number;
   interpolation: string;
+  activityId: string;
 };
 
 export interface SelectedBoard {

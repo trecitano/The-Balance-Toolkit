@@ -20,25 +20,9 @@ export function BoardPanel({ boardName, macAddress }: { boardName: string; macAd
 
       <div className="grid grid-cols-12 gap-3">
         {/* Top row: Board drawing (SVG) left, metrics right */}
-        <div className="col-span-7">
+        <div className="col-span-6">
           <div className="rounded border p-2">
             <BalanceBoardWithCoPOverlay boardId="Board One" src={wbbTopdown} />
-          </div>
-        </div>
-
-        <div className="col-span-5">
-          <div className="space-y-3 rounded border p-3">
-            <div>
-              <div className="text-sm text-gray-500">Stability Index</div>
-              <div className="text-2xl font-semibold">{"—"}</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-500">User</div>
-              <div className="text-base">
-                {/* If you send userId in processed events */}
-                TODO User Name!
-              </div>
-            </div>
           </div>
         </div>
 

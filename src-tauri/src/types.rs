@@ -92,6 +92,7 @@ pub struct SessionInformation {
     pub available_users: Vec<String>,
     pub selected_boards: Vec<SelectedBoard>,
     pub session_configuration: SessionConfiguration,
+    pub has_ongoing_session: bool,
 }
 
 

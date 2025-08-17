@@ -82,8 +82,8 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   };
 
   if (!isOpen) return null;
-  if (isLoading) return <div className="inside-page">Loading settings...</div>;
-  if (error) return <div className="inside-page">Failed to load settings.</div>;
+  if (isLoading) return <div className="">Loading settings...</div>;
+  if (error) return <div className="">Failed to load settings.</div>;
   if (!tempSettings) return null;
 
   return (

@@ -241,17 +241,17 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
   return (
     <div
       ref={cardRef}
-      className={`activity-card${maximized && showMaximizedClass ? "maximized" : ""}`}
+      className={`activity-card ${maximized && showMaximizedClass ? "maximized" : ""}`}
       style={maximized ? maxStyle : undefined}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
       {!maximized && (
-        <div className="activity-image-container">
-          <img src={currentImageSrc} alt={`${activity.title} illustration`} className="activity-image" />
+        <div className="mb-5 flex max-h-65 justify-center rounded-[var(--radius-md)] bg-[var(--bg-light)] object-contain shadow-[var(--shadow-light)]">
+          <img src={currentImageSrc} alt={`${activity.title} illustration`} />
         </div>
       )}
-      <div className="activity-details" style={{ marginLeft: 0 }}>
+      <div className="flex flex-col">
         {/* Board tag above the title */}
         <div
           className="activity-board-tag"

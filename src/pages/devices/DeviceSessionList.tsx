@@ -2,14 +2,13 @@ import { Device } from "@/types";
 import bluetoothIcon from "@/assets/bluetooth-connected-icon.svg";
 import rippleIcon from "@/assets/ripple-icon.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
-import temperatureIcon from "@/assets/temperature.svg";
-import "./DeviceSessionList.css";
 import battery0Icon from "@/assets/battery-0-icon.svg";
 import battery25Icon from "@/assets/battery-25-icon.svg";
 import battery50Icon from "@/assets/battery-50-icon.svg";
 import battery75Icon from "@/assets/battery-75-icon.svg";
 import battery100Icon from "@/assets/battery-100-icon.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
+import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
@@ -26,49 +25,46 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
   };
 
   return (
-    <div className="static-side-panel">
+    <div className="h-full flex flex-col justify-center gap-6 basis-120 overflow-y-hidden">
       {[0, 1].map((index) => {
         const device = connectedDevices[index];
 
         return (
-          <div className="side-panel-square" key={`side-panel-${index}`}>
+          <div
+            className="box-border flex w-full flex-1 flex-col justify-between rounded-xl bg-[var(--bg-secondary)]"
+            key={`side-panel-${index}`}
+          >
             {device ? (
-              <>
-                <div className="side-panel-header">
-                  <img src={bluetoothIcon} alt="Bluetooth" className="side-panel-bt-icon" />
-                  <div className="side-panel-header-info">
-                    <div className="side-panel-device-name-container">
-                      <span className="side-panel-device-name-text" title={device.name}>
+              <div className="flex flex-col p-5 h-full rounded-xl shadow-[var(--shadow-light)]">
+                <div className="mb-5 flex items-center gap-[var(--space-sm)]">
+                  <img
+                    src={bluetoothIcon}
+                    alt="Bluetooth"
+                    className="h-[var(--icon-size-md)] w-[var(--icon-size-md)]"
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col items-start">
+                    <div className="flex max-w-full min-w-0 items-center gap-[0.4vw]">
+                      <span
+                        className="max-w-[20vw] min-w-0 shrink overflow-hidden font-medium text-ellipsis whitespace-nowrap text-[var(--text-lg)]"
+                        title={device.name}
+                      >
                         {device.name}
                       </span>
                     </div>
-                    <span className="side-panel-device-mac">{device.macAddress}</span>
+                    <span className="text-[var(--text-light)] text-[var(--text-md)]">
+                      {convertNumberToMacAddress(device.macAddress)}
+                    </span>
                   </div>
                 </div>
 
-                <div className="side-panel-icon-container">
-                  <img src={rippleIcon} alt="Ripple effect" className="side-panel-ripple-icon" />
-                  <img src={wbbIconBlue} alt={`${device.name} icon`} className="side-panel-device-image" />
-                </div>
-
-                <div className="side-panel-info-squares">
-                  <div className="info-square">
-                    <span className="info-square-value">{device.battery}%</span>
-                    <div className="info-square-label">
-                      <img src={getBatteryIcon(device.battery ?? 0)} alt="Battery" />
-                      <span>Battery</span>
-                    </div>
-                  </div>
-                  <div className="info-square">
-                    <span className="info-square-value">{device.temperature}°C</span>
-                    <div className="info-square-label">
-                      <img src={temperatureIcon} alt="Temperature" />
-                      <span>Temp</span>
-                    </div>
+                <div className=" flex items-center justify-center">
+                  <div className="relative flex min-h-80 max-w-70 items-center justify-center">
+                    <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-50" />
+                    <img src={wbbIconBlue} className="z-10 h-4/5 w-4/5" />
                   </div>
                 </div>
 
-                <div className="side-panel-actions">
+                <div className="mt-auto flex justify-end gap-(--space-sm)">
                   <ToolkitButton type={"button"} variant="red" onClick={() => handleUnselectDevice(device.macAddress)}>
                     Disconnect
                   </ToolkitButton>
@@ -76,10 +72,10 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                     Go to Session →
                   </ToolkitButton>
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="side-panel-empty">
-                <span>Device slot available</span>
+              <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white shadow-sm hover:border-grey-400 hover:bg-gray-50 transition-colors">
+                <span className="text-gray-500 font-medium">Device slot available</span>
               </div>
             )}
           </div>
