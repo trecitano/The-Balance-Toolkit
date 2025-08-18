@@ -2,15 +2,19 @@ import React, { useState, useEffect, useRef } from "react";
 import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
-import { ActivityConfig, getDefaultBlocksByTitle } from "@/config/activities.config.ts";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
+import {Activity} from "@/types.ts";
+import {getActivityAssetFullPath} from "@/utils/activityImages.ts";
+import {useMutation, useQueryClient} from "@tanstack/react-query";
+import {commands} from "@/utils/requests.ts";
+import {ACTIVITIES_QUERY_KEY} from "@/pages/activities/Activities.tsx";
 
 /**
  * ActivityCard component displays an activity with its details
  * Supports two modes: compact (in list) and maximized (detailed view)
  */
 interface ActivityCardProps {
-  activity: ActivityConfig;
+  activity: Activity;
   maximized?: boolean;
   onMaximize?: () => void;
   onMinimize?: () => void;
@@ -36,6 +40,28 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
   const [newActionName, setNewActionName] = useState("");
   const [newActionDuration, setNewActionDuration] = useState(10);
   const cardRef = useRef<HTMLDivElement>(null);
+
+  const queryClient = useQueryClient();
+  const saveMutation = useMutation({
+    mutationFn: (updated: Activity) =>
+      commands.activity.updateActivity(updated),
+    onSuccess: (_, updated) => {
+      // update cache so UI reflects saved state
+      queryClient.setQueryData(
+        ACTIVITIES_QUERY_KEY,
+        (old:
+           | { activities: Activity[] }
+           | undefined): { activities: Activity[] } | undefined => {
+          if (!old) return old;
+          return {
+            activities: old.activities.map((a) =>
+              a.id === updated.id ? updated : a
+            ),
+          };
+        }
+      );
+    },
+  });
 
   /**
    * Loads the appropriate image based on the current action label
@@ -193,8 +219,8 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
   /**
    * Gets the default action blocks for an activity
    */
-  function getDefaultBlocks(activity: ActivityConfig) {
-    return getDefaultBlocksByTitle(activity.title);
+  function getDefaultBlocks(activity: Activity) {
+    return activity.timelineBlocks;
   }
 
   /**
@@ -248,7 +274,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
     >
       {!maximized && (
         <div className="mb-5 flex max-h-65 justify-center rounded-[var(--radius-md)] bg-[var(--bg-light)] object-contain shadow-[var(--shadow-light)]">
-          <img src={currentImageSrc} alt={`${activity.title} illustration`} />
+          <img src={getActivityAssetFullPath(activity.id, currentImageSrc)} alt={`${activity.title} illustration`} />
         </div>
       )}
       <div className="flex flex-col">
@@ -329,10 +355,10 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
               }}
             >
               <ActivityTimeline
+                activityId={activity.id}
                 blocks={timelineBlocks}
                 onChange={setTimelineBlocks}
                 onBlockSelect={(block) => setCurrentActionLabel(block.label)}
-                activityName={activity.id}
               />
               {/* Activity settings panel below timeline */}
               <div className="activity-details-panel">
@@ -379,17 +405,29 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
                 type="button"
                 variant={"blue"}
                 onClick={() => {
-                  /* Save logic placeholder */
+                  const updated: Activity = {
+                    ...activity,
+                    timelineBlocks: timelineBlocks,
+                  };
+                  saveMutation.mutate(updated, {
+                    onSuccess: () => onMinimize?.(),
+                  });
                 }}
+                disabled={saveMutation.isPending}
               >
-                Save
+                {saveMutation.isPending ? "Saving..." : "Save"}
               </ToolkitButton>
-              <ToolkitButton type="button" onClick={() => setTimelineBlocks(defaultBlocksRef.current)} variant={"grey"}>
+
+              <ToolkitButton
+                type="button"
+                onClick={() => setTimelineBlocks(defaultBlocksRef.current)}
+                variant={"grey"}
+              >
                 Reset to Default
               </ToolkitButton>
+
               <ToolkitButton type="button" onClick={onMinimize} variant={"grey"}>
-                {" "}
-                Close{" "}
+                Close
               </ToolkitButton>
             </>
           )}

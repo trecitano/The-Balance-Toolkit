@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::de::DeserializeOwned;
+use crate::actors::state::activities::{Activity, ActivityState};
 
 #[derive(Serialize)]
 pub struct FileMetadata {
@@ -125,6 +126,26 @@ impl SettingsFileSystem {
     }
 }
 
+const ACTIVITIES_FILE: &str = "activities.json";
+pub struct ActivitiesFileSystem;
+impl ActivitiesFileSystem {
+    pub fn get_or_create_default_activities() -> Result<Vec<Activity>> {
+        let activities: Vec<Activity> = FileStore::load_or_else(ACTIVITIES_FILE, ||
+            ActivityState::create_default_activities())?;
+        Ok(activities)
+    }
+
+    pub fn save_activities(activities: &Vec<Activity>) -> Result<()> {
+        let old_activities: Vec<Activity> = FileStore::load(ACTIVITIES_FILE)?;
+
+        if old_activities == *activities {
+            return Ok(());
+        }
+
+        FileStore::save(ACTIVITIES_FILE, &activities)
+    }
+}
+
 
 // PRIMITIVES
 
@@ -149,6 +170,36 @@ impl FileStore {
         let data = match serde_json::from_reader(reader) {
             Ok(data) => data,
             Err(e) if e.is_eof() => T::default(),
+            Err(e) => return Err(e.into()),
+        };
+
+        Ok(data)
+    }
+
+    pub fn load_or_else<T, F>(file_name: &str, default_fn: F) -> Result<T>
+    where
+        T: Serialize + DeserializeOwned,
+        F: FnOnce() -> T,
+    {
+        let file_path = app_dir().join(file_name);
+
+        if !file_path.exists() {
+            let defaults = default_fn();
+            FileStore::save(file_name, &defaults)?;
+            return Ok(defaults);
+        }
+
+        let file = File::open(&file_path)
+            .with_context(|| format!("Failed to open file: {:?}", file_path))?;
+        let reader = BufReader::new(file);
+
+        let data = match serde_json::from_reader(reader) {
+            Ok(data) => data,
+            Err(e) if e.is_eof() => {
+                let defaults = default_fn();
+                FileStore::save(file_name, &defaults)?;
+                defaults
+            }
             Err(e) => return Err(e.into()),
         };
 

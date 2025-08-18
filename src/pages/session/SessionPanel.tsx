@@ -4,13 +4,13 @@ import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, SessionConfiguration } from "@/types.ts";
-import activitiesConfig from "@/config/activities.config.ts";
 import Heading from "@/components/PageTitle.tsx";
 
 export function SessionPanel({
   boardDisplaySelected,
   onBoardDisplayChange,
   boardDisplayOptions,
+  activityOptions,
   userOptions,
   value,
   onChange,
@@ -18,6 +18,7 @@ export function SessionPanel({
   boardDisplaySelected: string[];
   onBoardDisplayChange: (ids: string[]) => void;
   boardDisplayOptions: CheckboxOption[];
+  activityOptions: CheckboxOption[];
   userOptions: string[];
   value: SessionConfiguration;
   onChange: (v: SessionConfiguration) => void;
@@ -156,7 +157,7 @@ export function SessionPanel({
             <SelectPrimitive
               value={value.activityId}
               onChange={(v) => update("activityId", v)}
-              options={activitiesConfig.map((i) => ({ label: i.title, value: i.id }))}
+              options={activityOptions}
               noneOption="None"
             />
           </SingleColumn>
