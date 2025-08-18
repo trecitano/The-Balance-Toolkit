@@ -60,5 +60,7 @@ export const commands = {
     getActivities: async () => invoke<Activity[]>("activity_get_activities"),
     getActivity: async (activityId: string) => invoke<Activity>("activity_get_activity", { activityId: activityId }),
     updateActivity: async (activity: Activity) => invoke<void>("activity_update_activity", { activity: activity }),
+    resetActivity: async (activityId: string) =>
+      invoke<Activity>("activity_reset_activity_to_default", { activityId: activityId }),
   },
 };

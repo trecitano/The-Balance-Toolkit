@@ -70,6 +70,10 @@ pub enum ToolkitCommand {
         activity: Activity,
         response: Option<oneshot::Sender<()>>,
     },
+    ResetActivityToDefault {
+        activity_id: String,
+        response: oneshot::Sender<Activity>,
+    },
 
     SessionInformation {
         response: oneshot::Sender<SessionInformation>,
@@ -214,6 +218,10 @@ impl ConnectionManager {
                     if let Some(response) = response {
                         response.send(()).unwrap();
                     }
+                }
+                ToolkitCommand::ResetActivityToDefault { activity_id, response } => {
+                    let activity = self.activity_state.reset_activity(&activity_id)?;
+                    response.send(activity).unwrap();
                 }
 
                 ToolkitCommand::SessionInformation { response } => {
