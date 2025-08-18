@@ -67,7 +67,8 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             session_update_session_configuration,
             activity_get_activities,
             activity_get_activity,
-            activity_update_activity
+            activity_update_activity,
+            activity_reset_activity_to_default,
         ])
         .manage(AppState { manager_tx })
         .run(tauri::generate_context!())
@@ -475,4 +476,17 @@ async fn activity_update_activity(activity: Activity, state: State<'_, AppState>
 
     println!("<< activity_update_activity.");
     Ok(())
+}
+
+#[tauri::command(async)]
+async fn activity_reset_activity_to_default(activity_id: String, state: State<'_, AppState>) -> Result<Activity, String> {
+    println!(">> activity_reset_activity_to_default");
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::ResetActivityToDefault { activity_id, response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let result = response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< activity_reset_activity_to_default.");
+    Ok(result)
 }

@@ -54,6 +54,14 @@ impl ActivityState {
         Ok(())
     }
 
+    pub fn reset_activity(&mut self, id: &str) -> Result<Activity> {
+        let default_activities = Self::create_default_activities();
+        let default_activity = default_activities.into_iter().find(|a| a.id == id.to_string()).unwrap();
+        let index = self.activities.iter().position(|a| a.id == id.to_string()).unwrap();
+        self.activities[index] = default_activity.clone();
+        Ok(default_activity)
+    }
+
     pub fn create_default_activities() -> Vec<Activity> {
         vec![
             // Quiet Standing

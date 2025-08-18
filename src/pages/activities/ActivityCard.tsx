@@ -57,6 +57,21 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
       );
     },
   });
+  const resetMutation = useMutation({
+    mutationFn: (activityId: string) => commands.activity.resetActivity(activityId),
+    onSuccess: (activity) => {
+      // update cache so UI reflects saved state
+      queryClient.setQueryData(
+        ACTIVITIES_QUERY_KEY,
+        (old: { activities: Activity[] } | undefined): { activities: Activity[] } | undefined => {
+          if (!old) return old;
+          return {
+            activities: old.activities.map((a) => (a.id === activity.id ? activity : a)),
+          };
+        },
+      );
+    },
+  });
 
   /**
    * Loads the appropriate image based on the current action label
@@ -413,7 +428,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
                 {saveMutation.isPending ? "Saving..." : "Save"}
               </ToolkitButton>
 
-              <ToolkitButton type="button" onClick={() => setTimelineBlocks(defaultBlocksRef.current)} variant={"grey"}>
+              <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} variant={"grey"}>
                 Reset to Default
               </ToolkitButton>
 
