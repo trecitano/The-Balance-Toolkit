@@ -1,4 +1,4 @@
-import {useRef, useState} from "react";
+import { useState } from "react";
 import BoardPanel from "./BoardPanel";
 import { SessionPanel } from "./SessionPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -6,7 +6,6 @@ import { commands } from "@/utils/requests.ts";
 import { SessionConfiguration } from "@/types.ts";
 import { sessionChannelManager } from "@/services/SessionChannelManager.tsx";
 import ActivityTimeline from "@/pages/activities/ActivityTimeline.tsx";
-import activitiesConfig from "@/config/activities.config.ts";
 import { CheckboxOption } from "@/components/MultiSelect.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import clsx from "clsx";
@@ -16,8 +15,12 @@ const SESSION_QUERY_KEY = ["session_key"];
 export const SessionQuery = {
   queryKey: SESSION_QUERY_KEY,
   queryFn: async () => {
-    const sessionInformation = await commands.session.sessionInfo();
-    return { sessionInformation };
+    const [sessionInformation, activities] = await Promise.all([
+      commands.session.sessionInfo(),
+      commands.activity.getActivities(),
+    ]);
+
+    return { sessionInformation, activities };
   },
 };
 
@@ -26,7 +29,7 @@ export default function SessionPage() {
   const queryClient = useQueryClient();
   const [boardDisplaySelected, setBoardDisplaySelected] = useState<string[]>([]);
 
-  const { sessionInformation } = data ?? { sessionInformation: null };
+  const { sessionInformation, activities } = data ?? { sessionInformation: {}, activities: [] };
 
   const sessionConfiguration: SessionConfiguration | null = sessionInformation
     ? sessionInformation.sessionConfiguration
@@ -77,10 +80,13 @@ export default function SessionPage() {
   }));
   const selectedDisplayBoards = boardDisplaySelected
     .map((mac) => sessionInformation.selectedBoards.find((b) => b.macAddress === mac))
-    .filter(Boolean); // remove null/undefined if any
-  const chosenActivity = activitiesConfig.find((a) => a.id === sessionInformation.sessionConfiguration.activityId);
-  const chosenActivityDuration = chosenActivity?.defaultBlocks?.reduce((acc, block) => acc + block.duration, 0);
+    .filter(Boolean);
+  const activityOptions = activities.map((i) => ({ label: i.title, value: i.id }));
+  const chosenActivity = activities.find((a) => a.id === sessionInformation.sessionConfiguration.activityId);
+  const chosenActivityDuration = chosenActivity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0);
   const canStartSession = sessionInformation.selectedBoards.length > 0;
+
+  console.log("Duration is ", chosenActivityDuration);
 
   return (
     <div className="flex h-full flex-col">
@@ -88,6 +94,7 @@ export default function SessionPage() {
         boardDisplaySelected={boardDisplaySelected}
         onBoardDisplayChange={setBoardDisplaySelected}
         boardDisplayOptions={boardDisplayOptions}
+        activityOptions={activityOptions}
         userOptions={sessionInformation.availableUsers}
         value={sessionConfiguration}
         onChange={(newState) => updateSession.mutate(newState)}
@@ -128,7 +135,7 @@ export default function SessionPage() {
         {chosenActivity ? (
           <div className={"relative w-9/10 p-5"}>
             <ActivityTimeline
-              blocks={chosenActivity.defaultBlocks}
+              blocks={chosenActivity.timelineBlocks}
               onChange={() => {}}
               onBlockSelect={(block) => {}}
               activityName={chosenActivity.id}
@@ -141,7 +148,7 @@ export default function SessionPage() {
                 }
               }}
               className={clsx(
-                "absolute top-0 bottom-0 z-10 h-full w-[2px] bg-[var(--red)] transition-transform",
+                "absolute top-0 bottom-0 z-10 h-full w-[2px] bg-[var(--red)]",
                 !sessionInformation.hasOngoingSession && "hidden"
               )}
             >

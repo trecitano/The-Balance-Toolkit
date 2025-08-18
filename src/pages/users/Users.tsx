@@ -28,10 +28,9 @@ export default function Users() {
 
   const hasInitialScroll = useRef(false);
   const userListRef = useRef<HTMLUListElement>(null);
-  const queryClient = useQueryClient();
-
   const fixedColors = ["#e55d82", "#409edb", "#e8bd00", "#894c2f", "#dd2020", "#2a2a2a", "#989898", "#9bbc0f"];
 
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: USERS_QUERY_KEY,
     queryFn: async () => {

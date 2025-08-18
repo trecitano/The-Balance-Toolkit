@@ -12,7 +12,10 @@ import fileIcon from "@/assets/file-icon.svg";
 import userIcon from "@/assets/user-icon.svg";
 import wbbIconLine from "@/assets/wbb-icon-line.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import activitiesConfig from "@/config/activities.config.ts";
+import {useQuery} from "@tanstack/react-query";
+import {commands} from "@/utils/requests.ts";
+import {Activity} from "@/types.ts";
+import {getActivityAssetFullPath} from "@/utils/activityImages.ts";
 
 interface StatusIndicator {
   value: string;
@@ -21,7 +24,28 @@ interface StatusIndicator {
   icon: React.ComponentType<{ className?: string }>;
 }
 
+const HOME_QUERY_KEY = ["home"];
+
 const Home: React.FC = () => {
+  const { data, isLoading, error } = useQuery({
+    queryKey: HOME_QUERY_KEY,
+    queryFn: async () => {
+      const activities = await commands.activity.getActivities();
+      return { activities };
+    },
+  });
+
+
+  if (isLoading) {
+    return <div></div>;
+  }
+
+  if (error) {
+    return <div></div>;
+  }
+
+  const activities = data?.activities ?? []
+
   return (
     <div className="h-full px-20">
       {/* Header */}
@@ -34,7 +58,7 @@ const Home: React.FC = () => {
           <LastSessionCard />
         </div>
         <div className="col-span-1 row-span-2 rounded-lg border-2 border-red-500 bg-white p-5">
-          <ActivitiesCard />
+          <ActivitiesCard activities={activities} />
         </div>
 
         {/* Middle Column */}
@@ -149,12 +173,12 @@ const LastSessionCard: React.FC = () => {
   );
 };
 
-const ActivitiesCard: React.FC = () => {
+const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({activities}) => {
   const [selected, setSelected] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
 
   const scrollToActivity = (index: number) => {
-    const el = listRef.current?.querySelector(`[data-activityid="${activitiesConfig[index].id}"]`);
+    const el = listRef.current?.querySelector(`[data-activityid="${activities[index].id}"]`);
     el?.scrollIntoView({
       behavior: "smooth",
       inline: "center",
@@ -173,7 +197,7 @@ const ActivitiesCard: React.FC = () => {
 
       <div className="mt-4">
         <ul ref={listRef} className="activities-list flex gap-8 overflow-hidden px-[calc(50%-65px)] py-[2.5vh]">
-          {activitiesConfig.map((activity, i) => {
+          {activities.map((activity, i) => {
             const active = i === selected;
             return (
               <li
@@ -184,7 +208,7 @@ const ActivitiesCard: React.FC = () => {
               >
                 <div className="flex h-[70%] items-center justify-center">
                   <img
-                    src={activity.staticImage}
+                    src={getActivityAssetFullPath(activity.id, activity.staticImage)}
                     alt=""
                     draggable={false}
                     className="max-h-full max-w-full object-contain"
@@ -205,7 +229,7 @@ const ActivitiesCard: React.FC = () => {
 
       {/* Dot indicators */}
       <div className="mt-4 flex justify-center gap-2">
-        {activitiesConfig.map((_, i) => {
+        {activities.map((_, i) => {
           const active = i === selected;
           return (
             <button

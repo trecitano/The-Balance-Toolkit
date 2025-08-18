@@ -1,6 +1,7 @@
 // When using the Tauri API npm package:
 import { Channel, invoke } from "@tauri-apps/api/core";
 import {
+  Activity,
   BalanceBoardEvent,
   Device,
   GeneralSettings,
@@ -31,7 +32,7 @@ export const commands = {
     isScanning: async () => invoke<boolean>("devices_is_scanning"),
     selectDevice: async (macAddress: number) => invoke<void>("devices_select_device", { macAddress: macAddress }),
     unselectDevice: async (macAddress: number) => invoke<void>("devices_unselect_device", { macAddress: macAddress }),
-    selectedDevices: async () => invoke<void>("devices_get_selected_devices"),
+    selectedDevices: async () => invoke<number[]>("devices_get_selected_devices"),
     removeDevice: async (macAddress: number) => invoke<void>("devices_remove_device", { macAddress: macAddress }),
     disconnectDevice: async (macAddress: number) =>
       invoke<void>("devices_disconnect_device", { macAddress: macAddress }),
@@ -45,13 +46,19 @@ export const commands = {
   },
 
   session: {
-    sessionInfo: async () => invoke<Promise<SessionInformation>>("session_information"),
+    sessionInfo: async () => invoke<SessionInformation>("session_information"),
     updateSession: async (sessionConfiguration: SessionConfiguration) =>
       invoke<void>("session_update_session_configuration", { sessionConfiguration: sessionConfiguration }),
     startSession: async (sessionChannel: Channel<BalanceBoardEvent>) => {
-      return invoke<Promise<Device[]>>("session_start_session", { sessionChannel: sessionChannel });
+      return invoke<Device[]>("session_start_session", { sessionChannel: sessionChannel });
     },
 
     stopSession: async () => invoke("session_stop_session"),
   },
+
+  activity: {
+    getActivities: async () => invoke<Activity[]>("activity_get_activities"),
+    getActivity: async (activityId: string) => invoke<Activity>("activity_get_activity", { activityId: activityId}),
+    updateActivity: async (activity: Activity) => invoke<void>("activity_update_activity", { activity: activity }),
+  }
 };

@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
 use file_system::UserFileSystem;
 use crate::actors::balance_board_actor;
+use crate::actors::state::activities::{Activity, ActivityState};
 use crate::file_system;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
@@ -57,6 +58,19 @@ pub enum ToolkitCommand {
         response: oneshot::Sender<Vec<MacAddress>>,
     },
 
+    // Activities
+    GetActivities {
+        response: oneshot::Sender<Vec<Activity>>,
+    },
+    GetActivity {
+        activity_id: String,
+        response: oneshot::Sender<Activity>,
+    },
+    UpdateActivity {
+        activity: Activity,
+        response: Option<oneshot::Sender<()>>,
+    },
+
     SessionInformation {
         response: oneshot::Sender<SessionInformation>,
     },
@@ -82,6 +96,7 @@ pub struct ConnectionManager {
     rx: mpsc::Receiver<ToolkitCommand>,
     tx: Sender<ToolkitResponse>,
     bluetooth_manager_tx: Sender<BluetoothCommand>,
+    activity_state: ActivityState,
 
     general_settings: GeneralSettings,
     session_settings: SessionConfiguration,
@@ -121,11 +136,13 @@ impl ConnectionManager {
             interpolation: general_settings.processing_settings.interpolation.clone(),
             activity_id: None
         };
+        let activity_state = ActivityState::new()?;
 
         Ok(Self {
             rx,
             tx,
             bluetooth_manager_tx: BluetoothService::start_bluetooth_handler(general_settings.is_demo_mode),
+            activity_state,
 
             general_settings,
             session_settings,
@@ -181,6 +198,22 @@ impl ConnectionManager {
                 }
                 ToolkitCommand::SelectedBoardsForSession { response } => {
                     response.send(self.selected_boards.iter().cloned().collect()).unwrap();
+                }
+
+                ToolkitCommand::GetActivities { response } => {
+                    let activities = self.activity_state.get_copy_of_activities();
+                    response.send(activities).unwrap();
+                }
+                ToolkitCommand::GetActivity { activity_id, response } => {
+                    let activity = self.activity_state.get_copy_of_activity(&activity_id);
+                    response.send(activity).unwrap();
+                }
+                ToolkitCommand::UpdateActivity { activity, response } => {
+                    self.activity_state.update_activity(activity)?;
+
+                    if let Some(response) = response {
+                        response.send(()).unwrap();
+                    }
                 }
 
                 ToolkitCommand::SessionInformation { response } => {
