@@ -118,7 +118,7 @@ export type TimelineBlock = {
   start: number; // Start time in seconds
   duration: number; // Duration in seconds
   image?: string; // Path to the image for the action block
-}
+};
 
 /**
  * Represents the configuration for a balance assessment activity
@@ -132,4 +132,4 @@ export type Activity = {
   timelineBlocks: TimelineBlock[]; // Sequence of action blocks for this activity
   boardsRequired: number; // Number of balance boards needed (default: 1)
   description?: string; // Brief description of the activity purpose
-}
+};

@@ -12,10 +12,10 @@ import fileIcon from "@/assets/file-icon.svg";
 import userIcon from "@/assets/user-icon.svg";
 import wbbIconLine from "@/assets/wbb-icon-line.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import {useQuery} from "@tanstack/react-query";
-import {commands} from "@/utils/requests.ts";
-import {Activity} from "@/types.ts";
-import {getActivityAssetFullPath} from "@/utils/activityImages.ts";
+import { useQuery } from "@tanstack/react-query";
+import { commands } from "@/utils/requests.ts";
+import { Activity } from "@/types.ts";
+import { getActivityAssetFullPath } from "@/utils/activityImages.ts";
 
 interface StatusIndicator {
   value: string;
@@ -35,7 +35,6 @@ const Home: React.FC = () => {
     },
   });
 
-
   if (isLoading) {
     return <div></div>;
   }
@@ -44,7 +43,7 @@ const Home: React.FC = () => {
     return <div></div>;
   }
 
-  const activities = data?.activities ?? []
+  const activities = data?.activities ?? [];
 
   return (
     <div className="h-full px-20">
@@ -173,7 +172,7 @@ const LastSessionCard: React.FC = () => {
   );
 };
 
-const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({activities}) => {
+const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) => {
   const [selected, setSelected] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -204,9 +203,9 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({activities}) => {
                 key={activity.id}
                 data-activityid={activity.id}
                 onClick={() => handleSelectActivity(i)}
-                className={`flex aspect-square w-[110px] flex-shrink-0 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-[var(--light)] p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 border-2 border-[var(--primary)] bg-[#e0eafc] font-bold opacity-100 shadow-lg" : ""} `}
+                className={`flex aspect-square w-[120px] flex-shrink-0 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-[var(--light)] p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 border-2 border-[var(--primary)] bg-[#e0eafc] font-bold opacity-100 shadow-lg" : ""} `}
               >
-                <div className="flex h-[70%] items-center justify-center">
+                <div className="flex h-[80%] items-center justify-center">
                   <img
                     src={getActivityAssetFullPath(activity.id, activity.staticImage)}
                     alt=""
@@ -215,9 +214,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({activities}) => {
                   />
                 </div>
                 <div
-                  className={`mt-2 h-[30%] font-semibold ${
-                    active ? "text-base text-neutral-900" : "text-sm text-neutral-500"
-                  }`}
+                  className={`mt-2 h-[30%] text-xs font-semibold ${active ? "text-neutral-900" : "text-neutral-500"}`}
                 >
                   {activity.title}
                 </div>
@@ -306,7 +303,7 @@ const ConnectionCard: React.FC = () => {
           value={selectedDevice}
           onChange={handleDeviceChange}
         >
-          <option value="Andreia's WBB">Andreia's WBB</option>
+          <option value="Andreia's WBB">{`Andreia's WBB`}</option>
           <option value="Device 2">Device 2</option>
           <option value="Device 3">Device 3</option>
         </select>

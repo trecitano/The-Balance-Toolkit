@@ -1,13 +1,5 @@
-import React, {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useCallback,
-} from "react";
-import {
-  useSessionDataStore,
-  BoardBuffer,
-} from "@/store/sessionDataStore.tsx";
+import { useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { useSessionDataStore, BoardBuffer } from "@/store/sessionDataStore.tsx";
 import { RawBalanceBoardEvent, ProcessedPolygonData } from "@/types.ts";
 
 // Constants (same units as your CoP/polygons, typically mm)
@@ -35,20 +27,18 @@ type Props = {
 };
 
 export function BalanceBoardWithCoPOverlay({
-                                             macAddress,
-                                             src,
-                                             alt = "Balance Board",
-                                             className = "relative h-[160px] w-full",
-                                             showConfidenceEllipse = true,
-                                             showConvexHull = true,
-                                           }: Props) {
+  macAddress,
+  src,
+  alt = "Balance Board",
+  className = "relative h-[160px] w-full",
+  showConfidenceEllipse = true,
+  showConvexHull = true,
+}: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Refs to avoid re-render on every frame
-  const rawRef = useRef<BoardBuffer<RawBalanceBoardEvent> | undefined>(
-    undefined,
-  );
+  const rawRef = useRef<BoardBuffer<RawBalanceBoardEvent> | undefined>(undefined);
   const polyRef = useRef<ProcessedPolygonData | undefined>(undefined);
   const showCERef = useRef<boolean>(showConfidenceEllipse);
   const showHullRef = useRef<boolean>(showConvexHull);
@@ -58,13 +48,7 @@ export function BalanceBoardWithCoPOverlay({
   const scheduleDraw = useCallback(() => {
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
-      draw(
-        canvasRef.current,
-        rawRef.current,
-        polyRef.current,
-        showCERef.current,
-        showHullRef.current,
-      );
+      draw(canvasRef.current, rawRef.current, polyRef.current, showCERef.current, showHullRef.current);
     });
   }, []);
 
@@ -130,8 +114,7 @@ export function BalanceBoardWithCoPOverlay({
       { equalityFn: (a, b) => a === b },
     );
 
-    polyRef.current =
-      useSessionDataStore.getState().processedSessionPolygonData?.[macAddress];
+    polyRef.current = useSessionDataStore.getState().processedSessionPolygonData?.[macAddress];
     scheduleDraw();
 
     return () => unsub();
@@ -157,7 +140,7 @@ export function BalanceBoardWithCoPOverlay({
         <img
           src={src}
           alt={alt}
-          className="pointer-events-none block h-full w-full select-none object-contain"
+          className="pointer-events-none block h-full w-full object-contain select-none"
           draggable={false}
           onLoad={scheduleDraw}
         />
@@ -184,7 +167,6 @@ function draw(
   if (w === 0 || h === 0) return;
 
   ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = "#0f0"; ctx.strokeRect(0, 0, w, h);
 
   // Polygons under the trail/dot
   if (poly) {
@@ -269,12 +251,8 @@ function drawPolygon(
   ctx.restore();
 }
 
-function getLastSeconds(
-  buf: BoardBuffer<RawBalanceBoardEvent>,
-  seconds: number,
-) {
-  if (!buf || buf.len === 0)
-    return [] as { x: number; y: number; t: number }[];
+function getLastSeconds(buf: BoardBuffer<RawBalanceBoardEvent>, seconds: number) {
+  if (!buf || buf.len === 0) return [] as { x: number; y: number; t: number }[];
 
   const frames = buf.frames;
   const cap = frames.length;

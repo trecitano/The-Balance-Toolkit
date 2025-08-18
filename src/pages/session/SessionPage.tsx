@@ -3,15 +3,19 @@ import BoardPanel from "./BoardPanel";
 import { SessionPanel } from "./SessionPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import { SessionConfiguration } from "@/types.ts";
+import { Activity, SessionConfiguration, SessionInformation } from "@/types.ts";
 import { sessionChannelManager } from "@/services/SessionChannelManager.tsx";
 import ActivityTimeline from "@/pages/activities/ActivityTimeline.tsx";
 import { CheckboxOption } from "@/components/MultiSelect.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import clsx from "clsx";
-import {registerPlayhead, startTimeline, stopTimeline} from "@/pages/session/ProgressTimer.ts";
+import { registerPlayhead, startTimeline, stopTimeline } from "@/pages/session/ProgressTimer.ts";
 
 const SESSION_QUERY_KEY = ["session_key"];
+type SessionQueryData = {
+  sessionInformation: SessionInformation;
+  activities: Activity[];
+};
 export const SessionQuery = {
   queryKey: SESSION_QUERY_KEY,
   queryFn: async () => {
@@ -41,7 +45,7 @@ export default function SessionPage() {
       await queryClient.cancelQueries({ queryKey: SESSION_QUERY_KEY });
       const previous = queryClient.getQueryData(SESSION_QUERY_KEY);
 
-      queryClient.setQueryData(SESSION_QUERY_KEY, (old: any) => {
+      queryClient.setQueryData(SESSION_QUERY_KEY, (old: SessionQueryData) => {
         if (!old?.sessionInformation) return old;
         return {
           ...old,
@@ -114,8 +118,8 @@ export default function SessionPage() {
           <p className="text-xl text-gray-400">Choose a board from the panel above to get started.</p>
         </div>
       ) : selectedDisplayBoards.length === 1 ? (
-        <div className="flex justify-center mt-5">
-            <BoardPanel boardName={selectedDisplayBoards[0].name} macAddress={selectedDisplayBoards[0].macAddress} />
+        <div className="mt-5 flex justify-center">
+          <BoardPanel boardName={selectedDisplayBoards[0].name} macAddress={selectedDisplayBoards[0].macAddress} />
         </div>
       ) : (
         <div
@@ -131,14 +135,14 @@ export default function SessionPage() {
       )}
 
       {/*  Timeline Panel                           */}
-      <div className="mt-auto flex w-full py-3 items-center justify-between rounded-[12px] bg-gray-100 shadow-sm">
+      <div className="mt-auto flex w-full items-center justify-between rounded-[12px] bg-gray-100 py-3 shadow-sm">
         {chosenActivity ? (
-          <div className={"relative w-9/10 p-5"}>
+          <div className={"relative m-5 w-9/10"}>
             <ActivityTimeline
+              activityId={chosenActivity.id}
               blocks={chosenActivity.timelineBlocks}
               onChange={() => {}}
               onBlockSelect={(block) => {}}
-              activityName={chosenActivity.id}
             />
             <div
               ref={(el) => {
@@ -149,24 +153,16 @@ export default function SessionPage() {
               }}
               className={clsx(
                 "absolute top-0 bottom-0 z-10 h-full w-[2px] bg-[var(--red)]",
-                !sessionInformation.hasOngoingSession && "hidden"
+                !sessionInformation.hasOngoingSession && "hidden",
               )}
             >
               {/* Circle handle at the top */}
-              <div
-                className="
-      absolute left-1/2 -translate-x-1/2
-      w-5 h-4
-      bg-[var(--red)]
-      shadow-md
-      [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]
-    "
-              />
+              <div className="absolute left-1/2 h-4 w-5 -translate-x-1/2 bg-[var(--red)] shadow-md [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]" />
             </div>
           </div>
         ) : (
           <div className="w-9/10 text-center">
-            <p className="text-xl text-gray-400 mb-10">Choose an activity</p>
+            <p className="mb-10 text-xl text-gray-400">Choose an activity</p>
           </div>
         )}
 

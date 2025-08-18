@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
 import bluetoothDisconnectedIcon from "@/assets/bluetooth-disconnected-icon.svg";
@@ -114,7 +114,7 @@ export default function Devices() {
     cancelScanMutation.mutate();
   };
 
-  const handleGradientDevicesScroll = useCallback((e: any) => {
+  const handleGradientDevicesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     const maxFade = 100;
 
@@ -194,7 +194,7 @@ export default function Devices() {
               <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />
               <p className="text-xl text-gray-600">No devices found.</p>
               <p className="text-base text-gray-400">
-                Click the "Scan for Devices" button to search for nearby devices.
+                {`Click the "Scan for Devices" button to search for nearby devices.`}
               </p>
             </div>
           )}
