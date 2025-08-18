@@ -1,8 +1,8 @@
-import React, { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { useSessionDataStore, BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
-import { ProcessedBoardEvent, ProcessedPolygonData, RawBalanceBoardEvent } from "@/types.ts";
+import { ProcessedBoardEvent, RawBalanceBoardEvent } from "@/types.ts";
 
 type DataSelector<T> = (state: any) => BoardBuffer<T> | undefined;
 type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: number[] };

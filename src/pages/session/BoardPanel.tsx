@@ -1,12 +1,7 @@
-import {
-  copXPlotSettings,
-  copYPlotSettings,
-  UPlot,
-  vCopXPlotSettings, vCopYPlotSettings,
-} from "./UPlot.tsx";
+import { copXPlotSettings, copYPlotSettings, UPlot, vCopXPlotSettings, vCopYPlotSettings } from "./UPlot.tsx";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
-import {useState} from "react";
+import { useState } from "react";
 
 export function BoardPanel({ boardName, macAddress }: { boardName: string; macAddress: number }) {
   const [showConfidenceEllipse, setShowConfidenceEllipse] = useState(true);
@@ -21,7 +16,7 @@ export function BoardPanel({ boardName, macAddress }: { boardName: string; macAd
 
       <div className="grid grid-cols-12 gap-3">
         {/* Top row: Board drawing (SVG) left, metrics right */}
-        <div className="col-span-6 bg-gray-100 rounded p-2">
+        <div className="col-span-6 rounded bg-gray-100 p-2">
           <BalanceBoardWithCoPOverlay
             macAddress={macAddress}
             src={wbbTopdown}
@@ -55,22 +50,20 @@ export function BoardPanel({ boardName, macAddress }: { boardName: string; macAd
         </div>
 
         {/* Middle row: blue CoP-related charts */}
-        <div className="col-span-6 bg-gray-100 rounded p-2">
+        <div className="col-span-6 rounded bg-gray-100 p-2">
           <UPlot {...copYPlotSettings(macAddress)} />
         </div>
-        <div className="col-span-6 bg-gray-100 rounded p-2">
+        <div className="col-span-6 rounded bg-gray-100 p-2">
           <UPlot {...copXPlotSettings(macAddress)} />
         </div>
 
         {/* Bottom row: red velocity charts */}
-        <div className="col-span-6 bg-gray-100 rounded p-2">
+        <div className="col-span-6 rounded bg-gray-100 p-2">
           <UPlot {...vCopYPlotSettings(macAddress)} />
         </div>
-        <div className="col-span-6 bg-gray-100 rounded p-2">
+        <div className="col-span-6 rounded bg-gray-100 p-2">
           <UPlot {...vCopXPlotSettings(macAddress)} />
         </div>
-
-
       </div>
     </section>
   );

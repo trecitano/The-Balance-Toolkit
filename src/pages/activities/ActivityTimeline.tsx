@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useMemo,
-  useCallback,
-} from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import "./ActivityTimeline.css";
 import balanceIcon from "../../assets/balance-icon.svg";
 import { TimelineBlock } from "@/types.ts";
@@ -28,12 +22,7 @@ function recalcStartTimes(arr: TimelineBlock[]): TimelineBlock[] {
   });
 }
 
-export default function ActivityTimeline({
-                                           activityId,
-                                           blocks,
-                                           onChange,
-                                           onBlockSelect,
-                                         }: ActivityTimelineProps) {
+export default function ActivityTimeline({ activityId, blocks, onChange, onBlockSelect }: ActivityTimelineProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const blocksWithImages = useMemo(() => {
@@ -46,9 +35,7 @@ export default function ActivityTimeline({
 
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
-  const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(
-    null
-  );
+  const [dragPreview, setDragPreview] = useState<{ x: number; y: number } | null>(null);
 
   const [resizeInfo, setResizeInfo] = useState<{
     blockIdx: number;
@@ -60,10 +47,7 @@ export default function ActivityTimeline({
   const [editingDurationIdx, setEditingDurationIdx] = useState<number | null>(null);
   const [durationInputValue, setDurationInputValue] = useState<string>("");
 
-  const totalDuration = useMemo(
-    () => blocks.reduce((sum, b) => sum + b.duration, 0),
-    [blocks]
-  );
+  const totalDuration = useMemo(() => blocks.reduce((sum, b) => sum + b.duration, 0), [blocks]);
 
   const computeDropIndex = useCallback(
     (clientX: number) => {
@@ -76,9 +60,7 @@ export default function ActivityTimeline({
 
       // Positions in seconds at each boundary
       const boundaries: number[] = [0];
-      blocks.forEach((b) =>
-        boundaries.push(boundaries[boundaries.length - 1] + b.duration)
-      );
+      blocks.forEach((b) => boundaries.push(boundaries[boundaries.length - 1] + b.duration));
 
       // Find nearest boundary
       let idx = 0;
@@ -92,7 +74,7 @@ export default function ActivityTimeline({
       });
       return idx;
     },
-    [blocks, totalDuration]
+    [blocks, totalDuration],
   );
 
   const handleDeleteBlock = (blockIdx: number, e: React.MouseEvent) => {
@@ -101,11 +83,7 @@ export default function ActivityTimeline({
     onChange(recalcStartTimes(remaining));
   };
 
-  const onResizeStart = (
-    blockIdx: number,
-    direction: "left" | "right",
-    e: React.MouseEvent
-  ) => {
+  const onResizeStart = (blockIdx: number, direction: "left" | "right", e: React.MouseEvent) => {
     const blk = blocks.find((_b, idx) => idx === blockIdx);
     if (!blk) return;
     e.stopPropagation();
@@ -125,17 +103,13 @@ export default function ActivityTimeline({
       const scale = 2; // px per second
 
       let newDuration =
-        direction === "right"
-          ? startDuration + Math.round(delta / scale)
-          : startDuration - Math.round(delta / scale);
+        direction === "right" ? startDuration + Math.round(delta / scale) : startDuration - Math.round(delta / scale);
       newDuration = Math.max(MIN_DURATION, newDuration);
 
-      const updated = blocks.map((b, idx) =>
-        blockIdx === idx ? { ...b, duration: newDuration } : b
-      );
+      const updated = blocks.map((b, idx) => (blockIdx === idx ? { ...b, duration: newDuration } : b));
       onChange(recalcStartTimes(updated));
     },
-    [blocks, onChange, resizeInfo]
+    [blocks, onChange, resizeInfo],
   );
 
   const onResizeEnd = useCallback(() => setResizeInfo(null), []);
@@ -156,10 +130,7 @@ export default function ActivityTimeline({
   const dragStartIdxRef = useRef<number | null>(null);
 
   const handleBlockMouseDown = (idx: number, e: React.MouseEvent) => {
-    if (
-      resizeInfo ||
-      (e.target as HTMLElement).classList.contains("resize-handle")
-    ) {
+    if (resizeInfo || (e.target as HTMLElement).classList.contains("resize-handle")) {
       return;
     }
     e.preventDefault();
@@ -169,7 +140,7 @@ export default function ActivityTimeline({
     setIsDragging(true);
   };
 
-// fresh handlers live inside the effect
+  // fresh handlers live inside the effect
   useEffect(() => {
     if (!isDragging) return;
 
@@ -207,7 +178,7 @@ export default function ActivityTimeline({
   return (
     <div
       ref={containerRef}
-      className="activity-timeline flex flex-col h-20"
+      className="activity-timeline flex h-20 flex-col"
       style={{ cursor: draggedIdx !== null ? "grabbing" : "default" }}
     >
       <div className="flex h-full">
@@ -239,12 +210,7 @@ export default function ActivityTimeline({
                 minWidth: 40,
                 margin: 0,
                 opacity: draggedIdx === idx ? 0.2 : 1,
-                cursor:
-                  resizeInfo != null
-                    ? "default"
-                    : draggedIdx === idx
-                      ? "grabbing"
-                      : "grab",
+                cursor: resizeInfo != null ? "default" : draggedIdx === idx ? "grabbing" : "grab",
                 userSelect: "none",
                 pointerEvents: "auto",
                 position: "relative",
@@ -300,7 +266,7 @@ export default function ActivityTimeline({
                 data-block-label={block.label}
               >
                 <img
-                  src={block.image || balanceIcon}
+                  src={block.image}
                   alt={block.title}
                   style={{
                     width: "auto",
@@ -435,9 +401,7 @@ export default function ActivityTimeline({
                   onBlur={() => {
                     const val = parseInt(durationInputValue, 10);
                     if (!isNaN(val) && val >= MIN_DURATION) {
-                      const updated = blocks.map((b, innerIdx) =>
-                        idx === innerIdx ? { ...b, duration: val } : b
-                      );
+                      const updated = blocks.map((b, innerIdx) => (idx === innerIdx ? { ...b, duration: val } : b));
                       onChange(recalcStartTimes(updated));
                     }
                     setEditingDurationIdx(null);
@@ -446,9 +410,7 @@ export default function ActivityTimeline({
                     if (e.key === "Enter") {
                       const val = parseInt(durationInputValue, 10);
                       if (!isNaN(val) && val >= MIN_DURATION) {
-                        const updated = blocks.map((b, innerIdx) =>
-                          idx === innerIdx ? { ...b, duration: val } : b
-                        );
+                        const updated = blocks.map((b, innerIdx) => (idx === innerIdx ? { ...b, duration: val } : b));
                         onChange(recalcStartTimes(updated));
                       }
                       setEditingDurationIdx(null);

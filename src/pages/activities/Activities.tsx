@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 import "./Activities.css";
 import ActivityCard from "./ActivityCard";
 
 import Heading from "@/components/PageTitle.tsx";
-import {useQuery} from "@tanstack/react-query";
-import {commands} from "@/utils/requests.ts";
+import { useQuery } from "@tanstack/react-query";
+import { commands } from "@/utils/requests.ts";
 
 export const ACTIVITIES_QUERY_KEY = ["activities"];
 
@@ -20,7 +20,6 @@ export default function Activities() {
     },
   });
 
-
   if (isLoading) {
     return <div></div>;
   }
@@ -29,7 +28,7 @@ export default function Activities() {
     return <div></div>;
   }
 
-  const activities = data?.activities ?? []
+  const activities = data?.activities ?? [];
 
   return (
     <>

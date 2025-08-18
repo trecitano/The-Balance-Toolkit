@@ -3,13 +3,10 @@ export function getActivityAssetFullPath(activityId: string, assetName: string):
 }
 
 // src/utils/activityImages.ts
-const activityImageModules = import.meta.glob(
-  "/src/assets/activities/**/*.svg",
-  {
-    eager: true,
-    as: "url",
-  }
-);
+const activityImageModules = import.meta.glob("/src/assets/activities/**/*.svg", {
+  eager: true,
+  as: "url",
+});
 
 interface ImageItem {
   path: string;
@@ -20,9 +17,7 @@ export function getActivityImages(activityId: string): string[] {
   if (!activityId) return [];
 
   const images: ImageItem[] = [];
-  const regex = new RegExp(
-    `/src/assets/activities/${activityId}.*/${activityId}[\\d\\w-]+\\.svg$`
-  );
+  const regex = new RegExp(`/src/assets/activities/${activityId}.*/${activityId}[\\d\\w-]+\\.svg$`);
 
   Object.entries(activityImageModules).forEach(([path, imageUrl]) => {
     if (regex.test(path)) images.push({ path, image: imageUrl });
@@ -38,21 +33,14 @@ export function getActivityImages(activityId: string): string[] {
   return sorted.map((i) => i.image);
 }
 
-export function getActionImage(
-  activityId: string,
-  actionLabel: string
-): string | undefined {
+export function getActionImage(activityId: string, actionLabel: string): string | undefined {
   const matches: ImageItem[] = [];
 
   // 1) activityId-actionLabel.svg or activityId-actionLabel-N.svg
-  const regex1 = new RegExp(
-    `/src/assets/activities/${activityId}.*/${activityId}-${actionLabel}(-\\d+)?\\.svg$`
-  );
+  const regex1 = new RegExp(`/src/assets/activities/${activityId}.*/${activityId}-${actionLabel}(-\\d+)?\\.svg$`);
 
   // 2) activityIdN-actionLabel.svg
-  const regex2 = new RegExp(
-    `/src/assets/activities/${activityId}.*/${activityId}\\d+-${actionLabel}\\.svg$`
-  );
+  const regex2 = new RegExp(`/src/assets/activities/${activityId}.*/${activityId}\\d+-${actionLabel}\\.svg$`);
 
   Object.entries(activityImageModules).forEach(([path, imageUrl]) => {
     if (regex1.test(path) || regex2.test(path)) {
