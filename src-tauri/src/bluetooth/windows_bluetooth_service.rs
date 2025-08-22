@@ -64,12 +64,11 @@ impl BluetoothHandler for NativeBluetoothHandler {
                 let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
                 let default_adapter_id = default_adapter.DeviceId()?;
                 for entry in adapter_list.iter_mut() {
-                    if let Ok(adapter) = entry {
-                        if adapter.id == default_adapter_id {
+                    if let Ok(adapter) = entry
+                        && adapter.id == default_adapter_id {
                             adapter.devices = device_list;
                             break;
                         }
-                    }
                 }
 
                 Ok(adapter_list)

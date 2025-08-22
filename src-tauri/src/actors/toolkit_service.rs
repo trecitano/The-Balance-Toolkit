@@ -13,7 +13,6 @@ use file_system::UserFileSystem;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::Duration;
-use serde::Serialize;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{mpsc, oneshot};
 
@@ -275,12 +274,9 @@ impl ConnectionManager {
                 },
                 ToolkitCommand::StopSession => {
                     for board in &self.session_settings.selected_boards {
-                        match &self.connections.get(board) {
-                            Some(connection) => {
-                                let command = { BoardAction::StopRecording };
-                                connection.send(command).await?
-                            }
-                            None => ()
+                        if let Some(connection) = &self.connections.get(board) {
+                            let command = { BoardAction::StopRecording };
+                            connection.send(command).await?
                         }
                     }
                     self.has_ongoing_session = false;
@@ -445,12 +441,11 @@ impl ConnectionManager {
         let current_session_path = self.session_settings.load_session_file.as_ref().map(|s| &s.file_path);
         let incoming_session_path = session_configuration.load_session_file_path.as_ref();
 
-        if current_session_path != incoming_session_path {
-            if let Some(session_path) = incoming_session_path {
+        if current_session_path != incoming_session_path
+            && let Some(session_path) = incoming_session_path {
                 self.update_session_from_file(session_path.clone())?;
                 return Ok(());
             }
-        }
 
         self.update_session_from_update(session_configuration);
 
@@ -467,7 +462,7 @@ impl ConnectionManager {
                 let raw_file_path = directory.join(raw_file_name);
                 // We assume that the raw file is in the same directory as the session file.
 
-                let tx = balance_board_actor::initialize(mac_address.clone(), BoardConnectionMode::ReadFromFile(raw_file_path)).unwrap();
+                let tx = balance_board_actor::initialize(*mac_address, BoardConnectionMode::ReadFromFile(raw_file_path)).unwrap();
                 (*mac_address, tx)
             })
             .collect();
@@ -574,8 +569,8 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
             general_settings.store_processed_data
         );
 
-        for mut session_mapping in observer_list.iter_mut() {
-            add_observer_to_device_list(&mut session_mapping,
+        for session_mapping in observer_list.iter_mut() {
+            add_observer_to_device_list(session_mapping,
                                         tx.clone(),
                                         ObserverType::FileWriter,
                                         general_settings.store_raw_session,
@@ -592,8 +587,8 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
             source_id: general_settings.lsl_source_id.clone()
         };
         let tx = lsl_writer::initialize(config);
-        for mut session_mapping in observer_list.iter_mut() {
-            add_observer_to_device_list(&mut session_mapping,
+        for session_mapping in observer_list.iter_mut() {
+            add_observer_to_device_list(session_mapping,
                                         tx.clone(),
                                         ObserverType::LslWriter,
                                         general_settings.lsl_send_raw_data,
@@ -606,8 +601,8 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
         (general_settings.tcp_send_raw_data || general_settings.tcp_send_processed_data);
     if should_use_tcp {
         let tx = tcp_writer::initialize(general_settings.tcp_connection_string.clone());
-        for mut session_mapping in observer_list.iter_mut() {
-            add_observer_to_device_list(&mut session_mapping,
+        for session_mapping in observer_list.iter_mut() {
+            add_observer_to_device_list(session_mapping,
                                         tx.clone(),
                                         ObserverType::TcpWriter,
                                         general_settings.tcp_send_raw_data,
@@ -617,8 +612,8 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
 
     // 1 Frontend Observer
     let tx = initialize_frontend_observer(frontend_channel);
-    for mut session_mapping in observer_list.iter_mut() {
-        add_observer_to_device_list(&mut session_mapping, tx.clone(), ObserverType::FrontendObserver, true, true);
+    for session_mapping in observer_list.iter_mut() {
+        add_observer_to_device_list(session_mapping, tx.clone(), ObserverType::FrontendObserver, true, true);
     }
 
     // N Data Processors (one per board)
@@ -627,7 +622,7 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
             .map(|(_, sender)| sender.clone())
             .collect();
 
-        if observers.len() > 0 {
+        if !observers.is_empty() {
             let tx = data_processor::initialize(observers, device_mapping.mac_address, processing_settings.clone());
             device_mapping.observers_raw.push( (ObserverType::DataProcessor, tx));
         }
@@ -638,14 +633,11 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
             .map(|(_, sender)| sender.clone())
             .collect();
 
-        if observers.len() > 0 {
+        if !observers.is_empty() {
             let (raw_data_tx, raw_data_rx) = mpsc::channel(10);
             let command = BoardAction::StartRecording(raw_data_tx);
 
-            match balance_board_connections.get(&device_mapping.mac_address) {
-                Some(sender) => sender.send(command).await.unwrap(),
-                None => ()
-            }
+            if let Some(sender) = balance_board_connections.get(&device_mapping.mac_address) { sender.send(command).await.unwrap() }
             initialize_raw_data_forwarder(raw_data_rx, observers);
         }
     }
@@ -657,12 +649,12 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
         for (observer_type, _) in &device_mapping.observers_raw {
             print!("{:?} ", observer_type)
         }
-        println!("");
+        println!();
         println!("  Processed data observers: ");
         for (observer_type, _) in &device_mapping.observers_processed {
             print!("{:?} ", observer_type)
         }
-        println!("");
+        println!();
     }
 }
 
@@ -685,10 +677,7 @@ fn initialize_raw_data_forwarder(mut raw_data_rx: mpsc::Receiver<BalanceBoardCal
     tokio::spawn(async move {
         while let Some(data) = raw_data_rx.recv().await {
             observers.retain(|observer| {
-                match observer.try_send(BalanceBoardOutput::Raw(data.clone())) {
-                    Ok(_) => true,
-                    Err(_) => false
-                }
+                observer.try_send(BalanceBoardOutput::Raw(data.clone())).is_ok()
             });
 
             if observers.is_empty() {

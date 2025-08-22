@@ -34,7 +34,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
                 while let Some(new_event) = manager_rx.recv().await {
                     match new_event {
                         ToolkitResponse::NewDeviceFound(device) =>
-                            app_handle.emit("new_board", NintendoDevice::from(device)).unwrap()
+                            app_handle.emit("new_board", device).unwrap()
                     }
                 }
             });
@@ -167,7 +167,7 @@ async fn devices_scan_without_timeout(state: State<'_, AppState>) -> Result<(), 
     println!(">> devices_scan_without_timeout");
 
     let (new_bluetooth_tx, mut new_bluetooth_rx) = mpsc::channel::<BluetoothPeripheral>(10);
-    let (hid_connection_tx, mut hid_connection_rx) = mpsc::channel(10);
+    let (hid_connection_tx, hid_connection_rx) = mpsc::channel(10);
     let manager_tx_clone = state.manager_tx.clone();
 
     // Flow: First we connect via bluetooth, then we connect via HID.
@@ -331,7 +331,7 @@ async fn session_information(state: State<'_, AppState>) -> Result<SessionInform
     println!(">> session_information");
 
     // When we receive a balance board reading, we send it to the frontend.
-    let (tx, mut rx) = oneshot::channel();
+    let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::SessionInformation { response: tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
@@ -344,7 +344,7 @@ async fn session_information(state: State<'_, AppState>) -> Result<SessionInform
 async fn session_update_session_configuration(session_configuration: FrontendSessionConfiguration, state: State<'_, AppState>) -> Result<(), String> {
     println!(">> session_update_session_configuration: {:?}", session_configuration);
 
-    let (tx, mut rx) = oneshot::channel();
+    let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::UpdateSessionInformation { session_configuration, response: Some(tx) };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
@@ -399,7 +399,7 @@ async fn session_start_session(state: State<'_, AppState>, session_channel: Chan
                     };
                     session_channel.send(FrontendBalanceBoardEvent::Raw(reading));
                 }
-                BalanceBoardOutput::Processed(mut data) => {
+                BalanceBoardOutput::Processed(data) => {
                     let reading = FrontendProcessedReadingData {
                         mac_address: data.mac_address,
                         timestamp: data.timestamp.timestamp_millis(),
@@ -487,7 +487,7 @@ async fn activity_update_activity(activity: Activity, state: State<'_, AppState>
     let (response_tx, response_rx) = oneshot::channel();
     let command = ToolkitCommand::UpdateActivity { activity, response: Some(response_tx) };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
-    let result = response_rx.await.map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< activity_update_activity.");
     Ok(())

@@ -32,5 +32,6 @@ async fn main() -> Result<()> {
         }
     });
     
-    Ok(frontend::tauri::initialize(manager_command_tx, manager_response_rx))
+    frontend::tauri::initialize(manager_command_tx, manager_response_rx);
+    Ok(())
 }

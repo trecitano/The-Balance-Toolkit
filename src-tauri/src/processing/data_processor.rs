@@ -151,10 +151,7 @@ fn data_process_loop(
         };
 
         observers.retain(|observer| {
-            match observer.try_send(BalanceBoardOutput::Processed(result.clone())) {
-                Ok(_) => true,
-                Err(_) => false
-            }
+            observer.try_send(BalanceBoardOutput::Processed(result.clone())).is_ok()
         });
 
         if observers.is_empty() {
@@ -225,7 +222,7 @@ fn linear_interpolation(
             result.push(interpolated);
         }
 
-        current_time = current_time + *time_step;
+        current_time += *time_step;
     }
 
     result
@@ -275,7 +272,7 @@ fn cubic_interpolation(
             result.push(interpolated);
         }
 
-        current_time = current_time + *time_step;
+        current_time += *time_step;
     }
 
     result
@@ -314,7 +311,7 @@ fn polynomial_interpolation(
             result.push(interpolated);
         }
 
-        current_time = current_time + *time_step;
+        current_time += *time_step;
     }
 
     result

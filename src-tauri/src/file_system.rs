@@ -1,4 +1,4 @@
-use crate::types::{FrontendSessionConfiguration, GeneralSettings, MacAddress, NintendoDevice, User};
+use crate::types::{GeneralSettings, MacAddress, NintendoDevice, User};
 use serde::Serialize;
 use std::fs;
 use std::fs::File;
@@ -103,7 +103,7 @@ impl DeviceFileSystem {
             return Ok(());
         }
 
-        FileStore::save(Path::new(NINTENDO_DEVICES_FILE), &devices)
+        FileStore::save(Path::new(NINTENDO_DEVICES_FILE), devices)
     }
 }
 
@@ -123,7 +123,7 @@ impl SettingsFileSystem {
             return Ok(());
         }
 
-        FileStore::save(Path::new(SETTINGS_FILE), &settings)
+        FileStore::save(Path::new(SETTINGS_FILE), settings)
     }
 }
 
@@ -131,8 +131,7 @@ const ACTIVITIES_FILE: &str = "activities.json";
 pub struct ActivitiesFileSystem;
 impl ActivitiesFileSystem {
     pub fn get_or_create_default_activities() -> Result<Vec<Activity>> {
-        let activities: Vec<Activity> = FileStore::load_or_else(Path::new(ACTIVITIES_FILE), ||
-            ActivityState::create_default_activities())?;
+        let activities: Vec<Activity> = FileStore::load_or_else(Path::new(ACTIVITIES_FILE), ActivityState::create_default_activities)?;
         Ok(activities)
     }
 
@@ -143,7 +142,7 @@ impl ActivitiesFileSystem {
             return Ok(());
         }
 
-        FileStore::save(Path::new(ACTIVITIES_FILE), &activities)
+        FileStore::save(Path::new(ACTIVITIES_FILE), activities)
     }
 }
 
