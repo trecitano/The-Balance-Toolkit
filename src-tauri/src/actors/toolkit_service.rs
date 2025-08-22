@@ -13,6 +13,7 @@ use file_system::UserFileSystem;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::Duration;
+use serde::Serialize;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{mpsc, oneshot};
 
@@ -112,12 +113,13 @@ pub struct ConnectionManager {
 
 // TODO The activity_id for now is just the string ID in the frontend, since the activities are fully implemented
 // in the frontend. In near future, they should be implemented in the backend.
+#[derive(Clone)]
 pub struct SessionConfiguration {
     pub selected_user: String,
     pub selected_boards: HashSet<MacAddress>,
     pub lsl_enabled: bool,
     pub tcp_enabled: bool,
-    pub output_directory: String,
+    pub output_directory: PathBuf,
     pub window_size_ms: u64,
     pub window_slide_ms: u64,
     pub sampling_rate: u64,
@@ -126,8 +128,9 @@ pub struct SessionConfiguration {
     pub load_session_file: Option<SessionFromFile>,
 }
 
-struct SessionFromFile {
-    file_path: String,
+#[derive(Clone)]
+pub struct SessionFromFile {
+    pub file_path: PathBuf,
     activity: Option<Activity>,
     device_names: HashMap<MacAddress, String>,
     connections: HashMap<MacAddress, Sender<BoardAction>>
@@ -437,14 +440,14 @@ impl ConnectionManager {
             eprintln!("Failed to forward action to device {:?}: {}", mac_address, e);
         }
     }
-    async fn update_session_settings(&mut self, session_configuration: FrontendSessionConfiguration) -> Result<()> {
+    fn update_session_settings(&mut self, session_configuration: FrontendSessionConfiguration) -> Result<()> {
         // Check if we need to load a different session file
         let current_session_path = self.session_settings.load_session_file.as_ref().map(|s| &s.file_path);
         let incoming_session_path = session_configuration.load_session_file_path.as_ref();
 
         if current_session_path != incoming_session_path {
             if let Some(session_path) = incoming_session_path {
-                self.update_session_from_file(session_path).await?;
+                self.update_session_from_file(session_path.clone())?;
                 return Ok(());
             }
         }
@@ -454,14 +457,14 @@ impl ConnectionManager {
         Ok(())
     }
 
-    async fn update_session_from_file(&mut self, session_path: &str) -> Result<()> {
-        let file_session = ExistingSessionFileSystem::load(session_path)?;
-        let directory = PathBuf::from(session_path).parent().ok_or(anyhow!("Can't access parent directory of session file."))?;
+    fn update_session_from_file(&mut self, session_path: PathBuf) -> Result<()> {
+        let file_session = ExistingSessionFileSystem::load(&session_path)?;
+        let directory = session_path.parent().ok_or(anyhow!("Can't access parent directory of session file."))?;
 
         let connections = file_session.device_names.iter()
             .map(|(mac_address, device_name)| {
-                let raw_file_name = &file_session.device_file_names.get(mac_address).unwrap().raw_file_name;
-                let raw_file_path = directory.join(raw_file_name).as_path().into();
+                let raw_file_name = &file_session.device_file_mappings.get(mac_address).unwrap().raw_file_name;
+                let raw_file_path = directory.join(raw_file_name);
                 // We assume that the raw file is in the same directory as the session file.
 
                 let tx = balance_board_actor::initialize(mac_address.clone(), BoardConnectionMode::ReadFromFile(raw_file_path)).unwrap();
@@ -469,12 +472,12 @@ impl ConnectionManager {
             })
             .collect();
 
-        self.session_settings.window_size_ms = file_session.session_configuration.window_size_ms;
-        self.session_settings.window_slide_ms = file_session.session_configuration.window_slide_ms;
-        self.session_settings.sampling_rate = file_session.session_configuration.sampling_rate;
-        self.session_settings.interpolation = file_session.session_configuration.interpolation.clone();
+        self.session_settings.window_size_ms = file_session.window_size_ms;
+        self.session_settings.window_slide_ms = file_session.window_slide_ms;
+        self.session_settings.sampling_rate = file_session.sampling_rate;
+        self.session_settings.interpolation = file_session.interpolation.clone();
         self.session_settings.load_session_file = Some(SessionFromFile {
-            file_path: session_path.to_string(),
+            file_path: session_path,
             activity: file_session.activity,
             device_names: file_session.device_names,
             connections,
@@ -566,7 +569,7 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
     let store_files = general_settings.store_raw_session || general_settings.store_processed_data;
     if store_files {
         let tx = file_writer::initialize(
-            session_settings.clone().into(),
+            session_settings.clone(),
             general_settings.store_raw_session,
             general_settings.store_processed_data
         );

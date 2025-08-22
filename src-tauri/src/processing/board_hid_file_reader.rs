@@ -48,7 +48,7 @@ fn blocking_file_reading_loop(
                     BalanceBoardCommands::StartRecording(sender) => {
                         let reader = csv::ReaderBuilder::new()
                             .has_headers(true)
-                            .from_path(file_path)?;
+                            .from_path(file_path.clone())?;
                         rdr = Some(reader.into_deserialize());
                         prev_time = None;
                         tx = Some(sender);

@@ -3,7 +3,7 @@ use serde::Serialize;
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::de::DeserializeOwned;
@@ -22,7 +22,7 @@ const USERS_FILE: &str = "users.json";
 pub struct UserFileSystem;
 impl UserFileSystem {
     pub fn get_or_create_default_user() -> Result<User> {
-        let users: Vec<User> = FileStore::load_with_default(USERS_FILE)?;
+        let users: Vec<User> = FileStore::load_with_default(Path::new(USERS_FILE))?;
 
         if let Some(default_user) = users.into_iter().find(|u| u.is_default) {
             return Ok(default_user);
@@ -36,14 +36,14 @@ impl UserFileSystem {
     }
 
     pub fn get_users() -> Result<Vec<User>> {
-        let users: Vec<User> = FileStore::load_with_default(USERS_FILE)?;
+        let users: Vec<User> = FileStore::load_with_default(Path::new(USERS_FILE))?;
         Ok(users)
     }
 
     pub fn add_user(new_user: User) -> Result<()> {
-        let mut users: Vec<User> = FileStore::load_with_default(USERS_FILE)?;
+        let mut users: Vec<User> = FileStore::load_with_default(Path::new(USERS_FILE))?;
         users.push(new_user);
-        FileStore::save(USERS_FILE, &users)
+        FileStore::save(Path::new(USERS_FILE), &users)
     }
 
     pub fn update_user(mut updated_user: User) -> Result<()> {
@@ -53,7 +53,7 @@ impl UserFileSystem {
         updated_user.updated_at = Utc::now();
         users.push(updated_user);
 
-        FileStore::save(USERS_FILE, &users)
+        FileStore::save(Path::new(USERS_FILE), &users)
     }
 
     pub fn remove_user(user_name: String) -> Result<()> {
@@ -61,7 +61,7 @@ impl UserFileSystem {
 
         users.retain(|user| user.name != user_name);
 
-        save_into_file(USERS_FILE, &users)
+        save_into_file(Path::new(USERS_FILE), &users)
     }
 }
 
@@ -70,12 +70,12 @@ const NINTENDO_DEVICES_FILE: &str = "nintendo_devices.json";
 pub struct DeviceFileSystem;
 impl DeviceFileSystem {
     pub fn get_users() -> Result<Vec<User>> {
-        let users: Vec<User> = FileStore::load_with_default(NINTENDO_DEVICES_FILE)?;
+        let users: Vec<User> = FileStore::load_with_default(Path::new(NINTENDO_DEVICES_FILE))?;
         Ok(users)
     }
 
     pub fn get_stored_devices() -> Result<Vec<NintendoDevice>> {
-        let devices: Vec<NintendoDevice> = FileStore::load_with_default(NINTENDO_DEVICES_FILE)?;
+        let devices: Vec<NintendoDevice> = FileStore::load_with_default(Path::new(NINTENDO_DEVICES_FILE))?;
         Ok(devices)
     }
 
@@ -86,7 +86,7 @@ impl DeviceFileSystem {
             device.name = device_board_name;
         }
 
-        FileStore::save(NINTENDO_DEVICES_FILE, &devices)
+        FileStore::save(Path::new(NINTENDO_DEVICES_FILE), &devices)
     }
 
     pub fn update_file_system_boards(devices: &Vec<NintendoDevice>) -> Result<()> {
@@ -103,7 +103,7 @@ impl DeviceFileSystem {
             return Ok(());
         }
 
-        FileStore::save(NINTENDO_DEVICES_FILE, &devices)
+        FileStore::save(Path::new(NINTENDO_DEVICES_FILE), &devices)
     }
 }
 
@@ -111,19 +111,19 @@ const SETTINGS_FILE: &str = "settings.json";
 pub struct SettingsFileSystem;
 impl SettingsFileSystem {
     pub fn get_or_create_default_settings() -> Result<GeneralSettings> {
-        let settings: GeneralSettings = FileStore::load_with_default(SETTINGS_FILE)?;
+        let settings: GeneralSettings = FileStore::load_with_default(Path::new(SETTINGS_FILE))?;
 
         Ok(settings)
     }
 
     pub fn save_settings(settings: &GeneralSettings) -> Result<()> {
-        let old_settings: GeneralSettings = FileStore::load_with_default(SETTINGS_FILE)?;
+        let old_settings: GeneralSettings = FileStore::load_with_default(Path::new(SETTINGS_FILE))?;
 
         if old_settings == *settings {
             return Ok(());
         }
 
-        FileStore::save(SETTINGS_FILE, &settings)
+        FileStore::save(Path::new(SETTINGS_FILE), &settings)
     }
 }
 
@@ -131,29 +131,29 @@ const ACTIVITIES_FILE: &str = "activities.json";
 pub struct ActivitiesFileSystem;
 impl ActivitiesFileSystem {
     pub fn get_or_create_default_activities() -> Result<Vec<Activity>> {
-        let activities: Vec<Activity> = FileStore::load_or_else(ACTIVITIES_FILE, ||
+        let activities: Vec<Activity> = FileStore::load_or_else(Path::new(ACTIVITIES_FILE), ||
             ActivityState::create_default_activities())?;
         Ok(activities)
     }
 
     pub fn save_activities(activities: &Vec<Activity>) -> Result<()> {
-        let old_activities: Vec<Activity> = FileStore::load_with_default(ACTIVITIES_FILE)?;
+        let old_activities: Vec<Activity> = FileStore::load_with_default(Path::new(ACTIVITIES_FILE))?;
 
         if old_activities == *activities {
             return Ok(());
         }
 
-        FileStore::save(ACTIVITIES_FILE, &activities)
+        FileStore::save(Path::new(ACTIVITIES_FILE), &activities)
     }
 }
 
 pub struct ExistingSessionFileSystem;
 impl ExistingSessionFileSystem {
-    pub fn load(file_path: &str) -> Result<SessionConfigurationFileFormat> {
+    pub fn load(file_path: &Path) -> Result<SessionConfigurationFileFormat> {
         FileStore::load(file_path)
     }
 
-    pub fn save(file_path: &str, session: &SessionConfigurationFileFormatRef) -> Result<()> {
+    pub fn save(file_path: &Path, session: &SessionConfigurationFileFormatRef) -> Result<()> {
         FileStore::save(file_path, session)
     }
 }
@@ -164,7 +164,7 @@ impl ExistingSessionFileSystem {
 struct FileStore;
 
 impl FileStore {
-    pub fn load<T>(file_name: &str) -> Result<T>
+    pub fn load<T>(file_name: &Path) -> Result<T>
     where
         T: Serialize + DeserializeOwned,
     {
@@ -181,7 +181,7 @@ impl FileStore {
         Ok(data)
     }
 
-    pub fn load_with_default<T>(file_name: &str) -> Result<T>
+    pub fn load_with_default<T>(file_name: &Path) -> Result<T>
     where
         T: Serialize + DeserializeOwned + Default,
     {
@@ -205,7 +205,7 @@ impl FileStore {
         Ok(data)
     }
 
-    pub fn load_or_else<T, F>(file_name: &str, default_fn: F) -> Result<T>
+    pub fn load_or_else<T, F>(file_name: &Path, default_fn: F) -> Result<T>
     where
         T: Serialize + DeserializeOwned,
         F: FnOnce() -> T,
@@ -235,7 +235,7 @@ impl FileStore {
         Ok(data)
     }
 
-    pub fn save<T>(file_name: &str, data: T) -> Result<()>
+    pub fn save<T>(file_name: &Path, data: T) -> Result<()>
     where
         T: Serialize,
     {
@@ -264,11 +264,11 @@ pub fn initialize_app_dir() -> Result<()> {
     Ok(())
 }
 
-fn app_dir_file(file_name: &str) -> Result<File> {
+fn app_dir_file(file_name: &Path) -> Result<File> {
     let file_path = app_dir().join(file_name);
 
     let file = File::create(file_path)
-        .with_context(|| format!("Failed to open file: {}", file_name))?;
+        .with_context(|| format!("Failed to open file: {}", file_name.to_string_lossy()))?;
     Ok(file)
 }
 
@@ -278,11 +278,11 @@ pub fn app_dir() -> PathBuf {
         .expect("Could not access dir file")
 }
 
-fn save_into_file<T: Serialize>(file_name: &str, data: T) -> anyhow::Result<()> {
+fn save_into_file<T: Serialize>(file_name: &Path, data: T) -> anyhow::Result<()> {
     let file = app_dir_file(file_name)?;
 
     serde_json::to_writer_pretty(file, &data)
-        .with_context(|| format!("Failed to save file: {}", file_name))?;
+        .with_context(|| format!("Failed to save file: {}", file_name.to_string_lossy()))?;
 
     Ok(())
 }

@@ -7,7 +7,7 @@ use chrono::Utc;
 use processing::board_hid_reader;
 use processing::board_hid_reader_mock;
 use serde::Serialize;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
@@ -159,7 +159,7 @@ impl ProcessedBoardData {
 pub enum BoardConnectionMode {
     Real,
     Demo,
-    ReadFromFile(Path)
+    ReadFromFile(PathBuf)
 }
 
 pub fn initialize(mac_address: MacAddress, mode: BoardConnectionMode) -> Result<Sender<BoardAction>> {
