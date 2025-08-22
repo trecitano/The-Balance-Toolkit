@@ -44,7 +44,7 @@ impl ActivityState {
     }
 
     pub fn get_copy_of_activity(&self, id: &str) -> Activity {
-        self.activities.iter().find(|a| a.id == id.to_string()).cloned().unwrap()
+        self.activities.iter().find(|a| a.id == id).cloned().unwrap()
     }
 
     pub fn update_activity(&mut self, activity: Activity) -> Result<()> {
@@ -56,8 +56,8 @@ impl ActivityState {
 
     pub fn reset_activity(&mut self, id: &str) -> Result<Activity> {
         let default_activities = Self::create_default_activities();
-        let default_activity = default_activities.into_iter().find(|a| a.id == id.to_string()).unwrap();
-        let index = self.activities.iter().position(|a| a.id == id.to_string()).unwrap();
+        let default_activity = default_activities.into_iter().find(|a| a.id == id).unwrap();
+        let index = self.activities.iter().position(|a| a.id == id).unwrap();
         self.activities[index] = default_activity.clone();
         Ok(default_activity)
     }

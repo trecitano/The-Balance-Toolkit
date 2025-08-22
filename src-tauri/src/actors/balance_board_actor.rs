@@ -7,7 +7,7 @@ use chrono::Utc;
 use processing::board_hid_reader;
 use processing::board_hid_reader_mock;
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 

@@ -1,7 +1,7 @@
 use crate::actors::balance_board_actor::BalanceBoardOutput;
 use crate::actors::toolkit_service::SessionConfiguration;
 use crate::file_system::DeviceFileSystem;
-use crate::types::{FrontendSessionConfiguration, MacAddress};
+use crate::types::MacAddress;
 use crate::utils;
 use anyhow::Result;
 use chrono::Utc;
@@ -65,10 +65,7 @@ async fn main_file_writer_loop(mut rx_param: Receiver<BalanceBoardOutput>,
 
     while let Some(data) = rx_param.recv().await {
         let mac_address = data.mac_address();
-        match device_tx_map.get_mut(&mac_address) {
-            Some(tx) => tx.send(data).await?,
-            None => ()
-        }
+        if let Some(tx) = device_tx_map.get_mut(&mac_address) { tx.send(data).await? }
     }
 
     println!("Main File writer execution complete.");
@@ -81,8 +78,8 @@ fn create_device_name_mapping(session_configuration: &SessionConfiguration) -> H
         Ok(devices) => devices,
         Err(_) => {
             return session_configuration.selected_boards
-                .iter().map(|device_mac| (device_mac.clone(),
-                                          utils::mac_address_human_name(device_mac.clone()))).collect()
+                .iter().map(|device_mac| (*device_mac,
+                                          utils::mac_address_human_name(*device_mac))).collect()
         }
     };
 
@@ -94,8 +91,8 @@ fn create_device_name_mapping(session_configuration: &SessionConfiguration) -> H
                 .iter()
                 .find(|device| device.mac_address == *device_mac)
                 .map(|device| device.name.clone())
-                .unwrap_or_else(|| utils::mac_address_human_name(device_mac.clone()));
-            (device_mac.clone(), name)
+                .unwrap_or_else(|| utils::mac_address_human_name(*device_mac));
+            (*device_mac, name)
         })
         .collect()
 }
@@ -103,7 +100,7 @@ fn create_device_name_mapping(session_configuration: &SessionConfiguration) -> H
 fn create_device_file_name_mapping(device_name_mapping: &HashMap<MacAddress, String>, session_id: &str) -> HashMap<MacAddress, FileNameMapping> {
     device_name_mapping.iter().map(|device| {
         let (mac_address, device_name) = device;
-        (mac_address.clone(), FileNameMapping {
+        (*mac_address, FileNameMapping {
             raw_file_name: format!("{session_id}-{device_name}.raw.txt"),
             processed_file_name: format!("{session_id}-{device_name}.processed.txt")
         })
@@ -154,7 +151,7 @@ async fn write_session_settings_to_disk(session_configuration: &SessionConfigura
         device_file_mappings,
         activity: &None,
     };
-    let path = PathBuf::from(session_configuration.output_directory.clone());
+    let path = session_configuration.output_directory.clone();
     let file_path = path.join(format!("{session_id}.settings.txt"));
     let mut file = create_file(file_path).await?;
     let content = toml::to_string_pretty(&data)?;

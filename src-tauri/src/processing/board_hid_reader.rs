@@ -156,14 +156,14 @@ fn read_calibration_data(device: &HidDevice) -> anyhow::Result<BalanceBoardCalib
     // We need to read at least 2 packets, as each packet is not large enough to contain
     // all of the calibration data.
     let cmd: [u8; 7] = [0x17, 0x04, 0xA4, 0x00, 0x20, 0x00, 0x20];
-    write_to_device(&device, &cmd)?;
+    write_to_device(device, &cmd)?;
 
     let mut calibration_buf = [0u8; CALIBRATION_DATA_SIZE];
     let mut bytes_read: usize = 0;
 
     while bytes_read < CALIBRATION_DATA_SIZE {
         let mut buf = [0u8; 32];
-        let len = read_from_device(&device, &mut buf)?;
+        let len = read_from_device(device, &mut buf)?;
 
         if len == 0 { return Err(anyhow!("Timeout reading calibration data.")); }
         // We ignore everything that isn't what we want.
@@ -251,7 +251,7 @@ impl BalanceBoardSensorRawReading {
     fn calculate_weights(&self, cal: &BalanceBoardCalibrationData, mac_address: MacAddress) -> BalanceBoardCalibratedReading {
         BalanceBoardCalibratedReading {
             timestamp: Utc::now(),
-            mac_address: mac_address,
+            mac_address,
             top_right: self.calculate_single_weight(self.top_right, &cal.top_right),
             bottom_right: self.calculate_single_weight(self.bottom_right, &cal.bottom_right),
             top_left: self.calculate_single_weight(self.top_left, &cal.top_left),
