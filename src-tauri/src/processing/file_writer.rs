@@ -1,59 +1,172 @@
 use crate::actors::balance_board_actor::BalanceBoardOutput;
-use crate::processing::data_processor::ProcessingSettings;
+use crate::actors::toolkit_service::SessionConfiguration;
+use crate::file_system::DeviceFileSystem;
+use crate::types::{FrontendSessionConfiguration, MacAddress};
+use crate::utils;
 use anyhow::Result;
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
+use crate::actors::state::activities::Activity;
 
-pub fn initialize(output_directory: String,
-                  session_name: String,
+pub fn initialize(session_configuration: SessionConfiguration,
                   observe_raw_data: bool,
-                  observe_processed_data: bool,
-                  device_name: String,
-                  processing_settings: ProcessingSettings) -> Sender<BalanceBoardOutput> {
-    let (tx, rx) = mpsc::channel(100);
+                  observe_processed_data: bool) -> Sender<BalanceBoardOutput> {
+
+    let (tx, rx) = mpsc::channel(1000);
     
     tokio::spawn(async move {
-        file_write_loop(rx,
-                        session_name,
-                        output_directory,
-                        observe_raw_data,
-                        observe_processed_data,
-                        device_name,
-                        processing_settings
+        main_file_writer_loop(rx,
+                              session_configuration,
+                              observe_raw_data,
+                              observe_processed_data
         ).await
     });
 
     tx
 }
 
+async fn main_file_writer_loop(mut rx_param: Receiver<BalanceBoardOutput>,
+                               session_configuration: SessionConfiguration,
+                               observe_raw_data: bool,
+                               observe_processed_data: bool) -> Result<()> {
+
+    // write settings to file
+    let mut device_tx_map = HashMap::new();
+
+    let device_name_mapping = create_device_name_mapping(&session_configuration);
+    let device_file_mapping = create_device_file_name_mapping(&session_configuration);
+    let session_id = Utc::now().format("%Y-%m-%dT%H-%M-%S").to_string();
+    let device_file_mappings = session_configuration.selected_boards;
+
+    write_session_settings_to_disk(&session_configuration, &device_name_mapping, &session_id).await?;
+
+    for device_mac in session_configuration.selected_boards {
+        let (tx, rx) = mpsc::channel(1000);
+        let output_directory = session_configuration.output_directory.clone();
+        let session_id_arg = session_id.clone();
+        let device_name = device_name_mapping.get(&device_mac).unwrap().clone();
+        device_tx_map.insert(device_mac, tx);
+
+        tokio::spawn(async move {
+            file_write_loop(rx,
+                            &output_directory,
+                            &session_id_arg,
+                            &device_name,
+                            observe_raw_data,
+                            observe_processed_data).await.unwrap();
+        });
+    }
+
+    while let Some(data) = rx_param.recv().await {
+        let mac_address = data.mac_address();
+        match device_tx_map.get_mut(&mac_address) {
+            Some(tx) => tx.send(data).await?,
+            None => ()
+        }
+    }
+
+    println!("Main File writer execution complete.");
+
+    Ok(())
+}
+
+fn create_device_name_mapping(session_configuration: &SessionConfiguration) -> HashMap<MacAddress, String> {
+    let devices = match DeviceFileSystem::get_stored_devices() {
+        Ok(devices) => devices,
+        Err(_) => {
+            return session_configuration.selected_boards
+                .iter().map(|device_mac| (device_mac.clone(),
+                                          utils::mac_address_human_name(device_mac.clone()))).collect()
+        }
+    };
+
+    session_configuration
+        .selected_boards
+        .iter()
+        .map(|device_mac| {
+            let name = devices
+                .iter()
+                .find(|device| device.mac_address == *device_mac)
+                .map(|device| device.name.clone())
+                .unwrap_or_else(|| utils::mac_address_human_name(device_mac.clone()));
+            (device_mac.clone(), name)
+        })
+        .collect()
+}
+
+fn create_device_file_name_mapping(device_name_mapping: HashMap<MacAddress, String>, session_id: &str) -> HashMap<MacAddress, FileNameMapping> {
+    device_name_mapping.iter().map(|device| {
+        let (mac_address, device_name) = device;
+        let file_name = format!("{device_name}.txt");
+        (mac_address.clone(), FileNameMapping {
+            raw_file_name: file_name.clone(),
+            processed_file_name: file_name
+        })
+    }).collect()
+
+}
+
+#[derive(Serialize)]
+pub struct SessionConfigurationFileFormatRef<'a> {
+    session_configuration: &'a SessionConfiguration,
+    device_names: &'a HashMap<MacAddress, String>,
+    device_file_names: &'a HashMap<MacAddress, FileNameMapping>,
+    activity: &'a Option<Activity>,
+    session_id: &'a str,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SessionConfigurationFileFormat {
+    pub session_configuration: FrontendSessionConfiguration,
+    pub device_names: HashMap<MacAddress, String>,
+    pub device_file_names: HashMap<MacAddress, FileNameMapping>,
+    pub activity: Option<Activity>,
+    pub session_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FileNameMapping {
+    pub raw_file_name: String,
+    pub processed_file_name: String
+}
+
+async fn write_session_settings_to_disk(session_configuration: &SessionConfiguration,
+                                        device_names: &HashMap<MacAddress, String>,
+                                        session_id: &str) -> Result<()> {
+    let data = SessionConfigurationFileFormatRef {
+        session_configuration,
+        device_names,
+        session_id
+    };
+    let path = PathBuf::from(session_configuration.output_directory.clone());
+    let file_path = path.join(format!("{session_id}.settings.txt"));
+    let mut file = create_file(file_path).await?;
+    let content = toml::to_string_pretty(&data)?;
+    file.write_all(content.as_ref()).await?;
+    Ok(())
+}
+
 async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
-                         output_directory: String,
-                         session_name: String,
+                         output_directory: &str,
+                         session_id: &str,
+                         device_name: &str,
                          observe_raw_data: bool,
-                         observe_processed_data: bool,
-                         device_name: String,
-                         processing_settings: ProcessingSettings) -> Result<()> {
+                         observe_processed_data: bool) -> Result<()> {
+
     println!("File writer execution start.");
     let path = PathBuf::from(output_directory);
-    let prepared_file_name = format!("{session_name}-{device_name}");
-
-    // Create a file to store the session processing settings;
-    if observe_processed_data {
-        let file_path = path.join(format!("{prepared_file_name}-settings.txt"));
-        println!("Storing settings in {:?}", file_path);
-        let mut file = create_file(file_path).await?;
-        let content = toml::to_string_pretty(&processing_settings)?;
-        file.write_all(content.as_ref()).await?;
-    }
+    let prepared_file_name = format!("{session_id}-{device_name}");
 
     // Create a file to optionally store the raw values;
     let mut raw_values_file = if observe_raw_data {
-        let file_path = path.join(format!("{prepared_file_name}-raw-values.txt"));
+        let file_path = path.join(format!("{prepared_file_name}.raw.txt"));
         println!("Storing processed session in {:?}", file_path);
         let mut file = create_file(file_path).await?;
         file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n").await?;
@@ -64,7 +177,7 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
 
     // Create a file to optionally store the processed values;
     let mut processed_values_file = if observe_processed_data {
-        let file_path = path.join(format!("{prepared_file_name}-processed-values.txt"));
+        let file_path = path.join(format!("{prepared_file_name}.processed.txt"));
         let mut file = create_file(file_path).await?;
         file.write_all(b"timestamp,mean_velocity,total_path_length,velocity_moment,mean_power_frequency,center_of_spectrum,frequency_total_power,dfa_alpha,jerk\n").await?;
         Some(file)

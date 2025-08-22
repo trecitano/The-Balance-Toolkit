@@ -1,8 +1,9 @@
+use std::collections::HashSet;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::actors::toolkit_service::SessionConfiguration;
 use crate::file_system;
-use crate::processing::data_processor::ProcessingSettings;
+use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -91,7 +92,7 @@ impl Default for User {
 pub struct SessionInformation {
     pub available_users: Vec<String>,
     pub selected_boards: Vec<SelectedBoard>,
-    pub session_configuration: SessionConfiguration,
+    pub session_configuration: FrontendSessionConfiguration,
     pub has_ongoing_session: bool,
 }
 
@@ -101,6 +102,43 @@ pub struct SessionInformation {
 pub struct SelectedBoard {
     pub name: String,
     pub mac_address: MacAddress,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FrontendSessionConfiguration {
+    pub selected_user: String,
+    pub selected_boards: HashSet<MacAddress>,
+    pub lsl_enabled: bool,
+    pub tcp_enabled: bool,
+    pub output_directory: String,
+    pub window_size_ms: u64,
+    pub window_slide_ms: u64,
+    pub sampling_rate: u64,
+    pub interpolation: InterpolationSetting,
+    pub activity_id: Option<String>,
+    pub load_session_file_path: Option<String>
+}
+
+impl From<&SessionConfiguration> for FrontendSessionConfiguration {
+    fn from(cfg: &SessionConfiguration) -> Self {
+        FrontendSessionConfiguration {
+            selected_user: cfg.selected_user.clone(),
+            selected_boards: cfg.selected_boards.clone(),
+            lsl_enabled: cfg.lsl_enabled,
+            tcp_enabled: cfg.tcp_enabled,
+            output_directory: cfg.output_directory.clone(),
+            window_size_ms: cfg.window_size_ms,
+            window_slide_ms: cfg.window_slide_ms,
+            sampling_rate: cfg.sampling_rate,
+            interpolation: cfg.interpolation.clone(),
+            activity_id: cfg.activity_id.clone(),
+            load_session_file_path: cfg
+                .load_session_file
+                .as_ref()
+                .map(|s| s.to_string()),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

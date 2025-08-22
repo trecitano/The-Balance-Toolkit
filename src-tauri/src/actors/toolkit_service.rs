@@ -1,21 +1,20 @@
-use std::collections::{HashMap, HashSet};
-use std::time::Duration;
-use tokio::sync::{mpsc, oneshot};
-use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, BoardAction};
-use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothService};
-use crate::file_system::{DeviceFileSystem, SettingsFileSystem};
-use crate::types::{GeneralSettings, MacAddress, NintendoDevice, SelectedBoard, SessionInformation};
-use anyhow::Result;
-use chrono::Utc;
-use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::Sender;
-use file_system::UserFileSystem;
 use crate::actors::balance_board_actor;
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, BoardAction, BoardConnectionMode};
+use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothService};
 use crate::actors::state::activities::{Activity, ActivityState};
 use crate::file_system;
-use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
+use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem, SettingsFileSystem};
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::lsl_writer::LslConnectionSettings;
+use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
+use crate::types::{FrontendSessionConfiguration, GeneralSettings, MacAddress, NintendoDevice, SelectedBoard, SessionInformation};
+use anyhow::{anyhow, Result};
+use file_system::UserFileSystem;
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
+use std::time::Duration;
+use tokio::sync::mpsc::Sender;
+use tokio::sync::{mpsc, oneshot};
 
 // Commands that can be sent to the ConnectionManager
 #[derive(Debug)]
@@ -75,16 +74,19 @@ pub enum ToolkitCommand {
         response: oneshot::Sender<Activity>,
     },
 
+    // Session
     SessionInformation {
         response: oneshot::Sender<SessionInformation>,
     },
     UpdateSessionInformation {
-        session_configuration: SessionConfiguration,
+        session_configuration: FrontendSessionConfiguration,
+        response: Option<oneshot::Sender<()>>,
     },
     StartSession {
         frontend_channel: Sender<BalanceBoardOutput>
     },
     StopSession,
+    LoadSessionFromFile { file_path: String, response: oneshot::Sender<FrontendSessionConfiguration> },
 
     BoardAction {
         mac_address: MacAddress,
@@ -105,16 +107,14 @@ pub struct ConnectionManager {
     general_settings: GeneralSettings,
     session_settings: SessionConfiguration,
     connections: HashMap<MacAddress, Sender<BoardAction>>,
-    selected_boards: HashSet<MacAddress>,
     has_ongoing_session: bool,
 }
 
 // TODO The activity_id for now is just the string ID in the frontend, since the activities are fully implemented
 // in the frontend. In near future, they should be implemented in the backend.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
 pub struct SessionConfiguration {
     pub selected_user: String,
+    pub selected_boards: HashSet<MacAddress>,
     pub lsl_enabled: bool,
     pub tcp_enabled: bool,
     pub output_directory: String,
@@ -123,6 +123,14 @@ pub struct SessionConfiguration {
     pub sampling_rate: u64,
     pub interpolation: InterpolationSetting,
     pub activity_id: Option<String>,
+    pub load_session_file: Option<SessionFromFile>,
+}
+
+struct SessionFromFile {
+    file_path: String,
+    activity: Option<Activity>,
+    device_names: HashMap<MacAddress, String>,
+    connections: HashMap<MacAddress, Sender<BoardAction>>
 }
 
 impl ConnectionManager {
@@ -131,6 +139,7 @@ impl ConnectionManager {
         let general_settings = SettingsFileSystem::get_or_create_default_settings()?;
         let session_settings = SessionConfiguration {
             selected_user: selected_user.clone(),
+            selected_boards: HashSet::new(),
             lsl_enabled: false,
             tcp_enabled: false,
             output_directory: general_settings.store_files_default_directory.clone(),
@@ -138,7 +147,8 @@ impl ConnectionManager {
             window_slide_ms: general_settings.processing_settings.window_slide_ms,
             sampling_rate: general_settings.processing_settings.sampling_rate,
             interpolation: general_settings.processing_settings.interpolation.clone(),
-            activity_id: None
+            activity_id: None,
+            load_session_file: None,
         };
         let activity_state = ActivityState::new()?;
 
@@ -151,7 +161,6 @@ impl ConnectionManager {
             general_settings,
             session_settings,
             connections: HashMap::new(),
-            selected_boards: HashSet::new(),
             has_ongoing_session: false,
         })
     }
@@ -195,13 +204,13 @@ impl ConnectionManager {
                     response.send(self.session_settings.selected_user.clone()).unwrap();
                 }
                 ToolkitCommand::SelectBoardForSession { mac_address } => {
-                    self.selected_boards.insert(mac_address);
+                    self.session_settings.selected_boards.insert(mac_address);
                 }
                 ToolkitCommand::UnselectBoardForSession { mac_address } => {
-                    self.selected_boards.remove(&mac_address);
+                    self.session_settings.selected_boards.remove(&mac_address);
                 }
                 ToolkitCommand::SelectedBoardsForSession { response } => {
-                    response.send(self.selected_boards.iter().cloned().collect()).unwrap();
+                    response.send(self.session_settings.selected_boards.iter().cloned().collect()).unwrap();
                 }
 
                 ToolkitCommand::GetActivities { response } => {
@@ -230,7 +239,7 @@ impl ConnectionManager {
                         .filter(|device| {
                             // Convert u64 to MacAddress before checking
                             let mac = MacAddress::from(device.mac_address);
-                            self.selected_boards.contains(&mac)
+                            self.session_settings.selected_boards.contains(&mac)
                         })
                         .map(|device| SelectedBoard {
                             name: device.name.clone(),
@@ -242,44 +251,27 @@ impl ConnectionManager {
                         available_users: UserFileSystem::get_users()?.into_iter().map(|user| user.name).collect(),
                         selected_boards,
                         has_ongoing_session: self.has_ongoing_session,
-                        session_configuration: SessionConfiguration {
-                            selected_user: self.session_settings.selected_user.clone(),
-                            lsl_enabled: self.session_settings.lsl_enabled,
-                            tcp_enabled: self.session_settings.tcp_enabled,
-                            output_directory: self.session_settings.output_directory.clone(),
-                            window_size_ms: self.session_settings.window_size_ms,
-                            window_slide_ms: self.session_settings.window_slide_ms,
-                            sampling_rate: self.session_settings.sampling_rate,
-                            interpolation: self.session_settings.interpolation.clone(),
-                            activity_id: self.session_settings.activity_id.clone()
-                        }
+                        session_configuration: (&self.session_settings).into()
                     };
                     response.send(session_information).unwrap();
                 }
-                ToolkitCommand::UpdateSessionInformation { session_configuration } => {
-                    self.session_settings = SessionConfiguration {
-                        selected_user: session_configuration.selected_user,
-                        lsl_enabled: session_configuration.lsl_enabled,
-                        tcp_enabled: session_configuration.tcp_enabled,
-                        output_directory: session_configuration.output_directory,
-                        window_size_ms: session_configuration.window_size_ms,
-                        window_slide_ms: session_configuration.window_slide_ms,
-                        sampling_rate: session_configuration.sampling_rate,
-                        interpolation: session_configuration.interpolation,
-                        activity_id: session_configuration.activity_id
-                    };
-                }
+                ToolkitCommand::UpdateSessionInformation { session_configuration, response } => {
+                    self.update_session_settings(session_configuration)?;
+
+                    if let Some(response) = response {
+                        response.send(()).unwrap();
+                    }
+                },
                 ToolkitCommand::StartSession { frontend_channel } => {
                     self.has_ongoing_session = true;
                     start_session(frontend_channel,
                                   &self.general_settings,
                                   &self.session_settings,
-                                  &self.selected_boards,
                                   &self.connections)
                         .await;
                 },
                 ToolkitCommand::StopSession => {
-                    for board in &self.selected_boards {
+                    for board in &self.session_settings.selected_boards {
                         match &self.connections.get(board) {
                             Some(connection) => {
                                 let command = { BoardAction::StopRecording };
@@ -289,6 +281,9 @@ impl ConnectionManager {
                         }
                     }
                     self.has_ongoing_session = false;
+                },
+                ToolkitCommand::LoadSessionFromFile { file_path, response } => {
+
                 }
 
 
@@ -328,8 +323,8 @@ impl ConnectionManager {
         DeviceFileSystem::update_file_system_boards(&non_mock_devices)?;
 
         self.bluetooth_manager_tx = BluetoothService::start_bluetooth_handler(self.general_settings.is_demo_mode);
+        self.session_settings.selected_boards = HashSet::new();
         self.connections = HashMap::new();
-        self.selected_boards = HashSet::new();
         self.boards_system_view().await?;
         Ok(())
     }
@@ -379,7 +374,13 @@ impl ConnectionManager {
         }
 
         println!("Connecting to device: {:?}", mac_address);
-        let board_connection = balance_board_actor::initialize(mac_address, self.general_settings.is_demo_mode)?;
+        let connection_mode = if self.general_settings.is_demo_mode {
+            BoardConnectionMode::Demo
+        } else {
+            BoardConnectionMode::Real
+        };
+
+        let board_connection = balance_board_actor::initialize(mac_address, connection_mode)?;
 
         self.connections.insert(mac_address, board_connection);
         // TODO
@@ -436,6 +437,64 @@ impl ConnectionManager {
             eprintln!("Failed to forward action to device {:?}: {}", mac_address, e);
         }
     }
+    async fn update_session_settings(&mut self, session_configuration: FrontendSessionConfiguration) -> Result<()> {
+        // Check if we need to load a different session file
+        let current_session_path = self.session_settings.load_session_file.as_ref().map(|s| &s.file_path);
+        let incoming_session_path = session_configuration.load_session_file_path.as_ref();
+
+        if current_session_path != incoming_session_path {
+            if let Some(session_path) = incoming_session_path {
+                self.update_session_from_file(session_path).await?;
+                return Ok(());
+            }
+        }
+
+        self.update_session_from_update(session_configuration);
+
+        Ok(())
+    }
+
+    async fn update_session_from_file(&mut self, session_path: &str) -> Result<()> {
+        let file_session = ExistingSessionFileSystem::load(session_path)?;
+        let directory = PathBuf::from(session_path).parent().ok_or(anyhow!("Can't access parent directory of session file."))?;
+
+        let connections = file_session.device_names.iter()
+            .map(|(mac_address, device_name)| {
+                let raw_file_name = &file_session.device_file_names.get(mac_address).unwrap().raw_file_name;
+                let raw_file_path = directory.join(raw_file_name).as_path().into();
+                // We assume that the raw file is in the same directory as the session file.
+
+                let tx = balance_board_actor::initialize(mac_address.clone(), BoardConnectionMode::ReadFromFile(raw_file_path)).unwrap();
+                (*mac_address, tx)
+            })
+            .collect();
+
+        self.session_settings.window_size_ms = file_session.session_configuration.window_size_ms;
+        self.session_settings.window_slide_ms = file_session.session_configuration.window_slide_ms;
+        self.session_settings.sampling_rate = file_session.session_configuration.sampling_rate;
+        self.session_settings.interpolation = file_session.session_configuration.interpolation.clone();
+        self.session_settings.load_session_file = Some(SessionFromFile {
+            file_path: session_path.to_string(),
+            activity: file_session.activity,
+            device_names: file_session.device_names,
+            connections,
+        });
+
+        Ok(())
+    }
+
+    fn update_session_from_update(&mut self, config: FrontendSessionConfiguration) {
+        self.session_settings.selected_user = config.selected_user;
+        self.session_settings.selected_boards = config.selected_boards;
+        self.session_settings.lsl_enabled = config.lsl_enabled;
+        self.session_settings.tcp_enabled = config.tcp_enabled;
+        self.session_settings.output_directory = config.output_directory;
+        self.session_settings.window_size_ms = config.window_size_ms;
+        self.session_settings.window_slide_ms = config.window_slide_ms;
+        self.session_settings.sampling_rate = config.sampling_rate;
+        self.session_settings.interpolation = config.interpolation;
+        self.session_settings.activity_id = config.activity_id;
+    }
 }
 
 // In a session, we have 2 producers:
@@ -476,14 +535,16 @@ struct SessionMapping {
 async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
                        general_settings: &GeneralSettings,
                        session_settings: &SessionConfiguration,
-                       selected_boards: &HashSet<MacAddress>,
                        hid_board_rx_map: &HashMap<MacAddress, Sender<BoardAction>>) {
-    if selected_boards.len() == 0 {
-        return;
-    }
+
+    // If we are reading a session, then we must not use our existing session connection.
+    let balance_board_connections: HashMap<MacAddress, Sender<BoardAction>> = match &session_settings.load_session_file {
+        Some(session_file) => session_file.connections.clone(),
+        None => hid_board_rx_map.clone()
+    };
 
     let mut observer_list: Vec<SessionMapping> = vec!();
-    for mac_address in selected_boards {
+    for mac_address in session_settings.selected_boards.iter() {
         observer_list.push(SessionMapping {
             mac_address: *mac_address,
             observers_raw: vec!(),
@@ -500,27 +561,22 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
         interpolation: session_settings.interpolation.clone()
     };
 
-    // N file writers (one per board)
+    // 1 file writer
+    // This file writer then spawns multiple different tasks
     let store_files = general_settings.store_raw_session || general_settings.store_processed_data;
     if store_files {
-        for mut session_mapping in observer_list.iter_mut() {
-            let output_directory = session_settings.output_directory.clone();
-            let session_name = Utc::now().format("%Y-%m-%dT%H-%M-%SZ").to_string();
+        let tx = file_writer::initialize(
+            session_settings.clone().into(),
+            general_settings.store_raw_session,
+            general_settings.store_processed_data
+        );
 
-            let tx = file_writer::initialize(
-                output_directory,
-                session_name,
-                general_settings.store_raw_session,
-                general_settings.store_processed_data,
-                "TODO_UPDATE_SESSION_DEVICE_NAME".to_string(),
-                processing_settings.clone()
-            );
+        for mut session_mapping in observer_list.iter_mut() {
             add_observer_to_device_list(&mut session_mapping,
-                                        tx,
+                                        tx.clone(),
                                         ObserverType::FileWriter,
                                         general_settings.store_raw_session,
-                                        general_settings.store_processed_data,
-                                        );
+                                        general_settings.store_processed_data);
         }
     }
 
@@ -582,7 +638,8 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
         if observers.len() > 0 {
             let (raw_data_tx, raw_data_rx) = mpsc::channel(10);
             let command = BoardAction::StartRecording(raw_data_tx);
-            match hid_board_rx_map.get(&device_mapping.mac_address) {
+
+            match balance_board_connections.get(&device_mapping.mac_address) {
                 Some(sender) => sender.send(command).await.unwrap(),
                 None => ()
             }
