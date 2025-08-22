@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::path::PathBuf;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::actors::toolkit_service::SessionConfiguration;
@@ -15,7 +16,7 @@ pub struct GeneralSettings {
     pub lsl_source_id: String,
     pub lsl_send_raw_data: bool,
     pub lsl_send_processed_data: bool,
-    pub store_files_default_directory: String,
+    pub store_files_default_directory: PathBuf,
     pub store_raw_session: bool,
     pub store_processed_data: bool,
     pub processing_settings: ProcessingSettings,
@@ -34,7 +35,7 @@ impl Default for GeneralSettings {
             lsl_send_raw_data: true,
             lsl_send_processed_data: true,
 
-            store_files_default_directory: file_system::app_dir().to_str().unwrap().to_string(),
+            store_files_default_directory: file_system::app_dir(),
             store_raw_session: true,
             store_processed_data: true,
 
@@ -111,13 +112,13 @@ pub struct FrontendSessionConfiguration {
     pub selected_boards: HashSet<MacAddress>,
     pub lsl_enabled: bool,
     pub tcp_enabled: bool,
-    pub output_directory: String,
+    pub output_directory: PathBuf,
     pub window_size_ms: u64,
     pub window_slide_ms: u64,
     pub sampling_rate: u64,
     pub interpolation: InterpolationSetting,
     pub activity_id: Option<String>,
-    pub load_session_file_path: Option<String>
+    pub load_session_file_path: Option<PathBuf>
 }
 
 impl From<&SessionConfiguration> for FrontendSessionConfiguration {
@@ -136,7 +137,7 @@ impl From<&SessionConfiguration> for FrontendSessionConfiguration {
             load_session_file_path: cfg
                 .load_session_file
                 .as_ref()
-                .map(|s| s.to_string()),
+                .map(|s| s.file_path.clone()),
         }
     }
 }
