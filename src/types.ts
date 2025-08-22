@@ -73,6 +73,7 @@ export type SessionConfiguration = {
   samplingRate: number;
   interpolation: string;
   activityId: string;
+  loadSessionRawDataFromFile?: string;
 };
 
 export interface SelectedBoard {

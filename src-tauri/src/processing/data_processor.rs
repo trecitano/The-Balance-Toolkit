@@ -127,16 +127,12 @@ fn data_process_loop(
         // Cleanup old raw readings
         let idx = buffer.partition_point(|p| p.timestamp < start_time);
         buffer.drain(0..idx);
-        
-        println!("Data processor: {:?}", &buffer.len());
 
         let points = match settings.interpolation {
             InterpolationSetting::Linear => { linear_interpolation(&buffer, start_time, end_time, &sampling_size_time_delta)}
             InterpolationSetting::Cubic => { cubic_interpolation(&buffer, start_time, end_time, &sampling_size_time_delta)}
             InterpolationSetting::Polynomial => { polynomial_interpolation(&buffer, start_time, end_time, &sampling_size_time_delta)}
         };
-
-        println!("Data processor: {:?}", &points.len());
 
         let sway_calculation = calculate_basic_sway_metrics(&points);
         let area_calculation = calculate_area_metrics(&points);

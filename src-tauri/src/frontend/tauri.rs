@@ -1,19 +1,18 @@
 use crate::file_system;
 use crate::file_system::UserFileSystem;
-use crate::types::{GeneralSettings, MacAddress, NintendoDevice, SessionInformation, User, UserPageInformation};
+use crate::types::{FrontendSessionConfiguration, GeneralSettings, MacAddress, NintendoDevice, SessionInformation, User, UserPageInformation};
 use serde::Serialize;
 use std::time::Duration;
 
 use crate::actors::balance_board_actor::{BalanceBoardOutput, BoardAction};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
-use crate::actors::toolkit_service::{SessionConfiguration, ToolkitCommand, ToolkitResponse};
-use crate::processing::data_processor::ProcessedBoardData;
+use crate::actors::state::activities::Activity;
+use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
 use tauri::ipc::Channel;
 use tauri::{Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, oneshot};
-use crate::actors::state::activities::Activity;
 
 pub struct AppState {
     pub manager_tx: Sender<ToolkitCommand>,
@@ -342,11 +341,13 @@ async fn session_information(state: State<'_, AppState>) -> Result<SessionInform
 }
 
 #[tauri::command(async)]
-async fn session_update_session_configuration(session_configuration: SessionConfiguration, state: State<'_, AppState>) -> Result<(), String> {
+async fn session_update_session_configuration(session_configuration: FrontendSessionConfiguration, state: State<'_, AppState>) -> Result<(), String> {
     println!(">> session_update_session_configuration: {:?}", session_configuration);
 
-    let command = ToolkitCommand::UpdateSessionInformation { session_configuration };
+    let (tx, mut rx) = oneshot::channel();
+    let command = ToolkitCommand::UpdateSessionInformation { session_configuration, response: Some(tx) };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    rx.await.map_err(|e| e.to_string())?;
 
     println!("<< session_update_session_configuration.");
     Ok(())
@@ -432,6 +433,20 @@ async fn session_stop_session(state: State<'_, AppState>) -> Result<(), String> 
 
     println!("<< session_stop_session.");
     Ok(())
+}
+
+#[tauri::command(async)]
+async fn session_load_session_file(state: State<'_, AppState>, file_path: String) -> Result<FrontendSessionConfiguration, String> {
+    println!(">> session_load_session_file: {}", file_path);
+
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::LoadSessionFromFile { file_path, response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let result = response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< session_load_session_file: {:?}", result);
+    Ok(result)
 }
 
 

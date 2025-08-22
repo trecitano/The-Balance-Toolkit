@@ -1,11 +1,13 @@
+use crate::processing;
+use crate::processing::board_hid_file_reader;
 use crate::processing::data_processor::ProcessedBoardData;
 use crate::types::MacAddress;
-use crate::processing;
 use anyhow::Result;
 use chrono::Utc;
 use processing::board_hid_reader;
 use processing::board_hid_reader_mock;
 use serde::Serialize;
+use std::path::Path;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
@@ -32,6 +34,15 @@ pub enum BalanceBoardCommands {
 pub enum BalanceBoardOutput {
     Raw(BalanceBoardCalibratedReading),
     Processed(ProcessedBoardData),
+}
+
+impl BalanceBoardOutput {
+    pub fn mac_address(&self) -> MacAddress {
+        match self {
+            BalanceBoardOutput::Raw(reading) => reading.mac_address,
+            BalanceBoardOutput::Processed(reading) => reading.mac_address,
+        }
+    }
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -145,13 +156,19 @@ impl ProcessedBoardData {
     }
 }
 
-pub fn initialize(mac_address: MacAddress, is_demo_mode: bool) -> Result<Sender<BoardAction>> {
+pub enum BoardConnectionMode {
+    Real,
+    Demo,
+    ReadFromFile(Path)
+}
+
+pub fn initialize(mac_address: MacAddress, mode: BoardConnectionMode) -> Result<Sender<BoardAction>> {
     let (tx, rx) = mpsc::channel(100);
 
-    let board_hid_tx = if is_demo_mode {
-        board_hid_reader_mock::initialize(mac_address)?
-    } else {
-        board_hid_reader::initialize(mac_address)?
+    let board_hid_tx = match mode {
+        BoardConnectionMode::Real => board_hid_reader::initialize(mac_address)?,
+        BoardConnectionMode::Demo => board_hid_reader_mock::initialize(mac_address)?,
+        BoardConnectionMode::ReadFromFile(file_path) => board_hid_file_reader::initialize(mac_address, file_path)?,
     };
     
     tokio::spawn(async move{

@@ -1,4 +1,4 @@
-use crate::types::{GeneralSettings, MacAddress, NintendoDevice, User};
+use crate::types::{FrontendSessionConfiguration, GeneralSettings, MacAddress, NintendoDevice, User};
 use serde::Serialize;
 use std::fs;
 use std::fs::File;
@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::de::DeserializeOwned;
 use crate::actors::state::activities::{Activity, ActivityState};
+use crate::processing::file_writer::{SessionConfigurationFileFormat, SessionConfigurationFileFormatRef};
 
 #[derive(Serialize)]
 pub struct FileMetadata {
@@ -21,7 +22,7 @@ const USERS_FILE: &str = "users.json";
 pub struct UserFileSystem;
 impl UserFileSystem {
     pub fn get_or_create_default_user() -> Result<User> {
-        let users: Vec<User> = FileStore::load(USERS_FILE)?;
+        let users: Vec<User> = FileStore::load_with_default(USERS_FILE)?;
 
         if let Some(default_user) = users.into_iter().find(|u| u.is_default) {
             return Ok(default_user);
@@ -35,12 +36,12 @@ impl UserFileSystem {
     }
 
     pub fn get_users() -> Result<Vec<User>> {
-        let users: Vec<User> = FileStore::load(USERS_FILE)?;
+        let users: Vec<User> = FileStore::load_with_default(USERS_FILE)?;
         Ok(users)
     }
 
     pub fn add_user(new_user: User) -> Result<()> {
-        let mut users: Vec<User> = FileStore::load(USERS_FILE)?;
+        let mut users: Vec<User> = FileStore::load_with_default(USERS_FILE)?;
         users.push(new_user);
         FileStore::save(USERS_FILE, &users)
     }
@@ -69,12 +70,12 @@ const NINTENDO_DEVICES_FILE: &str = "nintendo_devices.json";
 pub struct DeviceFileSystem;
 impl DeviceFileSystem {
     pub fn get_users() -> Result<Vec<User>> {
-        let users: Vec<User> = FileStore::load(NINTENDO_DEVICES_FILE)?;
+        let users: Vec<User> = FileStore::load_with_default(NINTENDO_DEVICES_FILE)?;
         Ok(users)
     }
 
     pub fn get_stored_devices() -> Result<Vec<NintendoDevice>> {
-        let devices: Vec<NintendoDevice> = FileStore::load(NINTENDO_DEVICES_FILE)?;
+        let devices: Vec<NintendoDevice> = FileStore::load_with_default(NINTENDO_DEVICES_FILE)?;
         Ok(devices)
     }
 
@@ -110,13 +111,13 @@ const SETTINGS_FILE: &str = "settings.json";
 pub struct SettingsFileSystem;
 impl SettingsFileSystem {
     pub fn get_or_create_default_settings() -> Result<GeneralSettings> {
-        let settings: GeneralSettings = FileStore::load(SETTINGS_FILE)?;
+        let settings: GeneralSettings = FileStore::load_with_default(SETTINGS_FILE)?;
 
         Ok(settings)
     }
 
     pub fn save_settings(settings: &GeneralSettings) -> Result<()> {
-        let old_settings: GeneralSettings = FileStore::load(SETTINGS_FILE)?;
+        let old_settings: GeneralSettings = FileStore::load_with_default(SETTINGS_FILE)?;
 
         if old_settings == *settings {
             return Ok(());
@@ -136,13 +137,24 @@ impl ActivitiesFileSystem {
     }
 
     pub fn save_activities(activities: &Vec<Activity>) -> Result<()> {
-        let old_activities: Vec<Activity> = FileStore::load(ACTIVITIES_FILE)?;
+        let old_activities: Vec<Activity> = FileStore::load_with_default(ACTIVITIES_FILE)?;
 
         if old_activities == *activities {
             return Ok(());
         }
 
         FileStore::save(ACTIVITIES_FILE, &activities)
+    }
+}
+
+pub struct ExistingSessionFileSystem;
+impl ExistingSessionFileSystem {
+    pub fn load(file_path: &str) -> Result<SessionConfigurationFileFormat> {
+        FileStore::load(file_path)
+    }
+
+    pub fn save(file_path: &str, session: &SessionConfigurationFileFormatRef) -> Result<()> {
+        FileStore::save(file_path, session)
     }
 }
 
@@ -153,6 +165,23 @@ struct FileStore;
 
 impl FileStore {
     pub fn load<T>(file_name: &str) -> Result<T>
+    where
+        T: Serialize + DeserializeOwned,
+    {
+        let file_path = app_dir().join(file_name);
+
+        let file = File::open(&file_path)
+            .with_context(|| format!("Failed to open file: {:?}", file_path))?;
+
+        let reader = BufReader::new(file);
+
+        let data: T = serde_json::from_reader(reader)
+            .with_context(|| format!("Failed to parse JSON from file: {:?}", file_path))?;
+
+        Ok(data)
+    }
+
+    pub fn load_with_default<T>(file_name: &str) -> Result<T>
     where
         T: Serialize + DeserializeOwned + Default,
     {

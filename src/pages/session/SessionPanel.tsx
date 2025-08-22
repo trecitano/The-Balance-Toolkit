@@ -41,6 +41,23 @@ export function SessionPanel({
     }
   };
 
+  const pickSessionFile = async () => {
+    const selected = await open({
+      directory: false,
+      multiple: false,
+      filters: [
+        {
+          name: "Session file",
+          extensions: ["settings.txt"],
+        },
+      ],
+      title: "Select the Session file",
+    });
+    if (typeof selected === "string") {
+      update("loadSessionRawDataFromFile", selected);
+    }
+  }
+
   return (
     <>
       <header className={"mb-6"}>
@@ -71,29 +88,41 @@ export function SessionPanel({
           </SingleColumn>
         </div>
 
-        <div className="w-1/20">
+        <div className="w-4/20">
           {/* LSL */}
-          <SingleColumn label="LSL" backgroundType="transparent" direction="row">
-            <InputPrimitive
-              editable
-              type="checkbox"
-              className={"w-5"}
-              checked={value.lslEnabled ?? false}
-              onChange={(e) => update("lslEnabled", e.target.checked)}
-            />
-            <span className="font-semibold">{value.lslEnabled ? "ON" : "OFF"}</span>
-          </SingleColumn>
+          <div className="flex">
+            {/* LSL */}
+            <SingleColumn label="LSL" backgroundType="transparent" direction="row">
+              <InputPrimitive
+                editable
+                type="checkbox"
+                className={"w-5"}
+                checked={value.lslEnabled ?? false}
+                onChange={(e) => update("lslEnabled", e.target.checked)}
+              />
+              <span className="font-semibold">{value.lslEnabled ? "ON" : "OFF"}</span>
+            </SingleColumn>
 
-          {/* TCP */}
-          <SingleColumn label="TCP" backgroundType="transparent" direction="row">
-            <InputPrimitive
-              editable
-              type="checkbox"
-              className={"w-5"}
-              checked={value.tcpEnabled}
-              onChange={(e) => update("tcpEnabled", e.target.checked)}
+            {/* TCP */}
+            <SingleColumn label="TCP" backgroundType="transparent" direction="row">
+              <InputPrimitive
+                editable
+                type="checkbox"
+                className={"w-5"}
+                checked={value.tcpEnabled}
+                onChange={(e) => update("tcpEnabled", e.target.checked)}
+              />
+              <span className="font-semibold">{value.tcpEnabled ? "ON" : "OFF"}</span>
+            </SingleColumn>
+          </div>
+
+          <SingleColumn label="Activity" backgroundType="transparent">
+            <SelectPrimitive
+              value={value.activityId}
+              onChange={(v) => update("activityId", v)}
+              options={activityOptions}
+              noneOption="None"
             />
-            <span className="font-semibold">{value.tcpEnabled ? "ON" : "OFF"}</span>
           </SingleColumn>
         </div>
 
@@ -153,13 +182,22 @@ export function SessionPanel({
             </div>
           </SingleColumn>
 
-          <SingleColumn label="Activity" backgroundType="transparent" className="w-1/2">
-            <SelectPrimitive
-              value={value.activityId}
-              onChange={(v) => update("activityId", v)}
-              options={activityOptions}
-              noneOption="None"
-            />
+          <SingleColumn label="Load Session" backgroundType="transparent">
+            <div className="flex h-10 items-center gap-2">
+              <button
+                type="button"
+                className="h-10 rounded-md border border-gray-300 px-3 text-sm hover:bg-gray-200"
+                onClick={pickSessionFile}
+              >
+                Choose…
+              </button>
+              <div className="min-w-0 flex-1 truncate text-sm text-gray-700">
+                {value.loadSessionRawDataFromFile ?? "No file selected"}
+              </div>
+            </div>
+            <button className={"h-5 w-5 bg-amber-800"} onClick={() =>  update("loadSessionRawDataFromFile", undefined)}>
+
+            </button>
           </SingleColumn>
         </div>
       </div>
