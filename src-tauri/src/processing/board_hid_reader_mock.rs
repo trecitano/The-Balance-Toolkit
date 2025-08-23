@@ -10,7 +10,9 @@ pub fn initialize(mac_address: MacAddress) -> anyhow::Result<Sender<BalanceBoard
     let (tx, rx) = mpsc::channel(100);
 
     thread::spawn(move || {
-        mock_hid_loop(rx, mac_address)
+        if let Err(e) = mock_hid_loop(rx, mac_address) {
+            eprintln!("Error in Board Hid Reader Mock: {:?}", e);
+        }
     });
 
     Ok(tx)

@@ -2,7 +2,7 @@ use crate::actors::balance_board_actor;
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, BoardAction, BoardConnectionMode};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothService};
 use crate::actors::state::activities::{Activity, ActivityState};
-use crate::file_system;
+use crate::{file_system, utils};
 use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem, SettingsFileSystem};
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::lsl_writer::LslConnectionSettings;
@@ -86,7 +86,6 @@ pub enum ToolkitCommand {
         frontend_channel: Sender<BalanceBoardOutput>
     },
     StopSession,
-    LoadSessionFromFile { file_path: String, response: oneshot::Sender<FrontendSessionConfiguration> },
 
     BoardAction {
         mac_address: MacAddress,
@@ -245,18 +244,32 @@ impl ConnectionManager {
                 }
 
                 ToolkitCommand::SessionInformation { response } => {
-                    let selected_boards = self.boards_system_view().await?
-                        .iter()
-                        .filter(|device| {
-                            // Convert u64 to MacAddress before checking
-                            let mac = MacAddress::from(device.mac_address);
-                            self.session_settings.selected_boards.contains(&mac)
-                        })
-                        .map(|device| SelectedBoard {
-                            name: device.name.clone(),
-                            mac_address: MacAddress::from(device.mac_address),
-                        })
-                        .collect();
+                    let selected_boards: Vec<SelectedBoard> = if let Some(session) = &self.session_settings.load_session_file {
+                        session
+                            .device_names
+                            .iter()
+                            .map(|(mac_address, name)| SelectedBoard {
+                                name: name.clone(),
+                                mac_address: *mac_address, // or mac_address.clone() if not Copy
+                            })
+                            .collect()
+                    } else {
+                        self.boards_system_view()
+                            .await?
+                            .iter()
+                            .filter_map(|device| {
+                                let mac = MacAddress::from(device.mac_address);
+                                if self.session_settings.selected_boards.contains(&mac) {
+                                    Some(SelectedBoard {
+                                        name: device.name.clone(),
+                                        mac_address: mac,
+                                    })
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect()
+                    };
 
                     let session_information = SessionInformation {
                         available_users: UserFileSystem::get_users()?.into_iter().map(|user| user.name).collect(),
@@ -290,11 +303,6 @@ impl ConnectionManager {
                     }
                     self.has_ongoing_session = false;
                 },
-                ToolkitCommand::LoadSessionFromFile { file_path, response } => {
-
-                }
-
-
                 ToolkitCommand::BoardAction { mac_address, action } => {
                     self.board_action(mac_address, action).await;
                 }
@@ -342,37 +350,41 @@ impl ConnectionManager {
     // If a device is found to be connected to the Operating System, but the manager doesn't know about it,
     // then the manager automatically connects to it.
     async fn boards_system_view(&mut self) -> Result<Vec<NintendoDevice>> {
-        let stored_devices = DeviceFileSystem::get_stored_devices()?;
-
         let (response_tx, response_rx) = oneshot::channel();
         self.bluetooth_manager_tx.send(BluetoothCommand::GetNintendoDevices { response: response_tx }).await?;
-        let bluetooth_devices = response_rx.await?;
-
-        // Connect the manager to any missing devices.
-        for device in &bluetooth_devices {
-            let mac_address = device.mac_address;
-            if !self.connections.contains_key(&mac_address) {
-                self.connect(mac_address).await;
-            }
-        }
-
-        let os_connected_devices: Vec<NintendoDevice> = bluetooth_devices
-            .into_iter()
+        let mut nintendo_devices: Vec<NintendoDevice> = response_rx.await?.into_iter()
             .map(|p| p.into())
             .collect();
 
-        let mut result = stored_devices;
-        for device in os_connected_devices {
-            if let Some(found) = result.iter_mut().find(|d| d.mac_address == device.mac_address) {
-                found.last_connected = None; // Or update with new connection time
+        // Connect the manager to new missing devices.
+        for device in &nintendo_devices {
+            let mac_address = device.mac_address;
+            if !self.connections.contains_key(&mac_address) {
+                self.connect(mac_address).await?;
+            }
+        }
+        // Remove connections to any device that has been disconnected.
+        self.connections.retain(|mac_address, _| {
+            nintendo_devices
+                .iter()
+                .any(|device| device.mac_address == *mac_address && device.is_connected)
+        });
+
+        // Update name of devices and add any missing devices to the list
+        let stored_devices = DeviceFileSystem::get_stored_devices()?;
+        for stored_device in stored_devices {
+            let mac_address = stored_device.mac_address;
+            let device = nintendo_devices.iter_mut().find(|d| d.mac_address == mac_address);
+            if let Some(device) = device {
+                device.name = stored_device.name;
             } else {
-                result.push(device);
+                nintendo_devices.push(stored_device);
             }
         }
 
-        DeviceFileSystem::update_file_system_boards(&result);
+        DeviceFileSystem::update_file_system_boards(&nintendo_devices)?;
 
-        Ok(result)
+        Ok(nintendo_devices)
     }
 
     async fn connect(&mut self, mac_address: MacAddress) -> Result<()> {
@@ -381,7 +393,6 @@ impl ConnectionManager {
             return Ok(());
         }
 
-        println!("Connecting to device: {:?}", mac_address);
         let connection_mode = if self.general_settings.is_demo_mode {
             BoardConnectionMode::Demo
         } else {
@@ -389,6 +400,8 @@ impl ConnectionManager {
         };
 
         let board_connection = balance_board_actor::initialize(mac_address, connection_mode)?;
+
+        println!("Adding connection: {:#?}", utils::mac_address_human_name(mac_address));
 
         self.connections.insert(mac_address, board_connection);
         // TODO
@@ -501,7 +514,7 @@ impl ConnectionManager {
         self.session_settings.sampling_rate = config.sampling_rate;
         self.session_settings.interpolation = config.interpolation;
         self.session_settings.activity_id = config.activity_id;
-        
+
         if config.load_session_file_path.is_none() {
             self.session_settings.load_session_file = None;
         }
@@ -538,6 +551,7 @@ enum ObserverType {
     LslWriter,
 }
 
+#[derive(Debug)]
 struct SessionMapping {
     mac_address: MacAddress,
     observers_raw: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
@@ -547,7 +561,6 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
                        general_settings: &GeneralSettings,
                        session_settings: &SessionConfiguration,
                        hid_board_rx_map: &HashMap<MacAddress, Sender<BoardAction>>) {
-
     // If we are reading a session, then we must not use our existing session connection.
     let balance_board_connections: HashMap<MacAddress, Sender<BoardAction>> = match &session_settings.load_session_file {
         Some(session_file) => session_file.connections.clone(),
@@ -555,7 +568,11 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
     };
 
     let mut observer_list: Vec<SessionMapping> = vec!();
-    for mac_address in session_settings.selected_boards.iter() {
+    let selected_boards = match &session_settings.load_session_file {
+        Some(session_file) => session_file.device_names.keys().cloned().collect(),
+        None => session_settings.selected_boards.clone()
+    };
+    for mac_address in selected_boards.iter() {
         observer_list.push(SessionMapping {
             mac_address: *mac_address,
             observers_raw: vec!(),
@@ -653,7 +670,8 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
             let (raw_data_tx, raw_data_rx) = mpsc::channel(10);
             let command = BoardAction::StartRecording(raw_data_tx);
 
-            if let Some(sender) = balance_board_connections.get(&device_mapping.mac_address) { sender.send(command).await.unwrap() }
+            let sender = balance_board_connections.get(&device_mapping.mac_address).unwrap();
+            sender.send(command).await.unwrap();
             initialize_raw_data_forwarder(raw_data_rx, observers);
         }
     }

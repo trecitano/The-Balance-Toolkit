@@ -2,6 +2,7 @@ import { copXPlotSettings, copYPlotSettings, UPlot, vCopXPlotSettings, vCopYPlot
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
 import { useState } from "react";
+import {convertNumberToMacAddress} from "@/pages/devices/Devices.tsx";
 
 export function BoardPanel({ boardName, macAddress }: { boardName: string; macAddress: number }) {
   const [showConfidenceEllipse, setShowConfidenceEllipse] = useState(true);
@@ -11,7 +12,7 @@ export function BoardPanel({ boardName, macAddress }: { boardName: string; macAd
     <section className="rounded-lg bg-white p-3">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-semibold">{boardName}</h3>
-        <p>{macAddress}</p>
+        <p>{convertNumberToMacAddress(macAddress)}</p>
       </div>
 
       <div className="grid grid-cols-12 gap-3">
