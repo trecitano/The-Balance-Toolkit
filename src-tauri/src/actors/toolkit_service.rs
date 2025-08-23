@@ -181,7 +181,16 @@ impl ConnectionManager {
                 }
 
                 ToolkitCommand::BluetoothAction(action) => {
-                    self.bluetooth_manager_tx.send(action).await?;
+                    match action {
+                        BluetoothCommand::RemoveDevice { mac_address} => {
+                            if let Some(connection) = self.connections.remove(&mac_address) {
+                                connection.send(BoardAction::StopRecording).await?;
+                            }
+                            DeviceFileSystem::remove_device(mac_address)?;
+                            self.bluetooth_manager_tx.send(action).await?
+                        }
+                        _ => self.bluetooth_manager_tx.send(action).await?
+                    }
                 }
                 ToolkitCommand::GetBoardsSystemView { responder } => {
                     let result = self.boards_system_view().await?;
@@ -334,7 +343,7 @@ impl ConnectionManager {
     // then the manager automatically connects to it.
     async fn boards_system_view(&mut self) -> Result<Vec<NintendoDevice>> {
         let stored_devices = DeviceFileSystem::get_stored_devices()?;
-        
+
         let (response_tx, response_rx) = oneshot::channel();
         self.bluetooth_manager_tx.send(BluetoothCommand::GetNintendoDevices { response: response_tx }).await?;
         let bluetooth_devices = response_rx.await?;
@@ -492,6 +501,10 @@ impl ConnectionManager {
         self.session_settings.sampling_rate = config.sampling_rate;
         self.session_settings.interpolation = config.interpolation;
         self.session_settings.activity_id = config.activity_id;
+        
+        if config.load_session_file_path.is_none() {
+            self.session_settings.load_session_file = None;
+        }
     }
 }
 
@@ -563,18 +576,21 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
     // This file writer then spawns multiple different tasks
     let store_files = general_settings.store_raw_session || general_settings.store_processed_data;
     if store_files {
+        let write_raw_files = general_settings.store_raw_session && session_settings.load_session_file.is_none();
+        let write_processed_files = general_settings.store_processed_data;
+
         let tx = file_writer::initialize(
             session_settings.clone(),
-            general_settings.store_raw_session,
-            general_settings.store_processed_data
+            write_raw_files,
+            write_processed_files
         );
 
         for session_mapping in observer_list.iter_mut() {
             add_observer_to_device_list(session_mapping,
                                         tx.clone(),
                                         ObserverType::FileWriter,
-                                        general_settings.store_raw_session,
-                                        general_settings.store_processed_data);
+                                        write_raw_files,
+                                        write_processed_files);
         }
     }
 

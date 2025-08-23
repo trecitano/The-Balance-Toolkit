@@ -5,7 +5,8 @@ export function getActivityAssetFullPath(activityId: string, assetName: string):
 // src/utils/activityImages.ts
 const activityImageModules = import.meta.glob("/src/assets/activities/**/*.svg", {
   eager: true,
-  as: "url",
+  query: "?url",
+  import: "default",
 });
 
 interface ImageItem {

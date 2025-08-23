@@ -336,13 +336,14 @@ async fn session_information(state: State<'_, AppState>) -> Result<SessionInform
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< session_information. {:?}", result);
+    // TODO UNCOMMENT BELOW
+    //println!("<< session_information. {:?}", result);
     Ok(result)
 }
 
 #[tauri::command(async)]
 async fn session_update_session_configuration(session_configuration: FrontendSessionConfiguration, state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> session_update_session_configuration: {:?}", session_configuration);
+    println!(">> session_update_session_configuration: {:#?}", session_configuration);
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::UpdateSessionInformation { session_configuration, response: Some(tx) };

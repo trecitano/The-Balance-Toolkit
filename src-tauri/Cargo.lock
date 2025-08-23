@@ -294,7 +294,6 @@ dependencies = [
  "tauri-plugin-fs",
  "tauri-plugin-opener",
  "tokio",
- "toml 0.9.5",
  "windows",
  "windows-collections",
  "windows-core",

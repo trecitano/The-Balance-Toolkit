@@ -113,7 +113,6 @@ impl BluetoothHandler for MockBluetoothHandler {
 
     async fn remove_device(&self, mac_address: MacAddress) -> Result<()> {
         let mut mocked_data = MOCK_DATA.lock().unwrap();
-        println!("Removing device {}", mac_address);
 
         mocked_data.bluetooth_adapter_info.devices.retain(|device| {
             match device {
