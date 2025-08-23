@@ -10,14 +10,6 @@ use serde::de::DeserializeOwned;
 use crate::actors::state::activities::{Activity, ActivityState};
 use crate::processing::file_writer::{SessionConfigurationFileFormat, SessionConfigurationFileFormatRef};
 
-#[derive(Serialize)]
-pub struct FileMetadata {
-    file_name: String,
-    user: u64,
-    last_updated: String,
-    file_path: String,
-}
-
 const USERS_FILE: &str = "users.json";
 pub struct UserFileSystem;
 impl UserFileSystem {
@@ -69,11 +61,6 @@ impl UserFileSystem {
 const NINTENDO_DEVICES_FILE: &str = "nintendo_devices.json";
 pub struct DeviceFileSystem;
 impl DeviceFileSystem {
-    pub fn get_users() -> Result<Vec<User>> {
-        let users: Vec<User> = FileStore::load_with_default(Path::new(NINTENDO_DEVICES_FILE))?;
-        Ok(users)
-    }
-
     pub fn get_stored_devices() -> Result<Vec<NintendoDevice>> {
         let devices: Vec<NintendoDevice> = FileStore::load_with_default(Path::new(NINTENDO_DEVICES_FILE))?;
         Ok(devices)
@@ -87,6 +74,14 @@ impl DeviceFileSystem {
         }
 
         FileStore::save(Path::new(NINTENDO_DEVICES_FILE), &devices)
+    }
+
+    pub fn remove_device(mac_address: MacAddress) -> Result<()> {
+        let mut devices = Self::get_stored_devices()?;
+
+        devices.retain(|user| user.mac_address != mac_address);
+
+        save_into_file(Path::new(NINTENDO_DEVICES_FILE), &devices)
     }
 
     pub fn update_file_system_boards(devices: &Vec<NintendoDevice>) -> Result<()> {

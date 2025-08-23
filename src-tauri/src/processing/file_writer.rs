@@ -1,6 +1,6 @@
 use crate::actors::balance_board_actor::BalanceBoardOutput;
 use crate::actors::toolkit_service::SessionConfiguration;
-use crate::file_system::DeviceFileSystem;
+use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem};
 use crate::types::MacAddress;
 use crate::utils;
 use anyhow::Result;
@@ -23,11 +23,13 @@ pub fn initialize(session_configuration: SessionConfiguration,
     let (tx, rx) = mpsc::channel(1000);
     
     tokio::spawn(async move {
-        main_file_writer_loop(rx,
+        if let Err(e) = main_file_writer_loop(rx,
                               session_configuration,
                               observe_raw_data,
                               observe_processed_data
-        ).await
+        ).await {
+            eprintln!("Error in file writer: {:?}", e);
+        }
     });
 
     tx
@@ -53,6 +55,8 @@ async fn main_file_writer_loop(mut rx_param: Receiver<BalanceBoardOutput>,
         let device_file_mapping = device_file_mapping.get(&device_mac).unwrap().clone();
 
         device_tx_map.insert(device_mac, tx);
+
+        println!("Starting file writer for device: {}", device_mac);
 
         tokio::spawn(async move {
             file_write_loop(rx,
@@ -98,11 +102,10 @@ fn create_device_name_mapping(session_configuration: &SessionConfiguration) -> H
 }
 
 fn create_device_file_name_mapping(device_name_mapping: &HashMap<MacAddress, String>, session_id: &str) -> HashMap<MacAddress, FileNameMapping> {
-    device_name_mapping.iter().map(|device| {
-        let (mac_address, device_name) = device;
+    device_name_mapping.iter().map(|(mac_address, device_name) | {
         (*mac_address, FileNameMapping {
-            raw_file_name: format!("{session_id}-{device_name}.raw.txt"),
-            processed_file_name: format!("{session_id}-{device_name}.processed.txt")
+            raw_file_name: format!("{session_id}-{device_name}-{mac_address}.raw.txt"),
+            processed_file_name: format!("{session_id}-{device_name}-{mac_address}.processed.txt")
         })
     }).collect()
 }
@@ -153,9 +156,7 @@ async fn write_session_settings_to_disk(session_configuration: &SessionConfigura
     };
     let path = session_configuration.output_directory.clone();
     let file_path = path.join(format!("{session_id}.settings.txt"));
-    let mut file = create_file(file_path).await?;
-    let content = toml::to_string_pretty(&data)?;
-    file.write_all(content.as_ref()).await?;
+    ExistingSessionFileSystem::save(file_path.as_path(), &data)?;
     Ok(())
 }
 
@@ -165,11 +166,10 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
                          observe_raw_data: bool,
                          observe_processed_data: bool) -> Result<()> {
 
-    println!("File writer execution start.");
-
     // Create a file to optionally store the raw values;
     let mut raw_values_file = if observe_raw_data {
         let file_path = output_directory.join(&file_mapping.raw_file_name);
+        println!("WRITING TO RAW FILE ${:?}", file_path);
         let mut file = create_file(file_path).await?;
         file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n").await?;
         Some(file)
@@ -193,7 +193,7 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
                 if let Some(ref mut file) = raw_values_file {
                     let csv_line = format!(
                         "{},{},{},{},{}\n",
-                        data.timestamp.format("%Y-%m-%dT%H:%M:%S%.6fZ"),
+                        data.timestamp.to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
                         data.top_right,
                         data.bottom_right,
                         data.top_left,
@@ -208,7 +208,7 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
                 if let Some(ref mut file) = processed_values_file {
                     let csv_line = format!(
                         "{},{},{},{},{},{},{},{},{}\n",
-                        data.timestamp.format("%Y-%m-%dT%H:%M:%S%.6fZ"),
+                        data.timestamp.to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
                         data.sway_metrics.as_ref().map_or(String::new(), |v| v.mean_velocity.to_string()),
                         data.sway_metrics.as_ref().map_or(String::new(), |v| v.total_path_length.to_string()),
                         data.sway_metrics.as_ref().map_or(String::new(), |v| v.velocity_moment.to_string()),

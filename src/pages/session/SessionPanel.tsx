@@ -54,7 +54,7 @@ export function SessionPanel({
       title: "Select the Session file",
     });
     if (typeof selected === "string") {
-      update("loadSessionRawDataFromFile", selected);
+      update("loadSessionFilePath", selected);
     }
   }
 
@@ -192,10 +192,10 @@ export function SessionPanel({
                 Choose…
               </button>
               <div className="min-w-0 flex-1 truncate text-sm text-gray-700">
-                {value.loadSessionRawDataFromFile ?? "No file selected"}
+                {value.loadSessionFilePath ?? "No file selected"}
               </div>
             </div>
-            <button className={"h-5 w-5 bg-amber-800"} onClick={() =>  update("loadSessionRawDataFromFile", undefined)}>
+            <button className={"h-5 w-5 bg-amber-800"} onClick={() =>  update("loadSessionFilePath", undefined)}>
 
             </button>
           </SingleColumn>

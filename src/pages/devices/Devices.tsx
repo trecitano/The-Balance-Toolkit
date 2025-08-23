@@ -20,6 +20,7 @@ export const DevicesQuery = {
       commands.devices.selectedDevices(),
       commands.devices.isScanning(),
     ]);
+    console.log("Queried devices: ", devices);
     return { devices, selectedDevicesMacAddress, isScanning };
   },
 };
@@ -165,6 +166,7 @@ export default function Devices() {
     isScanning: false,
   };
 
+  console.log("Got devices: ", devices);
   const sortedDevices = sortDevices(devices);
   const noDevices = sortedDevices.length === 0;
   const selectedDevices = devices!.filter((d) => selectedDevicesMacAddress!.includes(d.macAddress));

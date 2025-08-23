@@ -88,7 +88,7 @@ export default function SessionPage() {
   const activityOptions = activities.map((i) => ({ label: i.title, value: i.id }));
   const chosenActivity = activities.find((a) => a.id === sessionInformation.sessionConfiguration.activityId);
   const chosenActivityDuration = chosenActivity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0);
-  const canStartSession = sessionInformation.selectedBoards.length > 0;
+  const canStartSession = sessionInformation.selectedBoards.length > 0 || sessionInformation.sessionConfiguration.loadSessionFilePath != null;
 
   console.log("Duration is ", chosenActivityDuration);
 
