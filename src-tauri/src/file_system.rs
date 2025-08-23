@@ -1,13 +1,14 @@
-use crate::types::{GeneralSettings, MacAddress, NintendoDevice, User};
-use serde::Serialize;
+use crate::types::{FrontendSessionConfiguration, GeneralSettings, MacAddress, NintendoDevice, User};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::de::DeserializeOwned;
 use crate::actors::state::activities::{Activity, ActivityState};
+use crate::actors::toolkit_service::SessionConfiguration;
 use crate::processing::file_writer::{SessionConfigurationFileFormat, SessionConfigurationFileFormatRef};
 
 const USERS_FILE: &str = "users.json";
@@ -60,9 +61,42 @@ impl UserFileSystem {
 
 const NINTENDO_DEVICES_FILE: &str = "nintendo_devices.json";
 pub struct DeviceFileSystem;
+#[derive(Serialize, Deserialize)]
+pub struct FileSystemNintendoDevice {
+    pub id: String,
+    pub name: String,
+    pub mac_address: MacAddress,
+    pub last_connected: DateTime<Utc>,
+}
+impl From<&NintendoDevice> for FileSystemNintendoDevice {
+    fn from(device: &NintendoDevice) -> Self {
+        FileSystemNintendoDevice {
+            id: device.id.clone(),
+            name: device.name.clone(),
+            mac_address: device.mac_address,
+            last_connected: device.last_connected
+        }
+    }
+}
+
+impl Into<NintendoDevice> for FileSystemNintendoDevice {
+    fn into(self) -> NintendoDevice {
+        NintendoDevice {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            mac_address: self.mac_address,
+            is_connected: false,
+            last_connected: self.last_connected
+        }
+    }
+}
+
 impl DeviceFileSystem {
     pub fn get_stored_devices() -> Result<Vec<NintendoDevice>> {
-        let devices: Vec<NintendoDevice> = FileStore::load_with_default(Path::new(NINTENDO_DEVICES_FILE))?;
+        let file_system_devices: Vec<FileSystemNintendoDevice> = FileStore::load_with_default(Path::new(NINTENDO_DEVICES_FILE))?;
+
+        let devices = file_system_devices.into_iter().map(|device| device.into()).collect();
+
         Ok(devices)
     }
 
@@ -73,7 +107,7 @@ impl DeviceFileSystem {
             device.name = device_board_name;
         }
 
-        FileStore::save(Path::new(NINTENDO_DEVICES_FILE), &devices)
+        Self::save(&devices)
     }
 
     pub fn remove_device(mac_address: MacAddress) -> Result<()> {
@@ -81,7 +115,7 @@ impl DeviceFileSystem {
 
         devices.retain(|user| user.mac_address != mac_address);
 
-        save_into_file(Path::new(NINTENDO_DEVICES_FILE), &devices)
+        Self::save(&devices)
     }
 
     pub fn update_file_system_boards(devices: &Vec<NintendoDevice>) -> Result<()> {
@@ -98,7 +132,15 @@ impl DeviceFileSystem {
             return Ok(());
         }
 
-        FileStore::save(Path::new(NINTENDO_DEVICES_FILE), devices)
+
+        Self::save(&devices)
+    }
+
+    fn save(devices: &Vec<NintendoDevice>) -> Result<()> {
+        let file_system_devices: Vec<FileSystemNintendoDevice> =
+            devices.iter().map(|device| device.into()).collect();
+
+        FileStore::save(Path::new(NINTENDO_DEVICES_FILE), &file_system_devices)
     }
 }
 

@@ -147,9 +147,9 @@ impl From<&SessionConfiguration> for FrontendSessionConfiguration {
 pub struct NintendoDevice {
     pub id: String,
     pub name: String,
-    pub mac_address: u64,
+    pub mac_address: MacAddress,
     pub is_connected: bool,
-    pub last_connected: Option<DateTime<Utc>>,
+    pub last_connected: DateTime<Utc>,
 }
 
 impl NintendoDevice {

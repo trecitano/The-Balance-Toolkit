@@ -436,21 +436,6 @@ async fn session_stop_session(state: State<'_, AppState>) -> Result<(), String> 
     Ok(())
 }
 
-#[tauri::command(async)]
-async fn session_load_session_file(state: State<'_, AppState>, file_path: String) -> Result<FrontendSessionConfiguration, String> {
-    println!(">> session_load_session_file: {}", file_path);
-
-
-    let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::LoadSessionFromFile { file_path, response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
-    let result = response_rx.await.map_err(|e| e.to_string())?;
-
-    println!("<< session_load_session_file: {:?}", result);
-    Ok(result)
-}
-
-
 // =========================
 // --- ACTIVITY COMMANDS ---
 // =========================
@@ -464,7 +449,8 @@ async fn activity_get_activities(state: State<'_, AppState>) -> Result<Vec<Activ
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< activity_get_activities. {:?}", result);
+    // TODO: uncomment
+    //println!("<< activity_get_activities. {:?}", result);
     Ok(result)
 }
 

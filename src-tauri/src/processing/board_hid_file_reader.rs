@@ -14,7 +14,9 @@ pub fn initialize(mac_address: MacAddress, file_path: PathBuf) -> Result<Sender<
     let (tx, rx) = mpsc::channel(100);
 
     thread::spawn(move || {
-        blocking_file_reading_loop(mac_address, rx, file_path)
+        if let Err(e) = blocking_file_reading_loop(mac_address, rx, file_path) {
+            eprintln!("Error in Board Hid File Reader: {:?}", e);
+        }
     });
     
     Ok(tx)
@@ -38,6 +40,7 @@ fn blocking_file_reading_loop(
     let mut prev_time: Option<DateTime<Utc>> = None;
     let mut tx: Option<Sender<BalanceBoardCalibratedReading>> = None;
 
+    println!("FILE!! HID Loop started.: #{:#?}", file_path);
     loop {
         match control_rx.try_recv() {
             Ok(command) => {
@@ -97,6 +100,7 @@ fn blocking_file_reading_loop(
                         }
 
                         prev_time = Some(record.timestamp);
+                        continue;
                     }
                     Err(e) => {
                         println!("CSV parse error: {:?}", e);
@@ -114,7 +118,7 @@ fn blocking_file_reading_loop(
         }
 
         // 3. Small sleep to avoid busy loop when idle
-        thread::sleep(Duration::from_millis(1));
+        thread::sleep(Duration::from_millis(200));
     }
 
     println!("File reading complete HID loop terminated.");

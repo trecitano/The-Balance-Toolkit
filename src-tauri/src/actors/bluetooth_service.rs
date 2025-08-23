@@ -9,6 +9,7 @@ use crate::bluetooth::bluetooth_service_mock::MockBluetoothHandler;
 
 use anyhow::{Result};
 use async_trait::async_trait;
+use chrono::Utc;
 use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
 use crate::NINTENDO_BOARD_ID;
@@ -205,7 +206,7 @@ impl From<BluetoothPeripheral> for NintendoDevice {
             name: p.name,
             mac_address: p.mac_address,
             is_connected:  p.is_connected,
-            last_connected: None,
+            last_connected: Utc::now(),
         }
     }
 }
