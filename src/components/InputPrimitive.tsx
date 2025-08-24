@@ -44,7 +44,7 @@ export const InputPrimitive: React.FC<InputPrimitiveProps> = ({ editable, error,
         "border border-gray-200 bg-gray-100 text-gray-600",
         "flex items-center",
         "cursor-not-allowed select-none",
-        className
+        className,
       )}
     >
       {props.value}

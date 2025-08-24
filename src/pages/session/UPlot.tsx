@@ -3,7 +3,7 @@ import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
 import { ProcessedBoardEvent, RawBalanceBoardEvent } from "@/types.ts";
-import {StoreApi} from "zustand";
+import { StoreApi } from "zustand";
 
 type DataSelector<T> = (state: any) => BoardBuffer<T> | undefined;
 type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: number[] };
@@ -21,7 +21,7 @@ function UPlotLineGeneric<T>({
   uPlotOptions: uPlot.Options;
   dataSelector: DataSelector<T>;
   dataMapper: DataMapper<T>;
-  store: StoreApi<SessionState>
+  store: StoreApi<SessionState>;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);

@@ -4,7 +4,8 @@ import {
   Activity,
   BalanceBoardEvent,
   Device,
-  GeneralSettings, ReplayConfiguration,
+  GeneralSettings,
+  ReplayConfiguration,
   SessionPanelConfiguration,
   SessionInformation,
   UserPageInformation,
@@ -47,7 +48,8 @@ export const commands = {
 
   session: {
     sessionInfo: async () => invoke<SessionInformation>("session_information"),
-    updateSession: async (configuration: SessionPanelConfiguration) => invoke<void>("session_update_session_configuration", { configuration: configuration }),
+    updateSession: async (configuration: SessionPanelConfiguration) =>
+      invoke<void>("session_update_session_configuration", { configuration: configuration }),
 
     startSession: async (sessionChannel: Channel<BalanceBoardEvent>) => {
       return invoke<void>("session_start_session", { sessionChannel: sessionChannel });

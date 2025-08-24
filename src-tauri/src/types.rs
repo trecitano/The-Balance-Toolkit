@@ -1,9 +1,8 @@
-use std::collections::HashSet;
 use std::path::PathBuf;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use crate::actors::state::activities::Activity;
-use crate::actors::toolkit_service::{SessionConfiguration, ReplayConfiguration, CoreSessionConfiguration};
+use crate::actors::toolkit_service::{ReplayConfiguration, CoreSessionConfiguration};
 use crate::file_system;
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 

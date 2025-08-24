@@ -8,7 +8,7 @@ use std::time::Duration;
 use crate::actors::balance_board_actor::{BalanceBoardOutput, BoardAction};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
 use crate::actors::state::activities::Activity;
-use crate::actors::toolkit_service::{ReplayConfiguration, ToolkitCommand, ToolkitResponse};
+use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
 use tauri::ipc::Channel;
 use tauri::{Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;

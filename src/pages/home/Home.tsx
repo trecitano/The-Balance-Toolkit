@@ -328,7 +328,7 @@ const ConnectionCard: React.FC = () => {
         })}
       </div>
 
-      <div className="mt-auto ">
+      <div className="mt-auto">
         <ToolkitButton to="/devices" variant={"grey"}>
           {" "}
           Go to Devices →

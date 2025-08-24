@@ -31,7 +31,7 @@ function AppContent() {
         activeView={location.pathname.substring(1) || "home"}
         onViewChange={handleViewChange}
       />
-      <main className="flex h-screen w-95/100 flex-col bg-[var(--bg-primary)] py-8 px-20">
+      <main className="flex h-screen w-95/100 flex-col bg-[var(--bg-primary)] px-20 py-8">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/users" element={<UsersPage />} />

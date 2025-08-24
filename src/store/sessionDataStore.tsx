@@ -41,61 +41,59 @@ function updateBuffer<T>(oldBuffer: BoardBuffer<T>, frame: T): BoardBuffer<T> {
 }
 
 function createSessionDataStore() {
-return create(
-  subscribeWithSelector<SessionState>((set) => ({
-    rawSessionData: {},
-    processedSessionData: {},
-    processedSessionPolygonData: {},
+  return create(
+    subscribeWithSelector<SessionState>((set) => ({
+      rawSessionData: {},
+      processedSessionData: {},
+      processedSessionPolygonData: {},
 
-    actions: {
-      pushRawFrame: (f) =>
-        set((state) => {
-          const oldBuffer = state.rawSessionData[f.macAddress] || createEmptyBuffer<RawBalanceBoardEvent>();
-          const newBuffer = updateBuffer(oldBuffer, f);
+      actions: {
+        pushRawFrame: (f) =>
+          set((state) => {
+            const oldBuffer = state.rawSessionData[f.macAddress] || createEmptyBuffer<RawBalanceBoardEvent>();
+            const newBuffer = updateBuffer(oldBuffer, f);
 
-          return {
-            rawSessionData: {
-              ...state.rawSessionData,
-              [f.macAddress]: newBuffer, // ✅ new object reference
-            },
-          };
-        }),
+            return {
+              rawSessionData: {
+                ...state.rawSessionData,
+                [f.macAddress]: newBuffer, // ✅ new object reference
+              },
+            };
+          }),
 
-      pushProcessedFrame: (f) =>
-        set((state) => {
-          const sessionData: ProcessedSessionData = { timestamp: f.timestamp, vCopX: f.vCopX, vCopY: f.vCopY };
-          const polygonData: ProcessedPolygonData = {
-            confidenceEllipsePolygon: f.confidenceEllipsePolygon,
-            convexHullPolygon: f.convexHullPolygon,
-          };
+        pushProcessedFrame: (f) =>
+          set((state) => {
+            const sessionData: ProcessedSessionData = { timestamp: f.timestamp, vCopX: f.vCopX, vCopY: f.vCopY };
+            const polygonData: ProcessedPolygonData = {
+              confidenceEllipsePolygon: f.confidenceEllipsePolygon,
+              convexHullPolygon: f.convexHullPolygon,
+            };
 
-          const oldSessionBuffer =
-            state.processedSessionData[f.macAddress] || createEmptyBuffer<ProcessedSessionData>();
-          const newSessionBuffer = updateBuffer(oldSessionBuffer, sessionData);
+            const oldSessionBuffer =
+              state.processedSessionData[f.macAddress] || createEmptyBuffer<ProcessedSessionData>();
+            const newSessionBuffer = updateBuffer(oldSessionBuffer, sessionData);
 
-          return {
-            processedSessionData: {
-              ...state.processedSessionData,
-              [f.macAddress]: newSessionBuffer, // ✅ new object reference
-            },
-            processedSessionPolygonData: {
-              ...state.processedSessionPolygonData,
-              [f.macAddress]: polygonData,
-            },
-          };
-        }),
+            return {
+              processedSessionData: {
+                ...state.processedSessionData,
+                [f.macAddress]: newSessionBuffer, // ✅ new object reference
+              },
+              processedSessionPolygonData: {
+                ...state.processedSessionPolygonData,
+                [f.macAddress]: polygonData,
+              },
+            };
+          }),
 
-      clear: () => set({ rawSessionData: {}, processedSessionData: {}, processedSessionPolygonData: {} }),
-    },
-  })),
-);
+        clear: () => set({ rawSessionData: {}, processedSessionData: {}, processedSessionPolygonData: {} }),
+      },
+    })),
+  );
 }
 
 export const useSessionDataStore = createSessionDataStore();
 export const useReplayDataStore = createSessionDataStore();
 
 // Selectors
-export const useSessionActions = () =>
-  useSessionDataStore.getState().actions;
-export const useReplayActions = () =>
-  useReplayDataStore.getState().actions;
+export const useSessionActions = () => useSessionDataStore.getState().actions;
+export const useReplayActions = () => useReplayDataStore.getState().actions;

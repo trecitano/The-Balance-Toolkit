@@ -243,11 +243,8 @@ impl ConnectionManager {
                     response.send(self.session_settings.core.selected_user.clone()).unwrap();
                 }
                 ToolkitCommand::SelectBoardForSession { mac_address } => {
-                  match self.all_connections.get(&mac_address) {
-                      Some(connection) => {
-                        self.session_settings.connections.insert(mac_address, connection.clone());
-                      }
-                      None => {}
+                  if let Some(connection) = self.all_connections.get(&mac_address) {
+                    self.session_settings.connections.insert(mac_address, connection.clone());
                   }
                 }
                 ToolkitCommand::UnselectBoardForSession { mac_address } => {
@@ -320,7 +317,7 @@ impl ConnectionManager {
                             .core
                             .activity
                             .as_ref()
-                            .map_or(true, |a| a.id != *activity_id);
+                            .is_none_or(|a| a.id != *activity_id);
 
                         if needs_update {
                             self.session_settings.core.activity = self.activity_state.get_copy_of_activity(&activity_id);
@@ -341,7 +338,7 @@ impl ConnectionManager {
                         .await;
                 },
                 ToolkitCommand::StopSession { response } => {
-                    for (_, board) in &self.session_settings.connections {
+                    for board in self.session_settings.connections.values() {
                         let command = { BoardAction::StopRecording };
                         board.send(command).await?
                     }
@@ -424,7 +421,7 @@ impl ConnectionManager {
                 },
                 ToolkitCommand::StopReplay { response } => {
                     if let Some(settings) = self.replay_settings.as_mut() {
-                        for (_, board) in &settings.connections {
+                        for board in settings.connections.values() {
                             let command = { BoardAction::StopRecording };
                             board.send(command).await?
                         }

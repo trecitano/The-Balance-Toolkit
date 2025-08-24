@@ -1,12 +1,12 @@
 use crate::actors::balance_board_actor::BalanceBoardOutput;
-use crate::actors::toolkit_service::{SessionConfiguration, CoreSessionConfiguration};
-use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem};
+use crate::actors::toolkit_service::CoreSessionConfiguration;
+use crate::file_system::ExistingSessionFileSystem;
 use crate::types::MacAddress;
 use crate::utils;
 use anyhow::Result;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
 use tokio::fs::{File, OpenOptions};
@@ -54,7 +54,7 @@ async fn main_file_writer_loop(mut rx_param: Receiver<BalanceBoardOutput>,
     for device_mac in device_names.keys() {
         let (tx, rx) = mpsc::channel(1000);
         let output_directory = session_configuration.output_directory.clone();
-        let device_file_mapping = device_file_mapping.get(&device_mac).unwrap().clone();
+        let device_file_mapping = device_file_mapping.get(device_mac).unwrap().clone();
 
         device_tx_map.insert(device_mac, tx);
 

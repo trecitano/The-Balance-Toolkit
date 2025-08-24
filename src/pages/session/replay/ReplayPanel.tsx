@@ -3,7 +3,7 @@ import { CheckboxOption, MultiSelect } from "@/components/MultiSelect.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
-import {InterpolationOption, interpolationOptions, ReplayConfiguration, SessionPanelConfiguration} from "@/types.ts";
+import { InterpolationOption, interpolationOptions, ReplayConfiguration, SessionPanelConfiguration } from "@/types.ts";
 import Heading from "@/components/PageTitle.tsx";
 
 export function ReplayPanel({
@@ -14,7 +14,7 @@ export function ReplayPanel({
   onChange,
   onLoadFile,
 }: {
-  config: ReplayConfiguration
+  config: ReplayConfiguration;
   boardDisplaySelected: string[];
   onBoardDisplayChange: (ids: string[]) => void;
   boardDisplayOptions: CheckboxOption[];
@@ -50,7 +50,7 @@ export function ReplayPanel({
     if (typeof selected === "string") {
       onLoadFile(selected);
     }
-  }
+  };
 
   return (
     <>
@@ -70,9 +70,7 @@ export function ReplayPanel({
         </SingleColumn>
 
         <SingleColumn label="User" backgroundType="transparent" className="col-span-3">
-          <InputPrimitive
-            value={config.core.selectedUser ?? "No User"}
-          />
+          <InputPrimitive value={config.core.selectedUser ?? "No User"} />
         </SingleColumn>
 
         <SingleColumn label="Window Size (ms)" backgroundType="transparent" className="col-span-2">
@@ -110,9 +108,7 @@ export function ReplayPanel({
         </SingleColumn>
 
         <SingleColumn label="Activity" backgroundType="transparent" className="col-span-3">
-          <InputPrimitive
-            value={config.activity?.title ?? "No Activity"}
-          />
+          <InputPrimitive value={config.activity?.title ?? "No Activity"} />
         </SingleColumn>
 
         <SingleColumn label="LSL" backgroundType="transparent" direction="row">
