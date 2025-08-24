@@ -645,9 +645,6 @@ export default function Users() {
                     </div>
                   </div>
                   <div className="user-display-actions">
-                    <ToolkitButton type="button" variant="blue" onClick={() => setEditingUserData(selectedUserData)}>
-                      Edit
-                    </ToolkitButton>
                     {!selectedUserData.isDefault && (
                       <ToolkitButton
                         type="button"
@@ -657,6 +654,9 @@ export default function Users() {
                         Delete
                       </ToolkitButton>
                     )}
+                    <ToolkitButton type="button" variant="blue" onClick={() => setEditingUserData(selectedUserData)}>
+                      Edit
+                    </ToolkitButton>
                   </div>
                 </div>
 

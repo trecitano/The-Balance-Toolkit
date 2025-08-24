@@ -40,7 +40,8 @@ function updateBuffer<T>(oldBuffer: BoardBuffer<T>, frame: T): BoardBuffer<T> {
   };
 }
 
-export const useSessionDataStore = create(
+function createSessionDataStore() {
+return create(
   subscribeWithSelector<SessionState>((set) => ({
     rawSessionData: {},
     processedSessionData: {},
@@ -88,11 +89,13 @@ export const useSessionDataStore = create(
     },
   })),
 );
+}
+
+export const useSessionDataStore = createSessionDataStore();
+export const useReplayDataStore = createSessionDataStore();
 
 // Selectors
-export const useSessionActions = () => useSessionDataStore.getState().actions;
-
-export const useSessionRawDataBuffer = (boardId: string) => useSessionDataStore((s) => s.rawSessionData[boardId]);
-
-export const useSessionProcessedDataBuffer = (boardId: string) =>
-  useSessionDataStore((s) => s.processedSessionData[boardId]);
+export const useSessionActions = () =>
+  useSessionDataStore.getState().actions;
+export const useReplayActions = () =>
+  useReplayDataStore.getState().actions;

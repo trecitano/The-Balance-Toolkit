@@ -1,13 +1,14 @@
+use std::path::PathBuf;
 use crate::file_system;
 use crate::file_system::UserFileSystem;
-use crate::types::{FrontendSessionConfiguration, GeneralSettings, MacAddress, NintendoDevice, SessionInformation, User, UserPageInformation};
+use crate::types::{FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, FrontendSessionInformation, User, UserPageInformation, FrontendCoreSession};
 use serde::Serialize;
 use std::time::Duration;
 
 use crate::actors::balance_board_actor::{BalanceBoardOutput, BoardAction};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
 use crate::actors::state::activities::Activity;
-use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
+use crate::actors::toolkit_service::{ReplayConfiguration, ToolkitCommand, ToolkitResponse};
 use tauri::ipc::Channel;
 use tauri::{Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;
@@ -64,6 +65,11 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             session_stop_session,
             session_information,
             session_update_session_configuration,
+            replay_start_replay,
+            replay_stop_replay,
+            replay_information,
+            replay_update,
+            replay_load_file,
             activity_get_activities,
             activity_get_activity,
             activity_update_activity,
@@ -322,12 +328,12 @@ async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<Vec<
     Ok(result)
 }
 
-// ========================
-// --- SESSION COMMANDS ---
-// ========================
+// ============================
+// --- NEW SESSION COMMANDS ---
+// ============================
 
 #[tauri::command(async)]
-async fn session_information(state: State<'_, AppState>) -> Result<SessionInformation, String> {
+async fn session_information(state: State<'_, AppState>) -> Result<FrontendSessionInformation, String> {
     println!(">> session_information");
 
     // When we receive a balance board reading, we send it to the frontend.
@@ -342,11 +348,11 @@ async fn session_information(state: State<'_, AppState>) -> Result<SessionInform
 }
 
 #[tauri::command(async)]
-async fn session_update_session_configuration(session_configuration: FrontendSessionConfiguration, state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> session_update_session_configuration: {:#?}", session_configuration);
+async fn session_update_session_configuration(configuration: FrontendCoreSession, state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> session_update_session_configuration: {:#?}", configuration);
 
     let (tx, rx) = oneshot::channel();
-    let command = ToolkitCommand::UpdateSessionInformation { session_configuration, response: Some(tx) };
+    let command = ToolkitCommand::UpdateSessionInformation { configuration, response: tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
 
@@ -386,6 +392,32 @@ async fn session_start_session(state: State<'_, AppState>, session_channel: Chan
     println!(">> session_start_session");
 
     // When we receive a balance board reading, we send it to the frontend.
+    let balance_board_tx = initialize_frontend_handler(session_channel).await;
+    let command = ToolkitCommand::StartSession { frontend_channel: balance_board_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+
+    println!("<< session_start_session.");
+    Ok(())
+}
+
+#[tauri::command(async)]
+async fn session_stop_session(state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> session_stop_session");
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::StopSession { response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< session_stop_session.");
+    Ok(())
+}
+
+// ===============================
+// --- REPLAY SESSION COMMANDS ---
+// ===============================
+
+async fn initialize_frontend_handler(session_channel: Channel<FrontendBalanceBoardEvent>) -> Sender<BalanceBoardOutput> {
     let (balance_board_tx, mut balance_board_rx) = mpsc::channel(100);
     tokio::spawn(async move {
         while let Some(data) = balance_board_rx.recv().await {
@@ -414,25 +446,70 @@ async fn session_start_session(state: State<'_, AppState>, session_channel: Chan
             }
         };
     });
+    balance_board_tx
+}
 
-    let command = ToolkitCommand::StartSession { frontend_channel: balance_board_tx };
-    state.manager_tx.send(command)
-        .await
-        .map_err(|e| e.to_string())?;
+#[tauri::command(async)]
+async fn replay_start_replay(state: State<'_, AppState>, session_channel: Channel<FrontendBalanceBoardEvent>) -> Result<(), String> {
+    println!(">> replay_start_replay");
 
-    println!("<< session_start_session.");
+    let balance_board_tx = initialize_frontend_handler(session_channel).await;
+    let command = ToolkitCommand::StartReplay { frontend_channel: balance_board_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+
+    println!("<< replay_start_replay.");
     Ok(())
 }
 
 #[tauri::command(async)]
-async fn session_stop_session(state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> session_stop_session");
+async fn replay_stop_replay(state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> replay_stop_replay");
 
-    state.manager_tx.send(ToolkitCommand::StopSession)
-        .await
-        .map_err(|e| e.to_string())?;
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::StopReplay { response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< session_stop_session.");
+    println!("<< replay_stop_replay.");
+    Ok(())
+}
+
+#[tauri::command(async)]
+async fn replay_information(state: State<'_, AppState>) -> Result<Option<FrontendReplayConfiguration>, String> {
+    println!(">> replay_information");
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::ReplayInformation { response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let result = response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< replay_information. {:#?}", result);
+    Ok(result)
+}
+
+#[tauri::command(async)]
+async fn replay_update(configuration: FrontendCoreSession, state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> replay_update");
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::UpdateReplayInformation { configuration, response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< replay_update.");
+    Ok(())
+}
+
+#[tauri::command(async)]
+async fn replay_load_file(file_path: PathBuf, state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> replay_load_file");
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::LoadReplayFile { file_path, response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< replay_load_file.");
     Ok(())
 }
 

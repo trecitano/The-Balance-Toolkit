@@ -3,7 +3,8 @@ import Navigation from "@/components/navigation/Navigation";
 import Home from "@/pages/home/Home.tsx";
 import DevicesPage, { DevicesQuery } from "@/pages/devices/Devices";
 import UsersPage from "@/pages/users/Users";
-import SessionPage from "@/pages/session/SessionPage";
+import SessionPage from "@/pages/session/session/SessionPage.tsx";
+import ReplayPage from "@/pages/session/replay/ReplayPage.tsx";
 import Activities from "@/pages/activities/Activities";
 import "./App.css";
 import { QueryClient, QueryClientProvider, usePrefetchQuery } from "@tanstack/react-query";
@@ -30,12 +31,13 @@ function AppContent() {
         activeView={location.pathname.substring(1) || "home"}
         onViewChange={handleViewChange}
       />
-      <main className="flex h-screen w-95/100 flex-col bg-[var(--bg-primary)] p-8">
+      <main className="flex h-screen w-95/100 flex-col bg-[var(--bg-primary)] py-8 px-20">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/devices" element={<DevicesPage />} />
           <Route path="/session" element={<SessionPage />} />
+          <Route path="/replay" element={<ReplayPage />} />
           <Route path="/activities" element={<Activities />} />
         </Routes>
       </main>

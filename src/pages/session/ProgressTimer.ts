@@ -1,4 +1,4 @@
-import { sessionChannelManager } from "@/services/SessionChannelManager.tsx";
+import { sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 
 let startTime: number | null = null;
 let duration = 0;

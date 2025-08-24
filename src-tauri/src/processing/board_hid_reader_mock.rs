@@ -24,6 +24,8 @@ fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, mac_a
     let mut generator: Option<MockBoardGen> = None;
     let mut rng = rand::rng();
 
+    println!("Mock HID loop starting.");
+
     let lower_base_rng_value = rng.random_range(10.0..40.0);
     let higher_base_rng_value = rng.random_range(lower_base_rng_value..lower_base_rng_value + 10.0);
 
@@ -49,7 +51,7 @@ fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, mac_a
             Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ },
             Err(mpsc::error::TryRecvError::Disconnected) => {
                 // The async part has shut down. We must exit.
-                println!("HID Loop: Control channel disconnected. Shutting down.");
+                println!("HID Mock Reader disconnected. Shutting down.");
                 break;
             }
         }

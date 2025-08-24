@@ -65,7 +65,7 @@ fn blocking_file_reading_loop(
             }
             Err(mpsc::error::TryRecvError::Empty) => { }
             Err(mpsc::error::TryRecvError::Disconnected) => {
-                println!("HID Loop: Control channel disconnected. Shutting down.");
+                println!("HID File Reader disconnected. Shutting down.");
                 break;
             }
         }

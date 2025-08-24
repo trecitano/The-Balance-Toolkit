@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
-import { useSessionDataStore, BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
+import { BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
 import { ProcessedBoardEvent, RawBalanceBoardEvent } from "@/types.ts";
+import {StoreApi} from "zustand";
 
 type DataSelector<T> = (state: any) => BoardBuffer<T> | undefined;
 type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: number[] };
@@ -15,10 +16,12 @@ function UPlotLineGeneric<T>({
   uPlotOptions,
   dataSelector,
   dataMapper,
+  store,
 }: {
   uPlotOptions: uPlot.Options;
   dataSelector: DataSelector<T>;
   dataMapper: DataMapper<T>;
+  store: StoreApi<SessionState>
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
@@ -53,7 +56,7 @@ function UPlotLineGeneric<T>({
   // Subscribe directly to Zustand for updates
   useEffect(() => {
     // Subscribe for future updates
-    const unsub = useSessionDataStore.subscribe(
+    const unsub = store.subscribe(
       (state) => dataSelector(state),
       (buffer) => {
         if (!plotRef || buffer === undefined) {
@@ -71,7 +74,7 @@ function UPlotLineGeneric<T>({
     );
 
     return () => unsub();
-  }, []);
+  }, [store]);
 
   return <div ref={hostRef} />;
 }

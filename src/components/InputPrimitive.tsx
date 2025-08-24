@@ -40,10 +40,11 @@ export const InputPrimitive: React.FC<InputPrimitiveProps> = ({ editable, error,
   return (
     <div
       className={clsx(
-        "box-border flex h-10 w-full items-center overflow-hidden rounded-(--radius-sm)",
-        "border border-transparent bg-(--light) p-(--space-sm) text-(length:--text-sm)",
-        "break-words text-ellipsis whitespace-normal text-(--text) shadow-[var(--shadow-inset)]",
-        className,
+        "h-10 rounded-md px-3 py-2 text-(length:--text-sm)",
+        "border border-gray-200 bg-gray-100 text-gray-600",
+        "flex items-center",
+        "cursor-not-allowed select-none",
+        className
       )}
     >
       {props.value}

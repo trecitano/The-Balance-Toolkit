@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import { useSessionDataStore, BoardBuffer } from "@/store/sessionDataStore.tsx";
+import { BoardBuffer, SessionState} from "@/store/sessionDataStore.tsx";
 import { RawBalanceBoardEvent, ProcessedPolygonData } from "@/types.ts";
+import {StoreApi} from "zustand";
 
 // Constants (same units as your CoP/polygons, typically mm)
 const COP_X_MIN = -216.5;
@@ -24,6 +25,7 @@ type Props = {
   className?: string;
   showConfidenceEllipse?: boolean;
   showConvexHull?: boolean;
+  store: StoreApi<SessionState>
 };
 
 export function BalanceBoardWithCoPOverlay({
@@ -33,6 +35,7 @@ export function BalanceBoardWithCoPOverlay({
   className = "relative h-[160px] w-full",
   showConfidenceEllipse = true,
   showConvexHull = true,
+  store,
 }: Props) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -88,7 +91,7 @@ export function BalanceBoardWithCoPOverlay({
 
   // Subscribe to raw buffer
   useEffect(() => {
-    const unsub = useSessionDataStore.subscribe(
+    const unsub = store.subscribe(
       (s) => s.rawSessionData?.[macAddress],
       (buf) => {
         rawRef.current = buf;
@@ -97,7 +100,7 @@ export function BalanceBoardWithCoPOverlay({
       { equalityFn: (a, b) => a === b },
     );
 
-    rawRef.current = useSessionDataStore.getState().rawSessionData?.[macAddress];
+    rawRef.current = store.getState().rawSessionData?.[macAddress];
     scheduleDraw();
 
     return () => unsub();
@@ -105,7 +108,7 @@ export function BalanceBoardWithCoPOverlay({
 
   // Subscribe to polygons
   useEffect(() => {
-    const unsub = useSessionDataStore.subscribe(
+    const unsub = store.subscribe(
       (s) => s.processedSessionPolygonData?.[macAddress],
       (polygon) => {
         polyRef.current = polygon;
@@ -114,7 +117,7 @@ export function BalanceBoardWithCoPOverlay({
       { equalityFn: (a, b) => a === b },
     );
 
-    polyRef.current = useSessionDataStore.getState().processedSessionPolygonData?.[macAddress];
+    polyRef.current = store.getState().processedSessionPolygonData?.[macAddress];
     scheduleDraw();
 
     return () => unsub();
