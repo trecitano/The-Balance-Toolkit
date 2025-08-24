@@ -1,5 +1,5 @@
 import { Channel } from "@tauri-apps/api/core";
-import {RawBalanceBoardEvent, ProcessedBoardEvent, BalanceBoardEvent} from "@/types";
+import { RawBalanceBoardEvent, ProcessedBoardEvent, BalanceBoardEvent } from "@/types";
 import { commands } from "@/utils/requests";
 import { useSessionActions, useReplayActions } from "@/store/sessionDataStore";
 
@@ -62,13 +62,13 @@ export const sessionChannelManager = new BalanceBoardChannelManager(
     start: commands.session.startSession,
     stop: commands.session.stopSession,
   },
-  useSessionActions()
-  );
+  useSessionActions(),
+);
 
 export const replayChannelManager = new BalanceBoardChannelManager(
   {
     start: commands.replay.startReplay,
     stop: commands.replay.stopReplay,
   },
-  useReplayActions()
+  useReplayActions(),
 );

@@ -1,4 +1,4 @@
-use crate::types::{FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, User};
+use crate::types::{GeneralSettings, MacAddress, NintendoDevice, User};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
@@ -8,7 +8,6 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::de::DeserializeOwned;
 use crate::actors::state::activities::{Activity, ActivityState};
-use crate::actors::toolkit_service::SessionConfiguration;
 use crate::processing::file_writer::{SessionConfigurationFileFormat, SessionConfigurationFileFormatRef};
 
 const USERS_FILE: &str = "users.json";
@@ -79,14 +78,14 @@ impl From<&NintendoDevice> for FileSystemNintendoDevice {
     }
 }
 
-impl Into<NintendoDevice> for FileSystemNintendoDevice {
-    fn into(self) -> NintendoDevice {
+impl From<FileSystemNintendoDevice> for NintendoDevice {
+    fn from(val: FileSystemNintendoDevice) -> Self {
         NintendoDevice {
-            id: self.id.clone(),
-            name: self.name.clone(),
-            mac_address: self.mac_address,
+            id: val.id.clone(),
+            name: val.name.clone(),
+            mac_address: val.mac_address,
             is_connected: false,
-            last_connected: self.last_connected
+            last_connected: val.last_connected
         }
     }
 }
@@ -133,7 +132,7 @@ impl DeviceFileSystem {
         }
 
 
-        Self::save(&devices)
+        Self::save(devices)
     }
 
     fn save(devices: &Vec<NintendoDevice>) -> Result<()> {

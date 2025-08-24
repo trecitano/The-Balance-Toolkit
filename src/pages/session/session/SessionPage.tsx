@@ -11,7 +11,7 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import clsx from "clsx";
 import { registerPlayhead, startTimeline, stopTimeline } from "@/pages/session/ProgressTimer.ts";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
-import {useSessionDataStore} from "@/store/sessionDataStore.tsx";
+import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
 
 const SESSION_QUERY_KEY = ["session_key"];
 type SessionQueryData = {
@@ -36,11 +36,11 @@ export default function SessionPage() {
 
   const { sessionInformation, activities } = data ?? { sessionInformation: {}, activities: [] };
 
-  const sessionConfiguration: SessionPanelConfiguration | null = sessionInformation
-    ? sessionInformation.core
-    : null;
+  const sessionConfiguration: SessionPanelConfiguration | null = sessionInformation ? sessionInformation.core : null;
 
-  const [boardDisplaySelected, setBoardDisplaySelected] = useState<string[]>(sessionInformation?.selectedBoards?.map((b) => b.macAddress) ?? []);
+  const [boardDisplaySelected, setBoardDisplaySelected] = useState<string[]>(
+    sessionInformation?.selectedBoards?.map((b) => b.macAddress) ?? [],
+  );
 
   const updateSession = useMutation({
     mutationFn: (newState: SessionPanelConfiguration) => commands.session.updateSession(newState),
@@ -92,7 +92,7 @@ export default function SessionPage() {
   const activityOptions = activities.map((i) => ({ label: i.title, value: i.id }));
   const chosenActivity = activities.find((a) => a.id === sessionInformation.core.activityId);
   const chosenActivityDuration = chosenActivity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0);
-  const canStartSession = sessionInformation.selectedBoards.length > 0
+  const canStartSession = sessionInformation.selectedBoards.length > 0;
 
   console.log("Duration is ", chosenActivityDuration);
   console.log("Session config", sessionConfiguration);
@@ -118,7 +118,7 @@ export default function SessionPage() {
           </ToolkitButton>
         </div>
       ) : (
-        <BoardGrid boards={selectedDisplayBoards} store={useSessionDataStore}/>
+        <BoardGrid boards={selectedDisplayBoards} store={useSessionDataStore} />
       )}
 
       {/*  Timeline Panel                           */}
@@ -148,7 +148,7 @@ export default function SessionPage() {
             </div>
           </div>
         ) : (
-          <div className="w-9/10 h-20 text-center">
+          <div className="h-20 w-9/10 text-center">
             <p className="mb-10 text-xl text-gray-400">Choose an activity</p>
           </div>
         )}

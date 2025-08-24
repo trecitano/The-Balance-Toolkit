@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import { BoardBuffer, SessionState} from "@/store/sessionDataStore.tsx";
+import { BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
 import { RawBalanceBoardEvent, ProcessedPolygonData } from "@/types.ts";
-import {StoreApi} from "zustand";
+import { StoreApi } from "zustand";
 
 // Constants (same units as your CoP/polygons, typically mm)
 const COP_X_MIN = -216.5;
@@ -25,7 +25,7 @@ type Props = {
   className?: string;
   showConfidenceEllipse?: boolean;
   showConvexHull?: boolean;
-  store: StoreApi<SessionState>
+  store: StoreApi<SessionState>;
 };
 
 export function BalanceBoardWithCoPOverlay({

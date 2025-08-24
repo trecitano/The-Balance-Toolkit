@@ -3,15 +3,21 @@ import BoardPanel from "../BoardPanel.tsx";
 import { ReplayPanel } from "./ReplayPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import {Activity, ReplayConfiguration, SelectedBoard, SessionPanelConfiguration, SessionInformation} from "@/types.ts";
-import {replayChannelManager, sessionChannelManager} from "@/services/BalanceBoardChannelManager.tsx";
+import {
+  Activity,
+  ReplayConfiguration,
+  SelectedBoard,
+  SessionPanelConfiguration,
+  SessionInformation,
+} from "@/types.ts";
+import { replayChannelManager, sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import ActivityTimeline from "@/pages/activities/ActivityTimeline.tsx";
 import { CheckboxOption } from "@/components/MultiSelect.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import clsx from "clsx";
 import { registerPlayhead, startTimeline, stopTimeline } from "@/pages/session/ProgressTimer.ts";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
-import {useReplayDataStore, useSessionDataStore} from "@/store/sessionDataStore.tsx";
+import { useReplayDataStore, useSessionDataStore } from "@/store/sessionDataStore.tsx";
 
 const REPLAY_QUERY_KEY = ["replay_key"];
 export const ReplayQuery = {
@@ -25,10 +31,14 @@ export const ReplayQuery = {
 
 export default function ReplayPage() {
   const { data, isLoading, error } = useQuery(ReplayQuery);
-  const replayInformation = data?.replayInformation ?? { core: {}, devices: [], filePath: "", hasOngoingSession: false } as ReplayConfiguration;
+  const replayInformation =
+    data?.replayInformation ??
+    ({ core: {}, devices: [], filePath: "", hasOngoingSession: false } as ReplayConfiguration);
 
   const queryClient = useQueryClient();
-  const [boardDisplaySelected, setBoardDisplaySelected] = useState<string[]>(replayInformation?.devices?.map((b) => b.macAddress) ?? []);
+  const [boardDisplaySelected, setBoardDisplaySelected] = useState<string[]>(
+    replayInformation?.devices?.map((b) => b.macAddress) ?? [],
+  );
 
   const updateReplay = useMutation({
     mutationFn: (newState: SessionPanelConfiguration) => commands.replay.updateReplay(newState),
@@ -63,7 +73,10 @@ export default function ReplayPage() {
   const selectedDisplayBoards = boardDisplaySelected
     .map((mac) => replayInformation.devices.find((b) => b.macAddress === mac))
     .filter(Boolean);
-  const chosenActivityDuration = replayInformation.activity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0);
+  const chosenActivityDuration = replayInformation.activity?.timelineBlocks?.reduce(
+    (acc, block) => acc + block.duration,
+    0,
+  );
   const chosenActivity = replayInformation.activity;
   const canStartSession = replayInformation.devices.length > 0;
 
@@ -86,7 +99,7 @@ export default function ReplayPage() {
           <p className="mb-4 text-xl text-gray-400">Select a session file to replay it!</p>
         </div>
       ) : (
-        <BoardGrid boards={selectedDisplayBoards} store={useReplayDataStore}/>
+        <BoardGrid boards={selectedDisplayBoards} store={useReplayDataStore} />
       )}
 
       {/*  Timeline Panel                           */}
@@ -116,8 +129,7 @@ export default function ReplayPage() {
             </div>
           </div>
         ) : (
-          <div className="w-9/10 h-20 text-center">
-          </div>
+          <div className="h-20 w-9/10 text-center"></div>
         )}
 
         <button

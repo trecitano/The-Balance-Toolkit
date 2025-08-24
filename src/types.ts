@@ -77,12 +77,12 @@ export type SessionPanelConfiguration = {
 };
 
 export type ReplayConfiguration = {
-  core: SessionPanelConfiguration,
+  core: SessionPanelConfiguration;
   devices: SelectedBoard[];
   activity?: Activity;
   filePath?: string;
   hasOngoingSession: boolean;
-}
+};
 
 export interface SelectedBoard {
   name: string;
