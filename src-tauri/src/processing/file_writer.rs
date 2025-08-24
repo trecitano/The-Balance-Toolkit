@@ -1,5 +1,5 @@
 use crate::actors::balance_board_actor::BalanceBoardOutput;
-use crate::actors::toolkit_service::SessionConfiguration;
+use crate::actors::toolkit_service::{SessionConfiguration, CoreSessionConfiguration};
 use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem};
 use crate::types::MacAddress;
 use crate::utils;
@@ -16,7 +16,8 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use crate::actors::state::activities::Activity;
 use crate::processing::data_processor::InterpolationSetting;
 
-pub fn initialize(session_configuration: SessionConfiguration,
+pub fn initialize(session_configuration: CoreSessionConfiguration,
+                  device_names: HashMap<MacAddress, String>,
                   observe_raw_data: bool,
                   observe_processed_data: bool) -> Sender<BalanceBoardOutput> {
 
@@ -24,9 +25,10 @@ pub fn initialize(session_configuration: SessionConfiguration,
     
     tokio::spawn(async move {
         if let Err(e) = main_file_writer_loop(rx,
-                              session_configuration,
-                              observe_raw_data,
-                              observe_processed_data
+                                              device_names,
+                                              session_configuration,
+                                              observe_raw_data,
+                                              observe_processed_data
         ).await {
             eprintln!("Error in file writer: {:?}", e);
         }
@@ -36,20 +38,20 @@ pub fn initialize(session_configuration: SessionConfiguration,
 }
 
 async fn main_file_writer_loop(mut rx_param: Receiver<BalanceBoardOutput>,
-                               session_configuration: SessionConfiguration,
+                               device_names: HashMap<MacAddress, String>,
+                               session_configuration: CoreSessionConfiguration,
                                observe_raw_data: bool,
                                observe_processed_data: bool) -> Result<()> {
 
     // write settings to file
     let mut device_tx_map = HashMap::new();
 
-    let session_id = Utc::now().format("%Y-%m-%dT%H-%M-%S").to_string();
-    let device_name_mapping = create_device_name_mapping(&session_configuration);
-    let device_file_mapping = create_device_file_name_mapping(&device_name_mapping, &session_id);
+    let session_id = Utc::now().format("tbt-%Y-%m-%dT%H-%M-%S").to_string();
+    let device_file_mapping = create_device_file_name_mapping(&device_names, &session_id);
 
-    write_session_settings_to_disk(&session_configuration, &device_name_mapping, &device_file_mapping, &session_id).await?;
+    write_session_settings_to_disk(&session_configuration, &device_names, &device_file_mapping, &session_id).await?;
 
-    for device_mac in session_configuration.selected_boards {
+    for device_mac in device_names.keys() {
         let (tx, rx) = mpsc::channel(1000);
         let output_directory = session_configuration.output_directory.clone();
         let device_file_mapping = device_file_mapping.get(&device_mac).unwrap().clone();
@@ -77,42 +79,20 @@ async fn main_file_writer_loop(mut rx_param: Receiver<BalanceBoardOutput>,
     Ok(())
 }
 
-fn create_device_name_mapping(session_configuration: &SessionConfiguration) -> HashMap<MacAddress, String> {
-    let devices = match DeviceFileSystem::get_stored_devices() {
-        Ok(devices) => devices,
-        Err(_) => {
-            return session_configuration.selected_boards
-                .iter().map(|device_mac| (*device_mac,
-                                          utils::mac_address_human_name(*device_mac))).collect()
-        }
-    };
-
-    session_configuration
-        .selected_boards
-        .iter()
-        .map(|device_mac| {
-            let name = devices
-                .iter()
-                .find(|device| device.mac_address == *device_mac)
-                .map(|device| device.name.clone())
-                .unwrap_or_else(|| utils::mac_address_human_name(*device_mac));
-            (*device_mac, name)
-        })
-        .collect()
-}
-
 fn create_device_file_name_mapping(device_name_mapping: &HashMap<MacAddress, String>, session_id: &str) -> HashMap<MacAddress, FileNameMapping> {
     device_name_mapping.iter().map(|(mac_address, device_name) | {
+        let device_name_without_spaces = device_name.replace(" ", "_");
+        let file_readable_mac_address = utils::mac_address_human_name(*mac_address).replace(":", "");
         (*mac_address, FileNameMapping {
-            raw_file_name: format!("{session_id}-{device_name}-{mac_address}.raw.txt"),
-            processed_file_name: format!("{session_id}-{device_name}-{mac_address}.processed.txt")
+            raw_file_name: format!("{session_id}-{device_name_without_spaces}-{file_readable_mac_address}-raw.csv"),
+            processed_file_name: format!("{session_id}-{device_name_without_spaces}-{file_readable_mac_address}-processed.csv")
         })
     }).collect()
 }
 
 #[derive(Serialize)]
 pub struct SessionConfigurationFileFormatRef<'a> {
-    pub selected_boards: &'a HashSet<MacAddress>,
+    pub selected_user: &'a str,
     pub window_size_ms: u64,
     pub window_slide_ms: u64,
     pub sampling_rate: u64,
@@ -124,7 +104,7 @@ pub struct SessionConfigurationFileFormatRef<'a> {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SessionConfigurationFileFormat {
-    pub selected_boards: HashSet<MacAddress>,
+    pub selected_user: String,
     pub window_size_ms: u64,
     pub window_slide_ms: u64,
     pub sampling_rate: u64,
@@ -140,12 +120,12 @@ pub struct FileNameMapping {
     pub processed_file_name: String
 }
 
-async fn write_session_settings_to_disk(session_configuration: &SessionConfiguration,
+async fn write_session_settings_to_disk(session_configuration: &CoreSessionConfiguration,
                                         device_names: &HashMap<MacAddress, String>,
                                         device_file_mappings: &HashMap<MacAddress, FileNameMapping>,
                                         session_id: &str) -> Result<()> {
     let data = SessionConfigurationFileFormatRef {
-        selected_boards: &session_configuration.selected_boards,
+        selected_user: &session_configuration.selected_user,
         window_size_ms: session_configuration.window_size_ms,
         window_slide_ms: session_configuration.window_slide_ms,
         sampling_rate: session_configuration.sampling_rate,
@@ -155,7 +135,7 @@ async fn write_session_settings_to_disk(session_configuration: &SessionConfigura
         activity: &None,
     };
     let path = session_configuration.output_directory.clone();
-    let file_path = path.join(format!("{session_id}.settings.txt"));
+    let file_path = path.join(format!("{session_id}.settings.json"));
     ExistingSessionFileSystem::save(file_path.as_path(), &data)?;
     Ok(())
 }

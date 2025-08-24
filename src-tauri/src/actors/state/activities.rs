@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Activity {
-    id: String,
-    title: String,
+    pub id: String,
+    pub title: String,
     static_image: String,
     sequence_images: Vec<String>,
     hover_images: Vec<String>,
@@ -43,8 +43,8 @@ impl ActivityState {
         self.activities.clone()
     }
 
-    pub fn get_copy_of_activity(&self, id: &str) -> Activity {
-        self.activities.iter().find(|a| a.id == id).cloned().unwrap()
+    pub fn get_copy_of_activity(&self, id: &str) -> Option<Activity> {
+        self.activities.iter().find(|a| a.id == id).cloned()
     }
 
     pub fn update_activity(&mut self, activity: Activity) -> Result<()> {

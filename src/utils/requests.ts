@@ -4,8 +4,8 @@ import {
   Activity,
   BalanceBoardEvent,
   Device,
-  GeneralSettings,
-  SessionConfiguration,
+  GeneralSettings, ReplayConfiguration,
+  SessionPanelConfiguration,
   SessionInformation,
   UserPageInformation,
   UserType,
@@ -47,13 +47,24 @@ export const commands = {
 
   session: {
     sessionInfo: async () => invoke<SessionInformation>("session_information"),
-    updateSession: async (sessionConfiguration: SessionConfiguration) =>
-      invoke<void>("session_update_session_configuration", { sessionConfiguration: sessionConfiguration }),
+    updateSession: async (configuration: SessionPanelConfiguration) => invoke<void>("session_update_session_configuration", { configuration: configuration }),
+
     startSession: async (sessionChannel: Channel<BalanceBoardEvent>) => {
-      return invoke<Device[]>("session_start_session", { sessionChannel: sessionChannel });
+      return invoke<void>("session_start_session", { sessionChannel: sessionChannel });
     },
 
-    stopSession: async () => invoke("session_stop_session"),
+    stopSession: async () => invoke<void>("session_stop_session"),
+  },
+
+  replay: {
+    replayInfo: async () => invoke<ReplayConfiguration>("replay_information"),
+    loadReplayFile: async (filePath: string) => invoke<void>("replay_load_file", { filePath: filePath }),
+    updateReplay: async (configuration: SessionPanelConfiguration) =>
+      invoke<void>("replay_update", { configuration: configuration }),
+    startReplay: async (sessionChannel: Channel<BalanceBoardEvent>) => {
+      return invoke<Device[]>("replay_start_replay", { sessionChannel: sessionChannel });
+    },
+    stopReplay: async () => invoke("replay_stop_replay"),
   },
 
   activity: {

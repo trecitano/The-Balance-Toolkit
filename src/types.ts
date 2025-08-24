@@ -59,12 +59,14 @@ export interface Device {
 export interface SessionInformation {
   availableUsers: string[];
   selectedBoards: SelectedBoard[];
-  sessionConfiguration: SessionConfiguration;
+  core: SessionPanelConfiguration;
+  activity?: Activity;
   hasOngoingSession: boolean;
 }
 
-export type SessionConfiguration = {
+export type SessionPanelConfiguration = {
   selectedUser: string;
+  activityId?: string;
   lslEnabled: boolean;
   tcpEnabled: boolean;
   outputDirectory: string | null;
@@ -72,9 +74,15 @@ export type SessionConfiguration = {
   windowSlideMs: number;
   samplingRate: number;
   interpolation: string;
-  activityId: string;
-  loadSessionFilePath?: string;
 };
+
+export type ReplayConfiguration = {
+  core: SessionPanelConfiguration,
+  devices: SelectedBoard[];
+  activity?: Activity;
+  filePath?: string;
+  hasOngoingSession: boolean;
+}
 
 export interface SelectedBoard {
   name: string;

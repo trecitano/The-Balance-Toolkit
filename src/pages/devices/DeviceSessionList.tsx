@@ -46,7 +46,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
 
                 <div className="flex items-center justify-center">
                   <div className="relative flex min-h-80 max-w-70 items-center justify-center">
-                    <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-50" />
+                    <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
                     <img src={wbbIconBlue} className="z-10 h-4/5 w-4/5" />
                   </div>
                 </div>

@@ -2,7 +2,8 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::actors::toolkit_service::SessionConfiguration;
+use crate::actors::state::activities::Activity;
+use crate::actors::toolkit_service::{SessionConfiguration, ReplayConfiguration, CoreSessionConfiguration};
 use crate::file_system;
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 
@@ -90,10 +91,11 @@ impl Default for User {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct SessionInformation {
+pub struct FrontendSessionInformation {
     pub available_users: Vec<String>,
     pub selected_boards: Vec<SelectedBoard>,
-    pub session_configuration: FrontendSessionConfiguration,
+    pub core: FrontendCoreSession,
+    pub activity: Option<Activity>,
     pub has_ongoing_session: bool,
 }
 
@@ -107,9 +109,9 @@ pub struct SelectedBoard {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct FrontendSessionConfiguration {
+pub struct FrontendCoreSession {
     pub selected_user: String,
-    pub selected_boards: HashSet<MacAddress>,
+    pub activity_id: Option<String>,
     pub lsl_enabled: bool,
     pub tcp_enabled: bool,
     pub output_directory: PathBuf,
@@ -117,15 +119,13 @@ pub struct FrontendSessionConfiguration {
     pub window_slide_ms: u64,
     pub sampling_rate: u64,
     pub interpolation: InterpolationSetting,
-    pub activity_id: Option<String>,
-    pub load_session_file_path: Option<PathBuf>
 }
 
-impl From<&SessionConfiguration> for FrontendSessionConfiguration {
-    fn from(cfg: &SessionConfiguration) -> Self {
-        FrontendSessionConfiguration {
+impl From<&CoreSessionConfiguration> for FrontendCoreSession {
+    fn from(cfg: &CoreSessionConfiguration) -> Self {
+        FrontendCoreSession {
             selected_user: cfg.selected_user.clone(),
-            selected_boards: cfg.selected_boards.clone(),
+            activity_id: cfg.activity.clone().map(|act| act.id.clone()),
             lsl_enabled: cfg.lsl_enabled,
             tcp_enabled: cfg.tcp_enabled,
             output_directory: cfg.output_directory.clone(),
@@ -133,14 +133,37 @@ impl From<&SessionConfiguration> for FrontendSessionConfiguration {
             window_slide_ms: cfg.window_slide_ms,
             sampling_rate: cfg.sampling_rate,
             interpolation: cfg.interpolation.clone(),
-            activity_id: cfg.activity_id.clone(),
-            load_session_file_path: cfg
-                .load_session_file
-                .as_ref()
-                .map(|s| s.file_path.clone()),
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FrontendReplayConfiguration {
+    pub core: FrontendCoreSession,
+    pub devices: Vec<SelectedBoard>,
+    pub activity: Option<Activity>,
+    pub file_path: PathBuf,
+    pub has_ongoing_session: bool,
+}
+
+impl From<&ReplayConfiguration> for FrontendReplayConfiguration {
+    fn from(cfg: &ReplayConfiguration) -> Self {
+        FrontendReplayConfiguration {
+            devices: cfg.device_names.iter().map(|(mac_address, name)| {
+                SelectedBoard {
+                    name: name.clone(),
+                    mac_address: *mac_address
+                }
+            }).collect(),
+            core: FrontendCoreSession::from(&cfg.core),
+            activity: cfg.core.activity.clone(),
+            file_path: cfg.file_path.clone(),
+            has_ongoing_session: cfg.has_ongoing_session,
+        }
+    }
+}
+
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]

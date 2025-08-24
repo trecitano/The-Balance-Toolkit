@@ -186,13 +186,13 @@ export default function Devices() {
         </ToolkitButton>
       </header>
 
-      <div className="flex h-[75dvh] flex-1 gap-5 px-20">
+      <div className="flex h-[75dvh] flex-1 gap-5">
         <div
           className="devices-list flex flex-1 flex-col gap-4 overflow-y-auto rounded-lg bg-white p-10"
           onScroll={handleGradientDevicesScroll}
         >
           {noDevices && (
-            <div className="mt-8 flex h-full flex-col items-center justify-center rounded-lg bg-gray-100 p-8 text-center shadow-inner">
+            <div className="mt-8 flex h-full flex-col items-center justify-center rounded-lg p-8 text-center shadow-inner">
               <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />
               <p className="text-xl text-gray-600">No devices found.</p>
               <p className="text-base text-gray-400">

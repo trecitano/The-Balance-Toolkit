@@ -1,4 +1,4 @@
-use crate::types::{FrontendSessionConfiguration, GeneralSettings, MacAddress, NintendoDevice, User};
+use crate::types::{FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, User};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;

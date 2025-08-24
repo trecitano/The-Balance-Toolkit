@@ -3,8 +3,10 @@ import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
 import { useState } from "react";
 import {convertNumberToMacAddress} from "@/pages/devices/Devices.tsx";
+import {StoreApi} from "zustand";
+import {SessionState} from "@/store/sessionDataStore.tsx";
 
-export function BoardPanel({ boardName, macAddress }: { boardName: string; macAddress: number }) {
+export function BoardPanel({ boardName, macAddress, store }: { boardName: string; macAddress: number, store: StoreApi<SessionState>  }) {
   const [showConfidenceEllipse, setShowConfidenceEllipse] = useState(true);
   const [showConvexHull, setShowConvexHull] = useState(true);
 
@@ -23,6 +25,7 @@ export function BoardPanel({ boardName, macAddress }: { boardName: string; macAd
             src={wbbTopdown}
             showConfidenceEllipse={showConfidenceEllipse}
             showConvexHull={showConvexHull}
+            store={store}
           />
         </div>
 
@@ -52,18 +55,18 @@ export function BoardPanel({ boardName, macAddress }: { boardName: string; macAd
 
         {/* Middle row: blue CoP-related charts */}
         <div className="col-span-6 rounded bg-gray-100 p-2">
-          <UPlot {...copYPlotSettings(macAddress)} />
+          <UPlot {...copYPlotSettings(macAddress)} store={store} />
         </div>
         <div className="col-span-6 rounded bg-gray-100 p-2">
-          <UPlot {...copXPlotSettings(macAddress)} />
+          <UPlot {...copXPlotSettings(macAddress)} store={store} />
         </div>
 
         {/* Bottom row: red velocity charts */}
         <div className="col-span-6 rounded bg-gray-100 p-2">
-          <UPlot {...vCopYPlotSettings(macAddress)} />
+          <UPlot {...vCopYPlotSettings(macAddress)} store={store} />
         </div>
         <div className="col-span-6 rounded bg-gray-100 p-2">
-          <UPlot {...vCopXPlotSettings(macAddress)} />
+          <UPlot {...vCopXPlotSettings(macAddress)} store={store}/>
         </div>
       </div>
     </section>

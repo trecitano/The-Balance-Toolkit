@@ -27,6 +27,7 @@ const menuItems: MenuItemType[] = [
   { id: "users", label: "Users", icon: usersIcon },
   { id: "devices", label: "Devices", icon: devicesIcon },
   { id: "session", label: "Session", icon: sessionIcon },
+  { id: "replay", label: "Replay", icon: sessionIcon },
   { id: "activities", label: "Activities", icon: activitiesIcon },
 ];
 

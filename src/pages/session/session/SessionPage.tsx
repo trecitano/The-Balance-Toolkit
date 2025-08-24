@@ -1,15 +1,17 @@
 import { useState } from "react";
-import BoardPanel from "./BoardPanel";
-import { SessionPanel } from "./SessionPanel";
+import BoardPanel from "../BoardPanel.tsx";
+import { SessionPanel } from "./SessionPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import { Activity, SessionConfiguration, SessionInformation } from "@/types.ts";
-import { sessionChannelManager } from "@/services/SessionChannelManager.tsx";
+import { Activity, SessionPanelConfiguration, SessionInformation } from "@/types.ts";
+import { sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import ActivityTimeline from "@/pages/activities/ActivityTimeline.tsx";
 import { CheckboxOption } from "@/components/MultiSelect.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import clsx from "clsx";
 import { registerPlayhead, startTimeline, stopTimeline } from "@/pages/session/ProgressTimer.ts";
+import BoardGrid from "@/pages/session/BoardGrid.tsx";
+import {useSessionDataStore} from "@/store/sessionDataStore.tsx";
 
 const SESSION_QUERY_KEY = ["session_key"];
 type SessionQueryData = {
@@ -31,17 +33,19 @@ export const SessionQuery = {
 export default function SessionPage() {
   const { data, isLoading, error } = useQuery(SessionQuery);
   const queryClient = useQueryClient();
-  const [boardDisplaySelected, setBoardDisplaySelected] = useState<string[]>([]);
 
   const { sessionInformation, activities } = data ?? { sessionInformation: {}, activities: [] };
 
-  const sessionConfiguration: SessionConfiguration | null = sessionInformation
-    ? sessionInformation.sessionConfiguration
+  const sessionConfiguration: SessionPanelConfiguration | null = sessionInformation
+    ? sessionInformation.core
     : null;
 
+  const [boardDisplaySelected, setBoardDisplaySelected] = useState<string[]>(sessionInformation?.selectedBoards?.map((b) => b.macAddress) ?? []);
+
   const updateSession = useMutation({
-    mutationFn: (newState: SessionConfiguration) => commands.session.updateSession(newState),
+    mutationFn: (newState: SessionPanelConfiguration) => commands.session.updateSession(newState),
     onMutate: async (next) => {
+      console.log("Updating session with ", next);
       await queryClient.cancelQueries({ queryKey: SESSION_QUERY_KEY });
       const previous = queryClient.getQueryData(SESSION_QUERY_KEY);
 
@@ -52,7 +56,7 @@ export default function SessionPage() {
           sessionInformation: {
             ...old.sessionInformation,
             sessionConfiguration: {
-              ...old.sessionInformation.sessionConfiguration,
+              ...old.sessionInformation.core,
               ...next,
             },
           },
@@ -86,11 +90,12 @@ export default function SessionPage() {
     .map((mac) => sessionInformation.selectedBoards.find((b) => b.macAddress === mac))
     .filter(Boolean);
   const activityOptions = activities.map((i) => ({ label: i.title, value: i.id }));
-  const chosenActivity = activities.find((a) => a.id === sessionInformation.sessionConfiguration.activityId);
+  const chosenActivity = activities.find((a) => a.id === sessionInformation.core.activityId);
   const chosenActivityDuration = chosenActivity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0);
-  const canStartSession = sessionInformation.selectedBoards.length > 0 || sessionInformation.sessionConfiguration.loadSessionFilePath != null;
+  const canStartSession = sessionInformation.selectedBoards.length > 0
 
   console.log("Duration is ", chosenActivityDuration);
+  console.log("Session config", sessionConfiguration);
 
   return (
     <div className="flex h-full flex-col">
@@ -112,26 +117,8 @@ export default function SessionPage() {
             Go to Devices →
           </ToolkitButton>
         </div>
-      ) : selectedDisplayBoards.length === 0 ? (
-        <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
-          <p className="text-3xl font-medium">No boards selected</p>
-          <p className="text-xl text-gray-400">Choose a board from the panel above to get started.</p>
-        </div>
-      ) : selectedDisplayBoards.length === 1 ? (
-        <div className="mt-5 flex justify-center">
-          <BoardPanel boardName={selectedDisplayBoards[0].name} macAddress={selectedDisplayBoards[0].macAddress} />
-        </div>
       ) : (
-        <div
-          className="grid gap-4"
-          style={{
-            gridTemplateColumns: `repeat(${boardDisplaySelected.length}, minmax(0, 1fr))`,
-          }}
-        >
-          {selectedDisplayBoards.map((board) => (
-            <BoardPanel key={board.macAddress} boardName={board.name} macAddress={board.macAddress} />
-          ))}
-        </div>
+        <BoardGrid boards={selectedDisplayBoards} store={useSessionDataStore}/>
       )}
 
       {/*  Timeline Panel                           */}
@@ -161,7 +148,7 @@ export default function SessionPage() {
             </div>
           </div>
         ) : (
-          <div className="w-9/10 text-center">
+          <div className="w-9/10 h-20 text-center">
             <p className="mb-10 text-xl text-gray-400">Choose an activity</p>
           </div>
         )}
