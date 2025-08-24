@@ -1,10 +1,10 @@
-use std::thread;
-use chrono::Utc;
-use rand::Rng;
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::Sender;
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
 use crate::types::MacAddress;
+use chrono::Utc;
+use rand::Rng;
+use std::thread;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::Sender;
 
 pub fn initialize(mac_address: MacAddress) -> anyhow::Result<Sender<BalanceBoardCommands>> {
     let (tx, rx) = mpsc::channel(100);
@@ -21,6 +21,14 @@ pub fn initialize(mac_address: MacAddress) -> anyhow::Result<Sender<BalanceBoard
 fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, mac_address: MacAddress) -> anyhow::Result<()> {
     let mut tx_channel: Option<mpsc::Sender<BalanceBoardCalibratedReading>> = None;
     let mut update_tare = false;
+    let mut tare_value = BalanceBoardCalibratedReading {
+        timestamp: Utc::now(),
+        mac_address: 0,
+        top_right: 0.0,
+        top_left: 0.0,
+        bottom_right: 0.0,
+        bottom_left: 0.0
+    };
     let mut generator: Option<MockBoardGen> = None;
     let mut rng = rand::rng();
 
@@ -43,6 +51,7 @@ fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, mac_a
                         generator = Some(MockBoardGen::new_random(mac_address));
                     },
                     BalanceBoardCommands::FinishRecording => {
+                        println!("Mock Board {} has stopped the session.", mac_address);
                         tx_channel = None;
                         generator = None;
                     },
@@ -58,7 +67,22 @@ fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, mac_a
 
         if let (Some(tx), Some(mock_generator)) = (&tx_channel, &mut generator) {
             let mock_reading = mock_generator.next();
-            tx.blocking_send(mock_reading)?;
+
+            if update_tare {
+                update_tare = false;
+                tare_value = mock_reading.clone();
+            }
+
+            let tared_reading = BalanceBoardCalibratedReading {
+                timestamp: mock_reading.timestamp,
+                mac_address: mock_reading.mac_address,
+                top_right: mock_reading.top_right - tare_value.top_right,
+                top_left: mock_reading.top_left - tare_value.top_left,
+                bottom_right: mock_reading.bottom_right - tare_value.bottom_right,
+                bottom_left: mock_reading.bottom_left - tare_value.bottom_left,
+            };
+
+            tx.blocking_send(tared_reading)?;
             
             std::thread::sleep(std::time::Duration::from_millis(10));
         } else {
@@ -71,12 +95,6 @@ fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, mac_a
     println!("Mock HID loop terminated.");
     Ok(())
 }
-
-
-
-
-
-
 
 
 use std::f32::consts::PI;
@@ -127,11 +145,6 @@ impl MockBoardGen {
             vert_amp,
             phase0,
         }
-    }
-
-    pub fn apply_tare(&mut self) {
-        // Reset the phase reference so motion restarts smoothly
-        self.start = Instant::now();
     }
 
     pub fn next(&self) -> BalanceBoardCalibratedReading {

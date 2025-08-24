@@ -44,6 +44,7 @@ export interface UserType {
 export interface UserPageInformation {
   users: UserType[];
   selectedUser: string;
+  sessionDevices: Device[];
 }
 
 export interface Device {

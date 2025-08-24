@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import clsx from "clsx";
 
 type Variant = "grey" | "blue" | "red";
 type Size = "sm" | "md" | "lg";
@@ -26,7 +27,7 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 const base =
   "inline-flex items-center justify-center gap-[5px] " +
-  "px-4 py-2 rounded-md border-0 cursor-pointer font-semibold " +
+  "rounded-md border-0 cursor-pointer font-semibold " +
   "transition-all shadow-md min-w-[var(--btn-min-width)] " +
   "relative overflow-hidden " +
   "enabled:hover:-translate-y-[1px] " +
@@ -41,13 +42,13 @@ const byVariant: Record<Variant, string> = {
 };
 
 const bySize: Record<Size, string> = {
-  sm: "px-3 py-1.5 text-sm",
+  sm: "px-2 py-2 text-sm",
   md: "px-4 py-2 text-lg",
   lg: "px-6 py-3 text-base",
 };
 
 export function ToolkitButton({ variant = "red", size = "md", className = "", children, ...props }: ButtonProps) {
-  const classes = [base, byVariant[variant], bySize[size], className].join(" ");
+  const classes = clsx(base, byVariant[variant], bySize[size], className);
 
   if ("to" in props && props.to) {
     const { to, ...rest } = props as ButtonAsLink;
