@@ -31,6 +31,7 @@ export const InputPrimitive: React.FC<InputPrimitiveProps> = ({ editable, error,
           error && "border-red-500 focus:border-red-500 focus:ring-red-200",
           className,
         )}
+        type={type}
         {...props}
         value={props.value ?? ""}
       />

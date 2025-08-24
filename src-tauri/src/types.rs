@@ -50,6 +50,7 @@ impl Default for GeneralSettings {
 pub struct UserPageInformation {
     pub users: Vec<User>,
     pub selected_user: String,
+    pub session_devices: Vec<NintendoDevice>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -58,9 +59,9 @@ pub struct User {
     pub name: String,
     pub age: Option<u8>,
     pub gender: Option<String>,
-    pub height: Option<u32>,
+    pub height: Option<f64>,
     pub height_metric: Option<String>,
-    pub weight: Option<u32>,
+    pub weight: Option<f64>,
     pub weight_metric: Option<String>,
     pub handedness: Option<String>,
     pub color: Option<String>,

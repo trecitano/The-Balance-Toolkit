@@ -50,6 +50,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             user_add,
             user_update,
             user_delete,
+            user_measure_weight,
             devices_get_selected_devices,
             devices_fetch_all_devices,
             devices_scan_without_timeout,
@@ -108,19 +109,33 @@ async fn settings_set_settings(settings: GeneralSettings, state: State<'_, AppSt
 
 #[tauri::command]
 async fn user_page_information(state: State<'_, AppState>) -> Result<UserPageInformation, String> {
-    println!(">> fetch_all_users");
+    println!(">> user_page_information");
 
     let users = UserFileSystem::get_users().map_err(|e| e.to_string())?;
-    let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::GetSelectedUser { response: response_tx };
+
+    let (tx, rx) = oneshot::channel();
+    let command = ToolkitCommand::GetSelectedUser { response: tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
-    let result = response_rx.await.map_err(|e| e.to_string())?;
+    let selected_user = rx.await.map_err(|e| e.to_string())?;
+
+    let (tx, rx) = oneshot::channel();
+    let command = ToolkitCommand::SelectedBoardsForSession { response: tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let selected_boards = rx.await.map_err(|e| e.to_string())?;
+
+    let (tx, rx) = oneshot::channel();
+    let command = ToolkitCommand::GetBoardsSystemView { response: tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let mut devices = rx.await.map_err(|e| e.to_string())?;
+    devices.retain(|device| selected_boards.contains(&device.mac_address));
 
     let response = UserPageInformation {
         users,
-        selected_user: result,
+        selected_user,
+        session_devices: devices
     };
 
+    println!("<< user_page_information: {:#?}", response);
     Ok(response)
 }
 
@@ -152,6 +167,30 @@ fn user_delete(user_name: String) -> Result<(), String> {
     UserFileSystem::remove_user(user_name).map_err(|e| e.to_string())
 }
 
+#[tauri::command(async)]
+async fn user_measure_weight(state: State<'_, AppState>, channel: Channel<f64>, mac_address: MacAddress) -> Result<(), String> {
+    println!(">> user_measure_weight");
+
+    // Forward inner tauri messages to outer Tauri channel
+    let (tx, mut rx) = mpsc::channel(100);
+    tokio::spawn(async move {
+        while let Some(data) = rx.recv().await {
+            match channel.send(data) {
+                Ok(_) => (),
+                Err(_) => {
+                    break;
+                }
+            }
+        }
+        println!("Weight measuring over");
+    });
+    let command = ToolkitCommand::MeasureWeight { frontend_channel: tx, mac_address };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+
+    println!("<< user_measure_weight_return.");
+    Ok(())
+}
+
 // --- DEVICE COMMANDS ---
 
 #[tauri::command(async)]
@@ -159,7 +198,7 @@ async fn devices_fetch_all_devices(state: State<'_, AppState>) -> Result<Vec<Nin
     println!(">> devices_fetch_all_devices");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::GetBoardsSystemView { responder: response_tx };
+    let command = ToolkitCommand::GetBoardsSystemView { response: response_tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
     let result = response_rx.await.map_err(|e| e.to_string())?;

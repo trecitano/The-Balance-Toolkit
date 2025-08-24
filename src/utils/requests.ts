@@ -24,6 +24,7 @@ export const commands = {
     addUser: async (user: UserType) => invoke<void>("user_add", { user: user }),
     updateUser: async (user: UserType) => invoke<void>("user_update", { user: user }),
     deleteUser: async (userName: string) => invoke<void>("user_delete", { userName: userName }),
+    startMeasureWeight: async (channel: Channel<number>, macAddress: number) => invoke<void>("user_measure_weight", { channel: channel, macAddress: macAddress }),
   },
 
   devices: {
@@ -43,6 +44,7 @@ export const commands = {
         deviceName: deviceName,
       });
     },
+    tareDevice: async (macAddress: number) => invoke<void>("devices_tare_device", { macAddress: macAddress }),
     identifyDevice: async (macAddress: number) => invoke<void>("devices_identify_device", { macAddress: macAddress }),
   },
 
@@ -55,6 +57,7 @@ export const commands = {
       return invoke<void>("session_start_session", { sessionChannel: sessionChannel });
     },
 
+    tareDevices: async () => invoke<void>("session_taring_devices"),
     stopSession: async () => invoke<void>("session_stop_session"),
   },
 

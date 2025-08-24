@@ -17,6 +17,8 @@ import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import Heading from "@/components/PageTitle.tsx";
+import {Modal} from "@/components/Modal.tsx";
+import {Channel} from "@tauri-apps/api/core";
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -26,6 +28,13 @@ export default function Users() {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showColorDropdown, setShowColorDropdown] = useState<boolean>(false);
 
+  // Weight Measuring
+  const [liveWeight, setLiveWeight] = useState<number | null>(null);
+  const [showWeightMeasure, setShowWeightMeasure] = useState<boolean>(false);
+  const [selectedWeightMeasureDeviceMac, setSelectedWeightMeasureDeviceMac] = useState<string>('');
+  const weightChannelRef = useRef<Channel<number> | null>(null);
+  const [isMeasuringWeight, setIsMeasuringWeight] = useState<boolean>(false);
+
   const hasInitialScroll = useRef(false);
   const userListRef = useRef<HTMLUListElement>(null);
   const fixedColors = ["#e55d82", "#409edb", "#e8bd00", "#894c2f", "#dd2020", "#2a2a2a", "#989898", "#9bbc0f"];
@@ -34,13 +43,14 @@ export default function Users() {
   const { data, isLoading, error } = useQuery({
     queryKey: USERS_QUERY_KEY,
     queryFn: async () => {
-      const { users, selectedUser } = await commands.users.userPageInformation();
-      return { users, selectedUser };
+      const { users, selectedUser, sessionDevices } = await commands.users.userPageInformation();
+      return { users, selectedUser, sessionDevices };
     },
   });
 
   const users = data?.users ?? [];
   const selectedUser = data?.selectedUser ?? "";
+  const sessionDevices = data?.sessionDevices ?? [];
   const selectedUserData = users.find((user) => user.name === selectedUser)!;
   const isSearching = searchTerm.trim().length > 0;
   const sortedUsers = [...users].sort((a, b) => {
@@ -334,6 +344,28 @@ export default function Users() {
     setEditingUserData((prev) => prev && { ...prev, [field]: value });
   };
 
+  const startWeightMeasurement = async () => {
+    if (weightChannelRef.current) return;
+    if (!selectedWeightMeasureDeviceMac) return;
+
+    const ch = new Channel<number>();
+    ch.onmessage = (value) => {
+      // value is a weight sent from Rust
+      setLiveWeight(value);
+    };
+    weightChannelRef.current = ch;
+    await commands.users.startMeasureWeight(ch, Number(selectedWeightMeasureDeviceMac));
+    setIsMeasuringWeight(true);
+  };
+
+  const stopWeightMeasurement = async () => {
+    // This is a hack. Ideally, dropping the channel in the frontend should drop it in the backend.
+    // Sadly, however, Tauri does not work like this (for now).
+    await commands.session.stopSession();
+    weightChannelRef.current = null;
+    setIsMeasuringWeight(false);
+  };
+
   return (
     <>
       <header className="relative z-50 mb-6 flex justify-between">
@@ -547,7 +579,7 @@ export default function Users() {
                         value={editingUserData.weight ?? ""}
                         onChange={(e) => {
                           handleEditUpdate("weight", Number(e.target.value));
-                          if (!editingUserData?.heightMetric) {
+                          if (!editingUserData?.weightMetric) {
                             handleEditUpdate("weightMetric", "kg");
                           }
                         }}
@@ -560,6 +592,16 @@ export default function Users() {
                           { label: "lb", value: "lb" },
                         ]}
                       />
+                    </div>
+                    <div className={"pt-3"}>
+                      <ToolkitButton
+                        size="sm"
+                        type="button"
+                        variant="grey"
+                        onClick={() => setShowWeightMeasure(true)}
+                      >
+                        Measure Weight
+                      </ToolkitButton>
                     </div>
                   </SingleColumn>
 
@@ -720,24 +762,92 @@ export default function Users() {
         </div>
       </div>
 
-      {showDeleteConfirm && (
-        <div className="delete-confirm-overlay">
-          <div className="delete-confirm-dialog">
-            <h4>Confirm Delete</h4>
-            <p>{`Are you sure you want to delete user "${users.find((u) => u.name === showDeleteConfirm)?.name}"?`}</p>
+      <Modal open={!!showDeleteConfirm} onClose={() => setShowDeleteConfirm(null)}>
+        <h4 className="text-lg font-bold mb-4">Confirm Delete</h4>
+        <p className="mb-6 text-gray-700 text-base leading-relaxed">
+          {`Are you sure you want to delete user "${
+            users.find((u) => u.name === showDeleteConfirm)?.name
+          }"?`}
+        </p>
+        <div className="flex justify-center gap-6">
+          <ToolkitButton
+            type="button"
+            variant="red"
+            onClick={() => handleDeleteUser(showDeleteConfirm)}
+          >
+            Delete
+          </ToolkitButton>
+          <ToolkitButton
+            type="button"
+            variant="grey"
+            onClick={() => setShowDeleteConfirm(null)}
+          >
+            Cancel
+          </ToolkitButton>
+        </div>
+      </Modal>
 
-            <div className="delete-confirm-actions">
-              <ToolkitButton type="button" variant="red" onClick={() => handleDeleteUser(showDeleteConfirm)}>
-                Delete
-              </ToolkitButton>
-
-              <ToolkitButton type="button" variant="grey" onClick={() => setShowDeleteConfirm(null)}>
-                Cancel
-              </ToolkitButton>
-            </div>
+      <Modal open={showWeightMeasure} onClose={() => setShowWeightMeasure(false)}>
+        <h4 className="text-lg font-bold mb-4">Weight Measure</h4>
+        <div className="mb-3 flex flex-col items-center">
+          <div className="text-lg text-gray-500 mb-1">Live reading</div>
+          <div className="text-4xl font-semibold tabular-nums">
+            {liveWeight !== null ? liveWeight.toFixed(2) : "--"}
+            <span className="ml-2 text-2xl font-normal">
+              {editingUserData?.weightMetric ?? selectedUserData?.weightMetric ?? "kg"}
+            </span>
           </div>
         </div>
-      )}
+          {sessionDevices.length === 0 ? (
+            <div>
+              <p className="mb-7 text-lg text-gray-400">Connect to a board in the Devices page!</p>
+              <ToolkitButton to="/devices" variant="blue">
+                Go to Devices →
+              </ToolkitButton>
+            </div>
+            ) : (
+              <>
+                <SingleColumn className="items-center mb-10" label="Select a Device" backgroundType={"transparent"}>
+                  <SelectPrimitive
+                    value={selectedWeightMeasureDeviceMac}
+                    onChange={(v) => setSelectedWeightMeasureDeviceMac(v)}
+                    options={sessionDevices.map((device) => ({
+                      label: device.name,
+                      value: String(device.macAddress),
+                    }))}
+                  />
+                </SingleColumn>
+
+                <div className="flex justify-center gap-6">
+                  <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} variant="grey" onClick={() => commands.devices.tareDevice(Number(selectedWeightMeasureDeviceMac))}>
+                    Tare
+                  </ToolkitButton>
+                  {!isMeasuringWeight ? (
+                    <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} variant="grey" onClick={startWeightMeasurement}>
+                      Start Measurement
+                    </ToolkitButton>
+                  ) : (
+                    <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} variant="grey" onClick={stopWeightMeasurement}>
+                      Stop Measurement
+                    </ToolkitButton>
+                  )}
+                  <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} variant="grey"
+                                 onClick={() => handleEditUpdate("weight", liveWeight?.toFixed(2) ?? 0)}>
+                    Save value
+                  </ToolkitButton>
+                </div>
+
+                {selectedWeightMeasureDeviceMac &&
+                  <div>
+
+                  </div>
+                }
+              </>
+            )
+          }
+      </Modal>
+
+
     </>
   );
 }

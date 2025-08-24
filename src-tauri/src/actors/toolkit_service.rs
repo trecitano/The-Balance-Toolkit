@@ -13,6 +13,7 @@ use file_system::UserFileSystem;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
+use futures::SinkExt;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::{mpsc, oneshot};
 
@@ -26,7 +27,12 @@ pub enum ToolkitCommand {
     BluetoothAction(BluetoothCommand),
 
     GetBoardsSystemView {
-        responder: oneshot::Sender<Vec<NintendoDevice>>,
+        response: oneshot::Sender<Vec<NintendoDevice>>,
+    },
+
+    MeasureWeight {
+        frontend_channel: Sender<f64>,
+        mac_address: MacAddress,
     },
 
     Connect {
@@ -220,10 +226,40 @@ impl ConnectionManager {
                         _ => self.bluetooth_manager_tx.send(action).await?
                     }
                 }
-                ToolkitCommand::GetBoardsSystemView { responder } => {
+                ToolkitCommand::GetBoardsSystemView { response: responder } => {
                     let result = self.boards_system_view().await?;
                     responder.send(result).unwrap();
-                }
+                },
+                ToolkitCommand::MeasureWeight { frontend_channel, mac_address} => {
+                    // Weight measurements semantics:
+                    // 1 - We cannot make a weight measurement if a session is ongoing
+                    // 2 - We only perform a weight measurement on a specific board
+                    // 3 - When the user closes the channel, we stop reading from the board.
+                    if self.session_settings.has_ongoing_session {
+                        continue;
+                    }
+
+                    let board = self.session_settings.connections.get(&mac_address).unwrap();
+                    let (raw_data_tx, mut raw_data_rx) = mpsc::channel(10);
+                    let command = BoardAction::StartRecording(raw_data_tx);
+                    board.send(command).await?;
+
+                    let board_clone = board.clone();
+                    tokio::spawn(async move {
+                        while let Some(data) = raw_data_rx.recv().await {
+                            let weight = data.top_left + data.top_right + data.bottom_left + data.bottom_right;
+                            match frontend_channel.send(weight as f64).await {
+                                Ok(_) => (),
+                                Err(e) => {
+                                    println!("Weight measurement channel is closed, stopping recording");
+                                    let command = BoardAction::StopRecording;
+                                    board_clone.send(command).await.unwrap();
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                },
 
                 ToolkitCommand::Connect { mac_address, response } => {
                     self.connect(mac_address).await?;
