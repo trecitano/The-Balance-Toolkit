@@ -103,7 +103,7 @@ export default function ReplayPage() {
       )}
 
       {/*  Timeline Panel                           */}
-      <div className="mt-auto flex w-full items-center justify-between rounded-[12px] bg-gray-100 py-3 shadow-sm">
+      <div className="mt-auto flex w-full items-center justify-between rounded-lg bg-gray-100 py-3 shadow-sm">
         {chosenActivity ? (
           <div className={"relative m-5 w-9/10"}>
             <ActivityTimeline
@@ -155,7 +155,7 @@ export default function ReplayPage() {
           <span
             className={`block transition-all ${
               replayInformation.hasOngoingSession
-                ? "h-5 w-5 rounded-[3px] bg-white"
+                ? "h-5 w-5 rounded-lg bg-white"
                 : "h-[22px] w-[22px] rounded-full bg-[#e50012]"
             }`}
           />

@@ -283,7 +283,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
       onMouseLeave={() => setIsHovering(false)}
     >
       {!maximized && (
-        <div className="mb-5 flex max-h-65 justify-center rounded-[var(--radius-md)] bg-[var(--bg-light)] object-contain shadow-[var(--shadow-light)]">
+        <div className="mb-5 flex max-h-65 justify-center rounded-lg bg-[var(--bg-light)] object-contain shadow-[var(--shadow-light)]">
           <img src={getActivityAssetFullPath(activity.id, currentImageSrc)} alt={`${activity.title} illustration`} />
         </div>
       )}

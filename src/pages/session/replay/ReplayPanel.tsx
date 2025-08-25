@@ -58,7 +58,7 @@ export function ReplayPanel({
         <Heading>Replay</Heading>
       </header>
 
-      <div className="grid grid-cols-14 grid-rows-2 gap-1 rounded-xl bg-white/70 p-3 shadow-sm">
+      <div className="grid grid-cols-14 grid-rows-2 gap-1 rounded-lg bg-white/70 p-3 shadow-sm">
         <SingleColumn label="Board to Display" backgroundType="transparent" className="col-span-3">
           <MultiSelect
             options={boardDisplayOptions}
@@ -137,7 +137,7 @@ export function ReplayPanel({
           <div className="flex h-10 items-center gap-2">
             <button
               type="button"
-              className="h-10 rounded-md border border-gray-300 px-3 text-sm hover:bg-gray-200"
+              className="h-10 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200"
               onClick={pickSessionFile}
             >
               Choose…

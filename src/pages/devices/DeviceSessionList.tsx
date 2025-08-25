@@ -18,11 +18,11 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
 
         return (
           <div
-            className="box-border flex w-full flex-1 flex-col justify-between rounded-xl bg-[var(--bg-secondary)]"
+            className="box-border flex w-full flex-1 flex-col justify-between rounded-lg bg-[var(--bg-secondary)]"
             key={`side-panel-${index}`}
           >
             {device ? (
-              <div className="flex h-full flex-col rounded-xl p-5 shadow-[var(--shadow-light)]">
+              <div className="flex h-full flex-col rounded-lg p-5 shadow-[var(--shadow-light)]">
                 <div className="mb-5 flex items-center gap-[var(--space-sm)]">
                   <img
                     src={bluetoothIcon}
@@ -61,7 +61,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                 </div>
               </div>
             ) : (
-              <div className="hover:border-grey-400 flex h-full items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-white shadow-sm transition-colors hover:bg-gray-50">
+              <div className="hover:border-grey-400 flex h-full items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white shadow-sm transition-colors hover:bg-gray-50">
                 <span className="font-medium text-gray-500">Device slot available</span>
               </div>
             )}

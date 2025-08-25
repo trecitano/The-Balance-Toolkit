@@ -22,12 +22,12 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
   className,
   children,
   direction = "col",
-  backgroundType = "default",
+  backgroundType = "transparent",
 }) => {
   return (
     <div
       className={clsx(
-        "box-border flex flex-col gap-(--space-xs) rounded-md p-(--space-sm)",
+        "box-border flex flex-col gap-(--space-xs) rounded-lg p-(--space-sm)",
         {
           "bg-gray-100": backgroundType === "default",
           "bg-transparent": backgroundType === "transparent",

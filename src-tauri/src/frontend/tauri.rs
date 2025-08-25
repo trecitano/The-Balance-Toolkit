@@ -34,8 +34,9 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             tokio::spawn(async move {
                 while let Some(new_event) = manager_rx.recv().await {
                     match new_event {
-                        ToolkitResponse::NewDeviceFound(device) =>
+                        ToolkitResponse::NewDeviceFound(device) => {
                             app_handle.emit("new_board", device).unwrap()
+                        }
                     }
                 }
             });
@@ -212,29 +213,23 @@ async fn devices_scan_without_timeout(state: State<'_, AppState>) -> Result<(), 
     println!(">> devices_scan_without_timeout");
 
     let (new_bluetooth_tx, mut new_bluetooth_rx) = mpsc::channel::<BluetoothPeripheral>(10);
-    let (hid_connection_tx, hid_connection_rx) = mpsc::channel(10);
     let manager_tx_clone = state.manager_tx.clone();
 
     // Flow: First we connect via bluetooth, then we connect via HID.
     tokio::spawn(async move {
         while let Some(device) = new_bluetooth_rx.recv().await {
-            let (response_tx, response_rx) = oneshot::channel();
-
             tokio::time::sleep(Duration::from_millis(2000)).await; // TODO Improve
-
-            manager_tx_clone.send(ToolkitCommand::Connect { mac_address: device.mac_address, response: response_tx}).await.unwrap();
-
-            match response_rx.await {
-                Ok(_) => { hid_connection_tx.send(device).await.unwrap() }
-                Err(_) => { } // Device was not HID connected succesfully.
-            }
+            manager_tx_clone.send(ToolkitCommand::Connect { mac_address: device.mac_address}).await.unwrap();
         }
     });
 
+    let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::BluetoothAction(BluetoothCommand::StartScanAndPair {
-            response_stream: new_bluetooth_tx
-        });
+        response_stream: new_bluetooth_tx,
+        response: tx
+    });
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    rx.await.map_err(|e| e.to_string())?;
     
     println!("<< devices_scan_without_timeout: Scan started in background.\n");
     Ok(())
@@ -243,9 +238,11 @@ async fn devices_scan_without_timeout(state: State<'_, AppState>) -> Result<(), 
 #[tauri::command]
 async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
     println!(">> cancel_scan");
-    
-    let command = ToolkitCommand::BluetoothAction(BluetoothCommand::StopScan);
+
+    let (tx, rx) = oneshot::channel();
+    let command = ToolkitCommand::BluetoothAction(BluetoothCommand::StopScan { response: tx });
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    rx.await.map_err(|e| e.to_string())?;
 
     println!("<< cancel_scan\n");
     Ok(())

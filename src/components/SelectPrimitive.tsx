@@ -106,7 +106,7 @@ export function SelectPrimitive({
             }
           }}
           onKeyDown={onTriggerKeyDown}
-          className={`relative flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 text-left text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
+          className={`relative flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
             open ? "ring-2 ring-blue-100" : ""
           }`}
         >
@@ -129,7 +129,7 @@ export function SelectPrimitive({
             role="listbox"
             tabIndex={0}
             onKeyDown={onListKeyDown}
-            className="absolute top-full left-0 z-40 mt-1 w-full overflow-hidden rounded-md border border-gray-300 bg-white shadow-lg focus:outline-none"
+            className="absolute top-full left-0 z-40 mt-1 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg focus:outline-none"
           >
             <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>
               {noneOption && (

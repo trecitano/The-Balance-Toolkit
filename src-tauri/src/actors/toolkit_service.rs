@@ -36,8 +36,7 @@ pub enum ToolkitCommand {
     },
 
     Connect {
-        mac_address: MacAddress,
-        response: oneshot::Sender<bool>,
+        mac_address: MacAddress
     },
     IdentifyBoard {
         mac_address: MacAddress,
@@ -121,7 +120,7 @@ pub enum ToolkitCommand {
 }
 
 pub enum ToolkitResponse {
-    NewDeviceFound(NintendoDevice),
+    NewDeviceFound(MacAddress),
 }
 
 pub struct ConnectionManager {
@@ -261,9 +260,8 @@ impl ConnectionManager {
                     });
                 },
 
-                ToolkitCommand::Connect { mac_address, response } => {
+                ToolkitCommand::Connect { mac_address } => {
                     self.connect(mac_address).await?;
-                    response.send(true).unwrap();
                 }
                 ToolkitCommand::IdentifyBoard { mac_address } => {
                     self.identify_board(mac_address);
@@ -560,10 +558,9 @@ impl ConnectionManager {
         };
 
         let board_connection = balance_board_actor::initialize(mac_address, connection_mode)?;
-
         self.all_connections.insert(mac_address, board_connection);
-        // TODO
-        //self.tx.send(ToolkitResponse::NewDeviceFound())
+        self.tx.send(ToolkitResponse::NewDeviceFound(mac_address)).await?;
+
         Ok(())
     }
 

@@ -7,9 +7,9 @@ import { Device } from "@/types";
 import { commands } from "@/utils/requests.ts";
 import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
 import "./Devices.css";
-import DeviceScanner from "@/pages/devices/DeviceScanner.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import Heading from "@/components/PageTitle.tsx";
+import {Modal} from "@/components/Modal.tsx";
 
 export const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
@@ -20,7 +20,6 @@ export const DevicesQuery = {
       commands.devices.selectedDevices(),
       commands.devices.isScanning(),
     ]);
-    console.log("Queried devices: ", devices);
     return { devices, selectedDevicesMacAddress, isScanning };
   },
 };
@@ -35,12 +34,11 @@ export const convertNumberToMacAddress = (number: number): string => {
 };
 
 export default function Devices() {
-  const [showIdentifyPopup, setShowIdentifyPopup] = useState(false);
-  const [identifyDeviceName, setIdentifyDeviceName] = useState<string | null>(null);
   const [foundDevicesCount, setFoundDevicesCount] = useState(0);
   const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
   const unlistenRef = useRef<(() => void) | null>(null);
   const queryClient = useQueryClient();
+  const [showIdentifyModal, setShowIdentifyModal] = useState<Device | null>(null);
 
   const { data, isLoading, error } = useQuery(DevicesQuery);
 
@@ -77,9 +75,9 @@ export default function Devices() {
   const scanDevicesMutation = useMutation({
     mutationFn: commands.devices.scanDevices,
     onSuccess: async () => {
-      unlistenRef.current = await listen<Device>("new_board", (event) => {
+      unlistenRef.current = await listen<Device>("new_board", (_) => {
         setFoundDevicesCount((prev) => prev + 1);
-        console.log("REACT: Received device-discovered event", event.payload);
+        queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
       });
       queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
     },
@@ -127,10 +125,6 @@ export default function Devices() {
     e.currentTarget.style.setProperty("--bottom-opacity", bottomOpacity);
   }, []);
 
-  const handleClosePopup = () => {
-    setShowIdentifyPopup(false);
-    setIdentifyDeviceName(null);
-  };
 
   if (isLoading) {
     return <div className=""></div>;
@@ -138,9 +132,9 @@ export default function Devices() {
 
   if (error) {
     return (
-      <div className="">
-        <div className="">
-          <span className="page-title">Devices</span>
+      <div>
+        <div>
+          <span>Devices</span>
         </div>
         <div className="flex items-center justify-center p-8">
           <p className="text-red-600">Failed to load devices: {error.message}</p>
@@ -166,7 +160,7 @@ export default function Devices() {
     isScanning: false,
   };
 
-  console.log("Got devices: ", devices);
+  console.log("isScanning", isScanning);
   const sortedDevices = sortDevices(devices);
   const noDevices = sortedDevices.length === 0;
   const selectedDevices = devices!.filter((d) => selectedDevicesMacAddress!.includes(d.macAddress));
@@ -205,9 +199,14 @@ export default function Devices() {
               key={device.id}
               device={device}
               isEditing={editingDeviceId === device.id}
+              isSelected={selectedDevices.some((d) => d.macAddress === device.macAddress)}
               handleStartEditName={handleStartEditName}
               handleSaveDeviceName={handleSaveDeviceName}
-              handleIdentifyClick={(macAddress) => identifyDeviceMutation.mutate(macAddress)}
+              handleIdentifyClick={(device) => {
+                setShowIdentifyModal(device);
+                identifyDeviceMutation.mutate(device.macAddress)
+              }}
+              handleUnselectDevice={(macAddress) => unselectDeviceForSessionMutation.mutate(macAddress)}
               handleRemoveDevice={(macAddress) => removeDeviceMutation.mutate(macAddress)}
               handleSelectDeviceForSession={(macAddress) => selectDeviceForSessionMutation.mutate(macAddress)}
             />
@@ -220,20 +219,42 @@ export default function Devices() {
         />
       </div>
 
-      {isScanning && <DeviceScanner foundDevicesCount={foundDevicesCount} handleCancelScan={handleCancelScan} />}
-
-      {showIdentifyPopup && (
-        <div className="identify-popup-overlay" onClick={handleClosePopup}>
-          <div className="identify-popup" onClick={(e) => e.stopPropagation()}>
-            <p>
-              The LED in <b>{identifyDeviceName}</b> should be blinking
-            </p>
-            <button className="popup-close-btn" onClick={handleClosePopup}>
-              OK
-            </button>
+      <Modal open={isScanning} onClose={handleCancelScan}>
+        <div className="flex flex-col gap-6">
+          <div>
+            <span className="spinner" />
           </div>
+          <span className="text-(--primary) text-2xl font-semibold">Scanning...</span>
+
+          <p className="text-lg">
+            {`Found ${foundDevicesCount} devices so far...`}
+          </p>
+
+          <ToolkitButton
+            type="button"
+            variant="blue"
+            onClick={handleCancelScan}
+          >
+            Cancel
+          </ToolkitButton>
         </div>
-      )}
+      </Modal>
+
+      <Modal open={!!showIdentifyModal} onClose={() => setShowIdentifyModal(null)}>
+        <h4 className="text-lg font-bold mb-4">Identifying {showIdentifyModal?.name}</h4>
+        <p className="mb-6 text-gray-700 text-base leading-relaxed">
+          A flashing sequence will appear on the LED of the board.
+        </p>
+        <div className="flex justify-center gap-6">
+          <ToolkitButton
+            type="button"
+            variant="grey"
+            onClick={() => setShowIdentifyModal(null)}
+          >
+            Close
+          </ToolkitButton>
+        </div>
+      </Modal>
     </>
   );
 }

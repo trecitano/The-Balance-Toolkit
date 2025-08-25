@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use rand::Rng;
 use crate::actors::bluetooth_service::{BluetoothAdapterInfo, BluetoothHandler, BluetoothPeripheral};
-use crate::NINTENDO_BOARD_ID;
+use crate::{utils, NINTENDO_BOARD_ID};
 use crate::types::MacAddress;
 
 struct MockedData {
@@ -94,8 +94,10 @@ impl BluetoothHandler for MockBluetoothHandler {
         // Every X time, we assume that a new device was found.
         // We add this device to our global state, and return it.
         let mut mocked_data = MOCK_DATA.lock().unwrap();
-        let number_devices = mocked_data.bluetooth_adapter_info.devices.len();
-        let device_id = format!("Board {}", number_devices);
+        let mac_address = create_random_mac_address();
+        let human_readable_mac_address = utils::mac_address_human_name(mac_address);
+
+        let device_id = format!("Board {}", human_readable_mac_address);
 
         let new_device = BluetoothPeripheral {
             id: mock_device_id(device_id),

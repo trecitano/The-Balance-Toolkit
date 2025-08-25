@@ -23,7 +23,7 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         className={clsx(
-          "bg-white px-20 py-12 rounded-lg shadow-lg text-center",
+          "bg-[#ffffff] px-20 py-12 rounded-lg shadow-lg text-center",
           className
         )}
         onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
