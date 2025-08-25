@@ -44,8 +44,7 @@ const byVariant: Record<Variant, string> = {
 
 const byShape: Record<Shape, string> = {
   default: "rounded-lg min-w-30",
-  circle:
-    "rounded-full aspect-square",
+  circle: "rounded-full aspect-square",
 };
 
 const bySize: Record<Size, string> = {
@@ -55,7 +54,14 @@ const bySize: Record<Size, string> = {
   lg: "",
 };
 
-export function ToolkitButton({ variant = "red", size = "md", shape="default", className = "", children, ...props }: ButtonProps) {
+export function ToolkitButton({
+  variant = "red",
+  size = "md",
+  shape = "default",
+  className = "",
+  children,
+  ...props
+}: ButtonProps) {
   const classes = clsx(byShape[shape], bySize[size], byVariant[variant], base, className);
 
   if ("to" in props && props.to) {

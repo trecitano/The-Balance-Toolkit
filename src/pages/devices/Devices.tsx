@@ -9,7 +9,7 @@ import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
 import "./Devices.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import Heading from "@/components/PageTitle.tsx";
-import {Modal} from "@/components/Modal.tsx";
+import { Modal } from "@/components/Modal.tsx";
 
 export const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
@@ -125,7 +125,6 @@ export default function Devices() {
     e.currentTarget.style.setProperty("--bottom-opacity", bottomOpacity);
   }, []);
 
-
   if (isLoading) {
     return <div className=""></div>;
   }
@@ -204,7 +203,7 @@ export default function Devices() {
               handleSaveDeviceName={handleSaveDeviceName}
               handleIdentifyClick={(device) => {
                 setShowIdentifyModal(device);
-                identifyDeviceMutation.mutate(device.macAddress)
+                identifyDeviceMutation.mutate(device.macAddress);
               }}
               handleUnselectDevice={(macAddress) => unselectDeviceForSessionMutation.mutate(macAddress)}
               handleRemoveDevice={(macAddress) => removeDeviceMutation.mutate(macAddress)}
@@ -224,33 +223,23 @@ export default function Devices() {
           <div>
             <span className="spinner" />
           </div>
-          <span className="text-(--primary) text-2xl font-semibold">Scanning...</span>
+          <span className="text-2xl font-semibold text-(--primary)">Scanning...</span>
 
-          <p className="text-lg">
-            {`Found ${foundDevicesCount} devices so far...`}
-          </p>
+          <p className="text-lg">{`Found ${foundDevicesCount} devices so far...`}</p>
 
-          <ToolkitButton
-            type="button"
-            variant="blue"
-            onClick={handleCancelScan}
-          >
+          <ToolkitButton type="button" variant="blue" onClick={handleCancelScan}>
             Cancel
           </ToolkitButton>
         </div>
       </Modal>
 
       <Modal open={!!showIdentifyModal} onClose={() => setShowIdentifyModal(null)}>
-        <h4 className="text-lg font-bold mb-4">Identifying {showIdentifyModal?.name}</h4>
-        <p className="mb-6 text-gray-700 text-base leading-relaxed">
+        <h4 className="mb-4 text-lg font-bold">Identifying {showIdentifyModal?.name}</h4>
+        <p className="mb-6 text-base leading-relaxed text-gray-700">
           A flashing sequence will appear on the LED of the board.
         </p>
         <div className="flex justify-center gap-6">
-          <ToolkitButton
-            type="button"
-            variant="grey"
-            onClick={() => setShowIdentifyModal(null)}
-          >
+          <ToolkitButton type="button" variant="grey" onClick={() => setShowIdentifyModal(null)}>
             Close
           </ToolkitButton>
         </div>
