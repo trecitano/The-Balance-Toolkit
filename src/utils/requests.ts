@@ -24,7 +24,8 @@ export const commands = {
     addUser: async (user: UserType) => invoke<void>("user_add", { user: user }),
     updateUser: async (user: UserType) => invoke<void>("user_update", { user: user }),
     deleteUser: async (userName: string) => invoke<void>("user_delete", { userName: userName }),
-    startMeasureWeight: async (channel: Channel<number>, macAddress: number) => invoke<void>("user_measure_weight", { channel: channel, macAddress: macAddress }),
+    startMeasureWeight: async (channel: Channel<number>, macAddress: number) =>
+      invoke<void>("user_measure_weight", { channel: channel, macAddress: macAddress }),
   },
 
   devices: {

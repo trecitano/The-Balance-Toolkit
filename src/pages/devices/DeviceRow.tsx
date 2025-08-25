@@ -1,11 +1,11 @@
-import React, {useRef, useState} from "react";
+import React, { useRef, useState } from "react";
 import { Device } from "@/types";
 import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import "./DeviceRow.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
-import {Modal} from "@/components/Modal.tsx";
+import { Modal } from "@/components/Modal.tsx";
 
 interface DeviceRowProps {
   device: Device;
@@ -113,26 +113,28 @@ export default function DeviceRow({
           </div>
         </div>
 
-        <div className="flex gap-5 ">
-          <ToolkitButton disabled={!device.isConnected}
-                         type="button"
-                         className={"text-sm"}
-                         shape="circle"
-                         variant="white"
-                         onClick={() => handleIdentifyClick(device)}>
+        <div className="flex gap-5">
+          <ToolkitButton
+            disabled={!device.isConnected}
+            type="button"
+            className={"text-sm"}
+            shape="circle"
+            variant="white"
+            onClick={() => handleIdentifyClick(device)}
+          >
             ID
           </ToolkitButton>
           {!isSelected ? (
-            <ToolkitButton type="button"
-                           variant="blue"
-                           onClick={() => handleSelectDeviceForSession(device.macAddress) }
-                           disabled={!device.isConnected}>
+            <ToolkitButton
+              type="button"
+              variant="blue"
+              onClick={() => handleSelectDeviceForSession(device.macAddress)}
+              disabled={!device.isConnected}
+            >
               Connect
             </ToolkitButton>
-            ) : (
-            <ToolkitButton type="button"
-                           variant="red"
-                           onClick={() => handleUnselectDevice(device.macAddress) }>
+          ) : (
+            <ToolkitButton type="button" variant="red" onClick={() => handleUnselectDevice(device.macAddress)}>
               Disconnect
             </ToolkitButton>
           )}

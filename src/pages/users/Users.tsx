@@ -17,8 +17,8 @@ import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import Heading from "@/components/PageTitle.tsx";
-import {Modal} from "@/components/Modal.tsx";
-import {Channel} from "@tauri-apps/api/core";
+import { Modal } from "@/components/Modal.tsx";
+import { Channel } from "@tauri-apps/api/core";
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -31,7 +31,7 @@ export default function Users() {
   // Weight Measuring
   const [liveWeight, setLiveWeight] = useState<number | null>(null);
   const [showWeightMeasure, setShowWeightMeasure] = useState<boolean>(false);
-  const [selectedWeightMeasureDeviceMac, setSelectedWeightMeasureDeviceMac] = useState<string>('');
+  const [selectedWeightMeasureDeviceMac, setSelectedWeightMeasureDeviceMac] = useState<string>("");
   const weightChannelRef = useRef<Channel<number> | null>(null);
   const [isMeasuringWeight, setIsMeasuringWeight] = useState<boolean>(false);
 
@@ -598,8 +598,7 @@ export default function Users() {
                         type="button"
                         variant="white"
                         onClick={() => setShowWeightMeasure(true)}
-                      >
-                      </ToolkitButton>
+                      ></ToolkitButton>
                     </div>
                   </SingleColumn>
 
@@ -761,38 +760,30 @@ export default function Users() {
       </div>
 
       <Modal open={!!showDeleteConfirm} onClose={() => setShowDeleteConfirm(null)}>
-        <h4 className="text-lg font-bold mb-4">Confirm Delete</h4>
-        <p className="mb-6 text-gray-700 text-base leading-relaxed">
-          {`Are you sure you want to delete user "${
-            users.find((u) => u.name === showDeleteConfirm)?.name
-          }"?`}
+        <h4 className="mb-4 text-lg font-bold">Confirm Delete</h4>
+        <p className="mb-6 text-base leading-relaxed text-gray-700">
+          {`Are you sure you want to delete user "${users.find((u) => u.name === showDeleteConfirm)?.name}"?`}
         </p>
         <div className="flex justify-center gap-6">
-          <ToolkitButton
-            type="button"
-            variant="red"
-            onClick={() => handleDeleteUser(showDeleteConfirm)}
-          >
+          <ToolkitButton type="button" variant="red" onClick={() => handleDeleteUser(showDeleteConfirm)}>
             Delete
           </ToolkitButton>
-          <ToolkitButton
-            type="button"
-            variant="grey"
-            onClick={() => setShowDeleteConfirm(null)}
-          >
+          <ToolkitButton type="button" variant="grey" onClick={() => setShowDeleteConfirm(null)}>
             Cancel
           </ToolkitButton>
         </div>
       </Modal>
 
-      <Modal open={showWeightMeasure}
-             onClose={() => {
-               stopWeightMeasurement(false)
-               setShowWeightMeasure(false);
-             }}>
-        <h4 className="text-lg font-bold mb-4">Weight Measure</h4>
+      <Modal
+        open={showWeightMeasure}
+        onClose={() => {
+          stopWeightMeasurement(false);
+          setShowWeightMeasure(false);
+        }}
+      >
+        <h4 className="mb-4 text-lg font-bold">Weight Measure</h4>
         <div className="mb-3 flex flex-col items-center">
-          <div className="text-lg text-gray-500 mb-1">Live reading</div>
+          <div className="mb-1 text-lg text-gray-500">Live reading</div>
           <div className="text-4xl font-semibold tabular-nums">
             {liveWeight !== null ? liveWeight.toFixed(2) : "--"}
             <span className="ml-2 text-2xl font-normal">
@@ -800,56 +791,64 @@ export default function Users() {
             </span>
           </div>
         </div>
-          {sessionDevices.length === 0 ? (
-            <div>
-              <p className="mb-7 text-lg text-gray-400">Connect to a board in the Devices page!</p>
-              <ToolkitButton to="/devices" variant="blue">
-                Go to Devices →
+        {sessionDevices.length === 0 ? (
+          <div>
+            <p className="mb-7 text-lg text-gray-400">Connect to a board in the Devices page!</p>
+            <ToolkitButton to="/devices" variant="blue">
+              Go to Devices →
+            </ToolkitButton>
+          </div>
+        ) : (
+          <>
+            <SingleColumn className="mb-10 items-center" label="Select a Device" backgroundType={"transparent"}>
+              <SelectPrimitive
+                value={selectedWeightMeasureDeviceMac}
+                onChange={(v) => setSelectedWeightMeasureDeviceMac(v)}
+                options={sessionDevices.map((device) => ({
+                  label: device.name,
+                  value: String(device.macAddress),
+                }))}
+              />
+            </SingleColumn>
+
+            <div className="flex justify-center gap-6">
+              <ToolkitButton
+                disabled={!selectedWeightMeasureDeviceMac}
+                variant="grey"
+                onClick={() => commands.devices.tareDevice(Number(selectedWeightMeasureDeviceMac))}
+              >
+                Tare
+              </ToolkitButton>
+              {!isMeasuringWeight ? (
+                <ToolkitButton
+                  disabled={!selectedWeightMeasureDeviceMac}
+                  variant="grey"
+                  onClick={startWeightMeasurement}
+                >
+                  Start Measurement
+                </ToolkitButton>
+              ) : (
+                <ToolkitButton
+                  disabled={!selectedWeightMeasureDeviceMac}
+                  variant="grey"
+                  onClick={stopWeightMeasurement}
+                >
+                  Stop Measurement
+                </ToolkitButton>
+              )}
+              <ToolkitButton
+                disabled={!selectedWeightMeasureDeviceMac}
+                variant="grey"
+                onClick={() => handleEditUpdate("weight", liveWeight?.toFixed(2) ?? 0)}
+              >
+                Save value
               </ToolkitButton>
             </div>
-            ) : (
-              <>
-                <SingleColumn className="items-center mb-10" label="Select a Device" backgroundType={"transparent"}>
-                  <SelectPrimitive
-                    value={selectedWeightMeasureDeviceMac}
-                    onChange={(v) => setSelectedWeightMeasureDeviceMac(v)}
-                    options={sessionDevices.map((device) => ({
-                      label: device.name,
-                      value: String(device.macAddress),
-                    }))}
-                  />
-                </SingleColumn>
 
-                <div className="flex justify-center gap-6">
-                  <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} variant="grey" onClick={() => commands.devices.tareDevice(Number(selectedWeightMeasureDeviceMac))}>
-                    Tare
-                  </ToolkitButton>
-                  {!isMeasuringWeight ? (
-                    <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} variant="grey" onClick={startWeightMeasurement}>
-                      Start Measurement
-                    </ToolkitButton>
-                  ) : (
-                    <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} variant="grey" onClick={stopWeightMeasurement}>
-                      Stop Measurement
-                    </ToolkitButton>
-                  )}
-                  <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} variant="grey"
-                                 onClick={() => handleEditUpdate("weight", liveWeight?.toFixed(2) ?? 0)}>
-                    Save value
-                  </ToolkitButton>
-                </div>
-
-                {selectedWeightMeasureDeviceMac &&
-                  <div>
-
-                  </div>
-                }
-              </>
-            )
-          }
+            {selectedWeightMeasureDeviceMac && <div></div>}
+          </>
+        )}
       </Modal>
-
-
     </>
   );
 }
