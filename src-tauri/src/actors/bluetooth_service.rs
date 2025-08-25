@@ -18,8 +18,8 @@ use crate::types::{MacAddress, NintendoDevice};
 #[derive(Debug)]
 pub enum BluetoothCommand {
     GetNintendoDevices { response: oneshot::Sender<Vec<BluetoothPeripheral>>},
-    StartScanAndPair { response_stream: mpsc::Sender<BluetoothPeripheral> },
-    StopScan,
+    StartScanAndPair { response_stream: mpsc::Sender<BluetoothPeripheral>, response: oneshot::Sender<()> },
+    StopScan { response: oneshot::Sender<()> },
     IsScanning { response: oneshot::Sender<bool>},
     RemoveDevice { mac_address: MacAddress },
 }
@@ -69,11 +69,13 @@ impl BluetoothService {
                     let result = Self::get_nintendo_devices(&self.bluetooth_implementation).await.unwrap();
                     response.send(result).unwrap();
                 },
-                BluetoothCommand::StartScanAndPair { response_stream } => {
+                BluetoothCommand::StartScanAndPair { response_stream, response } => {
                     self.start_scan(response_stream).await.unwrap();
+                    response.send(()).unwrap();
                 },
-                BluetoothCommand::StopScan => {
+                BluetoothCommand::StopScan { response }=> {
                     self.scan_cancel_tx = None;
+                    response.send(()).unwrap();   
                 },
                 BluetoothCommand::IsScanning { response } => {
                     response.send(self.scan_cancel_tx.is_some()).unwrap();
@@ -120,7 +122,7 @@ impl BluetoothService {
                     _ = Self::connect_new_balance_board(&bluetooth_handler, response_stream.clone()) => {
                         // If the current state failed, wait one second before trying again
                         // TODO update this value
-                        tokio::time::sleep(tokio::time::Duration::from_millis(50000)).await;
+                        tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
                     },
                 }
             }
@@ -152,7 +154,6 @@ impl BluetoothService {
     async fn connect_new_balance_board(bluetooth_handler: &Arc<dyn BluetoothHandler>,
                                        response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()> {
         let connected_nintendo_devices = Self::get_nintendo_devices(bluetooth_handler).await?;
-        println!("Current boards: #{:?}", connected_nintendo_devices);
 
         let bluetooth_device = match bluetooth_handler.scan_and_pair_nintendo().await {
             Ok(bluetooth_device) => bluetooth_device,

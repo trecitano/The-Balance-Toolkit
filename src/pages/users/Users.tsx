@@ -592,15 +592,13 @@ export default function Users() {
                           { label: "lb", value: "lb" },
                         ]}
                       />
-                    </div>
-                    <div className={"pt-3"}>
                       <ToolkitButton
-                        size="sm"
+                        className={"w-1"}
+                        size="none"
                         type="button"
-                        variant="grey"
+                        variant="white"
                         onClick={() => setShowWeightMeasure(true)}
                       >
-                        Measure Weight
                       </ToolkitButton>
                     </div>
                   </SingleColumn>
@@ -787,7 +785,11 @@ export default function Users() {
         </div>
       </Modal>
 
-      <Modal open={showWeightMeasure} onClose={() => setShowWeightMeasure(false)}>
+      <Modal open={showWeightMeasure}
+             onClose={() => {
+               stopWeightMeasurement(false)
+               setShowWeightMeasure(false);
+             }}>
         <h4 className="text-lg font-bold mb-4">Weight Measure</h4>
         <div className="mb-3 flex flex-col items-center">
           <div className="text-lg text-gray-500 mb-1">Live reading</div>

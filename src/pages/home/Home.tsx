@@ -239,7 +239,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
         })}
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-auto ml-auto">
         <ToolkitButton to="/activities" variant={"grey"}>
           {" "}
           Go to Activities →
@@ -328,7 +328,7 @@ const ConnectionCard: React.FC = () => {
         })}
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-auto ml-auto">
         <ToolkitButton to="/devices" variant={"grey"}>
           {" "}
           Go to Devices →

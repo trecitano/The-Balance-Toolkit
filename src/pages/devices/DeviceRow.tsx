@@ -1,17 +1,20 @@
-import { useRef } from "react";
+import React, {useRef, useState} from "react";
 import { Device } from "@/types";
 import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import "./DeviceRow.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
+import {Modal} from "@/components/Modal.tsx";
 
 interface DeviceRowProps {
   device: Device;
   isEditing: boolean;
+  isSelected: boolean;
   handleStartEditName: (deviceId: string) => void;
   handleSaveDeviceName: (macAddress: number, deviceName: string) => void;
-  handleIdentifyClick: (macAddress: number) => void;
+  handleIdentifyClick: (device: Device) => void;
+  handleUnselectDevice: (macAddress: number) => void;
   handleRemoveDevice: (macAddress: number) => void;
   handleSelectDeviceForSession: (macAddress: number) => void;
 }
@@ -19,9 +22,11 @@ interface DeviceRowProps {
 export default function DeviceRow({
   device,
   isEditing,
+  isSelected,
   handleStartEditName,
   handleSaveDeviceName,
   handleIdentifyClick,
+  handleUnselectDevice,
   handleRemoveDevice,
   handleSelectDeviceForSession,
 }: DeviceRowProps) {
@@ -108,22 +113,27 @@ export default function DeviceRow({
           </div>
         </div>
 
-        <div className="device-actions">
-          <button
-            onClick={() => handleIdentifyClick(device.macAddress)}
-            className="device-action-btn btn-circle"
-            disabled={!device.isConnected}
-            title={device.isConnected ? "Identify Device" : "Device is disconnected"}
-          >
+        <div className="flex gap-5 ">
+          <ToolkitButton disabled={!device.isConnected}
+                         type="button"
+                         className={"text-sm"}
+                         shape="circle"
+                         variant="white"
+                         onClick={() => handleIdentifyClick(device)}>
             ID
-          </button>
-          {device.isConnected ? (
-            <ToolkitButton type="button" variant="blue" onClick={() => handleSelectDeviceForSession(device.macAddress)}>
+          </ToolkitButton>
+          {!isSelected ? (
+            <ToolkitButton type="button"
+                           variant="blue"
+                           onClick={() => handleSelectDeviceForSession(device.macAddress) }
+                           disabled={!device.isConnected}>
               Connect
             </ToolkitButton>
-          ) : (
-            <ToolkitButton type="button" variant="blue" disabled={true}>
-              Connect
+            ) : (
+            <ToolkitButton type="button"
+                           variant="red"
+                           onClick={() => handleUnselectDevice(device.macAddress) }>
+              Disconnect
             </ToolkitButton>
           )}
         </div>

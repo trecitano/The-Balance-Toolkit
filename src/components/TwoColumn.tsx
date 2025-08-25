@@ -21,7 +21,7 @@ export const TwoColumn: React.FC<TwoColumnProps> = ({
   labelWidth = "w-1/3", // default: 1/3 of the row
 }) => {
   return (
-    <div className={clsx("flex items-start gap-2 rounded-md bg-gray-100 p-(--space-sm)", className)}>
+    <div className={clsx("flex items-start gap-2 rounded-lg bg-gray-100 p-(--space-sm)", className)}>
       {label && (
         <label
           className={clsx("flex items-center gap-2 text-(length:--text-sm) font-medium text-gray-600", labelWidth)}

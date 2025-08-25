@@ -2,12 +2,14 @@ import React from "react";
 import { Link } from "react-router-dom";
 import clsx from "clsx";
 
-type Variant = "grey" | "blue" | "red";
-type Size = "sm" | "md" | "lg";
+type Variant = "grey" | "blue" | "red" | "white";
+type Size = "none" | "sm" | "md" | "lg";
+type Shape = "default" | "circle";
 
 type BaseProps = {
   variant?: Variant;
   size?: Size;
+  shape?: Shape;
   fullWidth?: boolean;
   className?: string;
   children: React.ReactNode;
@@ -26,10 +28,8 @@ type ButtonAsLink = BaseProps &
 type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 const base =
-  "inline-flex items-center justify-center gap-[5px] " +
-  "rounded-md border-0 cursor-pointer font-semibold " +
-  "transition-all shadow-md min-w-[var(--btn-min-width)] " +
-  "relative overflow-hidden " +
+  "px-4 py-2 text-lg cursor-pointer font-semibold " +
+  "transition-all shadow-md " +
   "enabled:hover:-translate-y-[1px] " +
   "enabled:active:translate-y-[1px] enabled:active:shadow-inner " +
   "disabled:opacity-60 disabled:cursor-not-allowed " +
@@ -39,16 +39,24 @@ const byVariant: Record<Variant, string> = {
   grey: "bg-[var(--secondary)] text-[var(--white)] enabled:hover:bg-[var(--secondary-dark)]",
   blue: "bg-[var(--primary)] text-[var(--white)] enabled:hover:bg-[var(--primary-dark)]",
   red: "bg-[var(--red)] text-[var(--white)] enabled:hover:bg-[var(--red-dark)]",
+  white: "bg-white text-gray-800 shadow-md enabled:hover:shadow-lg enabled:hover:bg-gray-50 border border-gray-200",
+};
+
+const byShape: Record<Shape, string> = {
+  default: "rounded-lg min-w-30",
+  circle:
+    "rounded-full aspect-square",
 };
 
 const bySize: Record<Size, string> = {
-  sm: "px-2 py-2 text-sm",
-  md: "px-4 py-2 text-lg",
-  lg: "px-6 py-3 text-base",
+  none: "",
+  sm: "",
+  md: "",
+  lg: "",
 };
 
-export function ToolkitButton({ variant = "red", size = "md", className = "", children, ...props }: ButtonProps) {
-  const classes = clsx(base, byVariant[variant], bySize[size], className);
+export function ToolkitButton({ variant = "red", size = "md", shape="default", className = "", children, ...props }: ButtonProps) {
+  const classes = clsx(byShape[shape], bySize[size], byVariant[variant], base, className);
 
   if ("to" in props && props.to) {
     const { to, ...rest } = props as ButtonAsLink;
