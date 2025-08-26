@@ -1,47 +1,50 @@
-import React from "react";
+import clsx from "clsx";
 
 type Props = {
   entries: string[];
-  currentIndex: number;
-  selectedEntry: string;
-  onSelect: (userName: string) => void | Promise<void>;
+  selectedIndex: number;
+  onSelect: (index: number) => void | Promise<void>;
   nearbyThreshold?: number;
+  className?: string;
 };
 
-const CarouselIndicators: React.FC<Props> = React.memo(
-  ({ entries, currentIndex, selectedEntry, onSelect, nearbyThreshold = 2 }) => {
-    return (
-      <div className="mt-[1.5vh] flex w-full list-none justify-center gap-[10px] p-0" role="list">
-        {entries.map((entry, index) => {
-          const distance = Math.abs(index - currentIndex);
-          let dotClass = "w-[12px] h-[12px] rounded-full bg-[var(--border)] opacity-50 transition cursor-pointer";
+export default function CarouselIndicators({
+  entries,
+  selectedIndex,
+  onSelect,
+  nearbyThreshold = 2,
+  className,
+}: Props) {
+  return (
+    <div className={clsx("flex w-full list-none justify-center gap-3", className)} role="list">
+      {entries.map((entry, index) => {
+        const distance = Math.abs(index - selectedIndex);
 
-          if (entry === selectedEntry) {
-            dotClass += " bg-[var(--primary)] opacity-100 scale-125";
-          } else if (distance <= nearbyThreshold) {
-            dotClass += " bg-[var(--secondary-dark)] opacity-80";
-          }
+        let dotClass = "w-[12px] h-[12px] rounded-full bg-[var(--border)] opacity-50 transition cursor-pointer";
 
-          return (
-            <div
-              key={entry}
-              className={dotClass}
-              onClick={() => onSelect(entry)}
-              title={entry}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onSelect(entry);
-                }
-              }}
-            />
-          );
-        })}
-      </div>
-    );
-  },
-);
+        if (index === selectedIndex) {
+          dotClass += " bg-[var(--primary)] opacity-100 scale-125";
+        } else if (distance <= nearbyThreshold) {
+          dotClass += " bg-[var(--secondary-dark)] opacity-80";
+        }
 
-export default CarouselIndicators;
+        return (
+          <div
+            key={entry}
+            className={dotClass}
+            onClick={() => onSelect(index)}
+            title={entry}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect(index);
+              }
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}

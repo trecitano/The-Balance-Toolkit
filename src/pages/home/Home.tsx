@@ -196,52 +196,41 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
     <div className="flex h-full flex-col">
       <h2 className="text-2xl font-semibold text-neutral-900">Activities</h2>
 
-      <div className="mt-4">
-        <ul ref={listRef} className="activities-list flex gap-8 overflow-hidden px-[calc(50%-65px)] py-[2.5vh]">
-          {activities.map((activity, i) => {
-            const active = i === selected;
-            return (
-              <li
-                key={activity.id}
-                data-activityid={activity.id}
-                onClick={() => handleSelectActivity(i)}
-                className={`flex aspect-square w-[120px] flex-shrink-0 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-[var(--light)] p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 border-2 border-[var(--primary)] bg-[#e0eafc] font-bold opacity-100 shadow-lg" : ""} `}
-              >
-                <div className="flex h-[80%] items-center justify-center">
-                  <img
-                    src={getActivityAssetFullPath(activity.id, activity.staticImage)}
-                    alt=""
-                    draggable={false}
-                    className="max-h-full max-w-full object-contain"
-                  />
-                </div>
-                <div
-                  className={`mt-2 h-[30%] text-xs font-semibold ${active ? "text-neutral-900" : "text-neutral-500"}`}
-                >
-                  {activity.title}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      {/* Dot indicators */}
-      <div className="mt-4 flex justify-center gap-2">
-        {activities.map((_, i) => {
+      <ul ref={listRef} className="activities-list flex gap-8 overflow-hidden px-[calc(50%-65px)] py-[2.5vh]">
+        {activities.map((activity, i) => {
           const active = i === selected;
           return (
-            <button
-              key={i}
+            <li
+              key={activity.id}
+              data-activityid={activity.id}
               onClick={() => handleSelectActivity(i)}
-              className={`h-3 w-3 rounded-full ${active ? "bg-red-600" : "bg-neutral-400"}`}
-              type="button"
-            />
+              className={`flex aspect-square w-[120px] flex-shrink-0 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-[var(--light)] p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 border-2 border-[var(--primary)] bg-[#e0eafc] font-bold opacity-100 shadow-lg" : ""} `}
+            >
+              <div className="flex h-[80%] items-center justify-center">
+                <img
+                  src={getActivityAssetFullPath(activity.id, activity.staticImage)}
+                  alt=""
+                  draggable={false}
+                  className="max-h-full max-w-full object-contain"
+                />
+              </div>
+              <div className={`mt-2 h-[30%] text-xs font-semibold ${active ? "text-neutral-900" : "text-neutral-500"}`}>
+                {activity.title}
+              </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
 
-      <div className="">
+      <CarouselIndicators
+        entries={activities.map((activity) => activity.id)}
+        selectedIndex={selected}
+        onSelect={handleSelectActivity}
+        nearbyThreshold={1}
+        className={"mt-3"}
+      />
+
+      <div className="mt-auto flex justify-end">
         <ToolkitButton to="/activities" variant={"grey"}>
           {" "}
           Go to Activities →
@@ -330,7 +319,7 @@ const ConnectionCard: React.FC = () => {
         })}
       </div>
 
-      <div className="mt-auto ml-auto">
+      <div className="mt-auto flex justify-end">
         <ToolkitButton to="/devices" variant={"grey"}>
           {" "}
           Go to Devices →

@@ -295,27 +295,6 @@ export default function Users() {
     }, 0);
   };
 
-  const renderCarouselIndicators = () => {
-    return (
-      <div className="carousel-indicators">
-        {sortedUsers.map((user, index) => {
-          const distance = Math.abs(index - currentIndex);
-          let className = "carousel-indicator-dot";
-
-          if (user.name === selectedUser) {
-            className += " active";
-          } else if (distance <= 2) {
-            className += " nearby";
-          }
-
-          return (
-            <div key={user.name} className={className} onClick={() => handleSelectUser(user.name)} title={user.name} />
-          );
-        })}
-      </div>
-    );
-  };
-
   const renderUserIcon = (user: UserType, extraClasses: string) => {
     return (
       <>
@@ -370,10 +349,10 @@ export default function Users() {
 
   return (
     <>
-      <header className="relative z-50 mb-6 flex gap-10">
+      <header className="z-1 grid grid-cols-8">
         <Heading>Users</Heading>
 
-        <ToolkitButton type="button" variant="blue" onClick={() => handleAddUser(users)}>
+        <ToolkitButton className="" type="button" variant="blue" onClick={() => handleAddUser(users)}>
           Add new user
         </ToolkitButton>
 
@@ -448,9 +427,11 @@ export default function Users() {
 
       <CarouselIndicators
         entries={sortedUsers.map((user) => user.name)}
-        currentIndex={currentIndex}
-        selectedEntry={selectedUser}
-        onSelect={handleSelectUser}
+        selectedIndex={currentIndex}
+        onSelect={(index) => {
+          const user = sortedUsers[index];
+          handleSelectUser(user.name);
+        }}
       />
 
       <ToolkitContainer className="mt-20 p-12">

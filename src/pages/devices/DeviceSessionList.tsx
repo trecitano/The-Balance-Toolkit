@@ -20,7 +20,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
         return (
           <ToolkitContainer className="flex w-full flex-1 flex-col justify-between p-8" key={`side-panel-${index}`}>
             {device ? (
-              <div className="flex h-full flex-col">
+              <>
                 <div className="mb-5 flex items-center gap-[var(--space-sm)]">
                   <img
                     src={bluetoothIcon}
@@ -43,7 +43,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                 </div>
 
                 <div className="flex items-center justify-center">
-                  <div className="relative flex min-h-80 max-w-70 items-center justify-center">
+                  <div className="relative flex min-h-60 max-w-70 items-center justify-center">
                     <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
                     <img src={wbbIconBlue} className="z-10 h-4/5 w-4/5" />
                   </div>
@@ -57,7 +57,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                     Go to Session →
                   </ToolkitButton>
                 </div>
-              </div>
+              </>
             ) : (
               <div className="flex h-full items-center justify-center">
                 <span className="font-medium text-gray-500">Device slot available</span>
