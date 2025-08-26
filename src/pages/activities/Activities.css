@@ -142,15 +142,7 @@
   width: 40px;
 }
 .activity-card {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-light);
   padding: var(--space-xl) var(--space-lg) var(--space-lg) var(--space-lg);
-  flex-direction: column;
-  text-align: left;
-  gap: var(--space-xs);
-  border: var(--border-primary);
-  position: relative;
   transition:
     box-shadow var(--transition),
     transform var(--transition),

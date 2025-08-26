@@ -16,6 +16,8 @@ import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
 import { Activity } from "@/types.ts";
 import { getActivityAssetFullPath } from "@/utils/activityImages.ts";
+import CarouselIndicators from "@/components/CarouselIndicators.tsx";
+import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 
 interface StatusIndicator {
   value: string;
@@ -46,37 +48,37 @@ const Home: React.FC = () => {
   const activities = data?.activities ?? [];
 
   return (
-    <div className="h-full px-20">
+    <>
       {/* Header */}
       <Header />
 
       {/* Main Content */}
-      <div className="mt-6 grid grid-flow-col grid-cols-3 grid-rows-3 gap-8">
+      <div className="mt-6 grid h-full grid-flow-col grid-cols-3 grid-rows-3 gap-8">
         {/* Left Column */}
-        <div className="col-span-1 row-span-1 rounded-lg border-2 border-red-500 bg-white p-5">
+        <ToolkitContainer className="col-span-1 row-span-1">
           <LastSessionCard />
-        </div>
-        <div className="col-span-1 row-span-2 rounded-lg border-2 border-red-500 bg-white p-5">
+        </ToolkitContainer>
+        <ToolkitContainer className="col-span-1 row-span-2">
           <ActivitiesCard activities={activities} />
-        </div>
+        </ToolkitContainer>
 
         {/* Middle Column */}
-        <div className="row-span-3 rounded-lg border-2 border-red-500 bg-white p-5">
+        <ToolkitContainer className="row-span-3">
           <ConnectionCard />{" "}
-        </div>
+        </ToolkitContainer>
 
         {/* Right Column */}
-        <div className="row-span-1 rounded-lg border-2 border-red-500 bg-white p-5">
+        <ToolkitContainer className="row-span-1">
           <HelpSupportCard />{" "}
-        </div>
-        <div className="row-span-1 rounded-lg border-2 border-red-500 bg-white p-5">
+        </ToolkitContainer>
+        <ToolkitContainer className="row-span-1">
           <DocumentationCard />{" "}
-        </div>
-        <div className="row-span-1 rounded-lg border-2 border-red-500 bg-white p-5">
+        </ToolkitContainer>
+        <ToolkitContainer className="row-span-1">
           <OtherResourcesCard />{" "}
-        </div>
+        </ToolkitContainer>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -239,7 +241,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
         })}
       </div>
 
-      <div className="mt-auto ml-auto">
+      <div className="">
         <ToolkitButton to="/activities" variant={"grey"}>
           {" "}
           Go to Activities →

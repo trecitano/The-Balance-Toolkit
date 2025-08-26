@@ -10,6 +10,7 @@ import "./Devices.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import Heading from "@/components/PageTitle.tsx";
 import { Modal } from "@/components/Modal.tsx";
+import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 
 export const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
@@ -40,7 +41,7 @@ export default function Devices() {
   const queryClient = useQueryClient();
   const [showIdentifyModal, setShowIdentifyModal] = useState<Device | null>(null);
 
-  const { data, isLoading, error } = useQuery(DevicesQuery);
+  const { data } = useQuery(DevicesQuery);
 
   const identifyDeviceMutation = useMutation({
     mutationFn: (macAddress: number) => commands.devices.identifyDevice(macAddress),
@@ -125,23 +126,6 @@ export default function Devices() {
     e.currentTarget.style.setProperty("--bottom-opacity", bottomOpacity);
   }, []);
 
-  if (isLoading) {
-    return <div className=""></div>;
-  }
-
-  if (error) {
-    return (
-      <div>
-        <div>
-          <span>Devices</span>
-        </div>
-        <div className="flex items-center justify-center p-8">
-          <p className="text-red-600">Failed to load devices: {error.message}</p>
-        </div>
-      </div>
-    );
-  }
-
   const sortDevices = (devices: Device[]): Device[] => {
     if (!Array.isArray(devices)) return [];
     const connected = devices.filter((d) => d.isConnected);
@@ -166,7 +150,7 @@ export default function Devices() {
 
   return (
     <>
-      <header className="mb-6 flex justify-between">
+      <header className="mb-6 flex gap-10">
         <Heading>Devices</Heading>
 
         <ToolkitButton
@@ -175,42 +159,44 @@ export default function Devices() {
           onClick={handleScanDevices}
           disabled={scanDevicesMutation.isPending || isScanning}
         >
-          {scanDevicesMutation.isPending || isScanning ? "Scanning..." : "Scan for Devices"}
+          <span>{scanDevicesMutation.isPending || isScanning ? "Scanning..." : "Scan for Devices"}</span>
         </ToolkitButton>
       </header>
 
       <div className="flex h-[75dvh] flex-1 gap-5">
-        <div
-          className="devices-list flex flex-1 flex-col gap-4 overflow-y-auto rounded-lg bg-white p-10"
-          onScroll={handleGradientDevicesScroll}
-        >
-          {noDevices && (
-            <div className="mt-8 flex h-full flex-col items-center justify-center rounded-lg p-8 text-center shadow-inner">
-              <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />
-              <p className="text-xl text-gray-600">No devices found.</p>
-              <p className="text-base text-gray-400">
-                {`Click the "Scan for Devices" button to search for nearby devices.`}
-              </p>
-            </div>
-          )}
-          {sortedDevices.map((device) => (
-            <DeviceRow
-              key={device.id}
-              device={device}
-              isEditing={editingDeviceId === device.id}
-              isSelected={selectedDevices.some((d) => d.macAddress === device.macAddress)}
-              handleStartEditName={handleStartEditName}
-              handleSaveDeviceName={handleSaveDeviceName}
-              handleIdentifyClick={(device) => {
-                setShowIdentifyModal(device);
-                identifyDeviceMutation.mutate(device.macAddress);
-              }}
-              handleUnselectDevice={(macAddress) => unselectDeviceForSessionMutation.mutate(macAddress)}
-              handleRemoveDevice={(macAddress) => removeDeviceMutation.mutate(macAddress)}
-              handleSelectDeviceForSession={(macAddress) => selectDeviceForSessionMutation.mutate(macAddress)}
-            />
-          ))}
-        </div>
+        <ToolkitContainer className="flex flex-1 flex-col p-10">
+          <div
+            className={"devices-list flex h-full flex-col gap-4 overflow-y-auto"}
+            onScroll={handleGradientDevicesScroll}
+          >
+            {noDevices && (
+              <div className="mt-8 flex h-full flex-col items-center justify-center rounded-lg p-8 text-center shadow-inner">
+                <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />
+                <p className="text-xl text-gray-600">No devices found.</p>
+                <p className="text-base text-gray-400">
+                  {`Click the "Scan for Devices" button to search for nearby devices.`}
+                </p>
+              </div>
+            )}
+            {sortedDevices.map((device) => (
+              <DeviceRow
+                key={device.id}
+                device={device}
+                isEditing={editingDeviceId === device.id}
+                isSelected={selectedDevices.some((d) => d.macAddress === device.macAddress)}
+                handleStartEditName={handleStartEditName}
+                handleSaveDeviceName={handleSaveDeviceName}
+                handleIdentifyClick={(device) => {
+                  setShowIdentifyModal(device);
+                  identifyDeviceMutation.mutate(device.macAddress);
+                }}
+                handleUnselectDevice={(macAddress) => unselectDeviceForSessionMutation.mutate(macAddress)}
+                handleRemoveDevice={(macAddress) => removeDeviceMutation.mutate(macAddress)}
+                handleSelectDeviceForSession={(macAddress) => selectDeviceForSessionMutation.mutate(macAddress)}
+              />
+            ))}
+          </div>
+        </ToolkitContainer>
 
         <DeviceSessionList
           connectedDevices={selectedDevices}

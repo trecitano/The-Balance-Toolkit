@@ -47,6 +47,7 @@ export const InputPrimitive: React.FC<InputPrimitiveProps> = ({ editable, error,
         "cursor-not-allowed select-none",
         className,
       )}
+      {...props}
     >
       {props.value}
     </div>

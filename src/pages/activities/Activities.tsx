@@ -35,7 +35,7 @@ export default function Activities() {
       <header className="mb-6">
         <Heading>Activities</Heading>
       </header>
-      <div className="grid grid-cols-3 gap-10 px-20">
+      <div className="grid grid-cols-3 gap-10">
         {activities.map((activity) => (
           <ActivityCard
             key={activity.id}

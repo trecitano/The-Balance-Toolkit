@@ -4,6 +4,7 @@ import rippleIcon from "@/assets/ripple-icon.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
+import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
@@ -12,17 +13,14 @@ interface DeviceSessionListProps {
 
 export default function DeviceSessionList({ connectedDevices, handleUnselectDevice }: DeviceSessionListProps) {
   return (
-    <div className="flex h-full basis-120 flex-col justify-center gap-6 overflow-y-hidden">
+    <div className="flex h-full basis-120 flex-col gap-6">
       {[0, 1].map((index) => {
         const device = connectedDevices[index];
 
         return (
-          <div
-            className="box-border flex w-full flex-1 flex-col justify-between rounded-lg bg-[var(--bg-secondary)]"
-            key={`side-panel-${index}`}
-          >
+          <ToolkitContainer className="flex w-full flex-1 flex-col justify-between p-8" key={`side-panel-${index}`}>
             {device ? (
-              <div className="flex h-full flex-col rounded-lg p-5 shadow-[var(--shadow-light)]">
+              <div className="flex h-full flex-col">
                 <div className="mb-5 flex items-center gap-[var(--space-sm)]">
                   <img
                     src={bluetoothIcon}
@@ -61,11 +59,11 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                 </div>
               </div>
             ) : (
-              <div className="hover:border-grey-400 flex h-full items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white shadow-sm transition-colors hover:bg-gray-50">
+              <div className="flex h-full items-center justify-center">
                 <span className="font-medium text-gray-500">Device slot available</span>
               </div>
             )}
-          </div>
+          </ToolkitContainer>
         );
       })}
     </div>

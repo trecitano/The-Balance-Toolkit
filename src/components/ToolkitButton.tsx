@@ -28,6 +28,7 @@ type ButtonAsLink = BaseProps &
 type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 const base =
+  "leading-none " +
   "px-4 py-2 text-lg cursor-pointer font-semibold " +
   "transition-all shadow-md " +
   "enabled:hover:-translate-y-[1px] " +
@@ -39,7 +40,8 @@ const byVariant: Record<Variant, string> = {
   grey: "bg-[var(--secondary)] text-[var(--white)] enabled:hover:bg-[var(--secondary-dark)]",
   blue: "bg-[var(--primary)] text-[var(--white)] enabled:hover:bg-[var(--primary-dark)]",
   red: "bg-[var(--red)] text-[var(--white)] enabled:hover:bg-[var(--red-dark)]",
-  white: "bg-white text-gray-800 shadow-md enabled:hover:shadow-lg enabled:hover:bg-gray-50 border border-gray-200",
+  white:
+    "bg-white text-gray-800 shadow-(--shadow-light) enabled:hover:shadow-lg enabled:hover:bg-gray-50 border border-gray-200",
 };
 
 const byShape: Record<Shape, string> = {

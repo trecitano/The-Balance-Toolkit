@@ -29,7 +29,7 @@
   --text-link-hover: #0056b3;
 
   --border: #ccc;
-  --border-primary: 0.001rem solid #e0e0e0;
+  --border-primary: #e0e0e0;
   --border-radius: 0.8vw;
 
   --space-xs: 0.3rem;
@@ -63,8 +63,6 @@
   --transition: 0.2s ease;
   --transition-slow: 0.2s ease;
 
-  --btn-padding: 0.5vw 1vw;
-  --btn-padding-lg: 0.8vw 2vw;
   --btn-min-width: 7.5vw;
   --btn-height: 4vw;
   --input-height: 38px;
