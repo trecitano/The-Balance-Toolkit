@@ -29,7 +29,7 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 const base =
   "leading-none " +
-  "px-4 py-2 text-lg cursor-pointer font-semibold " +
+  "text-lg cursor-pointer font-semibold " +
   "transition-all shadow-md " +
   "enabled:hover:-translate-y-[1px] " +
   "enabled:active:translate-y-[1px] enabled:active:shadow-inner " +
@@ -45,14 +45,14 @@ const byVariant: Record<Variant, string> = {
 };
 
 const byShape: Record<Shape, string> = {
-  default: "rounded-lg min-w-30",
+  default: "rounded-lg",
   circle: "rounded-full aspect-square",
 };
 
 const bySize: Record<Size, string> = {
   none: "",
   sm: "",
-  md: "",
+  md: "p-2",
   lg: "",
 };
 

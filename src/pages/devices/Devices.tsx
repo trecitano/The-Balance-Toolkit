@@ -150,8 +150,8 @@ export default function Devices() {
 
   return (
     <>
-      <header className="mb-6 flex gap-10">
-        <Heading>Devices</Heading>
+      <header className="mb-6 grid grid-cols-8">
+        <Heading className={"flex-shrink-0"}>Devices</Heading>
 
         <ToolkitButton
           type="button"
@@ -170,12 +170,20 @@ export default function Devices() {
             onScroll={handleGradientDevicesScroll}
           >
             {noDevices && (
-              <div className="mt-8 flex h-full flex-col items-center justify-center rounded-lg p-8 text-center shadow-inner">
+              <div className="flex h-full flex-col items-center justify-center p-8 text-center">
                 <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />
                 <p className="text-xl text-gray-600">No devices found.</p>
-                <p className="text-base text-gray-400">
+                <p className="mb-5 text-base text-gray-400">
                   {`Click the "Scan for Devices" button to search for nearby devices.`}
                 </p>
+                <ToolkitButton
+                  type="button"
+                  variant="grey"
+                  onClick={handleScanDevices}
+                  disabled={scanDevicesMutation.isPending || isScanning}
+                >
+                  <span>{scanDevicesMutation.isPending || isScanning ? "Scanning..." : "Scan for Devices"}</span>
+                </ToolkitButton>
               </div>
             )}
             {sortedDevices.map((device) => (
@@ -184,6 +192,7 @@ export default function Devices() {
                 device={device}
                 isEditing={editingDeviceId === device.id}
                 isSelected={selectedDevices.some((d) => d.macAddress === device.macAddress)}
+                cannotConnect={!device.isConnected || selectedDevices.length >= 2}
                 handleStartEditName={handleStartEditName}
                 handleSaveDeviceName={handleSaveDeviceName}
                 handleIdentifyClick={(device) => {

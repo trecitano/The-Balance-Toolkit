@@ -11,6 +11,7 @@ interface DeviceRowProps {
   device: Device;
   isEditing: boolean;
   isSelected: boolean;
+  cannotConnect: boolean;
   handleStartEditName: (deviceId: string) => void;
   handleSaveDeviceName: (macAddress: number, deviceName: string) => void;
   handleIdentifyClick: (device: Device) => void;
@@ -23,6 +24,7 @@ export default function DeviceRow({
   device,
   isEditing,
   isSelected,
+  cannotConnect,
   handleStartEditName,
   handleSaveDeviceName,
   handleIdentifyClick,
@@ -129,7 +131,7 @@ export default function DeviceRow({
               type="button"
               variant="blue"
               onClick={() => handleSelectDeviceForSession(device.macAddress)}
-              disabled={!device.isConnected}
+              disabled={cannotConnect}
             >
               Connect
             </ToolkitButton>
