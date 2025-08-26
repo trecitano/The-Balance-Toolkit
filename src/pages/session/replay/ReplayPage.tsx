@@ -30,7 +30,7 @@ export const ReplayQuery = {
 };
 
 export default function ReplayPage() {
-  const { data, isLoading, error } = useQuery(ReplayQuery);
+  const { data } = useQuery(ReplayQuery);
   const replayInformation =
     data?.replayInformation ??
     ({ core: {}, devices: [], filePath: "", hasOngoingSession: false } as ReplayConfiguration);
@@ -53,18 +53,6 @@ export default function ReplayPage() {
       queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
     },
   });
-
-  if (isLoading) {
-    return <div className=""></div>;
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <p className="text-red-600">Failed to Session page: {error.message}</p>
-      </div>
-    );
-  }
 
   const boardDisplayOptions: CheckboxOption[] = replayInformation.devices.map((board) => ({
     value: board.macAddress,
@@ -125,7 +113,7 @@ export default function ReplayPage() {
               )}
             >
               {/* Circle handle at the top */}
-              <div className="absolute left-1/2 h-4 w-5 -translate-x-1/2 bg-[var(--red)] shadow-md [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]" />
+              <div className="absolute left-1/2 h-4 w-5 -translate-x-1/2 bg-[var(--red)] shadow-(--shadow-light) [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]" />
             </div>
           </div>
         ) : (

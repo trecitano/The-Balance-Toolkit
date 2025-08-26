@@ -5,6 +5,7 @@ import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, ReplayConfiguration, SessionPanelConfiguration } from "@/types.ts";
 import Heading from "@/components/PageTitle.tsx";
+import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 
 export function ReplayPanel({
   config,
@@ -58,7 +59,7 @@ export function ReplayPanel({
         <Heading>Replay</Heading>
       </header>
 
-      <div className="grid grid-cols-14 grid-rows-2 gap-1 rounded-lg bg-white/70 p-3 shadow-sm">
+      <ToolkitContainer className="grid grid-cols-14 grid-rows-2 gap-1">
         <SingleColumn label="Board to Display" backgroundType="transparent" className="col-span-3">
           <MultiSelect
             options={boardDisplayOptions}
@@ -147,7 +148,7 @@ export function ReplayPanel({
             </div>
           </div>
         </SingleColumn>
-      </div>
+      </ToolkitContainer>
     </>
   );
 }

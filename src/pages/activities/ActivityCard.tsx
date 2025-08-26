@@ -8,6 +8,7 @@ import { getActivityAssetFullPath } from "@/utils/activityImages.ts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
 import { ACTIVITIES_QUERY_KEY } from "@/pages/activities/Activities.tsx";
+import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 
 /**
  * ActivityCard component displays an activity with its details
@@ -275,7 +276,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
   };
 
   return (
-    <div
+    <ToolkitContainer
       ref={cardRef}
       className={`activity-card ${maximized && showMaximizedClass ? "maximized" : ""}`}
       style={maximized ? maxStyle : undefined}
@@ -439,7 +440,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
           )}
         </div>
       </div>
-    </div>
+    </ToolkitContainer>
   );
 };
 
