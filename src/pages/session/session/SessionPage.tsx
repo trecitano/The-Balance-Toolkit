@@ -1,9 +1,8 @@
-import { useState } from "react";
-import BoardPanel from "../BoardPanel.tsx";
+import {useRef, useState} from "react";
 import { SessionPanel } from "./SessionPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import { Activity, SessionPanelConfiguration, SessionInformation } from "@/types.ts";
+import {Activity, SessionPanelConfiguration, SessionInformation} from "@/types.ts";
 import { sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import ActivityTimeline from "@/pages/activities/ActivityTimeline.tsx";
 import { CheckboxOption } from "@/components/MultiSelect.tsx";
@@ -12,6 +11,7 @@ import clsx from "clsx";
 import { registerPlayhead, startTimeline, stopTimeline } from "@/pages/session/ProgressTimer.ts";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
+import {listen} from "@tauri-apps/api/event";
 
 const SESSION_QUERY_KEY = ["session_key"];
 type SessionQueryData = {
@@ -33,6 +33,7 @@ export const SessionQuery = {
 export default function SessionPage() {
   const { data } = useQuery(SessionQuery);
   const queryClient = useQueryClient();
+  const sessionOverListener = useRef<(() => void) | null>(null);
 
   const { sessionInformation, activities } = data ?? {
     sessionInformation: {
@@ -90,8 +91,15 @@ export default function SessionPage() {
   const chosenActivityDuration = chosenActivity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0);
   const canStartSession = sessionInformation.selectedBoards.length > 0;
 
-  console.log("Duration is ", chosenActivityDuration);
-  console.log("Session config", sessionConfiguration);
+  if (sessionOverListener.current == null) {
+    listen<void>("session_completed", (_) => {
+      console.log("Received session completed from the frontend!");
+      stopTimeline();
+      queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+    }).then((unlisten) => {
+      sessionOverListener.current = unlisten;
+    });
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -130,14 +138,16 @@ export default function SessionPage() {
             <div
               ref={(el) => {
                 if (el) {
+                  if (sessionInformation.hasOngoingSession) {
+                    el.style.display = "block";
+                  } else {
+                    el.style.display = "none";
+                  }
                   el.style.transform = "translateX(0px)";
                   registerPlayhead(el);
                 }
               }}
-              className={clsx(
-                "absolute top-0 bottom-0 z-10 h-full w-[2px] bg-[var(--red)]",
-                !sessionInformation.hasOngoingSession && "hidden",
-              )}
+              className="absolute top-0 bottom-0 z-10 h-full w-[2px] bg-[var(--red)]"
             >
               {/* Circle handle at the top */}
               <div className="absolute left-1/2 h-4 w-5 -translate-x-1/2 bg-[var(--red)] shadow-(--shadow-light) [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]" />
