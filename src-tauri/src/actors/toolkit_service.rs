@@ -13,8 +13,9 @@ use file_system::UserFileSystem;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
-use futures::SinkExt;
+use tokio_util::sync::CancellationToken;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::Receiver;
 use tokio::sync::{mpsc, oneshot};
 
 // Commands that can be sent to the ConnectionManager
@@ -121,11 +122,14 @@ pub enum ToolkitCommand {
 
 pub enum ToolkitResponse {
     NewDeviceFound(MacAddress),
+    SessionCompleted,
+    ReplayCompleted,
 }
 
 pub struct ConnectionManager {
-    rx: mpsc::Receiver<ToolkitCommand>,
-    tx: Sender<ToolkitResponse>,
+    tx: Sender<ToolkitCommand>,
+    rx: Receiver<ToolkitCommand>,
+    response_tx: Sender<ToolkitResponse>,
     bluetooth_manager_tx: Sender<BluetoothCommand>,
     activity_state: ActivityState,
 
@@ -135,13 +139,12 @@ pub struct ConnectionManager {
     all_connections: HashMap<MacAddress, Sender<BoardAction>>,
 }
 
-// TODO The activity_id for now is just the string ID in the frontend, since the activities are fully implemented
-// in the frontend. In near future, they should be implemented in the backend.
 #[derive(Clone)]
 pub struct SessionConfiguration {
     pub core: CoreSessionConfiguration,
     pub connections: HashMap<MacAddress, Sender<BoardAction>>,
     pub has_ongoing_session: bool,
+    pub cancel_token: Option<CancellationToken>
 }
 
 #[derive(Clone)]
@@ -164,10 +167,13 @@ pub struct ReplayConfiguration {
     pub device_names: HashMap<MacAddress, String>,
     pub connections: HashMap<MacAddress, Sender<BoardAction>>,
     pub has_ongoing_session: bool,
+    pub cancel_token: Option<CancellationToken>
 }
 
 impl ConnectionManager {
-    pub fn new(rx: mpsc::Receiver<ToolkitCommand>, tx: Sender<ToolkitResponse>) -> Result<Self> {
+    pub fn new(response_tx: Sender<ToolkitResponse>) -> Result<Self> {
+        let (tx, rx) = mpsc::channel(100);
+
         let selected_user = UserFileSystem::get_or_create_default_user()?.name;
         let general_settings = SettingsFileSystem::get_or_create_default_settings()?;
         let session_settings = SessionConfiguration {
@@ -184,12 +190,14 @@ impl ConnectionManager {
             },
             connections: HashMap::new(),
             has_ongoing_session: false,
+            cancel_token: None,
         };
         let activity_state = ActivityState::new()?;
 
         Ok(Self {
             rx,
             tx,
+            response_tx,
             bluetooth_manager_tx: BluetoothService::start_bluetooth_handler(general_settings.is_demo_mode),
             activity_state,
 
@@ -198,6 +206,10 @@ impl ConnectionManager {
             replay_settings: None,
             all_connections: HashMap::new(),
         })
+    }
+
+    pub fn get_sender_channel(&self) -> Sender<ToolkitCommand> {
+        self.tx.clone()
     }
 
     pub async fn run(mut self) -> Result<()> {
@@ -361,6 +373,8 @@ impl ConnectionManager {
                     response.send(()).unwrap();
                 },
                 ToolkitCommand::StartSession { frontend_channel } => {
+                    let cancellation_token = CancellationToken::new();
+                    self.session_settings.cancel_token = Some(cancellation_token.clone());
                     self.session_settings.has_ongoing_session = true;
                     let device_names = self.get_connected_device_names().await?;
 
@@ -370,8 +384,37 @@ impl ConnectionManager {
                                   &self.session_settings.connections,
                                   device_names)
                         .await;
+
+                    // Cancel the session when the activity ends
+                    if let Some(activity) = &self.session_settings.core.activity {
+                        let duration = activity.timeline_blocks.iter().map(|b| b.duration).sum::<i32>() as u64;
+
+                        let manager_tx = self.get_sender_channel();
+                        let response_tx = self.response_tx.clone();
+                        tokio::spawn(async move {
+                            println!("Going to sleep for {duration}");
+                            tokio::select! {
+                                _ = tokio::time::sleep(Duration::from_secs(duration)) => {
+                                    println!("Activity duration ended, stopping session...");
+                                    let (stop_tx, stop_rx) = oneshot::channel();
+                                    let _ = manager_tx.send(ToolkitCommand::StopSession { response: stop_tx }).await;
+                                    stop_rx.await.unwrap();
+                                    response_tx.send(ToolkitResponse::SessionCompleted).await.unwrap();
+                                }
+                                _ = cancellation_token.cancelled() => {
+                                    println!("Session cancelled manually, auto-stop task exiting.");
+                                    response_tx.send(ToolkitResponse::SessionCompleted).await.unwrap();
+                                }
+                            }
+                        });
+                    }
                 },
+
                 ToolkitCommand::StopSession { response } => {
+                    if let Some(token) = self.session_settings.cancel_token.take() {
+                        token.cancel();
+                    }
+
                     for board in self.session_settings.connections.values() {
                         let command = { BoardAction::StopRecording };
                         board.send(command).await?
@@ -379,6 +422,7 @@ impl ConnectionManager {
 
                     self.session_settings.has_ongoing_session = false;
                     response.send(()).unwrap();
+
                 },
                 ToolkitCommand::BoardAction { mac_address, action } => {
                     self.board_action(mac_address, action).await;
@@ -424,6 +468,7 @@ impl ConnectionManager {
                         device_names: file_session.device_names,
                         connections,
                         has_ongoing_session: false,
+                        cancel_token: None,
                     });
 
                     response.send(()).unwrap()
@@ -443,6 +488,8 @@ impl ConnectionManager {
                 },
                 ToolkitCommand::StartReplay { frontend_channel } => {
                     if let Some(settings) = self.replay_settings.as_mut() {
+                        let cancellation_token = CancellationToken::new();
+                        settings.cancel_token = Some(cancellation_token.clone());
                         settings.has_ongoing_session = true;
 
                         start_session(frontend_channel,
@@ -451,6 +498,29 @@ impl ConnectionManager {
                                       &settings.connections,
                                       settings.device_names.clone())
                             .await;
+
+                        // Cancel the replay when the activity ends
+                        if let Some(activity) = &settings.core.activity {
+                            let duration = activity.timeline_blocks.iter().map(|b| b.duration).sum::<i32>() as u64;
+
+                            let manager_tx = self.get_sender_channel();
+                            let response_tx = self.response_tx.clone();
+                            tokio::spawn(async move {
+                                tokio::select! {
+                                _ = tokio::time::sleep(Duration::from_secs(duration)) => {
+                                    println!("Activity duration ended, stopping replay...");
+                                    let (stop_tx, stop_rx) = oneshot::channel();
+                                    let _ = manager_tx.send(ToolkitCommand::StopReplay { response: stop_tx }).await;
+                                    stop_rx.await.unwrap();
+                                    response_tx.send(ToolkitResponse::ReplayCompleted).await.unwrap();
+                                }
+                                _ = cancellation_token.cancelled() => {
+                                    println!("Replay cancelled manually, auto-stop task exiting.");
+                                    response_tx.send(ToolkitResponse::ReplayCompleted).await.unwrap();
+                                }
+                            }
+                            });
+                        }
                     }
                 },
                 ToolkitCommand::StopReplay { response } => {
@@ -559,7 +629,7 @@ impl ConnectionManager {
 
         let board_connection = balance_board_actor::initialize(mac_address, connection_mode)?;
         self.all_connections.insert(mac_address, board_connection);
-        self.tx.send(ToolkitResponse::NewDeviceFound(mac_address)).await?;
+        self.response_tx.send(ToolkitResponse::NewDeviceFound(mac_address)).await?;
 
         Ok(())
     }
@@ -820,6 +890,10 @@ fn initialize_raw_data_forwarder(mut raw_data_rx: mpsc::Receiver<BalanceBoardCal
             }
         }
     });
+}
+
+fn stop_session_after_duration(frontend_channel: Sender<BalanceBoardOutput>) {
+
 }
 
 fn add_observer_to_device_list(session_mapping: &mut SessionMapping,

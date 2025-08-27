@@ -10,7 +10,7 @@ pub struct Activity {
     static_image: String,
     sequence_images: Vec<String>,
     hover_images: Vec<String>,
-    timeline_blocks: Vec<ActivityActionBlock>,
+    pub timeline_blocks: Vec<ActivityActionBlock>,
     boards_required: i32,
     description: String,
 }
@@ -21,7 +21,7 @@ pub struct ActivityActionBlock {
     title: String,
     label: String,
     start: i32,
-    duration: i32,
+    pub duration: i32,
     image: Option<String>,
 }
 

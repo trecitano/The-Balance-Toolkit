@@ -1,5 +1,3 @@
-import { sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
-
 let startTime: number | null = null;
 let duration = 0;
 let rafId: number | null = null;
@@ -13,6 +11,12 @@ export async function startTimeline(totalDurationMs: number) {
   await stopTimeline(); // reset if already running
   startTime = performance.now();
   duration = totalDurationMs;
+
+  if (playhead) {
+    playhead.style.display = "none";
+    playhead.style.transform = "translateX(0px)";
+  }
+
   loop();
 }
 
@@ -21,6 +25,7 @@ export async function stopTimeline() {
   rafId = null;
   startTime = null;
   if (playhead) {
+    playhead.style.display = "none";
     playhead.style.transform = "translateX(0px)"; // reset to start
   }
 }
@@ -40,7 +45,6 @@ async function loop() {
   if (progress < 1) {
     rafId = requestAnimationFrame(loop);
   } else {
-    await sessionChannelManager.stop();
     await stopTimeline(); // reset when finished
   }
 }

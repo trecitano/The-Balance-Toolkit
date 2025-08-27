@@ -36,6 +36,12 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
                     match new_event {
                         ToolkitResponse::NewDeviceFound(device) => {
                             app_handle.emit("new_board", device).unwrap()
+                        },
+                        ToolkitResponse::SessionCompleted => {
+                            app_handle.emit("session_completed", ()).unwrap()
+                        },
+                        ToolkitResponse::ReplayCompleted => {
+                            app_handle.emit("replay_completed", ()).unwrap()
                         }
                     }
                 }

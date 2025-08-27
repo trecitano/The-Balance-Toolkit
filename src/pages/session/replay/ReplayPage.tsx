@@ -1,4 +1,4 @@
-import { useState } from "react";
+import {useRef, useState} from "react";
 import BoardPanel from "../BoardPanel.tsx";
 import { ReplayPanel } from "./ReplayPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,6 +18,7 @@ import clsx from "clsx";
 import { registerPlayhead, startTimeline, stopTimeline } from "@/pages/session/ProgressTimer.ts";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useReplayDataStore, useSessionDataStore } from "@/store/sessionDataStore.tsx";
+import {listen} from "@tauri-apps/api/event";
 
 const REPLAY_QUERY_KEY = ["replay_key"];
 export const ReplayQuery = {
@@ -31,6 +32,7 @@ export const ReplayQuery = {
 
 export default function ReplayPage() {
   const { data } = useQuery(ReplayQuery);
+  const replayOverListener = useRef<(() => void) | null>(null);
   const replayInformation =
     data?.replayInformation ??
     ({ core: {}, devices: [], filePath: "", hasOngoingSession: false } as ReplayConfiguration);
@@ -68,7 +70,15 @@ export default function ReplayPage() {
   const chosenActivity = replayInformation.activity;
   const canStartSession = replayInformation.devices.length > 0;
 
-  console.log("Duration is ", chosenActivityDuration);
+  if (replayOverListener.current == null) {
+    listen<void>("replay_completed", (_) => {
+      console.log("Received session completed from the frontend!");
+      stopTimeline();
+      queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
+    }).then((unlisten) => {
+      replayOverListener.current = unlisten;
+    });
+  }
 
   return (
     <div className="flex h-full flex-col">
