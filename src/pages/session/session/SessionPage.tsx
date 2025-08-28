@@ -1,8 +1,8 @@
-import {useRef, useState} from "react";
+import { useRef, useState } from "react";
 import { SessionPanel } from "./SessionPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import {Activity, SessionPanelConfiguration, SessionInformation} from "@/types.ts";
+import { Activity, SessionPanelConfiguration, SessionInformation } from "@/types.ts";
 import { sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import ActivityTimeline from "@/pages/activities/ActivityTimeline.tsx";
 import { CheckboxOption } from "@/components/MultiSelect.tsx";
@@ -11,7 +11,7 @@ import clsx from "clsx";
 import { registerPlayhead, startTimeline, stopTimeline } from "@/pages/session/ProgressTimer.ts";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
-import {listen} from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 
 const SESSION_QUERY_KEY = ["session_key"];
 type SessionQueryData = {
@@ -102,7 +102,7 @@ export default function SessionPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col gap-5">
       <SessionPanel
         boardDisplaySelected={boardDisplaySelected}
         onBoardDisplayChange={setBoardDisplaySelected}

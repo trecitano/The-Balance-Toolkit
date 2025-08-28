@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
 import { RawBalanceBoardEvent, ProcessedPolygonData } from "@/types.ts";
 import { StoreApi } from "zustand";
+import wbbTopdown from "@/assets/wbb-topdown.svg";
 
 // Constants (same units as your CoP/polygons, typically mm)
 const COP_X_MIN = -216.5;
@@ -30,14 +31,11 @@ type Props = {
 
 export function BalanceBoardWithCoPOverlay({
   macAddress,
-  src,
-  alt = "Balance Board",
-  className = "relative h-[160px] w-full",
   showConfidenceEllipse = true,
   showConvexHull = true,
   store,
 }: Props) {
-  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Refs to avoid re-render on every frame
@@ -57,16 +55,16 @@ export function BalanceBoardWithCoPOverlay({
 
   // Canvas size management (DPR-aware)
   useLayoutEffect(() => {
-    if (!wrapRef.current || !canvasRef.current) return;
+    if (!imgRef.current || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const wrapper = wrapRef.current;
+    const image = imgRef.current;
 
     const ro = new ResizeObserver(() => {
       const dpr = Math.max(1, window.devicePixelRatio || 1);
 
-      const w = Math.round(wrapper.clientWidth);
-      const h = Math.round(wrapper.clientHeight);
+      const w = Math.round(image.clientWidth);
+      const h = Math.round(image.clientHeight);
 
       // Early bail if no size yet
       if (w === 0 || h === 0) return;
@@ -85,7 +83,7 @@ export function BalanceBoardWithCoPOverlay({
       scheduleDraw();
     });
 
-    ro.observe(wrapper);
+    ro.observe(image);
     return () => ro.disconnect();
   }, [scheduleDraw]);
 
@@ -138,17 +136,15 @@ export function BalanceBoardWithCoPOverlay({
   }, []);
 
   return (
-    <div className={className}>
-      <div ref={wrapRef} className="relative h-full w-full">
-        <img
-          src={src}
-          alt={alt}
-          className="pointer-events-none block h-full w-full object-contain select-none"
-          draggable={false}
-          onLoad={scheduleDraw}
-        />
-        <canvas className="pointer-events-none absolute inset-0" ref={canvasRef} />
-      </div>
+    <div className="relative h-full w-full">
+      <img
+        ref={imgRef}
+        src={wbbTopdown}
+        className="pointer-events-none block object-contain select-none"
+        draggable={false}
+        onLoad={scheduleDraw}
+      />
+      <canvas className="pointer-events-none absolute inset-0" ref={canvasRef} />
     </div>
   );
 }

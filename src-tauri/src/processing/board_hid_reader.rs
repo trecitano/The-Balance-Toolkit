@@ -53,17 +53,18 @@ fn connect_via_hid(mac_address: MacAddress) -> HidResult<HidDevice> {
     // The serial number of a nintendo balance board is the string version of a mac address.
     // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
     // Note: We must convert the mac address from u64 to the serial number format.
-    let serial_number = format!("{:012X}", mac_address);
+    let serial_number = format!("{:012x}", mac_address);
     let balance_board_info = api
         .device_list()
         .find(|device| {
+            println!("Device: {:?}, {:?}", device.serial_number(), device.serial_number_raw());
             if let Some(hid_serial_number) = device.serial_number() {
                 hid_serial_number == serial_number
             } else {
                 false
             }
         })
-        .ok_or(HidApiError { message: "Device with the specified device_id was not found.".to_string() })?;
+        .ok_or(HidApiError { message: format!("Device with the specified device_id was not found. {}", serial_number) })?;
     balance_board_info.open_device(&api)
 }
 

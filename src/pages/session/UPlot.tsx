@@ -2,22 +2,24 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 import { BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
-import { ProcessedBoardEvent, RawBalanceBoardEvent } from "@/types.ts";
+import { RawBalanceBoardEvent } from "@/types.ts";
 import { StoreApi } from "zustand";
 
-type DataSelector<T> = (state: any) => BoardBuffer<T> | undefined;
+type DataSelector<T> = (state: SessionState) => BoardBuffer<T> | undefined;
 type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: number[] };
 
-const RED_COLOUR = "#ef4444";
-const BLACK_COLOUR = "#000";
-const BLUE_COLOUR = "#3b82f6";
+export const RED_COLOUR = "#ef4444";
+export const BLACK_COLOUR = "#000";
+export const BLUE_COLOUR = "#3b82f6";
 
 function UPlotLineGeneric<T>({
+  title,
   uPlotOptions,
   dataSelector,
   dataMapper,
   store,
 }: {
+  title: string;
   uPlotOptions: uPlot.Options;
   dataSelector: DataSelector<T>;
   dataMapper: DataMapper<T>;
@@ -25,29 +27,25 @@ function UPlotLineGeneric<T>({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
-  const widthRef = useRef(0);
 
   // Mount uPlot once
   useLayoutEffect(() => {
     if (!hostRef.current || plotRef.current) return;
 
-    const width = hostRef.current.clientWidth || 300;
-    widthRef.current = width;
+    const rect = hostRef.current.getBoundingClientRect();
 
-    plotRef.current = new uPlot(uPlotOptions, [[], []], hostRef.current);
+    plotRef.current = new uPlot({ ...uPlotOptions, width: rect.width, height: rect.height }, [[], []], hostRef.current);
 
-    const onResize = () => {
-      const w = hostRef.current!.clientWidth;
-      const h = hostRef.current!.clientHeight;
-      if (w !== widthRef.current) {
-        widthRef.current = w;
-        plotRef.current!.setSize({ width: w, height: h });
-      }
-    };
+    const resizeObserver = new ResizeObserver(() => {
+      if (!hostRef.current || !plotRef.current) return;
+      const r = hostRef.current.getBoundingClientRect();
+      plotRef.current.setSize({ width: r.width, height: r.height });
+    });
 
-    window.addEventListener("resize", onResize);
+    resizeObserver.observe(hostRef.current);
+
     return () => {
-      window.removeEventListener("resize", onResize);
+      resizeObserver.disconnect();
       plotRef.current?.destroy();
       plotRef.current = null;
     };
@@ -76,20 +74,22 @@ function UPlotLineGeneric<T>({
     return () => unsub();
   }, [store]);
 
-  return <div ref={hostRef} />;
+  return (
+    <div className="h-full w-full">
+      <p className={"h-1/10 text-center"}>{title}</p>
+      <div ref={hostRef} className="h-9/10 w-full" />
+    </div>
+  );
 }
 
 export const UPlot = UPlotLineGeneric;
 
 export function copYPlotSettings(macAddress: number) {
-  const width = 100;
-  const height = 100;
   const color = BLUE_COLOUR;
-  const label = "copY";
 
   const uPlotOptions: uPlot.Options = {
-    width,
-    height,
+    width: 0,
+    height: 0,
     legend: { show: false },
     cursor: { show: false },
     scales: {
@@ -108,26 +108,26 @@ export function copYPlotSettings(macAddress: number) {
         grid: { show: false },
         values: () => [],
         ticks: { show: false },
+        size: 0,
       },
       {
         scale: "y",
         grid: { show: false },
+        border: { show: true, stroke: BLACK_COLOUR, width: 2 },
         values: (u, splits) => {
           return splits.map((v, i) => {
             if (i === 0) return "Back"; // bottom tick
-            if (v === 0) return label;
             if (i === splits.length - 1) return "Front"; // top tick
             return ""; // hide all other labels
           });
         },
       },
     ],
-    series: [{}, { label, stroke: color, width: 2 }],
+    series: [{}, { stroke: color, width: 2 }],
     hooks: {
       draw: [
         (u) => {
           drawHorizontalAxis(u, BLACK_COLOUR);
-          drawVerticalAxisStationary(u, BLACK_COLOUR);
           drawPlotLastPointAsCircle(u, color);
         },
       ],
@@ -144,89 +144,23 @@ export function copYPlotSettings(macAddress: number) {
   };
 }
 
-function drawHorizontalAxis(u: uPlot, color: string) {
-  const { ctx } = u;
-  const { left, width } = u.bbox;
-  const y0 = u.valToPos(0, "y", true);
-
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(left, y0);
-  ctx.lineTo(left + width, y0);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawVerticalAxisStationary(u: uPlot, color: string) {
-  const { ctx } = u;
-  const { left, top, height } = u.bbox;
-
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(left, top);
-  ctx.lineTo(left, top + height);
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawPlotLastPointAsCircle(u: uPlot, color: string) {
-  const ySeries = u.data[1] as number[];
-  const xSeries = u.data[0] as number[];
-  if (!ySeries.length) return;
-
-  const lastIdx = ySeries.length - 1;
-  const xVal = xSeries[lastIdx];
-  const yVal = ySeries[lastIdx];
-
-  const xPos = u.valToPos(xVal, "x", true);
-  const yPos = u.valToPos(yVal, "y", true);
-
-  const ctx = u.ctx;
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(xPos, yPos, 6, 0, 2 * Math.PI); // radius 6px
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.strokeStyle = "#fff"; // white border
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.restore();
-}
-
-// CoPx vs Time (time on Y, CoPx on X)
-// - Vertical axis fixed at x = 0 (center), labeled "CoPx" at the top
-// - Horizontal axis fixed at the top, labeled "Left" (far left) and "Right"
-// - Last point is drawn as a filled circle
-
-// Transposed CoP-X plot: time runs top→bottom, CoP-X runs left→right.
-// Produces the second mock image: a top stationary axis labeled
-// "Left  CoPx  Right", a vertical zero line at CoPx=0, the CoP-X trace
-// drawn top→bottom, and the last point highlighted.
-
 export function copXPlotSettings(macAddress: number) {
-  const width = 100;
-  const height = 100;
   const color = BLUE_COLOUR;
-  const label = "CoPx";
 
   // Horizontal domain (CoP-X)
-  const X_MIN = -50;
-  const X_MAX = 50;
+  const X_MIN = -200;
+  const X_MAX = 200;
 
   // Vertical domain (time window)
   const WINDOW_SEC = 10;
   const PAD_SEC = 1.5;
 
   const uPlotOptions: uPlot.Options = {
-    width,
-    height,
+    width: 0,
+    height: 0,
     legend: { show: false },
     cursor: { show: false },
-    padding: [20, 0, 0, 0], // top, right, bottom, left
+    padding: [0, 0, 0, 0], // top, right, bottom, left
 
     // Keep uPlot's native orientation (time on x, value on y),
     // but hide built-in axes, and draw everything transposed in hooks.
@@ -236,26 +170,34 @@ export function copXPlotSettings(macAddress: number) {
           const now = max || 0;
           return [now - WINDOW_SEC, now + PAD_SEC];
         },
+        ori: 1,
+        dir: -1,
       },
-      y: { range: [X_MIN, X_MAX] },
+      y: { range: [X_MIN, X_MAX], ori: 0 },
     },
 
     axes: [
-      { scale: "x", show: false },
+      {
+        scale: "x",
+        side: 0,
+        size: 20,
+        values: () => [],
+        grid: { show: false },
+        ticks: { show: false },
+        border: { show: true, stroke: BLACK_COLOUR, width: 2 },
+      },
       { scale: "y", show: false },
     ],
 
     // Hide default series drawing; we’ll render our own transposed line.
-    series: [{}, {}],
+    series: [{}, { stroke: color, width: 2 }],
 
     hooks: {
       draw: [
         (u) => {
-          drawTopAxisStationary(u, BLACK_COLOUR);
           drawVerticalZeroAxis(u, BLACK_COLOUR, X_MIN, X_MAX);
-          drawTransposedSeries(u, color, X_MIN, X_MAX);
-          drawLastPointTransposed(u, color, X_MIN, X_MAX);
-          drawTopAxisLabels(u, label);
+          drawPlotLastPointAsCircle(u, color, true);
+          drawTopAxisLabels(u);
         },
       ],
     },
@@ -271,7 +213,66 @@ export function copXPlotSettings(macAddress: number) {
   };
 }
 
-function makeDataMapper<T extends { timestamp: number }>(selector: (data: T) => number) {
+export function standardPlot(color: string) {
+  const WINDOW_SEC = 10;
+  const PAD_SEC = 1.5;
+
+  const uPlotOptions: uPlot.Options = {
+    width: 0,
+    height: 0,
+    legend: { show: false },
+    cursor: { show: false },
+    scales: {
+      x: {
+        range: (_u, _min, max) => {
+          const now = max || 0;
+          return [now - WINDOW_SEC, now + PAD_SEC];
+        },
+      },
+      y: {
+        range: (_u, min, max) => {
+          if (!Number.isFinite(min) || !Number.isFinite(max)) {
+            return [0, 1];
+          }
+          const pad = (max - min) * 0.1;
+          return [min - pad, max + pad];
+        },
+      },
+    },
+    axes: [
+      {
+        scale: "x",
+        values: () => [],
+        grid: { show: false },
+        ticks: { show: false },
+        border: { show: true, stroke: BLACK_COLOUR, width: 2 },
+        size: 0,
+      },
+      {
+        scale: "y",
+        grid: { show: false },
+        ticks: { show: false },
+        border: { show: true, stroke: BLACK_COLOUR, width: 2 },
+        size: 30,
+      },
+    ],
+    series: [{}, { stroke: color, width: 2 }],
+
+    hooks: {
+      draw: [
+        (u) => {
+          drawPlotLastPointAsCircle(u, color);
+        },
+      ],
+    },
+  };
+
+  return uPlotOptions;
+}
+
+// Helper Functions
+
+export function makeDataMapper<T extends { timestamp: number }>(selector: (data: T) => number) {
   return (buf: BoardBuffer<T>) => {
     const t: number[] = [];
     const y: number[] = [];
@@ -292,23 +293,48 @@ function makeDataMapper<T extends { timestamp: number }>(selector: (data: T) => 
   };
 }
 
-// ------------------------ drawing helpers ------------------------
-
-function drawTopAxisStationary(u: uPlot, color: string) {
+function drawHorizontalAxis(u: uPlot, color: string) {
   const { ctx } = u;
-  const { left, top, width } = u.bbox;
+  const { left, width } = u.bbox;
+  const y0 = u.valToPos(0, "y", true);
 
   ctx.save();
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(left, top);
-  ctx.lineTo(left + width, top);
+  ctx.moveTo(left, y0);
+  ctx.lineTo(left + width, y0);
   ctx.stroke();
   ctx.restore();
 }
 
-function drawTopAxisLabels(u: uPlot, centerLabel: string) {
+function drawPlotLastPointAsCircle(u: uPlot, color: string, transposed = false) {
+  const ySeries = u.data[1] as number[];
+  const xSeries = u.data[0] as number[];
+  if (!ySeries.length) return;
+
+  const lastIdx = ySeries.length - 1;
+  const xVal = xSeries[lastIdx];
+  const yVal = ySeries[lastIdx];
+
+  // Compute canvas coordinates
+  const cx = transposed ? u.valToPos(yVal, "y", true) : u.valToPos(xVal, "x", true);
+
+  const cy = transposed ? u.valToPos(xVal, "x", true) : u.valToPos(yVal, "y", true);
+
+  const ctx = u.ctx;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawTopAxisLabels(u: uPlot) {
   const { ctx } = u;
   const { left, top, width } = u.bbox;
 
@@ -320,10 +346,6 @@ function drawTopAxisLabels(u: uPlot, centerLabel: string) {
   // Left
   ctx.textAlign = "left";
   ctx.fillText("Left", left, top - 4);
-
-  // Center label (CoPx)
-  ctx.textAlign = "center";
-  ctx.fillText(centerLabel, left + width / 2, top - 4);
 
   // Right
   ctx.textAlign = "right";
@@ -346,192 +368,4 @@ function drawVerticalZeroAxis(u: uPlot, color: string, minX: number, maxX: numbe
   ctx.lineTo(xZero, top + height);
   ctx.stroke();
   ctx.restore();
-}
-
-// Map CoP-X value -> horizontal px
-function xPxFromCoPx(u: uPlot, value: number, minX: number, maxX: number): number {
-  const { left, width } = u.bbox;
-  const ratio = (value - minX) / (maxX - minX);
-  return left + ratio * width;
-}
-
-// Map time (on uPlot's x-scale) -> vertical px (top→bottom)
-function yPxFromTime(u: uPlot, t: number): number {
-  const { top, height, left, width } = u.bbox;
-  const xPos = u.valToPos(t, "x", true); // horizontal px on native scale
-  const ratio = (xPos - left) / width; // 0..1
-  return top + ratio * height; // vertical px
-}
-
-// Draw the CoP-X trace with time flowing downward.
-function drawTransposedSeries(u: uPlot, color: string, minX: number, maxX: number) {
-  const t = u.data[0] as number[];
-  const xVals = u.data[1] as number[];
-  if (!t.length) return;
-
-  const { ctx } = u;
-
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-
-  for (let i = 0; i < t.length; i++) {
-    const x = xPxFromCoPx(u, xVals[i], minX, maxX);
-    const y = yPxFromTime(u, t[i]);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-
-  ctx.stroke();
-  ctx.restore();
-}
-
-function drawLastPointTransposed(u: uPlot, color: string, minX: number, maxX: number) {
-  const t = u.data[0] as number[];
-  const xVals = u.data[1] as number[];
-  if (!t.length) return;
-
-  const last = t.length - 1;
-  const x = xPxFromCoPx(u, xVals[last], minX, maxX);
-  const y = yPxFromTime(u, t[last]);
-
-  const { ctx } = u;
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, 6, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.restore();
-}
-
-export function vCopYPlotSettings(macAddress: number) {
-  const width = 150;
-  const height = 150;
-  const color = RED_COLOUR;
-  const label = "vCoPy";
-
-  const WINDOW_SEC = 10;
-  const PAD_SEC = 1.5;
-
-  const uPlotOptions: uPlot.Options = {
-    width,
-    height,
-    legend: { show: false },
-    cursor: { show: false },
-    scales: {
-      x: {
-        range: (_u, _min, max) => {
-          const now = max || 0;
-          return [now - WINDOW_SEC, now + PAD_SEC];
-        },
-      },
-      y: {
-        range: (_u, min, max) => {
-          if (!Number.isFinite(min) || !Number.isFinite(max)) {
-            return [0, 1];
-          }
-          const pad = (max - min) * 0.1;
-          return [min - pad, max + pad];
-        },
-      },
-    },
-    axes: [
-      {
-        scale: "x",
-        values: () => [],
-        grid: { show: false },
-        ticks: { show: false },
-        border: { show: true, stroke: BLACK_COLOUR, width: 2 },
-      },
-      {
-        scale: "y",
-        grid: { show: false },
-        label: label,
-        ticks: { show: false },
-        border: { show: true, stroke: BLACK_COLOUR, width: 2 },
-      },
-    ],
-    series: [{}, { label, stroke: color, width: 2 }],
-
-    hooks: {
-      draw: [
-        (u) => {
-          drawPlotLastPointAsCircle(u, color);
-        },
-      ],
-    },
-  };
-
-  const dataSelector = (state: SessionState) => state.processedSessionData[macAddress];
-  const dataMapper = makeDataMapper<ProcessedBoardEvent>((d) => d.vCopY);
-
-  return { uPlotOptions, dataSelector, dataMapper };
-}
-
-export function vCopXPlotSettings(macAddress: number) {
-  const width = 250;
-  const height = 150;
-  const color = RED_COLOUR;
-  const label = "vCoPx";
-
-  const WINDOW_SEC = 10;
-  const PAD_SEC = 1.5;
-
-  const uPlotOptions: uPlot.Options = {
-    width,
-    height,
-    legend: { show: false },
-    cursor: { show: false },
-    scales: {
-      x: {
-        range: (_u, _min, max) => {
-          const now = max || 0;
-          return [now - WINDOW_SEC, now + PAD_SEC];
-        },
-      },
-      y: {
-        range: (_u, min, max) => {
-          if (!Number.isFinite(min) || !Number.isFinite(max)) {
-            return [0, 1];
-          }
-          const pad = (max - min) * 0.1;
-          return [min - pad, max + pad];
-        },
-      },
-    },
-    axes: [
-      {
-        scale: "x",
-        values: () => [],
-        grid: { show: false },
-        ticks: { show: false },
-        border: { show: true, stroke: BLACK_COLOUR, width: 2 },
-      },
-      {
-        scale: "y",
-        grid: { show: false },
-        label: label,
-        ticks: { show: false },
-        border: { show: true, stroke: BLACK_COLOUR, width: 2 },
-      },
-    ],
-    series: [{}, { label, stroke: color, width: 2 }],
-
-    hooks: {
-      draw: [
-        (u) => {
-          drawPlotLastPointAsCircle(u, color);
-        },
-      ],
-    },
-  };
-
-  const dataSelector = (state: SessionState) => state.processedSessionData[macAddress];
-  const dataMapper = makeDataMapper<ProcessedBoardEvent>((d) => d.vCopX);
-
-  return { uPlotOptions, dataSelector, dataMapper };
 }

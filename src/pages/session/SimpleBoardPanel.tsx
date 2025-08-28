@@ -1,10 +1,10 @@
-import { copXPlotSettings, copYPlotSettings, UPlot, vCopXPlotSettings, vCopYPlotSettings } from "./UPlot.tsx";
-import wbbTopdown from "@/assets/wbb-topdown.svg";
+import { copXPlotSettings, copYPlotSettings, makeDataMapper, RED_COLOUR, standardPlot, UPlot } from "./UPlot.tsx";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
 import { useState } from "react";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
 import { StoreApi } from "zustand";
 import { SessionState } from "@/store/sessionDataStore.tsx";
+import { ProcessedSessionData } from "@/types.ts";
 
 export function BoardPanel({
   boardName,
@@ -30,7 +30,6 @@ export function BoardPanel({
         <div className="col-span-6 rounded bg-gray-100 p-2">
           <BalanceBoardWithCoPOverlay
             macAddress={macAddress}
-            src={wbbTopdown}
             showConfidenceEllipse={showConfidenceEllipse}
             showConvexHull={showConvexHull}
             store={store}
@@ -69,12 +68,23 @@ export function BoardPanel({
           <UPlot {...copXPlotSettings(macAddress)} store={store} />
         </div>
 
-        {/* Bottom row: red velocity charts */}
-        <div className="col-span-6 rounded bg-gray-100 p-2">
-          <UPlot {...vCopYPlotSettings(macAddress)} store={store} />
+        <div className="col-span-2 rounded bg-gray-100 p-2">
+          <UPlot
+            title="vCopX"
+            uPlotOptions={standardPlot(RED_COLOUR)}
+            dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
+            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopX)}
+            store={store}
+          />
         </div>
-        <div className="col-span-6 rounded bg-gray-100 p-2">
-          <UPlot {...vCopXPlotSettings(macAddress)} store={store} />
+        <div className="col-span-2 rounded bg-gray-100 p-2">
+          <UPlot
+            title="vCopY"
+            uPlotOptions={standardPlot(RED_COLOUR)}
+            dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
+            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopY)}
+            store={store}
+          />
         </div>
       </div>
     </section>

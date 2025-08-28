@@ -1,7 +1,8 @@
 import { SelectedBoard } from "@/types.ts";
-import BoardPanel from "@/pages/session/BoardPanel.tsx";
+import ComplexBoardPanel from "@/pages/session/ComplexBoardPanel.tsx";
 import { StoreApi } from "zustand";
 import { SessionState } from "@/store/sessionDataStore.tsx";
+import SimpleBoardPanel from "@/pages/session/SimpleBoardPanel.tsx";
 
 export function BoardGrid({ boards, store }: { boards: SelectedBoard[]; store: StoreApi<SessionState> }) {
   return boards.length === 0 ? (
@@ -10,9 +11,7 @@ export function BoardGrid({ boards, store }: { boards: SelectedBoard[]; store: S
       <p className="text-xl text-gray-400">Choose a board from the panel above to get started.</p>
     </div>
   ) : boards.length === 1 ? (
-    <div className="mt-5 flex justify-center">
-      <BoardPanel boardName={boards[0].name} macAddress={boards[0].macAddress} store={store} />
-    </div>
+    <ComplexBoardPanel boardName={boards[0].name} macAddress={boards[0].macAddress} store={store} />
   ) : (
     <div
       className="grid gap-4"
@@ -21,7 +20,7 @@ export function BoardGrid({ boards, store }: { boards: SelectedBoard[]; store: S
       }}
     >
       {boards.map((board) => (
-        <BoardPanel key={board.macAddress} boardName={board.name} macAddress={board.macAddress} store={store} />
+        <SimpleBoardPanel key={board.macAddress} boardName={board.name} macAddress={board.macAddress} store={store} />
       ))}
     </div>
   );
