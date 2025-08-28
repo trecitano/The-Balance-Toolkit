@@ -126,7 +126,7 @@ export function SessionPanel({
             editable
             type="checkbox"
             className={"w-5"}
-            checked={value.tcpEnabled}
+            checked={value.tcpEnabled ?? false}
             onChange={(e) => update("tcpEnabled", e.target.checked)}
           />
           <span className="font-semibold">{value.tcpEnabled ? "ON" : "OFF"}</span>

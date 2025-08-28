@@ -1,5 +1,5 @@
-import {useRef, useState} from "react";
-import BoardPanel from "../BoardPanel.tsx";
+import { useRef, useState } from "react";
+import ComplexBoardPanel from "../ComplexBoardPanel.tsx";
 import { ReplayPanel } from "./ReplayPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
@@ -18,7 +18,7 @@ import clsx from "clsx";
 import { registerPlayhead, startTimeline, stopTimeline } from "@/pages/session/ProgressTimer.ts";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useReplayDataStore, useSessionDataStore } from "@/store/sessionDataStore.tsx";
-import {listen} from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 
 const REPLAY_QUERY_KEY = ["replay_key"];
 export const ReplayQuery = {

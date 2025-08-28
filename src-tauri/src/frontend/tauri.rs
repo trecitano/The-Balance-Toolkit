@@ -427,6 +427,9 @@ struct FrontendProcessedReadingData {
     v_cop_y: Option<f32>,
     confidence_ellipse_polygon: Option<Vec<(f32, f32)>>,
     convex_hull_polygon: Option<Vec<(f32, f32)>>,
+    mean_power_frequency: Option<f32>,
+    center_of_spectrum: Option<f32>,
+    total_power: Option<f32>,
 }
 
 #[tauri::command(async)]
@@ -482,6 +485,9 @@ async fn initialize_frontend_handler(session_channel: Channel<FrontendBalanceBoa
                         v_cop_y: data.sway_metrics.as_ref().map(|m| m.v_cop_y),
                         confidence_ellipse_polygon: data.area_metrics.as_ref().map(|m| m.confidence_ellipse_polygon.clone()),
                         convex_hull_polygon: data.area_metrics.as_ref().map(|m| m.convex_hull_polygon.clone()),
+                        mean_power_frequency: data.frequency_metrics.as_ref().map(|m| m.mean_power_frequency),
+                        center_of_spectrum: data.frequency_metrics.as_ref().map(|m| m.center_of_spectrum),
+                        total_power: data.frequency_metrics.as_ref().map(|m| m.total_power),
                     };
                     session_channel.send(FrontendBalanceBoardEvent::Processed(reading));
                 }

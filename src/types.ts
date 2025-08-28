@@ -108,12 +108,18 @@ export type ProcessedBoardEvent = {
   vCopY: number;
   confidenceEllipsePolygon: [number, number][];
   convexHullPolygon: [number, number][];
+  meanPowerFrequency: number;
+  centerOfSpectrum: number;
+  totalPower: number;
 };
 
 export type ProcessedSessionData = {
   timestamp: number;
   vCopX: number;
   vCopY: number;
+  meanPowerFrequency: number;
+  centerOfSpectrum: number;
+  totalPower: number;
 };
 
 export type ProcessedPolygonData = {

@@ -128,7 +128,7 @@ export function ReplayPanel({
             editable
             type="checkbox"
             className={"w-5"}
-            checked={config.core.tcpEnabled}
+            checked={config.core.tcpEnabled ?? false}
             onChange={(e) => update("tcpEnabled", e.target.checked)}
           />
           <span className="font-semibold">{config.core.tcpEnabled ? "ON" : "OFF"}</span>

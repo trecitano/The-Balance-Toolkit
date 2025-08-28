@@ -92,7 +92,10 @@ fn data_process_loop(
     // Window size of 5 seconds
     let window_size = std::time::Duration::from_millis(settings.window_size_ms);
     let window_slide_size = std::time::Duration::from_millis(settings.window_slide_ms);
-    let sampling_size_time_delta = TimeDelta::milliseconds(settings.window_size_ms as i64 / settings.sampling_rate as i64);
+
+    let sr_hz = settings.sampling_rate as f32;
+    let dt_ms = (1_000.0 / sr_hz).max(1.0).round();
+    let sampling_size_time_delta = TimeDelta::milliseconds(dt_ms as i64);
 
     let cop_calculation_x_value = settings.balance_board_x_size / 2.0;
     let cop_calculation_y_value = settings.balance_board_y_size / 2.0;
@@ -121,7 +124,7 @@ fn data_process_loop(
             break;
         }
 
-        let end_time = Utc::now();
+        let end_time = buffer.last().map(|p| p.timestamp).unwrap_or(Utc::now());
         let start_time = end_time - window_size;
 
         // Cleanup old raw readings
@@ -810,69 +813,103 @@ pub struct FrequencyMetrics {
 }
 
 // https://en.wikipedia.org/wiki/Spectral_density#Power_spectral_density
-fn calculate_frequency_metrics(points: &[CenterOfPressurePoint]) -> Option<FrequencyMetrics> {
+fn calculate_frequency_metrics(
+    points: &[CenterOfPressurePoint],
+) -> Option<FrequencyMetrics> {
     if points.len() < 8 {
         return None;
     }
 
-    // Calculate sampling rate
-    let total_time = (points.last()?.timestamp - points[0].timestamp).num_milliseconds() as f32 / 1000.0;
-    let sampling_rate = points.len() as f32 / total_time;
+    // Uniform dt assumed due to resampling
+    let dt = (points[1].timestamp - points[0].timestamp)
+        .num_microseconds()? as f32
+        / 1_000_000.0;
+    if dt <= 0.0 {
+        return None;
+    }
+    let fs = 1.0 / dt;
 
-    // Prepare data for FFT (using resultant velocity)
-    let mut signal = Vec::new();
-    for i in 1..points.len() {
-        let dt = (points[i].timestamp - points[i-1].timestamp).num_milliseconds() as f32 / 1000.0;
-        if dt > 0.0 {
-            let dx = points[i].x - points[i-1].x;
-            let dy = points[i].y - points[i-1].y;
-            let velocity = ((dx * dx + dy * dy).sqrt()) / dt;
-            signal.push(Complex::new(velocity, 0.0));
-        }
+    // Use signed COP components, not speed magnitude
+    // You can average PSDs from x and y or concatenate. Here we sum PSDs.
+    let n = points.len();
+    let mut x = Vec::with_capacity(n);
+    let mut y = Vec::with_capacity(n);
+
+    // Remove mean to reduce DC
+    let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n as f32;
+    let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n as f32;
+
+    for p in points {
+        x.push(p.x - mean_x);
+        y.push(p.y - mean_y);
     }
 
-    // Pad to next power of 2
-    let n = signal.len().next_power_of_two();
-    signal.resize(n, Complex::new(0.0, 0.0));
+    // Hann window
+    let mut w = Vec::with_capacity(n);
+    let mut wsum = 0.0_f32;
+    let mut w2sum = 0.0_f32;
+    for i in 0..n {
+        let wi = 0.5 - 0.5 * (2.0 * std::f32::consts::PI * i as f32
+            / (n as f32 - 1.0))
+            .cos();
+        w.push(wi);
+        wsum += wi;
+        w2sum += wi * wi;
+    }
 
-    // Perform FFT
+    // Apply window
+    let mut inx = Vec::with_capacity(n);
+    let mut iny = Vec::with_capacity(n);
+    for i in 0..n {
+        inx.push(Complex::new(x[i] * w[i], 0.0));
+        iny.push(Complex::new(y[i] * w[i], 0.0));
+    }
+
+    // FFT (no zero-padding for power)
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(n);
-    fft.process(&mut signal);
+    fft.process(&mut inx);
+    fft.process(&mut iny);
 
-    // Calculate power spectrum (only positive frequencies)
-    let mut power_spectrum = Vec::new();
-    let mut frequencies = Vec::new();
+    // One-sided PSD scaling (periodogram):
+    // Sxx[k] = (2*dt/(U*N)) * (|X[k]|^2), for k=1..N/2-1
+    // U = (1/N)*sum(w^2); DC and Nyquist not doubled.
+    let u = w2sum / n as f32;
+    let mut psd = Vec::new();
+    let mut freqs = Vec::new();
+    let nhalf = n / 2 + 1;
 
-    for i in 0..n/2 {
-        let power = signal[i].norm_sqr();
-        power_spectrum.push(power);
-        frequencies.push(i as f32 * sampling_rate / n as f32);
+    for k in 0..nhalf {
+        let fx = inx[k].norm_sqr();
+        let fy = iny[k].norm_sqr();
+        let mut s = (fx + fy) * dt / (u * n as f32);
+        if k != 0 && k != nhalf - 1 {
+            s *= 2.0;
+        }
+        psd.push(s);
+        freqs.push(k as f32 * fs / n as f32);
     }
 
-    // Calculate metrics
-    let total_power: f32 = power_spectrum.iter().sum();
-
-    if total_power == 0.0 {
+    let total_power: f32 = psd.iter().sum();
+    if total_power <= 0.0 {
         return None;
     }
 
     // Mean Power Frequency
-    let mut weighted_freq_sum = 0.0;
-    for i in 0..power_spectrum.len() {
-        weighted_freq_sum += frequencies[i] * power_spectrum[i];
+    let mut wsumf = 0.0;
+    for i in 0..psd.len() {
+        wsumf += psd[i] * freqs[i];
     }
-    let mean_power_frequency = weighted_freq_sum / total_power;
+    let mean_power_frequency = wsumf / total_power;
 
-    // Center of Spectrum (median frequency)
-    let mut cumulative_power = 0.0;
-    let half_power = total_power / 2.0;
-    let mut center_of_spectrum = 0.0;
-
-    for i in 0..power_spectrum.len() {
-        cumulative_power += power_spectrum[i];
-        if cumulative_power >= half_power {
-            center_of_spectrum = frequencies[i];
+    // Median frequency
+    let mut cum = 0.0;
+    let half = total_power / 2.0;
+    let mut center_of_spectrum = freqs[0];
+    for i in 0..psd.len() {
+        cum += psd[i];
+        if cum >= half {
+            center_of_spectrum = freqs[i];
             break;
         }
     }
@@ -1009,47 +1046,36 @@ fn calculate_jerk(points: &[CenterOfPressurePoint]) -> Option<f32> {
     if points.len() < 4 {
         return None;
     }
-
-    let mut jerks = Vec::new();
-
-    for i in 3..points.len() {
-        // Calculate time intervals
-        let dt1 = (points[i-2].timestamp - points[i-3].timestamp).num_milliseconds() as f32 / 1000.0;
-        let dt2 = (points[i-1].timestamp - points[i-2].timestamp).num_milliseconds() as f32 / 1000.0;
-        let dt3 = (points[i].timestamp - points[i-1].timestamp).num_milliseconds() as f32 / 1000.0;
-
-        if dt1 > 0.0 && dt2 > 0.0 && dt3 > 0.0 {
-            // Calculate velocities
-            let v1_x = (points[i-2].x - points[i-3].x) / dt1;
-            let v1_y = (points[i-2].y - points[i-3].y) / dt1;
-
-            let v2_x = (points[i-1].x - points[i-2].x) / dt2;
-            let v2_y = (points[i-1].y - points[i-2].y) / dt2;
-
-            let v3_x = (points[i].x - points[i-1].x) / dt3;
-            let v3_y = (points[i].y - points[i-1].y) / dt3;
-
-            // Calculate accelerations
-            let a1_x = (v2_x - v1_x) / dt2;
-            let a1_y = (v2_y - v1_y) / dt2;
-
-            let a2_x = (v3_x - v2_x) / dt3;
-            let a2_y = (v3_y - v2_y) / dt3;
-
-            // Calculate jerk (rate of change of acceleration)
-            let jerk_x = (a2_x - a1_x) / dt3;
-            let jerk_y = (a2_y - a1_y) / dt3;
-
-            let jerk_magnitude = (jerk_x.powi(2) + jerk_y.powi(2)).sqrt();
-            jerks.push(jerk_magnitude);
-        }
-    }
-
-    if jerks.is_empty() {
+    // Assume uniform dt
+    let dt = (points[1].timestamp - points[0].timestamp)
+        .num_microseconds()? as f32
+        / 1_000_000.0;
+    if dt <= 0.0 {
         return None;
     }
+    let dt3 = dt * dt * dt;
 
-    // Return RMS jerk
-    let mean_square_jerk = jerks.iter().map(|j| j.powi(2)).sum::<f32>() / jerks.len() as f32;
-    Some(mean_square_jerk.sqrt())
+    let mut jsq_sum = 0.0_f32;
+    let mut count = 0usize;
+
+    for i in 3..points.len() {
+        let jx = (points[i].x
+            - 3.0 * points[i - 1].x
+            + 3.0 * points[i - 2].x
+            - points[i - 3].x)
+            / dt3;
+        let jy = (points[i].y
+            - 3.0 * points[i - 1].y
+            + 3.0 * points[i - 2].y
+            - points[i - 3].y)
+            / dt3;
+        let j2 = jx * jx + jy * jy;
+        jsq_sum += j2;
+        count += 1;
+    }
+
+    if count == 0 {
+        return None;
+    }
+    Some((jsq_sum / count as f32).sqrt())
 }

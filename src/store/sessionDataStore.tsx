@@ -63,7 +63,14 @@ function createSessionDataStore() {
 
         pushProcessedFrame: (f) =>
           set((state) => {
-            const sessionData: ProcessedSessionData = { timestamp: f.timestamp, vCopX: f.vCopX, vCopY: f.vCopY };
+            const sessionData: ProcessedSessionData = {
+              timestamp: f.timestamp,
+              vCopX: f.vCopX,
+              vCopY: f.vCopY,
+              meanPowerFrequency: f.meanPowerFrequency,
+              centerOfSpectrum: f.centerOfSpectrum,
+              totalPower: f.totalPower,
+            };
             const polygonData: ProcessedPolygonData = {
               confidenceEllipsePolygon: f.confidenceEllipsePolygon,
               convexHullPolygon: f.convexHullPolygon,
