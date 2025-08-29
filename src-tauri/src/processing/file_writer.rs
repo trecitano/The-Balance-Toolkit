@@ -132,7 +132,7 @@ async fn write_session_settings_to_disk(session_configuration: &CoreSessionConfi
         interpolation: &session_configuration.interpolation,
         device_names,
         device_file_mappings,
-        activity: &None,
+        activity: &session_configuration.activity,
     };
     let path = session_configuration.output_directory.clone();
     let file_path = path.join(format!("{session_id}.settings.json"));

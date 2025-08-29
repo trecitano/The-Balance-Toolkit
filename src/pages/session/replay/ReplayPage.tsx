@@ -81,7 +81,7 @@ export default function ReplayPage() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col gap-5">
       <ReplayPanel
         config={replayInformation}
         boardDisplaySelected={boardDisplaySelected}
@@ -107,8 +107,6 @@ export default function ReplayPage() {
             <ActivityTimeline
               activityId={chosenActivity.id}
               blocks={chosenActivity.timelineBlocks}
-              onChange={() => {}}
-              onBlockSelect={(block) => {}}
             />
             <div
               ref={(el) => {

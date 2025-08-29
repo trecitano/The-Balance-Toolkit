@@ -55,7 +55,7 @@ export function ReplayPanel({
 
   return (
     <>
-      <header className={"mb-6"}>
+      <header>
         <Heading>Replay</Heading>
       </header>
 

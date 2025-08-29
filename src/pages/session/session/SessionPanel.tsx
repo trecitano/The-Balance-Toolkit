@@ -44,7 +44,7 @@ export function SessionPanel({
 
   return (
     <>
-      <header className={"mb-6"}>
+      <header>
         <Heading>Session</Heading>
       </header>
 
