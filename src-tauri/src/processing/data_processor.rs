@@ -57,6 +57,42 @@ pub struct ProcessedBoardData {
     pub jerk: Option<f32>,
 }
 
+impl ProcessedBoardData {
+    pub fn to_byte_array(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+
+        // 1. Serialize timestamp (8 bytes)
+        let timestamp_nanos = self.timestamp.timestamp_nanos_opt().unwrap_or(0);
+        buf.extend_from_slice(&timestamp_nanos.to_be_bytes());
+
+        // 2. Create flags byte indicating which fields are present
+        let mut flags = 0u8;
+        if self.sway_metrics.is_some() { flags |= 0b0001; }
+        if self.area_metrics.is_some() { flags |= 0b0010; }
+        if self.dfa_alpha.is_some() { flags |= 0b0100; }
+        if self.jerk.is_some() { flags |= 0b1000; }
+
+        buf.push(flags);
+
+        // 3. Serialize optional fields based on flags
+        if let Some(ref sway) = self.sway_metrics {
+            buf.extend_from_slice(&sway.mean_velocity.to_be_bytes());
+            buf.extend_from_slice(&sway.total_path_length.to_be_bytes());
+            buf.extend_from_slice(&sway.velocity_moment.to_be_bytes());
+        }
+
+        if let Some(dfa) = self.dfa_alpha {
+            buf.extend_from_slice(&dfa.to_be_bytes());
+        }
+
+        if let Some(jerk) = self.jerk {
+            buf.extend_from_slice(&jerk.to_be_bytes());
+        }
+
+        buf
+    }
+}
+
 pub fn initialize(observers: Vec<Sender<BalanceBoardOutput>>,
                   mac_address: MacAddress,
                   settings: ProcessingSettings) -> Sender<BalanceBoardOutput> {

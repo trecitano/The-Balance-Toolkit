@@ -349,7 +349,7 @@ export default function Users() {
 
   return (
     <>
-      <header className="z-1 grid grid-cols-8">
+      <header className="z-1 grid grid-cols-8 mb-5">
         <Heading>Users</Heading>
 
         <ToolkitButton className="" type="button" variant="blue" onClick={() => handleAddUser(users)}>

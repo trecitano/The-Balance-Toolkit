@@ -32,10 +32,10 @@ export default function Activities() {
 
   return (
     <>
-      <header className="mb-6">
+      <header className="mb-5">
         <Heading>Activities</Heading>
       </header>
-      <div className="grid grid-cols-3 gap-10">
+      <div className="grid grid-cols-3 gap-10 h-full">
         {activities.map((activity) => (
           <ActivityCard
             key={activity.id}

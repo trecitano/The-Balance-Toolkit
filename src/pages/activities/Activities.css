@@ -142,7 +142,6 @@
   width: 40px;
 }
 .activity-card {
-  padding: var(--space-xl) var(--space-lg) var(--space-lg) var(--space-lg);
   transition:
     box-shadow var(--transition),
     transform var(--transition),

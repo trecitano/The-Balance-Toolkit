@@ -147,7 +147,7 @@ pub struct SessionConfiguration {
     pub cancel_token: Option<CancellationToken>
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CoreSessionConfiguration {
     pub selected_user: String,
     pub activity: Option<Activity>,
@@ -160,7 +160,7 @@ pub struct CoreSessionConfiguration {
     pub interpolation: InterpolationSetting
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ReplayConfiguration {
     pub core: CoreSessionConfiguration,
     pub file_path: PathBuf,

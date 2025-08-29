@@ -132,8 +132,6 @@ export default function SessionPage() {
             <ActivityTimeline
               activityId={chosenActivity.id}
               blocks={chosenActivity.timelineBlocks}
-              onChange={() => {}}
-              onBlockSelect={(block) => {}}
             />
             <div
               ref={(el) => {

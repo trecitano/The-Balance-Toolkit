@@ -22,7 +22,7 @@ interface ActivityCardProps {
   index?: number;
 }
 
-const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false, onMaximize, onMinimize }) => {
+export default function ActivityCard({ activity, maximized = false, onMaximize, onMinimize }: ActivityCardProps) {
   // Image and animation state
   const [currentImageSrc, setCurrentImageSrc] = useState<string>(activity.staticImage);
   const [isHovering, setIsHovering] = useState(false);
@@ -278,14 +278,17 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
   return (
     <ToolkitContainer
       ref={cardRef}
-      className={`activity-card ${maximized && showMaximizedClass ? "maximized" : ""}`}
+      className={`activity-card pt-10 pl-5 pb-5 pr-5 ${maximized && showMaximizedClass ? "maximized" : ""}`}
       style={maximized ? maxStyle : undefined}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
       {!maximized && (
-        <div className="mb-5 flex max-h-65 justify-center rounded-lg bg-[var(--bg-light)] object-contain shadow-[var(--shadow-light)]">
-          <img src={getActivityAssetFullPath(activity.id, currentImageSrc)} alt={`${activity.title} illustration`} />
+        <div className="mb-5 h-65 flex justify-center rounded-lg bg-[var(--bg-light)] shadow-(--shadow-light)">
+          <img
+            className={"object-contain"}
+            src={getActivityAssetFullPath(activity.id, currentImageSrc)}
+            alt={`${activity.title} illustration`} />
         </div>
       )}
       <div className="flex flex-col">
@@ -368,6 +371,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
               <ActivityTimeline
                 activityId={activity.id}
                 blocks={timelineBlocks}
+                editable={true}
                 onChange={setTimelineBlocks}
                 onBlockSelect={(block) => setCurrentActionLabel(block.label)}
               />
@@ -443,5 +447,3 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ activity, maximized = false
     </ToolkitContainer>
   );
 };
-
-export default ActivityCard;

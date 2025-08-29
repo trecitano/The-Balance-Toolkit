@@ -150,7 +150,7 @@ export default function Devices() {
 
   return (
     <>
-      <header className="mb-6 grid grid-cols-8">
+      <header className="grid grid-cols-8 mb-5">
         <Heading className={"flex-shrink-0"}>Devices</Heading>
 
         <ToolkitButton

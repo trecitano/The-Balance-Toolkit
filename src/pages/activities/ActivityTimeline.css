@@ -38,10 +38,6 @@
   border-radius: 0 6px 6px 0;
 }
 
-.block-content {
-  pointer-events: auto;
-}
-
 .resize-handle {
   width: 8px;
   height: 100%;
@@ -59,8 +55,4 @@
 .resize-handle.right {
   right: 0;
   border-radius: 0 6px 6px 0;
-}
-
-.block-content {
-  pointer-events: auto;
 }
