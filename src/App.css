@@ -52,12 +52,7 @@
   --shadow-inset: inset 2px 2px 6px #d1d9e6, inset -2px -2px 6px #ffffff;
   --shadow-focus: 2px 2px 6px #d1d9e6, -2px -2px 6px #ffffff, 0 0 0 2px #e3e8ef inset;
 
-  --text-xs: clamp(0.75em, 0.75vw, 0.85em);
-  --text-sm: clamp(0.75em, 1vw, 1.2em);
   --text-base: clamp(0.85em, 0.9vw, 1.5em);
-  --text-md: clamp(0.8em, 1.2vw, 1.4em);
-  --text-lg: clamp(1em, 1vw, 1.6em);
-  --text-xl: clamp(1.2em, 2vw, 2em);
 
   --transition-fast: 0.08s ease;
   --transition: 0.2s ease;

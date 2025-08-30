@@ -2,16 +2,13 @@ import { useRef, useState } from "react";
 import { ReplayPanel } from "./ReplayPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import {
-  ReplayConfiguration,
-  SessionPanelConfiguration,
-} from "@/types.ts";
-import {replayChannelManager} from "@/services/BalanceBoardChannelManager.tsx";
+import { ReplayConfiguration, SessionPanelConfiguration } from "@/types.ts";
+import { replayChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import { CheckboxOption } from "@/components/MultiSelect.tsx";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useReplayDataStore } from "@/store/sessionDataStore.tsx";
 import { listen } from "@tauri-apps/api/event";
-import {TimelinePanel} from "@/pages/session/TimelinePanel.tsx";
+import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 
 const REPLAY_QUERY_KEY = ["replay_key"];
 export const ReplayQuery = {
@@ -95,7 +92,7 @@ export default function ReplayPage() {
         canStart={canStartSession}
         onStart={async () => {
           await replayChannelManager.start();
-          await queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY })
+          await queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
         }}
         onStop={async () => {
           await replayChannelManager.stop();

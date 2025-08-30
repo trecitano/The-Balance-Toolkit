@@ -278,17 +278,18 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
   return (
     <ToolkitContainer
       ref={cardRef}
-      className={`activity-card pt-10 pl-5 pb-5 pr-5 ${maximized && showMaximizedClass ? "maximized" : ""}`}
+      className={`activity-card pt-10 pr-5 pb-5 pl-5 ${maximized && showMaximizedClass ? "maximized" : ""}`}
       style={maximized ? maxStyle : undefined}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
       {!maximized && (
-        <div className="mb-5 h-65 flex justify-center rounded-lg bg-[var(--bg-light)] shadow-(--shadow-light)">
+        <div className="mb-5 flex h-65 justify-center rounded-lg bg-[var(--bg-light)] shadow-(--shadow-light)">
           <img
             className={"object-contain"}
             src={getActivityAssetFullPath(activity.id, currentImageSrc)}
-            alt={`${activity.title} illustration`} />
+            alt={`${activity.title} illustration`}
+          />
         </div>
       )}
       <div className="flex flex-col">
@@ -446,4 +447,4 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
       </div>
     </ToolkitContainer>
   );
-};
+}

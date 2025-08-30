@@ -9,7 +9,7 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
 import { listen } from "@tauri-apps/api/event";
-import {TimelinePanel} from "@/pages/session/TimelinePanel.tsx";
+import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 
 const SESSION_QUERY_KEY = ["session_key"];
 type SessionQueryData = {
@@ -128,7 +128,7 @@ export default function SessionPage() {
         canStart={canStartSession}
         onStart={async () => {
           await sessionChannelManager.start();
-          await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+          await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
         }}
         onStop={async () => {
           await sessionChannelManager.stop();

@@ -10,14 +10,15 @@ import {
 import balanceToolkitLogo from "@/assets/balance-icon.svg";
 import fileIcon from "@/assets/file-icon.svg";
 import userIcon from "@/assets/user-icon.svg";
-import wbbIconLine from "@/assets/wbb-icon-line.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import {Activity, LastSessionInformation} from "@/types.ts";
+import { Activity, Device, LastSessionInformation } from "@/types.ts";
 import { getActivityAssetFullPath } from "@/utils/activityImages.ts";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
+import wbbIcon from "@/assets/wbb-icon-line.svg";
+import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 
 interface StatusIndicator {
   value: string;
@@ -34,7 +35,8 @@ const Home: React.FC = () => {
     queryFn: async () => {
       const activities = await commands.activity.getActivities();
       const lastSessionDetails = await commands.replay.loadLastSessionDetails();
-      return { activities, lastSessionDetails };
+      const devices = await commands.devices.fetchDevices();
+      return { activities, lastSessionDetails, devices };
     },
   });
 
@@ -48,6 +50,7 @@ const Home: React.FC = () => {
 
   const activities = data?.activities ?? [];
   const lastSessionDetails = data?.lastSessionDetails;
+  const devices = data?.devices;
 
   return (
     <>
@@ -56,27 +59,27 @@ const Home: React.FC = () => {
 
       {/* Main Content */}
       <div className="mt-6 grid h-full grid-flow-col grid-cols-3 grid-rows-3 gap-8">
-        {/* Left Column */}
-        <ToolkitContainer className="col-span-1 row-span-1">
-          <LastSessionCard sessionDetails={lastSessionDetails} />
-        </ToolkitContainer>
-        <ToolkitContainer className="col-span-1 row-span-2">
-          <ActivitiesCard activities={activities} />
-        </ToolkitContainer>
+        <div className="col-span-2 row-span-3 grid grid-cols-2 grid-rows-10 gap-8">
+          <ToolkitContainer className="col-span-1 row-span-6">
+            <LastSessionCard sessionDetails={lastSessionDetails} />
+          </ToolkitContainer>
 
-        {/* Middle Column */}
-        <ToolkitContainer className="row-span-3">
-          <ConnectionCard />{" "}
-        </ToolkitContainer>
+          <ToolkitContainer className="col-span-1 row-span-6">
+            <ConnectionCard devices={devices} />{" "}
+          </ToolkitContainer>
 
-        {/* Right Column */}
-        <ToolkitContainer className="row-span-1">
+          <ToolkitContainer className="col-span-2 row-span-4">
+            <ActivitiesCard activities={activities} />
+          </ToolkitContainer>
+        </div>
+
+        <ToolkitContainer className="row-span-1" background={"bg-gray-100"}>
           <HelpSupportCard />{" "}
         </ToolkitContainer>
-        <ToolkitContainer className="row-span-1">
+        <ToolkitContainer className="row-span-1" background={"bg-gray-100"}>
           <DocumentationCard />{" "}
         </ToolkitContainer>
-        <ToolkitContainer className="row-span-1">
+        <ToolkitContainer className="row-span-1" background={"bg-gray-100"}>
           <OtherResourcesCard />{" "}
         </ToolkitContainer>
       </div>
@@ -131,25 +134,23 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = (
 
   if (!sessionDetails) {
     return (
-      <>
+      <div className="p-(--space-sm)">
         <h2 className="mb-4 text-xl font-semibold">Last session</h2>
 
         <div className="flex h-full flex-col">
           <div className="mb-4 flex items-center space-x-2">
-            <div className="rounded-full bg-red-600 p-1 text-white">
-              There is no existing session!
-            </div>
+            <div className="rounded-full bg-red-600 p-1 text-white">There is no existing session!</div>
           </div>
         </div>
-      </>
-    )
+      </div>
+    );
   }
 
   const user = sessionDetails?.user;
   const activity = sessionDetails?.activity;
 
   return (
-    <>
+    <div className="p-(--space-sm)">
       <h2 className="mb-4 text-xl font-semibold">Last session</h2>
 
       <div className="flex justify-between">
@@ -193,7 +194,7 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = (
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
@@ -216,7 +217,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col p-(--space-sm)">
       <h2 className="text-2xl font-semibold text-neutral-900">Activities</h2>
 
       <ul ref={listRef} className="activities-list flex gap-8 overflow-hidden px-[calc(50%-65px)] py-[2.5vh]">
@@ -227,7 +228,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
               key={activity.id}
               data-activityid={activity.id}
               onClick={() => handleSelectActivity(i)}
-              className={`flex aspect-square w-[120px] flex-shrink-0 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-[var(--light)] p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 border-2 border-[var(--primary)] bg-[#e0eafc] font-bold opacity-100 shadow-lg" : ""} `}
+              className={`flex aspect-square w-[50px] flex-shrink-0 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-[var(--light)] p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 border-2 border-[var(--primary)] bg-[#e0eafc] font-bold opacity-100 shadow-lg" : ""} `}
             >
               <div className="flex h-[80%] items-center justify-center">
                 <img
@@ -253,7 +254,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
         className={"mt-3"}
       />
 
-      <div className="mt-auto flex justify-end">
+      <div className="flex justify-end">
         <ToolkitButton to="/activities" variant={"grey"}>
           {" "}
           Go to Activities →
@@ -264,83 +265,39 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
 };
 
 // Connection Card
-const ConnectionCard: React.FC = () => {
-  const [selectedDevice, setSelectedDevice] = React.useState<string>("Andreia's WBB");
-
-  const statusIndicators: StatusIndicator[] = [
-    {
-      value: "Strong",
-      label: "Signal",
-      color: "green",
-      icon: SignalIcon,
-    },
-    {
-      value: "48%",
-      label: "Battery",
-      color: "orange",
-      icon: SignalIcon,
-    },
-    {
-      value: "24 C",
-      label: "Temp",
-      color: "blue",
-      icon: SignalIcon,
-    },
-  ];
-
-  const getStatusClasses = (color: "green" | "orange" | "blue"): string => {
-    switch (color) {
-      case "green":
-        return "bg-green-50 border-green-200 text-green-600";
-      case "orange":
-        return "bg-orange-50 border-orange-200 text-orange-600";
-      case "blue":
-        return "bg-blue-50 border-blue-200 text-blue-600";
-      default:
-        return "bg-gray-50 border-gray-200 text-gray-600";
-    }
-  };
-
-  const handleDeviceChange = (event: React.ChangeEvent<HTMLSelectElement>): void => {
-    setSelectedDevice(event.target.value);
-  };
+const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
+  const hasAnyDevices = !devices || devices.length === 0;
+  const hasAnyConnectedDevices = devices && devices.some((device) => device.isConnected);
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Connection</h2>
+    <div className="flex h-full flex-col gap-5 p-(--space-sm)">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Connection</h2>
       </div>
 
-      <div className="mb-10">
-        <select
-          className="w-full rounded-lg border border-gray-300 p-2"
-          value={selectedDevice}
-          onChange={handleDeviceChange}
-        >
-          <option value="Andreia's WBB">{`Andreia's WBB`}</option>
-          <option value="Device 2">Device 2</option>
-          <option value="Device 3">Device 3</option>
-        </select>
-      </div>
+      {hasAnyDevices ? (
+        <>
+          <div className="items-center">
+            <p className="text-md font-semibold">There are no connected devices!</p>
+            <p> Go to the devices page and scan for boards.</p>
+          </div>
 
-      {/* Balance Board Illustration */}
-      <div className="mb-6 flex justify-center">
-        <img src={wbbIconLine} alt="Balance Board" draggable={false} />
-      </div>
-
-      {/* Status Indicators */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
-        {statusIndicators.map((indicator: StatusIndicator, index: number) => {
-          const IconComponent = indicator.icon;
-          return (
-            <div key={index} className={`rounded-lg border p-3 text-center ${getStatusClasses(indicator.color)}`}>
-              <IconComponent className="mx-auto mb-1 h-6 w-6" />
-              <div className="text-sm font-semibold">{indicator.value}</div>
-              <div className="text-xs">{indicator.label}</div>
-            </div>
-          );
-        })}
-      </div>
+          <img className={"h-40 object-contain"} src={wbbIcon} />
+        </>
+      ) : hasAnyConnectedDevices ? (
+        <div className="flex h-full flex-col p-(--space-sm)">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">A Board has been previously connected.Please turn on the Board!</h2>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Balance Board Illustration */}
+          <div className="flex max-h-10 justify-center">
+            <img src={userIcon} />
+          </div>
+        </>
+      )}
 
       <div className="mt-auto flex justify-end">
         <ToolkitButton to="/devices" variant={"grey"}>
@@ -355,7 +312,7 @@ const ConnectionCard: React.FC = () => {
 // Help Support Card
 const HelpSupportCard: React.FC = () => {
   return (
-    <>
+    <div className="flex h-full flex-col p-(--space-sm)">
       <div className="mb-4 flex items-center space-x-2">
         <div className="rounded-full bg-red-600 p-1 text-white">
           <QuestionMarkCircleIcon className="h-4 w-4" />
@@ -363,21 +320,17 @@ const HelpSupportCard: React.FC = () => {
         <h2 className="text-xl font-semibold">Help and Support</h2>
       </div>
 
-      <p className="mb-4 text-gray-600">
-        Go through a quick tutorial and see how you can make the most of The Balance Toolkit
-      </p>
-
-      <div className="mt-auto flex justify-end">
-        <ToolkitButton variant={"grey"}>Go to Tutorial →</ToolkitButton>
+      <div className="flex flex-1 items-center justify-center">
+        <span className="text-lg font-bold text-gray-500 italic">🚧 This section is under construction 🚧</span>
       </div>
-    </>
+    </div>
   );
 };
 
 // Documentation Card
 const DocumentationCard: React.FC = () => {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col p-(--space-sm)">
       <div className="mb-4 flex items-center space-x-2">
         <div className="rounded bg-red-600 p-1 text-white">
           <DocumentTextIcon className="h-4 w-4" />
@@ -385,8 +338,8 @@ const DocumentationCard: React.FC = () => {
         <h2 className="text-xl font-semibold">Documentation</h2>
       </div>
 
-      <div className="mt-auto flex justify-end">
-        <ToolkitButton variant={"grey"}>Read More →</ToolkitButton>
+      <div className="flex flex-1 items-center justify-center">
+        <span className="text-lg font-bold text-gray-500 italic">🚧 This section is under construction 🚧</span>
       </div>
     </div>
   );
@@ -394,63 +347,14 @@ const DocumentationCard: React.FC = () => {
 
 // Other Resources Card
 const OtherResourcesCard: React.FC = () => {
-  interface ResourceLink {
-    icon: React.ComponentType<{ className?: string }>;
-    text: string;
-    onClick: () => void;
-  }
-
-  const handleCitationClick = (): void => {
-    console.log("Citation clicked");
-  };
-
-  const handleSourceCodeClick = (): void => {
-    console.log("Source code clicked");
-  };
-
-  const handleContactClick = (): void => {
-    console.log("Contact clicked");
-  };
-
-  const resourceLinks: ResourceLink[] = [
-    {
-      icon: DocumentIcon,
-      text: "Read our citation",
-      onClick: handleCitationClick,
-    },
-    {
-      icon: CodeBracketIcon,
-      text: "View our source code",
-      onClick: handleSourceCodeClick,
-    },
-    {
-      icon: EnvelopeIcon,
-      text: "Contact us",
-      onClick: handleContactClick,
-    },
-  ];
-
   return (
-    <>
+    <div className="flex h-full flex-col p-(--space-sm)">
       <h2 className="mb-4 text-xl font-semibold">Other Resources</h2>
 
-      <div className="space-y-3">
-        {resourceLinks.map((link: ResourceLink, index: number) => {
-          const IconComponent = link.icon;
-          return (
-            <button
-              key={index}
-              className="flex w-full items-center space-x-3 text-left text-gray-600 hover:text-gray-800"
-              onClick={link.onClick}
-              type="button"
-            >
-              <IconComponent className="h-5 w-5" />
-              <span>{link.text}</span>
-            </button>
-          );
-        })}
+      <div className="flex flex-1 items-center justify-center">
+        <span className="text-lg font-bold text-gray-500 italic">🚧 This section is under construction 🚧</span>
       </div>
-    </>
+    </div>
   );
 };
 

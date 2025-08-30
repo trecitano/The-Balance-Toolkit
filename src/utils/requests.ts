@@ -9,7 +9,8 @@ import {
   SessionPanelConfiguration,
   SessionInformation,
   UserPageInformation,
-  UserType, LastSessionInformation,
+  UserType,
+  LastSessionInformation,
 } from "@/types.ts";
 
 export const commands = {

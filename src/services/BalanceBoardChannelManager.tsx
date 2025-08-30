@@ -26,6 +26,7 @@ class BalanceBoardChannelManager {
 
   async start() {
     const { pushRawFrame, pushProcessedFrame } = this.actions;
+    this.actions.clear();
 
     this.channel = new Channel<RawBalanceBoardEvent | ProcessedBoardEvent>();
     this.channel.onmessage = (msg) => {
