@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "balance-toolkit-app",
+  "productName": "The Balance Toolkit",
   "version": "0.1.0",
-  "identifier": "React",
+  "identifier": "com.the-balance-toolkit",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "balance-toolkit-app",
+        "title": "The Balance Toolkit",
         "width": 1400,
         "height": 920,
         "resizable": true,

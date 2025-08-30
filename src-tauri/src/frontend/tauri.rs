@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use crate::file_system;
 use crate::file_system::UserFileSystem;
-use crate::types::{FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, FrontendSessionInformation, User, UserPageInformation, FrontendCoreSession};
+use crate::types::{FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, FrontendSessionInformation, User, UserPageInformation, FrontendCoreSession, FrontendLastSessionInformation};
 use serde::Serialize;
 use std::time::Duration;
 
@@ -78,6 +78,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             replay_information,
             replay_update,
             replay_load_file,
+            replay_load_last_session_info,
             activity_get_activities,
             activity_get_activity,
             activity_update_activity,
@@ -156,22 +157,43 @@ async fn user_select_user(state: State<'_, AppState>, user_name: String) -> Resu
     Ok(())
 }
 
-#[tauri::command]
-fn user_add(user: User) -> Result<(), String> {
+#[tauri::command(async)]
+async fn user_add(user: User, state: State<'_, AppState>) -> Result<(), String> {
     println!(">> user_add: {:?}", user);
-    UserFileSystem::add_user(user).map_err(|e| e.to_string())
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::CreateUser { user, response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< user_add\n");
+    Ok(())
 }
 
-#[tauri::command]
-fn user_update(user: User) -> Result<(), String> {
+#[tauri::command(async)]
+async fn user_update(user: User, state: State<'_, AppState>) -> Result<(), String> {
     println!(">> user_update: {:?}", user);
-    UserFileSystem::update_user(user).map_err(|e| e.to_string())
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::UpdateUser { user, response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< user_update:\n");
+    Ok(())
 }
 
-#[tauri::command]
-fn user_delete(user_name: String) -> Result<(), String> {
-    println!(">> user_delete: {}", user_name);
-    UserFileSystem::remove_user(user_name).map_err(|e| e.to_string())
+#[tauri::command(async)]
+async fn user_delete(user_name: String, state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> user_delete: {:?}", user_name);
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::DeleteUser { user_name, response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< user_delete:\n");
+    Ok(())
 }
 
 #[tauri::command(async)]
@@ -194,7 +216,7 @@ async fn user_measure_weight(state: State<'_, AppState>, channel: Channel<f64>, 
     let command = ToolkitCommand::MeasureWeight { frontend_channel: tx, mac_address };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
-    println!("<< user_measure_weight_return.");
+    println!("<< user_measure_weight_return.\n");
     Ok(())
 }
 
@@ -210,7 +232,7 @@ async fn devices_fetch_all_devices(state: State<'_, AppState>) -> Result<Vec<Nin
 
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< devices_fetch_all_devices: {:?}", result);
+    println!("<< devices_fetch_all_devices: {:?}\n", result);
     Ok(result)
 }
 
@@ -288,7 +310,7 @@ async fn devices_update_device_name(mac_address: MacAddress,
     let command = ToolkitCommand::UpdateBoardName { mac_address, device_name };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
-    println!("<< devices_update_device_name");
+    println!("<< devices_update_device_name\n");
     Ok(())
 }
 
@@ -306,7 +328,7 @@ async fn devices_identify_device(
         .await
         .map_err(|e| e.to_string())?;
 
-    println!("<< devices_identify_device: Identify command sent.");
+    println!("<< devices_identify_device: Identify command sent.\n");
     Ok(())
 }
 
@@ -324,7 +346,7 @@ async fn devices_tare_device(
         .await
         .map_err(|e| e.to_string())?;
 
-    println!("<< devices_tare_device: Tare command sent.");
+    println!("<< devices_tare_device: Tare command sent.\n");
     Ok(())
 }
 
@@ -339,7 +361,7 @@ async fn devices_select_device(
     let command = ToolkitCommand::SelectBoardForSession { mac_address };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
-    println!("<< devices_select_device: ");
+    println!("<< devices_select_device: \n");
     Ok(())
 }
 
@@ -353,7 +375,7 @@ async fn devices_unselect_device(
     let command = ToolkitCommand::UnselectBoardForSession { mac_address };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
-    println!("<< devices_deselect_device: Tare command sent.");
+    println!("<< devices_deselect_device: Tare command sent.\n");
     Ok(())
 }
 
@@ -366,7 +388,7 @@ async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<Vec<
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< devices_get_selected_devices. {:?}", result);
+    println!("<< devices_get_selected_devices. {:?}\n", result);
     Ok(result)
 }
 
@@ -398,7 +420,7 @@ async fn session_update_session_configuration(configuration: FrontendCoreSession
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< session_update_session_configuration.");
+    println!("<< session_update_session_configuration.\n");
     Ok(())
 }
 
@@ -441,7 +463,7 @@ async fn session_start_session(state: State<'_, AppState>, session_channel: Chan
     let command = ToolkitCommand::StartSession { frontend_channel: balance_board_tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
-    println!("<< session_start_session.");
+    println!("<< session_start_session.\n");
     Ok(())
 }
 
@@ -454,7 +476,7 @@ async fn session_stop_session(state: State<'_, AppState>) -> Result<(), String> 
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< session_stop_session.");
+    println!("<< session_stop_session.\n");
     Ok(())
 }
 
@@ -505,7 +527,7 @@ async fn replay_start_replay(state: State<'_, AppState>, session_channel: Channe
     let command = ToolkitCommand::StartReplay { frontend_channel: balance_board_tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
-    println!("<< replay_start_replay.");
+    println!("<< replay_start_replay.\n");
     Ok(())
 }
 
@@ -518,7 +540,7 @@ async fn replay_stop_replay(state: State<'_, AppState>) -> Result<(), String> {
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< replay_stop_replay.");
+    println!("<< replay_stop_replay.\n");
     Ok(())
 }
 
@@ -531,7 +553,7 @@ async fn replay_information(state: State<'_, AppState>) -> Result<Option<Fronten
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< replay_information. {:#?}", result);
+    println!("<< replay_information. {:#?}\n", result);
     Ok(result)
 }
 
@@ -544,7 +566,7 @@ async fn replay_update(configuration: FrontendCoreSession, state: State<'_, AppS
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< replay_update.");
+    println!("<< replay_update.\n");
     Ok(())
 }
 
@@ -557,8 +579,21 @@ async fn replay_load_file(file_path: PathBuf, state: State<'_, AppState>) -> Res
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< replay_load_file.");
+    println!("<< replay_load_file.\n");
     Ok(())
+}
+
+#[tauri::command(async)]
+async fn replay_load_last_session_info(state: State<'_, AppState>) -> Result<Option<FrontendLastSessionInformation>, String> {
+    println!(">> replay_load_last_session_info");
+
+    let (tx, rx) = oneshot::channel();
+    let command = ToolkitCommand::LastSessionInformation { response: tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let result = rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< replay_load_last_session_info: {:#?}\n", result);
+    Ok(result)
 }
 
 // =========================
@@ -588,7 +623,7 @@ async fn activity_get_activity(activity_id: String, state: State<'_, AppState>) 
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< activity_get_activity.");
+    println!("<< activity_get_activity.\n");
     Ok(result)
 }
 
@@ -601,7 +636,7 @@ async fn activity_update_activity(activity: Activity, state: State<'_, AppState>
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< activity_update_activity.");
+    println!("<< activity_update_activity.\n");
     Ok(())
 }
 
@@ -614,6 +649,6 @@ async fn activity_reset_activity_to_default(activity_id: String, state: State<'_
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< activity_reset_activity_to_default.");
+    println!("<< activity_reset_activity_to_default.\n");
     Ok(result)
 }

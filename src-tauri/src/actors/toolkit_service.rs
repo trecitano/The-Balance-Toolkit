@@ -6,17 +6,19 @@ use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem, SettingsFi
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::lsl_writer::LslConnectionSettings;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
-use crate::types::{FrontendCoreSession, FrontendSessionInformation, FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, SelectedBoard};
+use crate::types::{FrontendCoreSession, FrontendSessionInformation, FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, SelectedBoard, FrontendLastSessionInformation, User};
 use crate::{file_system, utils};
 use anyhow::{anyhow, Result};
 use file_system::UserFileSystem;
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::{mpsc, oneshot};
+use crate::actors::state::users::UserState;
 
 // Commands that can be sent to the ConnectionManager
 #[derive(Debug)]
@@ -31,6 +33,25 @@ pub enum ToolkitCommand {
         response: oneshot::Sender<Vec<NintendoDevice>>,
     },
 
+    // Users
+    SelectUser {
+        user_name: String,
+    },
+    GetSelectedUser {
+        response: oneshot::Sender<String>
+    },
+    CreateUser {
+        user: User,
+        response: oneshot::Sender<()>
+    },
+    UpdateUser {
+        user: User,
+        response: oneshot::Sender<()>
+    },
+    DeleteUser {
+        user_name: String,
+        response: oneshot::Sender<()>
+    },
     MeasureWeight {
         frontend_channel: Sender<f64>,
         mac_address: MacAddress,
@@ -47,12 +68,8 @@ pub enum ToolkitCommand {
         device_name: String,
     },
 
-    SelectUser {
-        user_name: String,
-    },
-    GetSelectedUser {
-        response: oneshot::Sender<String>
-    },
+
+
     SelectBoardForSession {
         mac_address: MacAddress,
     },
@@ -80,7 +97,10 @@ pub enum ToolkitCommand {
         response: oneshot::Sender<Activity>,
     },
 
-    // New Session
+    // Session
+    LastSessionInformation {
+        response: oneshot::Sender<Option<FrontendLastSessionInformation>>,
+    },
     SessionInformation {
         response: oneshot::Sender<FrontendSessionInformation>,
     },
@@ -132,7 +152,7 @@ pub struct ConnectionManager {
     response_tx: Sender<ToolkitResponse>,
     bluetooth_manager_tx: Sender<BluetoothCommand>,
     activity_state: ActivityState,
-
+    user_state: UserState,
     general_settings: GeneralSettings,
     session_settings: SessionConfiguration,
     replay_settings: Option<ReplayConfiguration>,
@@ -149,7 +169,7 @@ pub struct SessionConfiguration {
 
 #[derive(Clone, Debug)]
 pub struct CoreSessionConfiguration {
-    pub selected_user: String,
+    pub user: Arc<User>,
     pub activity: Option<Activity>,
     pub lsl_enabled: bool,
     pub tcp_enabled: bool,
@@ -174,11 +194,13 @@ impl ConnectionManager {
     pub fn new(response_tx: Sender<ToolkitResponse>) -> Result<Self> {
         let (tx, rx) = mpsc::channel(100);
 
-        let selected_user = UserFileSystem::get_or_create_default_user()?.name;
+        let activity_state = ActivityState::new()?;
+        let user_state = UserState::new()?;
+
         let general_settings = SettingsFileSystem::get_or_create_default_settings()?;
         let session_settings = SessionConfiguration {
             core: CoreSessionConfiguration {
-                selected_user,
+                user: user_state.get_default_user(),
                 activity: None,
                 lsl_enabled: false,
                 tcp_enabled: false,
@@ -192,7 +214,6 @@ impl ConnectionManager {
             has_ongoing_session: false,
             cancel_token: None,
         };
-        let activity_state = ActivityState::new()?;
 
         Ok(Self {
             rx,
@@ -200,6 +221,7 @@ impl ConnectionManager {
             response_tx,
             bluetooth_manager_tx: BluetoothService::start_bluetooth_handler(general_settings.is_demo_mode),
             activity_state,
+            user_state,
 
             general_settings,
             session_settings,
@@ -282,12 +304,27 @@ impl ConnectionManager {
                     DeviceFileSystem::update_board_name(mac_address, device_name)?
                 }
 
+                // Users
                 ToolkitCommand::SelectUser { user_name } => {
-                    self.session_settings.core.selected_user = user_name;
+                    let user = self.user_state.get_user(&user_name);
+                    self.session_settings.core.user = user;
                 }
                 ToolkitCommand::GetSelectedUser { response } => {
-                    response.send(self.session_settings.core.selected_user.clone()).unwrap();
+                    response.send(self.session_settings.core.user.name.clone()).unwrap();
                 }
+                ToolkitCommand::CreateUser { user, response } => {
+                    self.user_state.create_user(user)?;
+                    response.send(()).unwrap();
+                }
+                ToolkitCommand::UpdateUser { user, response } => {
+                    self.user_state.update_user(user)?;
+                    response.send(()).unwrap();
+                }
+                ToolkitCommand::DeleteUser { user_name, response } => {
+                    self.user_state.delete_user(&user_name)?;
+                    response.send(()).unwrap();
+                }
+
                 ToolkitCommand::SelectBoardForSession { mac_address } => {
                   if let Some(connection) = self.all_connections.get(&mac_address) {
                     self.session_settings.connections.insert(mac_address, connection.clone());
@@ -320,6 +357,20 @@ impl ConnectionManager {
                     response.send(activity).unwrap();
                 }
 
+                ToolkitCommand::LastSessionInformation { response } => {
+                    match ExistingSessionFileSystem::load_latest_session_file(&self.general_settings.store_files_default_directory) {
+                        Some((file_path, session)) => {
+                            let result = FrontendLastSessionInformation {
+                                user: session.user,
+                                session_stats: session.session_stats,
+                                file_location: file_path,
+                                activity: session.activity
+                            };
+                            response.send(Some(result)).unwrap();
+                        },
+                        None => response.send(None).unwrap(),
+                    }
+                }
                 ToolkitCommand::SessionInformation { response } => {
                     let selected_boards: Vec<SelectedBoard> = self.boards_system_view()
                             .await?
@@ -347,7 +398,7 @@ impl ConnectionManager {
                     response.send(session_information).unwrap();
                 }
                 ToolkitCommand::UpdateSessionInformation { configuration, response } => {
-                    self.session_settings.core.selected_user = configuration.selected_user;
+                    self.session_settings.core.user = self.user_state.get_user(&configuration.selected_user);
                     self.session_settings.core.lsl_enabled = configuration.lsl_enabled;
                     self.session_settings.core.tcp_enabled = configuration.tcp_enabled;
                     self.session_settings.core.output_directory = configuration.output_directory;
@@ -454,7 +505,7 @@ impl ConnectionManager {
 
                     self.replay_settings = Some(ReplayConfiguration {
                         core: CoreSessionConfiguration {
-                            selected_user: file_session.selected_user,
+                            user: Arc::new(file_session.user),
                             activity: file_session.activity,
                             lsl_enabled: false,
                             tcp_enabled: false,
@@ -598,13 +649,17 @@ impl ConnectionManager {
                 .any(|device| device.mac_address == *mac_address && device.is_connected)
         });
 
-        // Update name of devices and add any missing devices to the list
+        // Update name of devices and add any missing devices to the list.
+        // Additionally, update the last connected date if the device is not connected.
         let stored_devices = DeviceFileSystem::get_stored_devices()?;
         for stored_device in stored_devices {
             let mac_address = stored_device.mac_address;
             let device = nintendo_devices.iter_mut().find(|d| d.mac_address == mac_address);
             if let Some(device) = device {
                 device.name = stored_device.name;
+                if device.last_connected.is_none() {
+                    device.last_connected = stored_device.last_connected;
+                }
             } else {
                 nintendo_devices.push(stored_device);
             }

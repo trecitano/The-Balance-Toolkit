@@ -4,14 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
 import { Activity, SessionPanelConfiguration, SessionInformation } from "@/types.ts";
 import { sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
-import ActivityTimeline from "@/pages/activities/ActivityTimeline.tsx";
 import { CheckboxOption } from "@/components/MultiSelect.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import clsx from "clsx";
-import { registerPlayhead, startTimeline, stopTimeline } from "@/pages/session/ProgressTimer.ts";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
 import { listen } from "@tauri-apps/api/event";
+import {TimelinePanel} from "@/pages/session/TimelinePanel.tsx";
 
 const SESSION_QUERY_KEY = ["session_key"];
 type SessionQueryData = {
@@ -94,7 +92,6 @@ export default function SessionPage() {
   if (sessionOverListener.current == null) {
     listen<void>("session_completed", (_) => {
       console.log("Received session completed from the frontend!");
-      stopTimeline();
       queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
     }).then((unlisten) => {
       sessionOverListener.current = unlisten;
@@ -125,67 +122,19 @@ export default function SessionPage() {
         <BoardGrid boards={selectedDisplayBoards} store={useSessionDataStore} />
       )}
 
-      {/*  Timeline Panel                           */}
-      <div className="mt-auto flex w-full items-center justify-between rounded-lg bg-gray-100 py-3 shadow-sm">
-        {chosenActivity ? (
-          <div className={"relative m-5 w-9/10"}>
-            <ActivityTimeline
-              activityId={chosenActivity.id}
-              blocks={chosenActivity.timelineBlocks}
-            />
-            <div
-              ref={(el) => {
-                if (el) {
-                  if (sessionInformation.hasOngoingSession) {
-                    el.style.display = "block";
-                  } else {
-                    el.style.display = "none";
-                  }
-                  el.style.transform = "translateX(0px)";
-                  registerPlayhead(el);
-                }
-              }}
-              className="absolute top-0 bottom-0 z-10 h-full w-[2px] bg-[var(--red)]"
-            >
-              {/* Circle handle at the top */}
-              <div className="absolute left-1/2 h-4 w-5 -translate-x-1/2 bg-[var(--red)] shadow-(--shadow-light) [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]" />
-            </div>
-          </div>
-        ) : (
-          <div className="h-20 w-9/10 text-center">
-            <p className="mb-10 text-xl text-gray-400">Choose an activity</p>
-          </div>
-        )}
-
-        <button
-          className={clsx(
-            "mr-2 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full p-0 transition-all",
-            sessionInformation.hasOngoingSession
-              ? "border-2 border-[#e50012] bg-[#e50012] text-white"
-              : "border-2 border-[#e50012] bg-white text-black",
-            "disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-50",
-          )}
-          onClick={async () => {
-            if (!sessionInformation.hasOngoingSession) {
-              await sessionChannelManager.start();
-              await startTimeline(chosenActivityDuration * 1000);
-            } else {
-              await sessionChannelManager.stop();
-              await stopTimeline();
-            }
-            await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
-          }}
-          disabled={!canStartSession}
-        >
-          <span
-            className={`block transition-all ${
-              sessionInformation.hasOngoingSession
-                ? "h-5 w-5 rounded-lg bg-white"
-                : "h-[22px] w-[22px] rounded-full bg-[#e50012]"
-            }`}
-          />
-        </button>
-      </div>
+      <TimelinePanel
+        activity={chosenActivity}
+        hasOngoingSession={sessionInformation.hasOngoingSession}
+        canStart={canStartSession}
+        onStart={async () => {
+          await sessionChannelManager.start();
+          await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+        }}
+        onStop={async () => {
+          await sessionChannelManager.stop();
+          await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+        }}
+      />
     </div>
   );
 }
