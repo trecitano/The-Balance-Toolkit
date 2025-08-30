@@ -171,7 +171,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
 
                 let mut device_opt = None;
                 for info in devices {
-                     let device = BluetoothDevice::FromIdAsync(&info.Id()?)?.await?;
+                    let device = BluetoothDevice::FromIdAsync(&info.Id()?)?.await?;
                     if device.BluetoothAddress()? == mac_address {
                         device_opt = Some(device);
                         break;
@@ -183,24 +183,20 @@ impl BluetoothHandler for NativeBluetoothHandler {
                     None => return Ok(()),
                 };
 
-                let connection_status = device.ConnectionStatus()?;
-                if connection_status == BluetoothConnectionStatus::Connected {
-                    // Windows is very weird. If we check the pairing status, it will say that it's not paired.
-                    // However, to disconnect it, we must unpair it.
-                    let pairing = device.DeviceInformation()?.Pairing()?;
-                    let unpair_result = pairing.UnpairAsync()?.await?;
+                // Windows is very weird. If we check the pairing status, it will say that it's not paired.
+                // However, to disconnect it, we must unpair it.
+                let pairing = device.DeviceInformation()?.Pairing()?;
+                let unpair_result = pairing.UnpairAsync()?.await?;
 
-                    return match unpair_result.Status()? {
-                        DeviceUnpairingResultStatus::Unpaired => {
-                            println!("Device successfully unpaired");
-                            Ok(())
-                        },
-                        _ => {
-                            Err(anyhow!("Failed to unpair: Unknown status: {:?}", unpair_result.Status()))
-                        }
+                return match unpair_result.Status()? {
+                    DeviceUnpairingResultStatus::Unpaired => {
+                        println!("Device successfully unpaired");
+                        Ok(())
+                    },
+                    _ => {
+                        Err(anyhow!("Failed to unpair: Unknown status: {:?}", unpair_result.Status()))
                     }
                 }
-                Ok(())
             })
         }).await?
     }

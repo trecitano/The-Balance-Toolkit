@@ -24,7 +24,7 @@ function recalcStartTimes(arr: TimelineBlock[]): TimelineBlock[] {
 }
 
 type DragState = {
-  type: 'drag';
+  type: "drag";
   blockIdx: number;
   startX: number;
   startY: number;
@@ -34,9 +34,9 @@ type DragState = {
 };
 
 type ResizeState = {
-  type: 'resize';
+  type: "resize";
   blockIdx: number;
-  direction: 'left' | 'right';
+  direction: "left" | "right";
   startX: number;
   startDuration: number;
 };
@@ -44,12 +44,12 @@ type ResizeState = {
 type InteractionState = DragState | ResizeState | null;
 
 export default function ActivityTimeline({
-                                           activityId,
-                                           blocks,
-                                           editable,
-                                           onChange,
-                                           onBlockSelect
-                                         }: ActivityTimelineProps) {
+  activityId,
+  blocks,
+  editable,
+  onChange,
+  onBlockSelect,
+}: ActivityTimelineProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [interaction, setInteraction] = useState<InteractionState>(null);
   const [editingDurationIdx, setEditingDurationIdx] = useState<number | null>(null);
@@ -96,33 +96,30 @@ export default function ActivityTimeline({
     if (!interaction || !editable || !onChange || !onBlockSelect) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (interaction.type === 'drag') {
+      if (interaction.type === "drag") {
         const dropIdx = computeDropIndex(e.clientX);
         setInteraction({
           ...interaction,
           currentX: e.clientX,
           currentY: e.clientY,
-          dropIdx
+          dropIdx,
         });
-      } else if (interaction.type === 'resize') {
+      } else if (interaction.type === "resize") {
         const { blockIdx, direction, startX, startDuration } = interaction;
         const delta = e.clientX - startX;
         const scale = 2; // px per second
 
-        let newDuration = direction === 'right'
-          ? startDuration + Math.round(delta / scale)
-          : startDuration - Math.round(delta / scale);
+        let newDuration =
+          direction === "right" ? startDuration + Math.round(delta / scale) : startDuration - Math.round(delta / scale);
         newDuration = Math.max(MIN_DURATION, newDuration);
 
-        const updated = blocks.map((b, idx) =>
-          idx === blockIdx ? { ...b, duration: newDuration } : b
-        );
+        const updated = blocks.map((b, idx) => (idx === blockIdx ? { ...b, duration: newDuration } : b));
         onChange(recalcStartTimes(updated));
       }
     };
 
     const handleMouseUp = () => {
-      if (interaction.type === 'drag') {
+      if (interaction.type === "drag") {
         const { blockIdx, dropIdx } = interaction;
         if (dropIdx != null && blockIdx !== dropIdx && blockIdx + 1 !== dropIdx) {
           const copy = [...blocks];
@@ -135,42 +132,42 @@ export default function ActivityTimeline({
       setInteraction(null);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [interaction, blocks, onChange, computeDropIndex, editable]);
 
   const handleBlockMouseDown = (idx: number, e: React.MouseEvent) => {
-    if (!editable || interaction || (e.target as HTMLElement).classList.contains('resize-handle')) {
+    if (!editable || interaction || (e.target as HTMLElement).classList.contains("resize-handle")) {
       return;
     }
     e.preventDefault();
     setInteraction({
-      type: 'drag',
+      type: "drag",
       blockIdx: idx,
       startX: e.clientX,
       startY: e.clientY,
       currentX: e.clientX,
       currentY: e.clientY,
-      dropIdx: null
+      dropIdx: null,
     });
   };
 
-  const handleResizeStart = (blockIdx: number, direction: 'left' | 'right', e: React.MouseEvent) => {
+  const handleResizeStart = (blockIdx: number, direction: "left" | "right", e: React.MouseEvent) => {
     if (!editable) return;
     const block = blocks[blockIdx];
     if (!block) return;
     e.stopPropagation();
     setInteraction({
-      type: 'resize',
+      type: "resize",
       blockIdx,
       direction,
       startX: e.clientX,
-      startDuration: block.duration
+      startDuration: block.duration,
     });
   };
 
@@ -194,46 +191,40 @@ export default function ActivityTimeline({
 
     const val = parseInt(durationInputValue, 10);
     if (!isNaN(val) && val >= MIN_DURATION) {
-      const updated = blocks.map((b, i) =>
-        i === idx ? { ...b, duration: val } : b
-      );
+      const updated = blocks.map((b, i) => (i === idx ? { ...b, duration: val } : b));
       onChange(recalcStartTimes(updated));
     }
     setEditingDurationIdx(null);
   };
 
-  const isDragging = interaction?.type === 'drag';
+  const isDragging = interaction?.type === "drag";
   const draggedIdx = isDragging ? interaction.blockIdx : null;
   const dragOverIdx = isDragging ? interaction.dropIdx : null;
-  const isResizing = interaction?.type === 'resize';
+  const isResizing = interaction?.type === "resize";
 
   // Determine cursor based on state
   const getBlockCursor = (idx: number) => {
-    if (!editable) return 'default';
-    if (isResizing) return 'default';
-    if (draggedIdx === idx) return 'grabbing';
-    return 'grab';
+    if (!editable) return "default";
+    if (isResizing) return "default";
+    if (draggedIdx === idx) return "grabbing";
+    return "grab";
   };
 
   return (
     <div
       ref={containerRef}
-      className={`activity-timeline flex h-20 flex-col ${!editable ? 'opacity-75' : ''}`}
-      style={{ cursor: isDragging && editable ? 'grabbing' : 'default' }}
+      className={`activity-timeline flex h-20 flex-col ${!editable ? "opacity-75" : ""}`}
+      style={{ cursor: isDragging && editable ? "grabbing" : "default" }}
     >
       <div className="flex h-full">
         {blocksWithImages.map((block, idx) => (
           <React.Fragment key={idx}>
             {editable && dragOverIdx === idx && (
-              <div className="w-0 h-12 border-l-2 border-blue-500 mx-0.5 relative z-10 pointer-events-none" />
+              <div className="pointer-events-none relative z-10 mx-0.5 h-12 w-0 border-l-2 border-blue-500" />
             )}
 
             <div
-              className={`timeline-block flex flex-col justify-start items-center px-1 py-1 h-full max-h-24 box-border relative select-none
-                ${!editable ? 'pointer-events-none' : 'pointer-events-auto'}
-                ${draggedIdx === idx ? 'opacity-20 z-20' : 'z-10'}
-                ${editable ? 'hover:bg-gray-50 transition-colors' : ''}
-              `}
+              className={`timeline-block relative box-border flex h-full max-h-24 flex-col items-center justify-start px-1 py-1 select-none ${!editable ? "pointer-events-none" : "pointer-events-auto"} ${draggedIdx === idx ? "z-20 opacity-20" : "z-10"} ${editable ? "transition-colors hover:bg-gray-50" : ""} `}
               tabIndex={0}
               data-block-id={idx}
               onMouseDown={(e) => handleBlockMouseDown(idx, e)}
@@ -247,7 +238,7 @@ export default function ActivityTimeline({
               {/* Delete button - only show when editable */}
               {editable && (
                 <button
-                    className="delete-block-btn absolute w-5 h-5 bg-red-500 text-white rounded-full text-sm"
+                  className="delete-block-btn absolute h-5 w-5 rounded-full bg-red-500 text-sm text-white"
                   onClick={(e) => handleDeleteBlock(idx, e)}
                   title="Delete block"
                   tabIndex={-1}
@@ -262,29 +253,29 @@ export default function ActivityTimeline({
               {editable && (
                 <>
                   <div
-                    className="resize-handle left absolute left-0 top-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 hover:opacity-50"
-                    onMouseDown={(e) => handleResizeStart(idx, 'left', e)}
+                    className="resize-handle left absolute top-0 left-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 hover:opacity-50"
+                    onMouseDown={(e) => handleResizeStart(idx, "left", e)}
                   />
                   <div
-                    className="resize-handle right absolute right-0 top-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 hover:opacity-50"
-                    onMouseDown={(e) => handleResizeStart(idx, 'right', e)}
+                    className="resize-handle right absolute top-0 right-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 hover:opacity-50"
+                    onMouseDown={(e) => handleResizeStart(idx, "right", e)}
                   />
                 </>
               )}
 
-              <div className="block-title w-full text-center font-semibold text-sm mb-0.5 text-gray-800">
+              <div className="block-title mb-0.5 w-full text-center text-sm font-semibold text-gray-800">
                 {block.title}
               </div>
 
               <div
-                className="block-svg flex-1 w-full flex items-center justify-center min-h-0"
+                className="block-svg flex min-h-0 w-full flex-1 items-center justify-center"
                 data-block-id={idx}
                 data-block-label={block.label}
               >
                 <img
                   src={block.image}
                   alt={block.title}
-                  className="w-auto h-full object-contain block"
+                  className="block h-full w-auto object-contain"
                   onError={(e) => {
                     e.currentTarget.src = balanceIcon;
                   }}
@@ -295,37 +286,36 @@ export default function ActivityTimeline({
         ))}
 
         {editable && dragOverIdx === blocks.length && (
-          <div className="w-0 h-12 border-l-2 border-blue-500 mx-0.5 relative z-10 pointer-events-none" />
+          <div className="pointer-events-none relative z-10 mx-0.5 h-12 w-0 border-l-2 border-blue-500" />
         )}
 
         {/* Drag preview */}
-        {editable && isDragging && interaction && (() => {
-          const block = blocks[interaction.blockIdx];
-          if (!block) return null;
-          return (
-            <div
-              className="timeline-block fixed w-30 min-w-10 pointer-events-none opacity-85 z-50 bg-blue-100 border-2 border-blue-500 rounded-lg h-12 flex items-center shadow-lg"
-              style={{
-                left: interaction.currentX + 8,
-                top: interaction.currentY + 8,
-              }}
-            >
-              <span className="block-label flex-1 text-center text-blue-800 font-medium">
-                {block.title}
-              </span>
-            </div>
-          );
-        })()}
+        {editable &&
+          isDragging &&
+          interaction &&
+          (() => {
+            const block = blocks[interaction.blockIdx];
+            if (!block) return null;
+            return (
+              <div
+                className="timeline-block pointer-events-none fixed z-50 flex h-12 w-30 min-w-10 items-center rounded-lg border-2 border-blue-500 bg-blue-100 opacity-85 shadow-lg"
+                style={{
+                  left: interaction.currentX + 8,
+                  top: interaction.currentY + 8,
+                }}
+              >
+                <span className="block-label flex-1 text-center font-medium text-blue-800">{block.title}</span>
+              </div>
+            );
+          })()}
       </div>
 
       {/* Durations row */}
-      <div className="activity-timeline-durations flex w-full mt-1 items-start min-h-5">
+      <div className="activity-timeline-durations mt-1 flex min-h-5 w-full items-start">
         {blocks.map((block, idx) => (
           <div
             key={idx}
-            className={`text-center text-sm text-blue-800 font-medium select-none relative flex items-center justify-center gap-0.5
-              ${editable ? 'cursor-pointer rounded px-1' : 'cursor-default'}
-            `}
+            className={`relative flex items-center justify-center gap-0.5 text-center text-sm font-medium text-blue-800 select-none ${editable ? "cursor-pointer rounded px-1" : "cursor-default"} `}
             style={{
               flex: block.duration,
               minWidth: 40,
@@ -336,7 +326,7 @@ export default function ActivityTimeline({
               <>
                 <input
                   type="number"
-                  className="w-15 text-sm text-center border border-blue-500 rounded outline-none focus:ring-2 focus:ring-blue-300"
+                  className="w-15 rounded border border-blue-500 text-center text-sm outline-none focus:ring-2 focus:ring-blue-300"
                   min={MIN_DURATION}
                   value={durationInputValue}
                   autoFocus
@@ -346,9 +336,9 @@ export default function ActivityTimeline({
                   }}
                   onBlur={() => handleDurationSave(idx)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       handleDurationSave(idx);
-                    } else if (e.key === 'Escape') {
+                    } else if (e.key === "Escape") {
                       setEditingDurationIdx(null);
                     }
                   }}

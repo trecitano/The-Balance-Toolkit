@@ -1,11 +1,10 @@
-import React, { useRef, useState } from "react";
+import { useRef } from "react";
 import { Device } from "@/types";
 import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import "./DeviceRow.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
-import { Modal } from "@/components/Modal.tsx";
 
 interface DeviceRowProps {
   device: Device;

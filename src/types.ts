@@ -153,11 +153,11 @@ export type SessionStats = {
     secs: number;
     nanos: number;
   };
-}
+};
 
 export type LastSessionInformation = {
-  user: UserType,
-  sessionStats: SessionStats,
-  fileLocation: String,
-  activity?: Activity,
-}
+  user: UserType;
+  sessionStats: SessionStats;
+  fileLocation: String;
+  activity?: Activity;
+};
