@@ -207,7 +207,11 @@ impl From<BluetoothPeripheral> for NintendoDevice {
             name: p.name,
             mac_address: p.mac_address,
             is_connected:  p.is_connected,
-            last_connected: Utc::now(),
+            last_connected: if p.is_connected {
+                Some(Utc::now())
+            } else {
+                None
+            },
         }
     }
 }

@@ -4,8 +4,9 @@ use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::de::DeserializeOwned;
 use crate::actors::state::activities::{Activity, ActivityState};
 use crate::processing::file_writer::{SessionConfigurationFileFormat, SessionConfigurationFileFormatRef};
@@ -13,19 +14,6 @@ use crate::processing::file_writer::{SessionConfigurationFileFormat, SessionConf
 const USERS_FILE: &str = "users.json";
 pub struct UserFileSystem;
 impl UserFileSystem {
-    pub fn get_or_create_default_user() -> Result<User> {
-        let users: Vec<User> = FileStore::load_with_default(Path::new(USERS_FILE))?;
-
-        if let Some(default_user) = users.into_iter().find(|u| u.is_default) {
-            return Ok(default_user);
-        }
-
-        let default_user = User::default();
-
-        Self::add_user(default_user.clone())?;
-
-        Ok(default_user)
-    }
 
     pub fn get_users() -> Result<Vec<User>> {
         let users: Vec<User> = FileStore::load_with_default(Path::new(USERS_FILE))?;
@@ -55,6 +43,10 @@ impl UserFileSystem {
 
         save_into_file(Path::new(USERS_FILE), &users)
     }
+
+    pub fn save(users: &Vec<Arc<User>>) -> Result<()> {
+        FileStore::save(Path::new(USERS_FILE), &users)
+    }
 }
 
 
@@ -65,7 +57,7 @@ pub struct FileSystemNintendoDevice {
     pub id: String,
     pub name: String,
     pub mac_address: MacAddress,
-    pub last_connected: DateTime<Utc>,
+    pub last_connected: Option<DateTime<Utc>>,
 }
 impl From<&NintendoDevice> for FileSystemNintendoDevice {
     fn from(device: &NintendoDevice) -> Self {
@@ -184,6 +176,45 @@ impl ActivitiesFileSystem {
 
 pub struct ExistingSessionFileSystem;
 impl ExistingSessionFileSystem {
+    pub fn load_latest_session_file(directory: &Path) -> Option<(String, SessionConfigurationFileFormat)> {
+        let mut latest: Option<(NaiveDateTime, PathBuf)> = None;
+
+        let paths = fs::read_dir(directory).context("Failed to read directory").ok()?;
+
+        for entry in paths {
+            let entry = entry.ok()?;
+            let path = entry.path();
+
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if name.ends_with(".settings.json") && name.starts_with("tbt-") {
+                    // Extract the timestamp part: "2025-08-29T22-51-07"
+                    if let Some(ts_str) = name.strip_prefix("tbt-")
+                        .and_then(|s| s.strip_suffix(".settings.json")) {
+                        // Parse with chrono
+                        if let Ok(ts) = NaiveDateTime::parse_from_str(ts_str, "%Y-%m-%dT%H-%M-%S") {
+                            match &latest {
+                                Some((latest_ts, _)) if ts <= *latest_ts => {}
+                                _ => latest = Some((ts, path.clone())),
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        println!("latest: #{:#?}", latest);
+
+        if let Some((_, file_path)) = latest {
+            match Self::load(&file_path) {
+                Ok(session) => return Some((file_path.to_string_lossy().to_string(), session)),
+                Err(e) => {
+                    println!("Failed to load session file: {}", e);
+                }
+            }
+        };
+
+        None
+    }
     pub fn load(file_path: &Path) -> Result<SessionConfigurationFileFormat> {
         FileStore::load(file_path)
     }
@@ -311,6 +342,11 @@ pub fn app_dir() -> PathBuf {
     dirs::document_dir()
         .map(|path| path.join("the-balance-toolkit"))
         .expect("Could not access dir file")
+}
+
+pub fn session_dir() -> PathBuf {
+    let app_dir = app_dir();
+    app_dir.join("sessions")
 }
 
 fn save_into_file<T: Serialize>(file_name: &Path, data: T) -> anyhow::Result<()> {

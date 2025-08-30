@@ -136,9 +136,6 @@ export type TimelineBlock = {
   image?: string; // Path to the image for the action block
 };
 
-/**
- * Represents the configuration for a balance assessment activity
- */
 export type Activity = {
   id: string;
   title: string; // Display name of the activity
@@ -149,3 +146,18 @@ export type Activity = {
   boardsRequired: number; // Number of balance boards needed (default: 1)
   description?: string; // Brief description of the activity purpose
 };
+
+export type SessionStats = {
+  boardSamplingRate: number;
+  duration: {
+    secs: number;
+    nanos: number;
+  };
+}
+
+export type LastSessionInformation = {
+  user: UserType,
+  sessionStats: SessionStats,
+  fileLocation: String,
+  activity?: Activity,
+}

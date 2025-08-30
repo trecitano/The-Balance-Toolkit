@@ -1,8 +1,9 @@
 [package]
-name = "balance-toolkit-app"
+name = "the-balance-toolkitapp"
 version = "0.1.0"
-description = "A Tauri App"
+description = "A Toolkit to perform operations with a Nintendo Wii Balance Board"
 authors = ["you"]
+license = "MIT"
 edition = "2024"
 
 [profile.release]

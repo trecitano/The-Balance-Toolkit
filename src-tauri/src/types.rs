@@ -5,6 +5,7 @@ use crate::actors::state::activities::Activity;
 use crate::actors::toolkit_service::{ReplayConfiguration, CoreSessionConfiguration};
 use crate::file_system;
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
+use crate::processing::file_writer::SessionStats;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -35,7 +36,7 @@ impl Default for GeneralSettings {
             lsl_send_raw_data: true,
             lsl_send_processed_data: true,
 
-            store_files_default_directory: file_system::app_dir(),
+            store_files_default_directory: file_system::session_dir(),
             store_raw_session: true,
             store_processed_data: true,
 
@@ -99,6 +100,14 @@ pub struct FrontendSessionInformation {
     pub has_ongoing_session: bool,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct FrontendLastSessionInformation {
+    pub user: User,
+    pub session_stats: SessionStats,
+    pub file_location: String,
+    pub activity: Option<Activity>,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -124,7 +133,7 @@ pub struct FrontendCoreSession {
 impl From<&CoreSessionConfiguration> for FrontendCoreSession {
     fn from(cfg: &CoreSessionConfiguration) -> Self {
         FrontendCoreSession {
-            selected_user: cfg.selected_user.clone(),
+            selected_user: cfg.user.name.clone(),
             activity_id: cfg.activity.clone().map(|act| act.id.clone()),
             lsl_enabled: cfg.lsl_enabled,
             tcp_enabled: cfg.tcp_enabled,
@@ -172,7 +181,7 @@ pub struct NintendoDevice {
     pub name: String,
     pub mac_address: MacAddress,
     pub is_connected: bool,
-    pub last_connected: DateTime<Utc>,
+    pub last_connected: Option<DateTime<Utc>>,
 }
 
 impl NintendoDevice {

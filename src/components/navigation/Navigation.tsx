@@ -4,6 +4,7 @@ import homeIcon from "@/assets/home-icon.svg";
 import devicesIcon from "@/assets/wbb-icon-line.svg";
 import usersIcon from "@/assets/users-icon.svg";
 import sessionIcon from "@/assets/session-icon.svg";
+import replayIcon from "@/assets/replay-icon.svg";
 import settingsIcon from "@/assets/settings-icon.svg";
 import activitiesIcon from "@/assets/activities-icon.svg";
 import Settings from "@/components/settings/Settings.tsx";
@@ -27,7 +28,7 @@ const menuItems: MenuItemType[] = [
   { id: "users", label: "Users", icon: usersIcon },
   { id: "devices", label: "Devices", icon: devicesIcon },
   { id: "session", label: "Session", icon: sessionIcon },
-  { id: "replay", label: "Replay", icon: sessionIcon },
+  { id: "replay", label: "Replay", icon: replayIcon },
   { id: "activities", label: "Activities", icon: activitiesIcon },
 ];
 

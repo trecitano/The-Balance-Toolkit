@@ -14,7 +14,7 @@ import wbbIconLine from "@/assets/wbb-icon-line.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import { Activity } from "@/types.ts";
+import {Activity, LastSessionInformation} from "@/types.ts";
 import { getActivityAssetFullPath } from "@/utils/activityImages.ts";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
@@ -33,7 +33,8 @@ const Home: React.FC = () => {
     queryKey: HOME_QUERY_KEY,
     queryFn: async () => {
       const activities = await commands.activity.getActivities();
-      return { activities };
+      const lastSessionDetails = await commands.replay.loadLastSessionDetails();
+      return { activities, lastSessionDetails };
     },
   });
 
@@ -46,6 +47,7 @@ const Home: React.FC = () => {
   }
 
   const activities = data?.activities ?? [];
+  const lastSessionDetails = data?.lastSessionDetails;
 
   return (
     <>
@@ -56,7 +58,7 @@ const Home: React.FC = () => {
       <div className="mt-6 grid h-full grid-flow-col grid-cols-3 grid-rows-3 gap-8">
         {/* Left Column */}
         <ToolkitContainer className="col-span-1 row-span-1">
-          <LastSessionCard />
+          <LastSessionCard sessionDetails={lastSessionDetails} />
         </ToolkitContainer>
         <ToolkitContainer className="col-span-1 row-span-2">
           <ActivitiesCard activities={activities} />
@@ -84,7 +86,7 @@ const Home: React.FC = () => {
 
 const Header: React.FC = () => {
   return (
-    <div className="bg-red-600 px-6 py-6 text-white">
+    <div className="bg-(--red) px-6 py-6 text-white">
       <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
         {/* Left: Greeting */}
         <div className="mb-auto md:flex-1">
@@ -124,7 +126,28 @@ const Header: React.FC = () => {
 };
 
 // Last Session Card
-const LastSessionCard: React.FC = () => {
+const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = ({ sessionDetails }) => {
+  console.log(sessionDetails);
+
+  if (!sessionDetails) {
+    return (
+      <>
+        <h2 className="mb-4 text-xl font-semibold">Last session</h2>
+
+        <div className="flex h-full flex-col">
+          <div className="mb-4 flex items-center space-x-2">
+            <div className="rounded-full bg-red-600 p-1 text-white">
+              There is no existing session!
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  const user = sessionDetails?.user;
+  const activity = sessionDetails?.activity;
+
   return (
     <>
       <h2 className="mb-4 text-xl font-semibold">Last session</h2>
@@ -136,13 +159,13 @@ const LastSessionCard: React.FC = () => {
             <div className="h-4 w-4">
               <img src={userIcon} draggable={false} />
             </div>
-            <span className="font-medium">Username</span>
+            <span className="font-medium">{user.name}</span>
           </div>
 
           <div className="space-y-1 text-xs text-gray-600">
-            <div>Weight:</div>
-            <div>Sex:</div>
-            <div>Age:</div>
+            <div>Weight: {user.weight}</div>
+            <div>Gender: {user.gender}</div>
+            <div>Age: {user.age}</div>
           </div>
         </div>
 
@@ -153,8 +176,8 @@ const LastSessionCard: React.FC = () => {
             <span className="font-medium">Stats</span>
           </div>
           <div className="space-y-1 text-xs text-gray-600">
-            <div>Duration:</div>
-            <div>Something else:</div>
+            <div>Duration: {sessionDetails.sessionStats.duration.secs}</div>
+            <div>Board Sampling Rate: {sessionDetails.sessionStats.boardSamplingRate}</div>
           </div>
         </div>
 
