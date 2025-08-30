@@ -8,7 +8,7 @@ import { commands } from "@/utils/requests.ts";
 import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
 import "./Devices.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import Heading from "@/components/PageTitle.tsx";
+import PageTitle from "@/components/PageTitle.tsx";
 import { Modal } from "@/components/Modal.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 
@@ -151,7 +151,7 @@ export default function Devices() {
   return (
     <>
       <header className="mb-5 grid grid-cols-8">
-        <Heading className={"flex-shrink-0"}>Devices</Heading>
+        <PageTitle className={"flex-shrink-0"}>Devices</PageTitle>
 
         <ToolkitButton
           type="button"

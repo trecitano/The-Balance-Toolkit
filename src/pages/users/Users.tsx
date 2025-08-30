@@ -16,7 +16,7 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
-import Heading from "@/components/PageTitle.tsx";
+import PageTitle from "@/components/PageTitle.tsx";
 import { Modal } from "@/components/Modal.tsx";
 import { Channel } from "@tauri-apps/api/core";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
@@ -350,7 +350,7 @@ export default function Users() {
   return (
     <>
       <header className="z-1 mb-5 grid grid-cols-8">
-        <Heading>Users</Heading>
+        <PageTitle>Users</PageTitle>
 
         <ToolkitButton className="" type="button" variant="blue" onClick={() => handleAddUser(users)}>
           Add new user
