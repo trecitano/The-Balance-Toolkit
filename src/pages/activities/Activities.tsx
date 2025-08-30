@@ -3,7 +3,7 @@ import { useState } from "react";
 import "./Activities.css";
 import ActivityCard from "./ActivityCard";
 
-import Heading from "@/components/PageTitle.tsx";
+import PageTitle from "@/components/PageTitle.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
 
@@ -33,7 +33,7 @@ export default function Activities() {
   return (
     <>
       <header className="mb-5">
-        <Heading>Activities</Heading>
+        <PageTitle>Activities</PageTitle>
       </header>
       <div className="grid h-full grid-cols-3 gap-10">
         {activities.map((activity) => (

@@ -4,7 +4,7 @@ import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, SessionPanelConfiguration } from "@/types.ts";
-import Heading from "@/components/PageTitle.tsx";
+import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 
 export function SessionPanel({
@@ -45,7 +45,7 @@ export function SessionPanel({
   return (
     <>
       <header>
-        <Heading>Session</Heading>
+        <PageTitle>Session</PageTitle>
       </header>
 
       <ToolkitContainer className="grid grid-cols-14 grid-rows-2 gap-1">

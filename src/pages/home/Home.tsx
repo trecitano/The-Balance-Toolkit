@@ -1,15 +1,7 @@
 import React, { useRef, useState } from "react";
-import {
-  QuestionMarkCircleIcon,
-  DocumentTextIcon,
-  DocumentIcon,
-  CodeBracketIcon,
-  EnvelopeIcon,
-  SignalIcon,
-} from "@heroicons/react/24/outline";
+import { QuestionMarkCircleIcon, DocumentTextIcon, DocumentIcon, CodeBracketIcon } from "@heroicons/react/24/outline";
 import balanceToolkitLogo from "@/assets/balance-icon.svg";
 import fileIcon from "@/assets/file-icon.svg";
-import userIcon from "@/assets/user-icon.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
@@ -19,13 +11,7 @@ import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
-
-interface StatusIndicator {
-  value: string;
-  label: string;
-  color: "green" | "orange" | "blue";
-  icon: React.ComponentType<{ className?: string }>;
-}
+import PageSubtitle from "@/components/PageSubtitle.tsx";
 
 const HOME_QUERY_KEY = ["home"];
 
@@ -130,12 +116,10 @@ const Header: React.FC = () => {
 
 // Last Session Card
 const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = ({ sessionDetails }) => {
-  console.log(sessionDetails);
-
   if (!sessionDetails) {
     return (
       <div className="p-(--space-sm)">
-        <h2 className="mb-4 text-xl font-semibold">Last session</h2>
+        <PageSubtitle>Last session</PageSubtitle>
 
         <div className="flex h-full flex-col">
           <div className="mb-4 flex items-center space-x-2">
@@ -150,49 +134,67 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = (
   const activity = sessionDetails?.activity;
 
   return (
-    <div className="p-(--space-sm)">
-      <h2 className="mb-4 text-xl font-semibold">Last session</h2>
+    <div className="flex h-full flex-col gap-5 p-(--space-sm)">
+      <PageSubtitle>Last session</PageSubtitle>
 
-      <div className="flex justify-between">
-        {/* User Section */}
+      <div className="flex grid flex-1 grid-cols-2 grid-rows-2">
         <div>
-          <div className="flex">
-            <div className="h-4 w-4">
-              <img src={userIcon} draggable={false} />
-            </div>
-            <span className="font-medium">{user.name}</span>
-          </div>
-
-          <div className="space-y-1 text-xs text-gray-600">
-            <div>Weight: {user.weight}</div>
-            <div>Gender: {user.gender}</div>
-            <div>Age: {user.age}</div>
+          <span className="mb-2 flex text-base font-semibold">Stats</span>
+          <div className="text-gray-700">
+            <div>Duration: {sessionDetails.sessionStats.duration.secs} seconds</div>
+            <div>Board Hz: {sessionDetails.sessionStats.boardSamplingRate.toFixed(2)}</div>
           </div>
         </div>
 
-        {/* Stats Section */}
         <div>
-          <div className="mb-2 flex items-center space-x-2">
-            <DocumentTextIcon className="h-4 w-4 text-red-600" />
-            <span className="font-medium">Stats</span>
-          </div>
-          <div className="space-y-1 text-xs text-gray-600">
-            <div>Duration: {sessionDetails.sessionStats.duration.secs}</div>
-            <div>Board Sampling Rate: {sessionDetails.sessionStats.boardSamplingRate}</div>
+          <span className="mb-2 flex text-base font-semibold">User</span>
+          <div className="text-gray-700">
+            <div>Name: {user.name}</div>
+            {user.age && <div>Age: {user.age}</div>}
+            {user.weight && (
+              <div>
+                Weight: {user.weight} {user.weightMetric}
+              </div>
+            )}
+            {user.gender && <div>Gender: {user.gender}</div>}
           </div>
         </div>
 
-        {/* File */}
-        <div>
-          <div className="mb-2 flex h-4 w-4">
-            <img src={fileIcon} draggable={false} />
-            <span className="text-xs">Name of file</span>
-          </div>
-
+        {activity ? (
           <div>
-            <div className="text-xs text-gray-500">/location of file</div>
+            <span className="mb-2 flex text-base font-semibold">Activity</span>
+            <div className="text-gray-700">
+              <div>{activity.title}</div>
+              <div>Activity steps: {activity.timelineBlocks.length}</div>
+              <div>Number of boards: {activity.boardsRequired} </div>
+            </div>
           </div>
+        ) : (
+          <div>
+            <span className="mb-2 flex text-base font-semibold">Activity</span>
+            <div className="text-gray-700">
+              <div>No Activity chosen</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="mb-2 flex">
+          <img className="h-4 w-4" src={fileIcon} draggable={false} />
+          <span className="flex text-base font-semibold">File</span>
         </div>
+
+        <div>
+          <div className="text-base text-gray-700">{sessionDetails.fileLocation}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <ToolkitButton to="/replay" variant={"grey"}>
+          {" "}
+          Go to Replay →
+        </ToolkitButton>
       </div>
     </div>
   );
@@ -218,41 +220,44 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
 
   return (
     <div className="flex h-full flex-col p-(--space-sm)">
-      <h2 className="text-2xl font-semibold text-neutral-900">Activities</h2>
+      <PageSubtitle>Activities</PageSubtitle>
 
-      <ul ref={listRef} className="activities-list flex gap-8 overflow-hidden px-[calc(50%-65px)] py-[2.5vh]">
-        {activities.map((activity, i) => {
-          const active = i === selected;
-          return (
-            <li
-              key={activity.id}
-              data-activityid={activity.id}
-              onClick={() => handleSelectActivity(i)}
-              className={`flex aspect-square w-[50px] flex-shrink-0 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-[var(--light)] p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 border-2 border-[var(--primary)] bg-[#e0eafc] font-bold opacity-100 shadow-lg" : ""} `}
-            >
-              <div className="flex h-[80%] items-center justify-center">
-                <img
-                  src={getActivityAssetFullPath(activity.id, activity.staticImage)}
-                  alt=""
-                  draggable={false}
-                  className="max-h-full max-w-full object-contain"
-                />
-              </div>
-              <div className={`mt-2 h-[30%] text-xs font-semibold ${active ? "text-neutral-900" : "text-neutral-500"}`}>
-                {activity.title}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      <CarouselIndicators
-        entries={activities.map((activity) => activity.id)}
-        selectedIndex={selected}
-        onSelect={handleSelectActivity}
-        nearbyThreshold={1}
-        className={"mt-3"}
-      />
+      <div className="flex-1">
+        <ul ref={listRef} className="activities-list flex gap-8 overflow-hidden px-[calc(50%-125px)] py-5">
+          {activities.map((activity, i) => {
+            const active = i === selected;
+            return (
+              <li
+                key={activity.id}
+                data-activityid={activity.id}
+                onClick={() => handleSelectActivity(i)}
+                className={`flex h-32 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-(--light-accent) p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 bg-[#e0eafc] font-bold opacity-100 shadow-lg ring-1 ring-(--primary)" : ""} `}
+              >
+                <div className="flex h-[70%] w-45 items-center justify-center">
+                  <img
+                    src={getActivityAssetFullPath(activity.id, activity.staticImage)}
+                    alt=""
+                    draggable={false}
+                    className="max-h-full object-contain"
+                  />
+                </div>
+                <div
+                  className={`mt-2 h-[30%] text-xs font-semibold ${active ? "text-neutral-900" : "text-neutral-500"}`}
+                >
+                  {activity.title}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        <CarouselIndicators
+          entries={activities.map((activity) => activity.id)}
+          selectedIndex={selected}
+          onSelect={handleSelectActivity}
+          nearbyThreshold={2}
+          className={"mt-2"}
+        />
+      </div>
 
       <div className="flex justify-end">
         <ToolkitButton to="/activities" variant={"grey"}>
@@ -267,39 +272,52 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
 // Connection Card
 const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
   const hasAnyDevices = !devices || devices.length === 0;
-  const hasAnyConnectedDevices = devices && devices.some((device) => device.isConnected);
+  const numberConnectedDevices = devices?.filter((device) => device.isConnected).length ?? 0;
 
   return (
     <div className="flex h-full flex-col gap-5 p-(--space-sm)">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Connection</h2>
-      </div>
+      <PageSubtitle>Connection</PageSubtitle>
 
       {hasAnyDevices ? (
         <>
-          <div className="items-center">
-            <p className="text-md font-semibold">There are no connected devices!</p>
-            <p> Go to the devices page and scan for boards.</p>
+          <div className="text-base">
+            <p className="font-semibold">There are no connected devices!</p>
+            <p> Go to the devices page to scan for boards.</p>
           </div>
 
-          <img className={"h-40 object-contain"} src={wbbIcon} />
-        </>
-      ) : hasAnyConnectedDevices ? (
-        <div className="flex h-full flex-col p-(--space-sm)">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">A Board has been previously connected.Please turn on the Board!</h2>
+          <div className="flex flex-1 items-center justify-center">
+            <img className={"h-40 object-contain"} src={wbbIcon} />
           </div>
-        </div>
+        </>
+      ) : numberConnectedDevices === 0 ? (
+        <>
+          <div className="text-base">
+            <p className="font-semibold">A Board has been previously connected.</p>
+            <p> Please turn on the board!</p>
+          </div>
+
+          <div className="flex flex-1 items-center justify-center">
+            <img className={"h-40 object-contain"} src={wbbIcon} />
+          </div>
+        </>
       ) : (
         <>
-          {/* Balance Board Illustration */}
-          <div className="flex max-h-10 justify-center">
-            <img src={userIcon} />
+          <div className="text-base">
+            {numberConnectedDevices === 1 ? (
+              <p className="font-semibold">There is one connected board!</p>
+            ) : (
+              <p className="font-semibold">There are {numberConnectedDevices} connected boards!</p>
+            )}
+            <p> Go to the Devices page to select them to start a session.</p>
+          </div>
+
+          <div className="flex flex-1 items-center justify-center">
+            <img className={"h-40 object-contain"} src={wbbIconBlue} />
           </div>
         </>
       )}
 
-      <div className="mt-auto flex justify-end">
+      <div className="flex justify-end">
         <ToolkitButton to="/devices" variant={"grey"}>
           {" "}
           Go to Devices →
@@ -317,7 +335,7 @@ const HelpSupportCard: React.FC = () => {
         <div className="rounded-full bg-red-600 p-1 text-white">
           <QuestionMarkCircleIcon className="h-4 w-4" />
         </div>
-        <h2 className="text-xl font-semibold">Help and Support</h2>
+        <PageSubtitle>Help and Support</PageSubtitle>
       </div>
 
       <div className="flex flex-1 items-center justify-center">
@@ -335,7 +353,7 @@ const DocumentationCard: React.FC = () => {
         <div className="rounded bg-red-600 p-1 text-white">
           <DocumentTextIcon className="h-4 w-4" />
         </div>
-        <h2 className="text-xl font-semibold">Documentation</h2>
+        <PageSubtitle>Documentation</PageSubtitle>
       </div>
 
       <div className="flex flex-1 items-center justify-center">
@@ -349,7 +367,7 @@ const DocumentationCard: React.FC = () => {
 const OtherResourcesCard: React.FC = () => {
   return (
     <div className="flex h-full flex-col p-(--space-sm)">
-      <h2 className="mb-4 text-xl font-semibold">Other Resources</h2>
+      <PageSubtitle>Other Resources</PageSubtitle>
 
       <div className="flex flex-1 items-center justify-center">
         <span className="text-lg font-bold text-gray-500 italic">🚧 This section is under construction 🚧</span>
