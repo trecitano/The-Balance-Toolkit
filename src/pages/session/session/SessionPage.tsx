@@ -52,7 +52,6 @@ export default function SessionPage() {
   const updateSession = useMutation({
     mutationFn: (newState: SessionPanelConfiguration) => commands.session.updateSession(newState),
     onMutate: async (next) => {
-      console.log("Updating session with ", next);
       await queryClient.cancelQueries({ queryKey: SESSION_QUERY_KEY });
       const previous = queryClient.getQueryData(SESSION_QUERY_KEY);
 
@@ -86,12 +85,10 @@ export default function SessionPage() {
     .filter(Boolean);
   const activityOptions = activities.map((i) => ({ label: i.title, value: i.id }));
   const chosenActivity = activities.find((a) => a.id === sessionInformation.core.activityId);
-  const chosenActivityDuration = chosenActivity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0);
   const canStartSession = sessionInformation.selectedBoards.length > 0;
 
   if (sessionOverListener.current == null) {
     listen<void>("session_completed", (_) => {
-      console.log("Received session completed from the frontend!");
       queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
     }).then((unlisten) => {
       sessionOverListener.current = unlisten;

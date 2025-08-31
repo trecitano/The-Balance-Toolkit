@@ -58,7 +58,6 @@ export default function ReplayPage() {
 
   if (replayOverListener.current == null) {
     listen<void>("replay_completed", (_) => {
-      console.log("Received session completed from the frontend!");
       stopTimeline();
       queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
     }).then((unlisten) => {

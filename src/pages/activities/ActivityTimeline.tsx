@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import "./ActivityTimeline.css";
 import balanceIcon from "../../assets/balance-icon.svg";
 import { TimelineBlock } from "@/types.ts";
-import {getBlockImage} from "@/utils/activityImages.ts";
+import { getBlockImage } from "@/utils/activityImages.ts";
 
 interface ActivityTimelineProps {
   blocks: TimelineBlock[];
@@ -216,13 +216,7 @@ export default function ActivityTimeline({
             )}
 
             <div
-              className={`
-                timeline-block relative select-none
-                ${height}
-                ${!editable ? "pointer-events-none" : "pointer-events-auto"} 
-                ${draggedIdx === idx ? "z-20 opacity-20" : "z-10"} 
-                ${editable ? "transition-colors hover:bg-gray-50" : ""} `
-              }
+              className={`timeline-block relative select-none ${height} ${!editable ? "pointer-events-none" : "pointer-events-auto"} ${draggedIdx === idx ? "z-20 opacity-20" : "z-10"} ${editable ? "transition-colors hover:bg-gray-50" : ""} `}
               data-block-id={idx}
               onMouseDown={(e) => handleBlockMouseDown(idx, e)}
               onClick={() => onBlockSelect?.(block)}
@@ -260,16 +254,12 @@ export default function ActivityTimeline({
                 </>
               )}
 
-              <div className="mb-2 px-1 w-full text-center text-sm font-semibold  text-gray-800 whitespace-nowrap text-ellipsis overflow-hidden">
+              <div className="mb-2 w-full overflow-hidden px-1 text-center text-sm font-semibold text-ellipsis whitespace-nowrap text-gray-800">
                 {block.title}
               </div>
 
               <div className="flex h-7/10 items-center justify-center">
-                <img
-                  src={getBlockImage(block.id)}
-                  alt={block.title}
-                  className="h-full w-auto object-contain"
-                />
+                <img src={getBlockImage(block.id)} alt={block.title} className="h-full object-cover" />
               </div>
             </div>
           </React.Fragment>

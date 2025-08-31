@@ -26,8 +26,6 @@ export function SessionPanel({
 }) {
   const update = <K extends keyof SessionPanelConfiguration>(key: K, val: SessionPanelConfiguration[K]) => {
     const next = { ...value, [key]: val };
-    console.log("Updating", key, val);
-    console.log("next", next);
     onChange(next);
   };
 

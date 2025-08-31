@@ -5,7 +5,6 @@ export function createProgressTimer() {
   let playhead: HTMLDivElement | null = null;
 
   function registerPlayhead(el: HTMLDivElement) {
-    console.log("Playhead registered:", el);
     playhead = el;
   }
 

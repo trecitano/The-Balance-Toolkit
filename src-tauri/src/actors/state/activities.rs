@@ -61,6 +61,17 @@ impl ActivityState {
 
     pub fn create_default_activities() -> Vec<Activity> {
         vec![
+            // Eyes Open-close
+            Activity {
+                id: "eyes-open-close".into(),
+                title: "Eyes open-close".into(),
+                static_image: "eyes-open".into(),
+                boards_required: 1,
+                description: "Assess balance during quiet standing with eyes open and closed".into(),
+                timeline_blocks: vec![
+                    tare(), step_onto_board(), eyes_open(), eyes_close()
+                ],
+            },
             // Dynamic Weight Shifting
             Activity {
                 id: "dynamic-weight-shifting".into(),
@@ -71,17 +82,6 @@ impl ActivityState {
                 timeline_blocks: vec![
                     tare(), step_onto_board(), stand_upright(), lean_forward(), stand_upright(), lean_backwards(),
                     stand_upright(), lean_to_the_left(), stand_upright(), lean_to_the_right(), stand_upright(),
-                ],
-            },
-            // Eyes Open-close
-            Activity {
-                id: "eyes-open-close".into(),
-                title: "Eyes open-close".into(),
-                static_image: "eyes-open".into(),
-                boards_required: 1,
-                description: "Assess balance during quiet standing with eyes open and closed".into(),
-                timeline_blocks: vec![
-                    tare(), step_onto_board(), eyes_open(), eyes_close()
                 ],
             },
             // Functional Reach
@@ -138,7 +138,7 @@ fn eyes_close() -> TimelineBlock {
     TimelineBlock {
         title: "Eyes Closed".to_string(),
         id: "eyes-close".to_string(),
-        duration: 20,
+        duration: 4,
     }
 }
 
@@ -146,7 +146,7 @@ fn eyes_open() -> TimelineBlock {
     TimelineBlock {
         title: "Eyes Open".to_string(),
         id: "eyes-open".to_string(),
-        duration: 20,
+        duration: 4,
     }
 }
 
@@ -154,7 +154,7 @@ fn lean_backwards() -> TimelineBlock {
     TimelineBlock {
         title: "Lean Backwards".to_string(),
         id: "lean-backwards".to_string(),
-        duration: 20,
+        duration: 6,
     }
 }
 
@@ -162,7 +162,7 @@ fn lean_forward() -> TimelineBlock {
     TimelineBlock {
         title: "Lean Forward".to_string(),
         id: "lean-forward".to_string(),
-        duration: 20,
+        duration: 6,
     }
 }
 
@@ -170,7 +170,7 @@ fn lean_to_the_left() -> TimelineBlock {
     TimelineBlock {
         title: "Lean to the Left".to_string(),
         id: "lean-to-the-left".to_string(),
-        duration: 20,
+        duration: 6,
     }
 }
 
@@ -178,7 +178,7 @@ fn lean_to_the_right() -> TimelineBlock {
     TimelineBlock {
         title: "Lean to the Right".to_string(),
         id: "lean-to-the-right".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -186,7 +186,7 @@ fn left_arm_down() -> TimelineBlock {
     TimelineBlock {
         title: "Left Arm Down".to_string(),
         id: "left-arm-down".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -194,7 +194,7 @@ fn left_arm_reach() -> TimelineBlock {
     TimelineBlock {
         title: "Left Arm Reach".to_string(),
         id: "left-arm-reach".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -202,7 +202,7 @@ fn left_arm_up() -> TimelineBlock {
     TimelineBlock {
         title: "Left Arm Up".to_string(),
         id: "left-arm-up".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -210,7 +210,7 @@ fn left_foot_in_front() -> TimelineBlock {
     TimelineBlock {
         title: "Left Foot in Front".to_string(),
         id: "left-foot-in-front".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -218,7 +218,7 @@ fn left_leg_up() -> TimelineBlock {
     TimelineBlock {
         title: "Left Leg Up".to_string(),
         id: "left-leg-up".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -226,7 +226,7 @@ fn right_arm_down() -> TimelineBlock {
     TimelineBlock {
         title: "Right Arm Down".to_string(),
         id: "right-arm-down".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -234,7 +234,7 @@ fn right_arm_reach() -> TimelineBlock {
     TimelineBlock {
         title: "Right Arm Reach".to_string(),
         id: "right-arm-reach".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -242,7 +242,7 @@ fn right_arm_up() -> TimelineBlock {
     TimelineBlock {
         title: "Right Arm Up".to_string(),
         id: "right-arm-up".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -250,7 +250,7 @@ fn right_foot_in_front() -> TimelineBlock {
     TimelineBlock {
         title: "Right Foot in Front".to_string(),
         id: "right-foot-in-front".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -258,7 +258,7 @@ fn right_leg_up() -> TimelineBlock {
     TimelineBlock {
         title: "Right Leg Up".to_string(),
         id: "right-leg-up".to_string(),
-        duration: 20,
+        duration: 8,
     }
 }
 
@@ -266,7 +266,7 @@ fn sit() -> TimelineBlock {
     TimelineBlock {
         title: "Sit".to_string(),
         id: "sit".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }
 
@@ -274,7 +274,7 @@ fn sit_again() -> TimelineBlock {
     TimelineBlock {
         title: "Sit Again".to_string(),
         id: "sit-again".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }
 
@@ -282,7 +282,7 @@ fn stand() -> TimelineBlock {
     TimelineBlock {
         title: "Stand".to_string(),
         id: "stand".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }
 
@@ -290,7 +290,7 @@ fn stand_on_board() -> TimelineBlock {
     TimelineBlock {
         title: "Stand on the Board".to_string(),
         id: "stand-on-the-board".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }
 
@@ -298,7 +298,7 @@ fn stand_on_board_reach() -> TimelineBlock {
     TimelineBlock {
         title: "Stand on the Board (Reach)".to_string(),
         id: "stand-on-the-board-reach".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }
 
@@ -306,7 +306,7 @@ fn stand_upright() -> TimelineBlock {
     TimelineBlock {
         title: "Stand Upright".to_string(),
         id: "stand-upright".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }
 
@@ -314,7 +314,7 @@ fn step_onto_board() -> TimelineBlock {
     TimelineBlock {
         title: "Step onto Board".to_string(),
         id: "step-onto-board".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }
 
@@ -322,7 +322,7 @@ fn tare() -> TimelineBlock {
     TimelineBlock {
         title: "Tare".to_string(),
         id: "tare".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }
 
@@ -330,7 +330,7 @@ fn turn_around() -> TimelineBlock {
     TimelineBlock {
         title: "Turn Around".to_string(),
         id: "turn-around".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }
 
@@ -338,7 +338,7 @@ fn walk_back() -> TimelineBlock {
     TimelineBlock {
         title: "Walk Back".to_string(),
         id: "walk-back".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }
 
@@ -346,6 +346,6 @@ fn walk_forward() -> TimelineBlock {
     TimelineBlock {
         title: "Walk Forward".to_string(),
         id: "walk-forward".to_string(),
-        duration: 20,
+        duration: 12,
     }
 }

@@ -52,7 +52,7 @@ const byShape: Record<Shape, string> = {
 const bySize: Record<Size, string> = {
   none: "",
   sm: "",
-  md: "p-2",
+  md: "px-4 py-3",
   lg: "",
 };
 
