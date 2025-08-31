@@ -211,14 +211,14 @@ export default function Devices() {
         />
       </div>
 
-      <Modal open={isScanning} onClose={handleCancelScan}>
+      <Modal className={"min-w-sm"} open={isScanning} onClose={handleCancelScan}>
         <div className="flex flex-col gap-6">
           <div>
             <span className="spinner" />
           </div>
           <span className="text-2xl font-semibold text-(--primary)">Scanning...</span>
 
-          <p className="text-lg">{`Found ${foundDevicesCount} devices so far...`}</p>
+          <p className="text-lg font-medium">{`Found ${foundDevicesCount} devices so far...`}</p>
 
           <ToolkitButton type="button" color="blue" onClick={handleCancelScan}>
             Cancel

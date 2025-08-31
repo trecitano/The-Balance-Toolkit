@@ -251,6 +251,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             </SettingField>
             <SettingField label={"Interpolation Type"}>
               <SelectPrimitive
+                className={"min-w-35"}
                 value={tempSettings.processingSettings.interpolation}
                 onChange={(v) => handleProcessedSettingsUpdate("interpolation", v as InterpolationOption)}
                 options={interpolationOptions.map((i) => ({ label: i, value: i }))}
