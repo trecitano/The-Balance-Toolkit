@@ -96,7 +96,6 @@ export default function Devices() {
   });
 
   const handleStartEditName = (deviceId: string) => {
-    console.log("Starting edit for device:", deviceId);
     setEditingDeviceId(deviceId);
   };
 
@@ -143,7 +142,6 @@ export default function Devices() {
     isScanning: false,
   };
 
-  console.log("isScanning", isScanning);
   const sortedDevices = sortDevices(devices);
   const noDevices = sortedDevices.length === 0;
   const selectedDevices = devices!.filter((d) => selectedDevicesMacAddress!.includes(d.macAddress));

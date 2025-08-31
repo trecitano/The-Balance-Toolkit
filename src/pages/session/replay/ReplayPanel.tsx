@@ -31,8 +31,6 @@ export function ReplayPanel({
       },
     };
 
-    console.log("Current: ", config.core);
-    console.log("Next: ", next.core);
     onChange(next);
   };
 

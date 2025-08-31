@@ -18,14 +18,11 @@ export function TimelinePanel({ activity, hasOngoingSession, canStart, onStart, 
   const timer = timerRef.current;
   const activityDuration = activity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0);
 
-  console.log("Rerendering panel:", hasOngoingSession);
-  console.log("Activity duration:", activityDuration);
-
   return (
     <div className="mt-auto flex w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
       {activity ? (
         <div className="relative m-5 w-9/10">
-          <ActivityTimeline activityId={activity.id} blocks={activity.timelineBlocks} height={"h-25"}/>
+          <ActivityTimeline activityId={activity.id} blocks={activity.timelineBlocks} height={"h-25"} />
           <div
             ref={(el) => {
               if (el) {

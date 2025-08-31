@@ -100,7 +100,7 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
       // If we have a current action selected and the activity has a name, get action-specific images
       let animationImages: string[] = [];
 
-      animationImages = activity.timelineBlocks.map(b => b.id);
+      animationImages = activity.timelineBlocks.map((b) => b.id);
 
       // Now use the determined images for animation
       if (animationImages && animationImages.length > 0) {
@@ -142,13 +142,7 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
         clearInterval(intervalRef.current);
       }
     };
-  }, [
-    isHovering,
-    activity.staticImage,
-    activity.id,
-    currentActionLabel,
-    maximized,
-  ]);
+  }, [isHovering, activity.staticImage, activity.id, currentActionLabel, maximized]);
 
   /**
    * Handles animation and positioning when the card is maximized
@@ -278,11 +272,11 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
             >
               <img src={wbbIcon} alt="Balance Board" className="board-icon" />
               <span>
-              {activity.boardsRequired} {activity.boardsRequired === 1 ? "board" : "boards"}
-            </span>
+                {activity.boardsRequired} {activity.boardsRequired === 1 ? "board" : "boards"}
+              </span>
             </div>
-            <div>
-              <h3 className="activity-title">{activity.title}</h3>
+            <h3 className="activity-title">{activity.title}</h3>
+            <div className="flex justify-end">
               <ToolkitButton type="button" variant={"blue"} onClick={handleStartClick}>
                 Start
               </ToolkitButton>
@@ -325,8 +319,8 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
                     marginRight: 8,
                   }}
                 >
-                    s
-                  </span>
+                  s
+                </span>
                 <button className="add-action-btn" onClick={handleAddAction} disabled={!newActionName.trim()}>
                   Add
                 </button>
@@ -344,7 +338,7 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
             onBlockSelect={(block) => setCurrentActionLabel(block.title)}
           />
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-4">
             <ToolkitButton
               type="button"
               variant={"blue"}

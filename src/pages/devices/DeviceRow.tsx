@@ -84,7 +84,6 @@ export default function DeviceRow({
                 defaultValue={device.name}
                 autoFocus
                 onKeyDown={(e) => {
-                  console.log("Key down:", e.key);
                   if (e.key === "Enter") {
                     handleSaveDeviceName(device.macAddress, inputRef.current?.value || "");
                   }
