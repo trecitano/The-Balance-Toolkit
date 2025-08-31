@@ -262,7 +262,7 @@ export default function ActivityCard({
         onMouseLeave={() => setIsHovering(false)}
       >
         <>
-          <div className="mb-5 flex h-74 justify-center rounded-lg bg-[var(--bg-light)] shadow-(--shadow-light)">
+          <div className="mb-5 flex h-60 justify-center rounded-lg bg-[var(--bg-light)] shadow-(--shadow-light)">
             <img
               className={"object-contain"}
               src={getBlockImage(currentImageSrc)}

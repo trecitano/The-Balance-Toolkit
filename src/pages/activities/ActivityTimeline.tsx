@@ -253,12 +253,14 @@ export default function ActivityTimeline({
                 </>
               )}
 
-              <div className="mb-2 w-full overflow-hidden px-1 text-center text-sm font-semibold text-ellipsis whitespace-nowrap text-gray-800">
-                {block.title}
-              </div>
+              <div className={"flex flex-col h-full"}>
+                <div className="w-full overflow-hidden px-1 text-center text-sm font-semibold text-ellipsis whitespace-nowrap text-gray-800">
+                  {block.title}
+                </div>
 
-              <div className="flex h-7/10 items-center justify-center">
-                <img src={getBlockImage(block.id)} alt={block.title} className="h-full object-cover" />
+                <div className="mt-auto flex h-7/10 items-center justify-center">
+                  <img src={getBlockImage(block.id)} alt={block.title} className="h-full object-cover" />
+                </div>
               </div>
             </div>
           </React.Fragment>
