@@ -68,8 +68,6 @@ pub enum ToolkitCommand {
         device_name: String,
     },
 
-
-
     SelectBoardForSession {
         mac_address: MacAddress,
     },
@@ -436,11 +434,18 @@ impl ConnectionManager {
                                   device_names)
                         .await;
 
-                    // Cancel the session when the activity ends
                     if let Some(activity) = &self.session_settings.core.activity {
-                        let duration = activity.timeline_blocks.iter().map(|b| b.duration).sum::<i32>() as u64;
-
                         let manager_tx = self.get_sender_channel();
+
+                        // If the session has an activity that starts with a tare, then perform the tare
+                        if activity.timeline_blocks.len() > 0 && activity.timeline_blocks[0].id == "tare" {
+                            for device in self.session_settings.connections.values() {
+                                device.send(BoardAction::Tare).await?
+                            }
+                        }
+
+                        // Cancel the session when the activity ends
+                        let duration = activity.timeline_blocks.iter().map(|b| b.duration).sum::<i32>() as u64;
                         let response_tx = self.response_tx.clone();
                         tokio::spawn(async move {
                             println!("Going to sleep for {duration}");

@@ -18,7 +18,7 @@ pub struct Activity {
 #[serde(rename_all = "camelCase")]
 pub struct TimelineBlock {
     title: String,
-    id: String,
+    pub id: String,
     pub duration: i32
 }
 
