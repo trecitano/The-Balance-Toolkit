@@ -8,16 +8,30 @@ import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
 
 export const ACTIVITIES_QUERY_KEY = ["activities"];
+const AVAILABLE_BLOCKS_QUERY_KEY = ["available-blocks"];
 
 export default function Activities() {
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
 
-  const { data, isLoading, error } = useQuery({
+  const {
+    data: activitiesData,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ACTIVITIES_QUERY_KEY,
     queryFn: async () => {
       const activities = await commands.activity.getActivities();
       return { activities };
     },
+  });
+
+  // Fetch available time blocks (only once, cached forever)
+  const { data: timeBlocksData } = useQuery({
+    queryKey: AVAILABLE_BLOCKS_QUERY_KEY,
+    queryFn: async () => {
+      return await commands.activity.getAvailableTimeBlocks();
+    },
+    staleTime: Infinity,
   });
 
   if (isLoading) {
@@ -28,7 +42,8 @@ export default function Activities() {
     return <div></div>;
   }
 
-  const activities = data?.activities ?? [];
+  const activities = activitiesData?.activities ?? [];
+  const existingTimeBlocks = timeBlocksData ?? [];
 
   return (
     <>
@@ -43,6 +58,7 @@ export default function Activities() {
             maximized={maximizedId === activity.id}
             onMaximize={() => setMaximizedId(activity.id)}
             onMinimize={() => setMaximizedId(null)}
+            existingActionImages={existingTimeBlocks}
           />
         ))}
       </div>

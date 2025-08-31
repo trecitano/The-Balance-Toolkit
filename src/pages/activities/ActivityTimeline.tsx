@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import "./ActivityTimeline.css";
-import balanceIcon from "../../assets/balance-icon.svg";
 import { TimelineBlock } from "@/types.ts";
 import { getBlockImage } from "@/utils/activityImages.ts";
 
@@ -9,7 +8,7 @@ interface ActivityTimelineProps {
   editable?: boolean;
   onChange?: (blocks: TimelineBlock[]) => void;
   onBlockSelect?: (block: TimelineBlock) => void;
-  height: string;
+  height?: string;
 }
 
 const MIN_DURATION = 1;
@@ -208,7 +207,7 @@ export default function ActivityTimeline({
       className={`flex flex-col ${!editable ? "opacity-75" : ""}`}
       style={{ cursor: isDragging && editable ? "grabbing" : "default" }}
     >
-      <div className="flex h-full flex-1">
+      <div className={`flex h-full flex-1 ${editable && "gap-1"}`}>
         {blocks.map((block, idx) => (
           <React.Fragment key={idx}>
             {editable && dragOverIdx === idx && (

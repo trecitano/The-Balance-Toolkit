@@ -59,6 +59,38 @@ impl ActivityState {
         Ok(default_activity)
     }
 
+    pub fn get_available_time_blocks(&self) -> Vec<TimelineBlock> {
+        vec![
+            eyes_close(),
+            eyes_open(),
+            lean_backwards(),
+            lean_forward(),
+            lean_to_the_left(),
+            lean_to_the_right(),
+            left_arm_down(),
+            left_arm_reach(),
+            left_arm_up(),
+            left_foot_in_front(),
+            left_leg_up(),
+            right_arm_down(),
+            right_arm_reach(),
+            right_arm_up(),
+            right_foot_in_front(),
+            right_leg_up(),
+            sit(),
+            sit_again(),
+            stand(),
+            stand_on_board(),
+            stand_on_board_reach(),
+            stand_upright(),
+            step_onto_board(),
+            tare(),
+            turn_around(),
+            walk_back(),
+            walk_forward(),
+        ]
+    }
+
     pub fn create_default_activities() -> Vec<Activity> {
         vec![
             // Eyes Open-close

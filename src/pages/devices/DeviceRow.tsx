@@ -119,7 +119,7 @@ export default function DeviceRow({
             type="button"
             className={"text-sm"}
             shape="circle"
-            variant="white"
+            color="white"
             onClick={() => handleIdentifyClick(device)}
           >
             ID
@@ -127,14 +127,14 @@ export default function DeviceRow({
           {!isSelected ? (
             <ToolkitButton
               type="button"
-              variant="blue"
+              color="blue"
               onClick={() => handleSelectDeviceForSession(device.macAddress)}
               disabled={cannotConnect}
             >
               Connect
             </ToolkitButton>
           ) : (
-            <ToolkitButton type="button" variant="red" onClick={() => handleUnselectDevice(device.macAddress)}>
+            <ToolkitButton type="button" color="red" onClick={() => handleUnselectDevice(device.macAddress)}>
               Disconnect
             </ToolkitButton>
           )}

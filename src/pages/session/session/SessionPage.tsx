@@ -111,7 +111,7 @@ export default function SessionPage() {
         <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
           <p className="text-3xl font-medium">No boards in session</p>
           <p className="mb-4 text-xl text-gray-400">Connect to a board in the Devices page!</p>
-          <ToolkitButton to="/devices" variant="blue">
+          <ToolkitButton to="/devices" color="blue">
             Go to Devices →
           </ToolkitButton>
         </div>

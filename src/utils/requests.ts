@@ -11,6 +11,7 @@ import {
   UserPageInformation,
   UserType,
   LastSessionInformation,
+  TimelineBlock,
 } from "@/types.ts";
 
 export const commands = {
@@ -76,6 +77,7 @@ export const commands = {
   },
 
   activity: {
+    getAvailableTimeBlocks: async () => invoke<TimelineBlock[]>("activity_get_available_time_blocks"),
     getActivities: async () => invoke<Activity[]>("activity_get_activities"),
     getActivity: async (activityId: string) => invoke<Activity>("activity_get_activity", { activityId: activityId }),
     updateActivity: async (activity: Activity) => invoke<void>("activity_update_activity", { activity: activity }),

@@ -153,11 +153,11 @@ export default function Devices() {
 
         <ToolkitButton
           type="button"
-          variant="grey"
+          color="grey"
           onClick={handleScanDevices}
           disabled={scanDevicesMutation.isPending || isScanning}
         >
-          <span>{scanDevicesMutation.isPending || isScanning ? "Scanning..." : "Scan for Devices"}</span>
+          <span>{scanDevicesMutation.isPending || isScanning ? "Scanning..." : "Scan for devices"}</span>
         </ToolkitButton>
       </header>
 
@@ -176,11 +176,11 @@ export default function Devices() {
                 </p>
                 <ToolkitButton
                   type="button"
-                  variant="grey"
+                  color="grey"
                   onClick={handleScanDevices}
                   disabled={scanDevicesMutation.isPending || isScanning}
                 >
-                  <span>{scanDevicesMutation.isPending || isScanning ? "Scanning..." : "Scan for Devices"}</span>
+                  <span>{scanDevicesMutation.isPending || isScanning ? "Scanning..." : "Scan for devices"}</span>
                 </ToolkitButton>
               </div>
             )}
@@ -220,7 +220,7 @@ export default function Devices() {
 
           <p className="text-lg">{`Found ${foundDevicesCount} devices so far...`}</p>
 
-          <ToolkitButton type="button" variant="blue" onClick={handleCancelScan}>
+          <ToolkitButton type="button" color="blue" onClick={handleCancelScan}>
             Cancel
           </ToolkitButton>
         </div>
@@ -232,7 +232,7 @@ export default function Devices() {
           A flashing sequence will appear on the LED of the board.
         </p>
         <div className="flex justify-center gap-6">
-          <ToolkitButton type="button" variant="grey" onClick={() => setShowIdentifyModal(null)}>
+          <ToolkitButton type="button" color="grey" onClick={() => setShowIdentifyModal(null)}>
             Close
           </ToolkitButton>
         </div>

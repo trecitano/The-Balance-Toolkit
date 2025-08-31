@@ -191,7 +191,7 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = (
       </div>
 
       <div className="mt-4 flex justify-end">
-        <ToolkitButton to="/replay" variant={"grey"}>
+        <ToolkitButton to="/replay" color={"grey"}>
           {" "}
           Go to Replay →
         </ToolkitButton>
@@ -260,7 +260,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
       </div>
 
       <div className="flex justify-end">
-        <ToolkitButton to="/activities" variant={"grey"}>
+        <ToolkitButton to="/activities" color={"grey"}>
           {" "}
           Go to Activities →
         </ToolkitButton>
@@ -318,7 +318,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
       )}
 
       <div className="flex justify-end">
-        <ToolkitButton to="/devices" variant={"grey"}>
+        <ToolkitButton to="/devices" color={"grey"}>
           {" "}
           Go to Devices →
         </ToolkitButton>

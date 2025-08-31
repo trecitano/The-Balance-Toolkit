@@ -50,10 +50,10 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                 </div>
 
                 <div className="mt-auto flex justify-end gap-(--space-sm)">
-                  <ToolkitButton type={"button"} variant="red" onClick={() => handleUnselectDevice(device.macAddress)}>
+                  <ToolkitButton type={"button"} color="red" onClick={() => handleUnselectDevice(device.macAddress)}>
                     Disconnect
                   </ToolkitButton>
-                  <ToolkitButton to="/session" variant="blue">
+                  <ToolkitButton to="/session" color="blue">
                     Go to Session →
                   </ToolkitButton>
                 </div>
