@@ -2,14 +2,14 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import "./ActivityTimeline.css";
 import balanceIcon from "../../assets/balance-icon.svg";
 import { TimelineBlock } from "@/types.ts";
-import { getActionImage } from "@/utils/activityImages.ts";
+import {getBlockImage} from "@/utils/activityImages.ts";
 
 interface ActivityTimelineProps {
-  activityId: string;
   blocks: TimelineBlock[];
   editable?: boolean;
   onChange?: (blocks: TimelineBlock[]) => void;
   onBlockSelect?: (block: TimelineBlock) => void;
+  height: string;
 }
 
 const MIN_DURATION = 1;
@@ -44,24 +44,16 @@ type ResizeState = {
 type InteractionState = DragState | ResizeState | null;
 
 export default function ActivityTimeline({
-  activityId,
   blocks,
   editable,
   onChange,
   onBlockSelect,
+  height = "h-100",
 }: ActivityTimelineProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [interaction, setInteraction] = useState<InteractionState>(null);
   const [editingDurationIdx, setEditingDurationIdx] = useState<number | null>(null);
   const [durationInputValue, setDurationInputValue] = useState<string>("");
-
-  const blocksWithImages = useMemo(() => {
-    return blocks.map((b) => {
-      if (b.image) return b;
-      const image = getActionImage(activityId, b.label);
-      return image ? { ...b, image } : b;
-    });
-  }, [activityId, blocks]);
 
   const totalDuration = useMemo(() => blocks.reduce((sum, b) => sum + b.duration, 0), [blocks]);
 
@@ -213,19 +205,24 @@ export default function ActivityTimeline({
   return (
     <div
       ref={containerRef}
-      className={`activity-timeline flex h-20 flex-col ${!editable ? "opacity-75" : ""}`}
+      className={`flex flex-col ${!editable ? "opacity-75" : ""}`}
       style={{ cursor: isDragging && editable ? "grabbing" : "default" }}
     >
-      <div className="flex h-full">
-        {blocksWithImages.map((block, idx) => (
+      <div className="flex h-full flex-1">
+        {blocks.map((block, idx) => (
           <React.Fragment key={idx}>
             {editable && dragOverIdx === idx && (
               <div className="pointer-events-none relative z-10 mx-0.5 h-12 w-0 border-l-2 border-blue-500" />
             )}
 
             <div
-              className={`timeline-block relative box-border flex h-full max-h-24 flex-col items-center justify-start px-1 py-1 select-none ${!editable ? "pointer-events-none" : "pointer-events-auto"} ${draggedIdx === idx ? "z-20 opacity-20" : "z-10"} ${editable ? "transition-colors hover:bg-gray-50" : ""} `}
-              tabIndex={0}
+              className={`
+                timeline-block relative select-none
+                ${height}
+                ${!editable ? "pointer-events-none" : "pointer-events-auto"} 
+                ${draggedIdx === idx ? "z-20 opacity-20" : "z-10"} 
+                ${editable ? "transition-colors hover:bg-gray-50" : ""} `
+              }
               data-block-id={idx}
               onMouseDown={(e) => handleBlockMouseDown(idx, e)}
               onClick={() => onBlockSelect?.(block)}
@@ -263,22 +260,15 @@ export default function ActivityTimeline({
                 </>
               )}
 
-              <div className="block-title mb-0.5 w-full text-center text-sm font-semibold text-gray-800">
+              <div className="mb-2 px-1 w-full text-center text-sm font-semibold  text-gray-800 whitespace-nowrap text-ellipsis overflow-hidden">
                 {block.title}
               </div>
 
-              <div
-                className="block-svg flex min-h-0 w-full flex-1 items-center justify-center"
-                data-block-id={idx}
-                data-block-label={block.label}
-              >
+              <div className="flex h-7/10 items-center justify-center">
                 <img
-                  src={block.image}
+                  src={getBlockImage(block.id)}
                   alt={block.title}
-                  className="block h-full w-auto object-contain"
-                  onError={(e) => {
-                    e.currentTarget.src = balanceIcon;
-                  }}
+                  className="h-full w-auto object-contain"
                 />
               </div>
             </div>
@@ -311,7 +301,7 @@ export default function ActivityTimeline({
       </div>
 
       {/* Durations row */}
-      <div className="activity-timeline-durations mt-1 flex min-h-5 w-full items-start">
+      <div className="mt-1 flex min-h-5 w-full items-start">
         {blocks.map((block, idx) => (
           <div
             key={idx}
