@@ -253,7 +253,7 @@ export default function ActivityTimeline({
                 </>
               )}
 
-              <div className={"flex flex-col h-full"}>
+              <div className={"flex h-full flex-col"}>
                 <div className="w-full overflow-hidden px-1 text-center text-sm font-semibold text-ellipsis whitespace-nowrap text-gray-800">
                   {block.title}
                 </div>

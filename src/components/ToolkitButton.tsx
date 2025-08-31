@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import clsx from "clsx";
 
-type Color = "grey" | "blue" | "red" | "white";
+type Color = "grey" | "blue" | "red";
 type Size = "none" | "sm" | "md" | "lg";
 type Shape = "default" | "circle";
 
@@ -40,8 +40,6 @@ const byColor: Record<Color, string> = {
   grey: "bg-[var(--secondary)] text-[var(--white)] enabled:hover:bg-[var(--secondary-dark)]",
   blue: "bg-[var(--primary)] text-[var(--white)] enabled:hover:bg-[var(--primary-dark)]",
   red: "bg-[var(--red)] text-[var(--white)] enabled:hover:bg-[var(--red-dark)]",
-  white:
-    "bg-white text-gray-800 shadow-(--shadow-light) enabled:hover:shadow-lg enabled:hover:bg-gray-50 border border-gray-200",
 };
 
 const byShape: Record<Shape, string> = {
