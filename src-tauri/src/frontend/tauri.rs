@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use crate::actors::balance_board_actor::{BalanceBoardOutput, BoardAction};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
-use crate::actors::state::activities::Activity;
+use crate::actors::state::activities::{Activity, TimelineBlock};
 use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
 use tauri::ipc::Channel;
 use tauri::{Emitter, Manager, State};
@@ -79,6 +79,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             replay_update,
             replay_load_file,
             replay_load_last_session_info,
+            activity_get_available_time_blocks,
             activity_get_activities,
             activity_get_activity,
             activity_update_activity,
@@ -599,6 +600,19 @@ async fn replay_load_last_session_info(state: State<'_, AppState>) -> Result<Opt
 // =========================
 // --- ACTIVITY COMMANDS ---
 // =========================
+
+#[tauri::command(async)]
+async fn activity_get_available_time_blocks(state: State<'_, AppState>) -> Result<Vec<TimelineBlock>, String> {
+    println!(">> activity_get_available_time_blocks");
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::GetAvailableTimeBlocks { response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let result = response_rx.await.map_err(|e| e.to_string())?;
+
+    //println!("<< activity_get_available_time_blocks. {:?}", result);
+    Ok(result)
+}
 
 #[tauri::command(async)]
 async fn activity_get_activities(state: State<'_, AppState>) -> Result<Vec<Activity>, String> {

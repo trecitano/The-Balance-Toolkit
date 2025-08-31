@@ -352,7 +352,7 @@ export default function Users() {
       <header className="z-1 mb-5 grid grid-cols-8">
         <PageTitle>Users</PageTitle>
 
-        <ToolkitButton className="" type="button" variant="blue" onClick={() => handleAddUser(users)}>
+        <ToolkitButton className="" type="button" color="blue" onClick={() => handleAddUser(users)}>
           Add new user
         </ToolkitButton>
 
@@ -458,21 +458,21 @@ export default function Users() {
                   </div>
                 </div>
                 <div className="user-display-actions">
-                  <ToolkitButton type="submit" variant="blue">
+                  <ToolkitButton type="submit" color="blue">
                     Save
                   </ToolkitButton>
 
                   {!selectedUserData.isDefault && (
                     <ToolkitButton
                       type="button"
-                      variant="red"
+                      color="red"
                       onClick={() => setShowDeleteConfirm(selectedUserData.name)}
                     >
                       Delete
                     </ToolkitButton>
                   )}
 
-                  <ToolkitButton type="button" variant="grey" onClick={() => setEditingUserData(null)}>
+                  <ToolkitButton type="button" color="grey" onClick={() => setEditingUserData(null)}>
                     Cancel
                   </ToolkitButton>
                 </div>
@@ -582,7 +582,7 @@ export default function Users() {
                       className={"w-1"}
                       size="none"
                       type="button"
-                      variant="white"
+                      color="white"
                       onClick={() => setShowWeightMeasure(true)}
                     ></ToolkitButton>
                   </div>
@@ -669,13 +669,13 @@ export default function Users() {
                   {!selectedUserData.isDefault && (
                     <ToolkitButton
                       type="button"
-                      variant="red"
+                      color="red"
                       onClick={() => setShowDeleteConfirm(selectedUserData.name)}
                     >
                       Delete
                     </ToolkitButton>
                   )}
-                  <ToolkitButton type="button" variant="blue" onClick={() => setEditingUserData(selectedUserData)}>
+                  <ToolkitButton type="button" color="blue" onClick={() => setEditingUserData(selectedUserData)}>
                     Edit
                   </ToolkitButton>
                 </div>
@@ -739,10 +739,10 @@ export default function Users() {
           {`Are you sure you want to delete user "${users.find((u) => u.name === showDeleteConfirm)?.name}"?`}
         </p>
         <div className="flex justify-center gap-6">
-          <ToolkitButton type="button" variant="red" onClick={() => handleDeleteUser(showDeleteConfirm)}>
+          <ToolkitButton type="button" color="red" onClick={() => handleDeleteUser(showDeleteConfirm)}>
             Delete
           </ToolkitButton>
-          <ToolkitButton type="button" variant="grey" onClick={() => setShowDeleteConfirm(null)}>
+          <ToolkitButton type="button" color="grey" onClick={() => setShowDeleteConfirm(null)}>
             Cancel
           </ToolkitButton>
         </div>
@@ -768,7 +768,7 @@ export default function Users() {
         {sessionDevices.length === 0 ? (
           <div>
             <p className="mb-7 text-lg text-gray-400">Connect to a board in the Devices page!</p>
-            <ToolkitButton to="/devices" variant="blue">
+            <ToolkitButton to="/devices" color="blue">
               Go to Devices →
             </ToolkitButton>
           </div>
@@ -789,31 +789,23 @@ export default function Users() {
             <div className="flex justify-center gap-6">
               <ToolkitButton
                 disabled={!selectedWeightMeasureDeviceMac}
-                variant="grey"
+                color="grey"
                 onClick={() => commands.devices.tareDevice(Number(selectedWeightMeasureDeviceMac))}
               >
                 Tare
               </ToolkitButton>
               {!isMeasuringWeight ? (
-                <ToolkitButton
-                  disabled={!selectedWeightMeasureDeviceMac}
-                  variant="grey"
-                  onClick={startWeightMeasurement}
-                >
+                <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} color="grey" onClick={startWeightMeasurement}>
                   Start
                 </ToolkitButton>
               ) : (
-                <ToolkitButton
-                  disabled={!selectedWeightMeasureDeviceMac}
-                  variant="grey"
-                  onClick={stopWeightMeasurement}
-                >
+                <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} color="grey" onClick={stopWeightMeasurement}>
                   Stop Measurement
                 </ToolkitButton>
               )}
               <ToolkitButton
                 disabled={!selectedWeightMeasureDeviceMac || isMeasuringWeight}
-                variant="blue"
+                color="blue"
                 onClick={() => handleEditUpdate("weight", liveWeight?.toFixed(2) ?? 0)}
               >
                 Save

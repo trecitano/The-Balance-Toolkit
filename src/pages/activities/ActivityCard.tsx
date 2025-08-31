@@ -3,12 +3,17 @@ import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import { Activity } from "@/types.ts";
+import { Activity, interpolationOptions, TimelineBlock } from "@/types.ts";
 import { getBlockImage } from "@/utils/activityImages.ts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
 import { ACTIVITIES_QUERY_KEY } from "@/pages/activities/Activities.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
+import { InputPrimitive } from "@/components/InputPrimitive.tsx";
+import PageSubtitle from "@/components/PageSubtitle.tsx";
+import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
+import { SingleColumn } from "@/components/SingleColumn.tsx";
+import sexIcon from "@/assets/sex-icon.svg";
 
 /**
  * ActivityCard component displays an activity with its details
@@ -20,9 +25,16 @@ interface ActivityCardProps {
   onMaximize?: () => void;
   onMinimize?: () => void;
   index?: number;
+  existingActionImages: TimelineBlock[];
 }
 
-export default function ActivityCard({ activity, maximized = false, onMaximize, onMinimize }: ActivityCardProps) {
+export default function ActivityCard({
+  activity,
+  maximized = false,
+  onMaximize,
+  onMinimize,
+  existingActionImages,
+}: ActivityCardProps) {
   // Image and animation state
   const [currentImageSrc, setCurrentImageSrc] = useState<string>(activity.staticImage);
   const [isHovering, setIsHovering] = useState(false);
@@ -36,10 +48,11 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
 
   // UI state
   const [maxStyle, setMaxStyle] = useState<React.CSSProperties | undefined>();
-  const [showMaximizedClass, setShowMaximizedClass] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newActionName, setNewActionName] = useState("");
   const [newActionDuration, setNewActionDuration] = useState(10);
+  const [newActionImage, setNewActionImage] = useState("");
+
   const cardRef = useRef<HTMLDivElement>(null);
 
   const queryClient = useQueryClient();
@@ -162,34 +175,31 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
       const rect = cardRef.current.getBoundingClientRect();
       const parentRect = cardRef.current.parentElement?.getBoundingClientRect();
       if (parentRect) {
-        setShowMaximizedClass(false);
-
-        const initialLeft = rect.left - parentRect.left;
-        const initialTop = rect.top - parentRect.top;
         setMaxStyle({
-          position: "absolute",
-          top: initialTop,
-          left: initialLeft,
+          top: rect.top,
+          left: rect.left,
           width: rect.width,
           height: rect.height,
           zIndex: 10,
         });
         setTimeout(() => {
-          setShowMaximizedClass(true);
           setMaxStyle({
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
+            top: parentRect.top,
+            left: parentRect.left,
+            width: parentRect.width,
+            height: parentRect.height,
             zIndex: 10,
             transition:
-              "top 0.3s cubic-bezier(0.4,0,0.2,1), left 0.3s cubic-bezier(0.4,0,0.2,1), width 0.3s cubic-bezier(0.4,0,0.2,1), height 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow var(--transition), transform var(--transition)",
+              "top 0.3s cubic-bezier(0.4,0,0.2,1), " +
+              "left 0.3s cubic-bezier(0.4,0,0.2,1), " +
+              "width 0.3s cubic-bezier(0.4,0,0.2,1), " +
+              "height 0.3s cubic-bezier(0.4,0,0.2,1), " +
+              "box-shadow var(--transition), " +
+              "transform var(--transition)",
           });
         }, 10);
       }
     } else {
-      setShowMaximizedClass(false);
       setMaxStyle(undefined);
     }
   }, [maximized, activity.staticImage]);
@@ -221,10 +231,11 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
    * Adds a new action to the timeline
    */
   const handleAddAction = () => {
-    if (!newActionName.trim()) return;
+    const title = newActionName ? newActionName : existingActionImages.find((b) => b.id === newActionImage)?.title;
+
     const newBlock = {
-      id: Date.now().toString(),
-      title: newActionName,
+      id: newActionImage,
+      title: title,
       duration: Math.max(1, Number(newActionDuration) || 10),
     };
     setTimelineBlocks([...timelineBlocks, newBlock]);
@@ -243,90 +254,91 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
   };
 
   return (
-    <ToolkitContainer
-      ref={cardRef}
-      className={`activity-card pt-10 pr-5 pb-5 pl-5 ${maximized && showMaximizedClass ? "maximized" : ""}`}
-      style={maximized ? maxStyle : undefined}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-    >
-      {!maximized ? (
+    <>
+      <ToolkitContainer
+        ref={cardRef}
+        className={`activity-card flex flex-col gap-3 pt-10 pr-5 pb-5 pl-5`}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+      >
         <>
-          <div className="mb-5 flex h-65 justify-center rounded-lg bg-[var(--bg-light)] shadow-(--shadow-light)">
+          <div className="mb-5 flex h-74 justify-center rounded-lg bg-[var(--bg-light)] shadow-(--shadow-light)">
             <img
               className={"object-contain"}
               src={getBlockImage(currentImageSrc)}
               alt={`${activity.title} illustration`}
             />
           </div>
-          <div className="flex flex-col">
-            {/* Board tag above the title */}
-            <div
-              className="activity-board-tag"
-              style={{
-                backgroundColor: activity.boardsRequired > 1 ? "var(--primary-light, #e0e7ff)" : "var(--bg-light)",
-                position: maximized ? "absolute" : "relative",
-                top: maximized ? "1vw" : "auto",
-                right: maximized ? "1vw" : "auto",
-              }}
-            >
+          <div className="">
+            <div className="activity-board-tag">
               <img src={wbbIcon} alt="Balance Board" className="board-icon" />
               <span>
                 {activity.boardsRequired} {activity.boardsRequired === 1 ? "board" : "boards"}
               </span>
             </div>
-            <h3 className="activity-title">{activity.title}</h3>
-            <div className="flex justify-end">
-              <ToolkitButton type="button" variant={"blue"} onClick={handleStartClick}>
-                Start
-              </ToolkitButton>
-            </div>
+            <PageSubtitle>{activity.title}</PageSubtitle>
+          </div>
+          <div className="mt-auto flex justify-end">
+            <ToolkitButton type="button" color={"blue"} onClick={handleStartClick}>
+              Start
+            </ToolkitButton>
           </div>
         </>
-      ) : (
-        <div className="flex flex-col gap-10">
+      </ToolkitContainer>
+      {maximized && (
+        <ToolkitContainer className="absolute flex flex-col gap-10 bg-white" background="bg-white" style={maxStyle}>
           <div className="activity-details-header">
             <h3>{activity.title}</h3>
           </div>
           {/* Add Action Row */}
-          <div className="add-action-row">
+          <div className="flex min-h-10 items-center justify-end gap-4">
             {!showAddForm ? (
-              <ToolkitButton type="button" variant={"blue"} onClick={() => setShowAddForm(true)}>
-                + Add ActionSave
+              <ToolkitButton type="button" color={"blue"} onClick={() => setShowAddForm(true)}>
+                + Add Action
               </ToolkitButton>
             ) : (
               <>
-                <input
-                  type="text"
-                  placeholder="Action name"
-                  value={newActionName}
-                  onChange={(e) => setNewActionName(e.target.value)}
-                  className="add-action-input"
+                <SelectPrimitive
+                  value={newActionImage}
+                  placeholder="Action"
+                  className={"w-40"}
+                  options={[
+                    { label: "Custom Action", value: "custom-action-flamingo" },
+                    ...existingActionImages.map((action) => ({
+                      label: action.title,
+                      value: action.id,
+                    })),
+                  ]}
+                  onChange={(e) => setNewActionImage(e)}
                 />
-                <input
-                  type="number"
-                  min={1}
-                  placeholder="Duration"
-                  value={newActionDuration}
-                  onChange={(e) => setNewActionDuration(Number(e.target.value))}
-                  className="add-action-input add-action-duration"
-                  style={{ width: 50, marginRight: 4 }}
-                />
-                <span
-                  style={{
-                    fontSize: "0.9em",
-                    color: "var(--primary-dark, #3730a3)",
-                    marginRight: 8,
-                  }}
+                {newActionImage === "custom-action-flamingo" && (
+                  <InputPrimitive editable value={newActionName} onChange={(e) => setNewActionName(e.target.value)} />
+                )}
+
+                <div>
+                  <InputPrimitive
+                    type="number"
+                    min={1}
+                    placeholder="Duration"
+                    className={"w-20"}
+                    value={newActionDuration}
+                    editable
+                    onChange={(e) => setNewActionDuration(Number(e.target.value))}
+                  />
+                  <span className={"ml-1 text-base font-medium"}>secs</span>
+                </div>
+
+                <ToolkitButton
+                  type="button"
+                  color={"blue"}
+                  onClick={handleAddAction}
+                  disabled={!newActionName.trim() && !newActionImage.trim()}
                 >
-                  s
-                </span>
-                <button className="add-action-btn" onClick={handleAddAction} disabled={!newActionName.trim()}>
                   Add
-                </button>
-                <button className="add-action-btn add-action-cancel" onClick={handleCancelAdd}>
+                </ToolkitButton>
+                <ToolkitButton type="button" color={"grey"} onClick={handleCancelAdd}>
                   Cancel
-                </button>
+                </ToolkitButton>
               </>
             )}
           </div>
@@ -341,7 +353,7 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
           <div className="flex justify-end gap-4">
             <ToolkitButton
               type="button"
-              variant={"blue"}
+              color={"blue"}
               onClick={() => {
                 const updated: Activity = {
                   ...activity,
@@ -356,16 +368,16 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
               {saveMutation.isPending ? "Saving..." : "Save"}
             </ToolkitButton>
 
-            <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} variant={"grey"}>
+            <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} color={"grey"}>
               Reset to Default
             </ToolkitButton>
 
-            <ToolkitButton type="button" onClick={onMinimize} variant={"grey"}>
+            <ToolkitButton type="button" onClick={onMinimize} color={"grey"}>
               Close
             </ToolkitButton>
           </div>
-        </div>
+        </ToolkitContainer>
       )}
-    </ToolkitContainer>
+    </>
   );
 }

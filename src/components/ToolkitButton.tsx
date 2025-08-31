@@ -2,12 +2,12 @@ import React from "react";
 import { Link } from "react-router-dom";
 import clsx from "clsx";
 
-type Variant = "grey" | "blue" | "red" | "white";
+type Color = "grey" | "blue" | "red" | "white";
 type Size = "none" | "sm" | "md" | "lg";
 type Shape = "default" | "circle";
 
 type BaseProps = {
-  variant?: Variant;
+  color?: Color;
   size?: Size;
   shape?: Shape;
   fullWidth?: boolean;
@@ -36,7 +36,7 @@ const base =
   "disabled:opacity-60 disabled:cursor-not-allowed " +
   "enabled:focus:outline-none enabled:focus:shadow-[var(--shadow-focus)]";
 
-const byVariant: Record<Variant, string> = {
+const byColor: Record<Color, string> = {
   grey: "bg-[var(--secondary)] text-[var(--white)] enabled:hover:bg-[var(--secondary-dark)]",
   blue: "bg-[var(--primary)] text-[var(--white)] enabled:hover:bg-[var(--primary-dark)]",
   red: "bg-[var(--red)] text-[var(--white)] enabled:hover:bg-[var(--red-dark)]",
@@ -57,14 +57,14 @@ const bySize: Record<Size, string> = {
 };
 
 export function ToolkitButton({
-  variant = "red",
+  color = "red",
   size = "md",
   shape = "default",
   className = "",
   children,
   ...props
 }: ButtonProps) {
-  const classes = clsx(byShape[shape], bySize[size], byVariant[variant], base, className);
+  const classes = clsx(byShape[shape], bySize[size], byColor[color], base, className);
 
   if ("to" in props && props.to) {
     const { to, ...rest } = props as ButtonAsLink;

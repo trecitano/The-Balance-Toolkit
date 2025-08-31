@@ -1,7 +1,7 @@
 use crate::actors::balance_board_actor;
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput, BoardAction, BoardConnectionMode};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothService};
-use crate::actors::state::activities::{Activity, ActivityState};
+use crate::actors::state::activities::{Activity, ActivityState, TimelineBlock};
 use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem, SettingsFileSystem};
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::lsl_writer::LslConnectionSettings;
@@ -79,6 +79,9 @@ pub enum ToolkitCommand {
     },
 
     // Activities
+    GetAvailableTimeBlocks {
+        response: oneshot::Sender<Vec<TimelineBlock>>
+    },
     GetActivities {
         response: oneshot::Sender<Vec<Activity>>,
     },
@@ -335,6 +338,10 @@ impl ConnectionManager {
                     response.send(self.session_settings.connections.keys().cloned().collect()).unwrap();
                 }
 
+                ToolkitCommand::GetAvailableTimeBlocks { response } => {
+                    let result = self.activity_state.get_available_time_blocks();
+                    response.send(result).unwrap();
+                }
                 ToolkitCommand::GetActivities { response } => {
                     let activities = self.activity_state.get_copy_of_activities();
                     response.send(activities).unwrap();
@@ -950,10 +957,6 @@ fn initialize_raw_data_forwarder(mut raw_data_rx: mpsc::Receiver<BalanceBoardCal
             }
         }
     });
-}
-
-fn stop_session_after_duration(frontend_channel: Sender<BalanceBoardOutput>) {
-
 }
 
 fn add_observer_to_device_list(session_mapping: &mut SessionMapping,
