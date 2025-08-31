@@ -70,7 +70,7 @@ impl ActivityState {
                 description: "Assess controlled weight shifting ability".into(),
                 timeline_blocks: vec![
                     tare(), step_onto_board(), stand_upright(), lean_forward(), stand_upright(), lean_backwards(),
-                    stand_upright(), lean_to_the_left(), stand_upright(), lean_to_the_left(), stand_upright(),
+                    stand_upright(), lean_to_the_left(), stand_upright(), lean_to_the_right(), stand_upright(),
                 ],
             },
             // Eyes Open-close
@@ -104,7 +104,7 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Assess balance while standing on one leg".into(),
                 timeline_blocks: vec![
-                    tare(), step_onto_board(), stand_on_board(), left_leg_up(), right_leg_up(), stand_on_board()
+                    tare(), step_onto_board(), stand_on_board(), left_leg_up(), stand_on_board(), right_leg_up(), stand_on_board()
                 ],
             },
             // Tandem Stance
@@ -288,8 +288,8 @@ fn stand() -> TimelineBlock {
 
 fn stand_on_board() -> TimelineBlock {
     TimelineBlock {
-        title: "Stand on the Board (No Reach)".to_string(),
-        id: "stand-on-the-board-no-reach".to_string(),
+        title: "Stand on the Board".to_string(),
+        id: "stand-on-the-board".to_string(),
         duration: 20,
     }
 }
