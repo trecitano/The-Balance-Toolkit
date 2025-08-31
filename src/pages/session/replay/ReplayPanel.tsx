@@ -13,14 +13,14 @@ export function ReplayPanel({
   onBoardDisplayChange,
   boardDisplayOptions,
   onChange,
-  onLoadFile,
+  onPickSessionFile,
 }: {
   config: ReplayConfiguration;
   boardDisplaySelected: string[];
   onBoardDisplayChange: (ids: string[]) => void;
   boardDisplayOptions: CheckboxOption[];
   onChange: (v: ReplayConfiguration) => void;
-  onLoadFile: (path: string) => void;
+  onPickSessionFile: () => void;
 }) {
   const update = <K extends keyof SessionPanelConfiguration>(key: K, val: SessionPanelConfiguration[K]) => {
     const next: ReplayConfiguration = {
@@ -32,23 +32,6 @@ export function ReplayPanel({
     };
 
     onChange(next);
-  };
-
-  const pickSessionFile = async () => {
-    const selected = await open({
-      directory: false,
-      multiple: false,
-      filters: [
-        {
-          name: "Session file",
-          extensions: ["settings.json"],
-        },
-      ],
-      title: "Select the Session file",
-    });
-    if (typeof selected === "string") {
-      onLoadFile(selected);
-    }
   };
 
   return (
@@ -137,7 +120,7 @@ export function ReplayPanel({
             <button
               type="button"
               className="h-10 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200"
-              onClick={pickSessionFile}
+              onClick={onPickSessionFile}
             >
               Choose…
             </button>

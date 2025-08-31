@@ -12,6 +12,7 @@ import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import wbbIcon from "@/assets/wbb-icon-line.svg";
 import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
+import rippleIcon from "@/assets/ripple-icon.svg";
 
 const HOME_QUERY_KEY = ["home"];
 
@@ -118,13 +119,13 @@ const Header: React.FC = () => {
 const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = ({ sessionDetails }) => {
   if (!sessionDetails) {
     return (
-      <div className="p-(--space-sm)">
-        <PageSubtitle>Last session</PageSubtitle>
+      <div className="flex h-full flex-col p-(--space-sm)">
+        <div className="mb-4 flex items-center space-x-2">
+          <PageSubtitle>Last session</PageSubtitle>
+        </div>
 
-        <div className="flex h-full flex-col">
-          <div className="mb-4 flex items-center space-x-2">
-            <div className="rounded-full bg-red-600 p-1 text-white">There is no existing session!</div>
-          </div>
+        <div className="flex flex-1 items-center justify-center">
+          <span className="text-lg font-bold text-gray-500 italic">There are no previous sessions!</span>
         </div>
       </div>
     );
@@ -311,8 +312,9 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
             <p> Go to the Devices page to select them to start a session.</p>
           </div>
 
-          <div className="flex flex-1 items-center justify-center">
-            <img className={"h-40 object-contain"} src={wbbIconBlue} />
+          <div className="relative flex items-center justify-center">
+              <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
+              <img src={wbbIconBlue} className="z-10 h-4/5 w-4/5 object-contain" />
           </div>
         </>
       )}

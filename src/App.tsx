@@ -25,13 +25,13 @@ function AppContent() {
   usePrefetchQuery(DevicesQuery);
 
   return (
-    <div className="box-border flex h-screen flex-row overflow-hidden bg-[var(--bg-primary)] text-[0.85em]">
+    <div className="box-border flex h-screen flex-row overflow-hidden bg-(--bg-primary) text-[0.85em]">
       <Navigation
         className="w-5/100"
         activeView={location.pathname.substring(1) || "home"}
         onViewChange={handleViewChange}
       />
-      <main className="flex h-screen w-95/100 flex-col bg-[var(--bg-primary)] px-20 py-8">
+      <main className="flex h-screen w-95/100 flex-col bg-(--bg-primary) px-20 py-8">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/users" element={<UsersPage />} />

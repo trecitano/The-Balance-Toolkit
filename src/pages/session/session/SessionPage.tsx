@@ -121,6 +121,7 @@ export default function SessionPage() {
 
       <TimelinePanel
         activity={chosenActivity}
+        placeholderMessage="Choose an activity"
         hasOngoingSession={sessionInformation.hasOngoingSession}
         canStart={canStartSession}
         onStart={async () => {

@@ -7,22 +7,23 @@ import { useRef } from "react";
 
 type TimelinePanelProps = {
   activity?: Activity;
+  placeholderMessage?: string;
   hasOngoingSession: boolean;
   canStart: boolean;
   onStart: () => Promise<void>;
   onStop: () => Promise<void>;
 };
 
-export function TimelinePanel({ activity, hasOngoingSession, canStart, onStart, onStop }: TimelinePanelProps) {
+export function TimelinePanel({ activity, placeholderMessage, hasOngoingSession, canStart, onStart, onStop }: TimelinePanelProps) {
   const timerRef = useRef(createProgressTimer());
   const timer = timerRef.current;
   const activityDuration = activity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0);
 
   return (
-    <div className="mt-auto flex w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
+    <div className="mt-auto min-h-33 flex w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
       {activity ? (
-        <div className="relative m-5 w-9/10">
-          <ActivityTimeline activityId={activity.id} blocks={activity.timelineBlocks} height={"h-25"} />
+        <div className="relative mx-10 mt-5 mb-1 w-9/10">
+          <ActivityTimeline activityId={activity.id} blocks={activity.timelineBlocks} height={"h-20"} />
           <div
             ref={(el) => {
               if (el) {
@@ -39,8 +40,8 @@ export function TimelinePanel({ activity, hasOngoingSession, canStart, onStart, 
           </div>
         </div>
       ) : (
-        <div className="h-20 w-9/10 text-center">
-          <p className="mb-10 text-xl text-gray-400">Choose an activity</p>
+        <div className="h-20 w-9/10 items-center flex-1 flex justify-center">
+          <p className="text-xl text-gray-500/80">{placeholderMessage}</p>
         </div>
       )}
 
