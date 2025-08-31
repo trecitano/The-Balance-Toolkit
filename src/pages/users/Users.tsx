@@ -479,7 +479,7 @@ export default function Users() {
               </div>
 
               {/* Editable fields */}
-              <div className="user-info-fields">
+              <div className="mt-2 grid grid-cols-4 gap-2.5 text-base">
                 {/* Name */}
                 <SingleColumn requiredField label="Name:" icon={<img src={personIcon} />}>
                   <InputPrimitive
@@ -532,7 +532,7 @@ export default function Users() {
 
                 {/* Height */}
                 <SingleColumn label="Height:" icon={<img src={heightIcon} />}>
-                  <div className="flex justify-between gap-3">
+                  <div className="flex gap-3">
                     <InputPrimitive
                       editable
                       type="number"
@@ -557,11 +557,12 @@ export default function Users() {
 
                 {/* Weight */}
                 <SingleColumn requiredField label="Weight:" icon={<img src={weightIcon} />}>
-                  <div className="flex justify-between gap-3">
+                  <div className="flex justify-between gap-1">
                     <InputPrimitive
                       editable
                       required
                       type="number"
+                      className={"w-30"}
                       value={editingUserData.weight ?? ""}
                       onChange={(e) => {
                         handleEditUpdate("weight", Number(e.target.value));
@@ -578,13 +579,9 @@ export default function Users() {
                         { label: "lb", value: "lb" },
                       ]}
                     />
-                    <ToolkitButton
-                      className={"w-1"}
-                      size="none"
-                      type="button"
-                      color="white"
-                      onClick={() => setShowWeightMeasure(true)}
-                    ></ToolkitButton>
+                    <ToolkitButton type="button" color={"blue"} onClick={() => setShowWeightMeasure(true)}>
+                      Weight
+                    </ToolkitButton>
                   </div>
                 </SingleColumn>
 
@@ -603,26 +600,14 @@ export default function Users() {
 
                 {/* Color */}
                 <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
-                  <div className="color-picker-container">
-                    <input
-                      type="color"
-                      id="color"
-                      name="color"
-                      value={editingUserData.color || "#397aac"}
-                      onChange={(e) =>
-                        setEditingUserData((prev) => ({
-                          ...prev!,
-                          color: e.target.value,
-                        }))
-                      }
-                    />
-                    <div
-                      className="color-swatch-trigger"
-                      onClick={handleColorClick}
+                  <div className="relative">
+                    <InputPrimitive
+                      className={"cursor-pointer"}
                       style={{
                         backgroundColor: editingUserData.color || "#397aac",
                       }}
-                    ></div>
+                      onClick={handleColorClick}
+                    />
                     {showColorDropdown && (
                       <div className="recent-colors-dropdown">
                         <div className="recent-colors">
@@ -681,7 +666,7 @@ export default function Users() {
                 </div>
               </div>
 
-              <div className="user-info-fields">
+              <div className="mt-2 grid grid-cols-4 gap-2.5 text-base">
                 {/* Name */}
                 <SingleColumn label="Name:" icon={<img src={personIcon} />}>
                   <InputPrimitive value={selectedUserData.name ?? "N/A"} />
@@ -754,6 +739,7 @@ export default function Users() {
           stopWeightMeasurement(false);
           setShowWeightMeasure(false);
         }}
+        className={"min-w-lg"}
       >
         <h4 className="mb-4 text-lg font-bold">Weight Measure</h4>
         <div className="mb-3 flex flex-col items-center">

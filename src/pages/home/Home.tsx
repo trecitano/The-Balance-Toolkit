@@ -231,7 +231,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
                 key={activity.id}
                 data-activityid={activity.id}
                 onClick={() => handleSelectActivity(i)}
-                className={`flex h-32 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-(--light-accent) p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 bg-[#e0eafc] font-bold opacity-100 shadow-lg ring-1 ring-(--primary)" : ""} `}
+                className={`flex h-29 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-(--light-accent) p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 bg-[#e0eafc] font-bold opacity-100 shadow-lg ring-1 ring-(--primary)" : ""} `}
               >
                 <div className="flex h-7/10 w-45 items-center justify-center">
                   <img
