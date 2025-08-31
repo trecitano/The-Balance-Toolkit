@@ -22,10 +22,10 @@ export function TimelinePanel({ activity, hasOngoingSession, canStart, onStart, 
   console.log("Activity duration:", activityDuration);
 
   return (
-    <div className="mt-auto flex w-full items-center justify-between rounded-lg bg-gray-100 py-3 shadow-sm">
+    <div className="mt-auto flex w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
       {activity ? (
         <div className="relative m-5 w-9/10">
-          <ActivityTimeline activityId={activity.id} blocks={activity.timelineBlocks} />
+          <ActivityTimeline activityId={activity.id} blocks={activity.timelineBlocks} height={"h-25"}/>
           <div
             ref={(el) => {
               if (el) {

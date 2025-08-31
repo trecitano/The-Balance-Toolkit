@@ -6,7 +6,7 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
 import { Activity, Device, LastSessionInformation } from "@/types.ts";
-import { getActivityAssetFullPath } from "@/utils/activityImages.ts";
+import { getBlockImage } from "@/utils/activityImages.ts";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import wbbIcon from "@/assets/wbb-icon-line.svg";
@@ -233,9 +233,9 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
                 onClick={() => handleSelectActivity(i)}
                 className={`flex h-32 cursor-pointer snap-center flex-col items-center justify-between rounded-lg bg-(--light-accent) p-4 opacity-45 shadow transition-all hover:bg-[#e9eef5] hover:shadow-lg ${active ? "z-10 scale-115 bg-[#e0eafc] font-bold opacity-100 shadow-lg ring-1 ring-(--primary)" : ""} `}
               >
-                <div className="flex h-[70%] w-45 items-center justify-center">
+                <div className="flex h-7/10 w-45 items-center justify-center">
                   <img
-                    src={getActivityAssetFullPath(activity.id, activity.staticImage)}
+                    src={getBlockImage(activity.staticImage)}
                     alt=""
                     draggable={false}
                     className="max-h-full object-contain"

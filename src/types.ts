@@ -128,23 +128,18 @@ export type ProcessedPolygonData = {
 };
 
 export type TimelineBlock = {
-  id: number;
-  title: string; // Human-readable title (e.g., "Step onto board")
-  label: string; // Machine-readable identifier (e.g., "step-onto-board")
-  start: number; // Start time in seconds
-  duration: number; // Duration in seconds
-  image?: string; // Path to the image for the action block
+  id: string;
+  title: string;
+  duration: number;
 };
 
 export type Activity = {
   id: string;
-  title: string; // Display name of the activity
-  staticImage: string; // A SVG file
-  sequenceImages: string[]; // Multiple SVG files
-  hoverImages: string[];
-  timelineBlocks: TimelineBlock[]; // Sequence of action blocks for this activity
-  boardsRequired: number; // Number of balance boards needed (default: 1)
-  description?: string; // Brief description of the activity purpose
+  title: string;
+  staticImage: string;
+  timelineBlocks: TimelineBlock[];
+  boardsRequired: number;
+  description?: string;
 };
 
 export type SessionStats = {

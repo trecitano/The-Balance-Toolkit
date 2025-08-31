@@ -4,7 +4,7 @@ import "./Activities.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { Activity } from "@/types.ts";
-import { getActivityAssetFullPath } from "@/utils/activityImages.ts";
+import { getBlockImage } from "@/utils/activityImages.ts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
 import { ACTIVITIES_QUERY_KEY } from "@/pages/activities/Activities.tsx";
@@ -79,7 +79,6 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
    * Uses action-specific images when available, otherwise falls back to static image
    */
   useEffect(() => {
-    // If we have an active action block selected, try to get its specific image
     if (currentActionLabel && activity.id) {
       const actionImage = activity.staticImage;
       if (actionImage) {
@@ -88,13 +87,8 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
       }
     }
 
-    // Otherwise, fall back to sequence images or static image
-    if (activity.sequenceImages && activity.sequenceImages.length > 0) {
-      setCurrentImageSrc(activity.sequenceImages[0]);
-    } else {
-      setCurrentImageSrc(activity.staticImage);
-    }
-  }, [activity.staticImage, activity.sequenceImages, activity.title, activity.id, currentActionLabel]);
+    setCurrentImageSrc(activity.timelineBlocks[0].id);
+  }, [activity.staticImage, activity.title, activity.id, currentActionLabel]);
 
   /**
    * Handles animation when hovering over the activity card
@@ -106,26 +100,14 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
       // If we have a current action selected and the activity has a name, get action-specific images
       let animationImages: string[] = [];
 
-      if (currentActionLabel && activity.id) {
-        // This will now include both action-specific and general sequence images
-        animationImages = activity.sequenceImages;
-      }
-
-      // If no action-specific images found or no action selected, fall back to default sequence
-      if (animationImages.length === 0) {
-        const hasSequence = activity.sequenceImages && activity.sequenceImages.length > 0;
-        animationImages = hasSequence && activity.sequenceImages ? activity.sequenceImages : activity.hoverImages || [];
-      }
+      animationImages = activity.timelineBlocks.map(b => b.id);
 
       // Now use the determined images for animation
       if (animationImages && animationImages.length > 0) {
-        // Start directly with the second image when hovering (if available)
-        const startIndex = animationImages.length > 1 ? 1 : 0;
-        imageIndexRef.current = startIndex;
+        imageIndexRef.current = 0;
         setCurrentImageSrc(animationImages[imageIndexRef.current]);
 
         if (animationImages.length > 1) {
-          // Use a consistent animation speed of 700ms for sequences
           const animationSpeed = 700;
           intervalRef.current = setInterval(() => {
             imageIndexRef.current = (imageIndexRef.current + 1) % animationImages.length;
@@ -162,8 +144,6 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
     };
   }, [
     isHovering,
-    activity.hoverImages,
-    activity.sequenceImages,
     activity.staticImage,
     activity.id,
     currentActionLabel,
@@ -248,16 +228,9 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
    */
   const handleAddAction = () => {
     if (!newActionName.trim()) return;
-    let lastEnd = 0;
-    if (timelineBlocks.length > 0) {
-      const last = timelineBlocks[timelineBlocks.length - 1];
-      lastEnd = last.start + last.duration;
-    }
     const newBlock = {
-      id: Date.now(),
+      id: Date.now().toString(),
       title: newActionName,
-      label: newActionName.toLowerCase().replace(/\s+/g, "-"),
-      start: lastEnd,
       duration: Math.max(1, Number(newActionDuration) || 10),
     };
     setTimelineBlocks([...timelineBlocks, newBlock]);
@@ -283,168 +256,122 @@ export default function ActivityCard({ activity, maximized = false, onMaximize, 
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
     >
-      {!maximized && (
-        <div className="mb-5 flex h-65 justify-center rounded-lg bg-[var(--bg-light)] shadow-(--shadow-light)">
-          <img
-            className={"object-contain"}
-            src={getActivityAssetFullPath(activity.id, currentImageSrc)}
-            alt={`${activity.title} illustration`}
-          />
-        </div>
-      )}
-      <div className="flex flex-col">
-        {/* Board tag above the title */}
-        <div
-          className="activity-board-tag"
-          style={{
-            backgroundColor: activity.boardsRequired > 1 ? "var(--primary-light, #e0e7ff)" : "var(--bg-light)",
-            position: maximized ? "absolute" : "relative",
-            top: maximized ? "1vw" : "auto",
-            right: maximized ? "1vw" : "auto",
-          }}
-        >
-          <img src={wbbIcon} alt="Balance Board" className="board-icon" />
-          <span>
-            {activity.boardsRequired} {activity.boardsRequired === 1 ? "board" : "boards"}
-          </span>
-        </div>
-        {/* Always show the title in the same place, but use header style if maximized */}
-        {maximized ? (
+      {!maximized ? (
+        <>
+          <div className="mb-5 flex h-65 justify-center rounded-lg bg-[var(--bg-light)] shadow-(--shadow-light)">
+            <img
+              className={"object-contain"}
+              src={getBlockImage(currentImageSrc)}
+              alt={`${activity.title} illustration`}
+            />
+          </div>
+          <div className="flex flex-col">
+            {/* Board tag above the title */}
+            <div
+              className="activity-board-tag"
+              style={{
+                backgroundColor: activity.boardsRequired > 1 ? "var(--primary-light, #e0e7ff)" : "var(--bg-light)",
+                position: maximized ? "absolute" : "relative",
+                top: maximized ? "1vw" : "auto",
+                right: maximized ? "1vw" : "auto",
+              }}
+            >
+              <img src={wbbIcon} alt="Balance Board" className="board-icon" />
+              <span>
+              {activity.boardsRequired} {activity.boardsRequired === 1 ? "board" : "boards"}
+            </span>
+            </div>
+            <div>
+              <h3 className="activity-title">{activity.title}</h3>
+              <ToolkitButton type="button" variant={"blue"} onClick={handleStartClick}>
+                Start
+              </ToolkitButton>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col gap-10">
           <div className="activity-details-header">
             <h3>{activity.title}</h3>
           </div>
-        ) : (
-          <h3 className="activity-title">{activity.title}</h3>
-        )}
-        {maximized && (
-          <div style={{ display: "flex", flexDirection: "column", minHeight: 0, flex: 1 }}>
-            {/* Add Action Row */}
-            <div className="add-action-row">
-              {!showAddForm ? (
-                <ToolkitButton type="button" variant={"blue"} onClick={() => setShowAddForm(true)}>
-                  + Add ActionSave
-                </ToolkitButton>
-              ) : (
-                <>
-                  <input
-                    type="text"
-                    placeholder="Action name"
-                    value={newActionName}
-                    onChange={(e) => setNewActionName(e.target.value)}
-                    className="add-action-input"
-                  />
-                  <input
-                    type="number"
-                    min={1}
-                    placeholder="Duration"
-                    value={newActionDuration}
-                    onChange={(e) => setNewActionDuration(Number(e.target.value))}
-                    className="add-action-input add-action-duration"
-                    style={{ width: 50, marginRight: 4 }}
-                  />
-                  <span
-                    style={{
-                      fontSize: "0.9em",
-                      color: "var(--primary-dark, #3730a3)",
-                      marginRight: 8,
-                    }}
-                  >
+          {/* Add Action Row */}
+          <div className="add-action-row">
+            {!showAddForm ? (
+              <ToolkitButton type="button" variant={"blue"} onClick={() => setShowAddForm(true)}>
+                + Add ActionSave
+              </ToolkitButton>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  placeholder="Action name"
+                  value={newActionName}
+                  onChange={(e) => setNewActionName(e.target.value)}
+                  className="add-action-input"
+                />
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Duration"
+                  value={newActionDuration}
+                  onChange={(e) => setNewActionDuration(Number(e.target.value))}
+                  className="add-action-input add-action-duration"
+                  style={{ width: 50, marginRight: 4 }}
+                />
+                <span
+                  style={{
+                    fontSize: "0.9em",
+                    color: "var(--primary-dark, #3730a3)",
+                    marginRight: 8,
+                  }}
+                >
                     s
                   </span>
-                  <button className="add-action-btn" onClick={handleAddAction} disabled={!newActionName.trim()}>
-                    Add
-                  </button>
-                  <button className="add-action-btn add-action-cancel" onClick={handleCancelAdd}>
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
-            <div
-              style={{
-                flex: 1,
-                minHeight: 0,
-                display: "flex",
-                flexDirection: "column",
-                overflow: "auto",
-              }}
-            >
-              <ActivityTimeline
-                activityId={activity.id}
-                blocks={timelineBlocks}
-                editable={true}
-                onChange={setTimelineBlocks}
-                onBlockSelect={(block) => setCurrentActionLabel(block.label)}
-              />
-              {/* Activity settings panel below timeline */}
-              <div className="activity-details-panel">
-                {/* Activity settings fields below timeline */}
-                <div className="activity-details-fields">
-                  <div className="activity-details-field">
-                    <label htmlFor="activity-loops">Number of loops</label>
-                    <input id="activity-loops" type="number" min={1} defaultValue={1} />
-                  </div>
-                  <div className="activity-details-field">
-                    <label htmlFor="activity-sound">Sound</label>
-                    <select id="activity-sound" defaultValue="none">
-                      <option value="none">None</option>
-                      <option value="bell">Bell</option>
-                      <option value="voice">Voice</option>
-                    </select>
-                  </div>
-                  <div className="activity-details-field">
-                    <label htmlFor="activity-notes">Notes</label>
-                    <input id="activity-notes" type="text" placeholder="Optional notes..." />
-                  </div>
-                </div>
-              </div>
-            </div>
+                <button className="add-action-btn" onClick={handleAddAction} disabled={!newActionName.trim()}>
+                  Add
+                </button>
+                <button className="add-action-btn add-action-cancel" onClick={handleCancelAdd}>
+                  Cancel
+                </button>
+              </>
+            )}
           </div>
-        )}
-        <div
-          className="activity-footer"
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            gap: 8,
-            alignItems: "center",
-            justifyContent: "flex-end",
-          }}
-        >
-          {!maximized ? (
-            <ToolkitButton type="button" variant={"blue"} onClick={handleStartClick}>
-              Start
+
+          <ActivityTimeline
+            blocks={timelineBlocks}
+            editable={true}
+            onChange={setTimelineBlocks}
+            onBlockSelect={(block) => setCurrentActionLabel(block.title)}
+          />
+
+          <div className="flex justify-end gap-2">
+            <ToolkitButton
+              type="button"
+              variant={"blue"}
+              onClick={() => {
+                const updated: Activity = {
+                  ...activity,
+                  timelineBlocks: timelineBlocks,
+                };
+                saveMutation.mutate(updated, {
+                  onSuccess: () => onMinimize?.(),
+                });
+              }}
+              disabled={saveMutation.isPending}
+            >
+              {saveMutation.isPending ? "Saving..." : "Save"}
             </ToolkitButton>
-          ) : (
-            <>
-              <ToolkitButton
-                type="button"
-                variant={"blue"}
-                onClick={() => {
-                  const updated: Activity = {
-                    ...activity,
-                    timelineBlocks: timelineBlocks,
-                  };
-                  saveMutation.mutate(updated, {
-                    onSuccess: () => onMinimize?.(),
-                  });
-                }}
-                disabled={saveMutation.isPending}
-              >
-                {saveMutation.isPending ? "Saving..." : "Save"}
-              </ToolkitButton>
 
-              <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} variant={"grey"}>
-                Reset to Default
-              </ToolkitButton>
+            <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} variant={"grey"}>
+              Reset to Default
+            </ToolkitButton>
 
-              <ToolkitButton type="button" onClick={onMinimize} variant={"grey"}>
-                Close
-              </ToolkitButton>
-            </>
-          )}
+            <ToolkitButton type="button" onClick={onMinimize} variant={"grey"}>
+              Close
+            </ToolkitButton>
+          </div>
         </div>
-      </div>
+      )}
     </ToolkitContainer>
   );
 }
