@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import { RawBalanceBoardEvent, ProcessedBoardEvent, ProcessedPolygonData, ProcessedSessionData } from "@/types";
+import {
+  RawBalanceBoardEvent, ProcessedBoardEvent, ProcessedSessionData,
+  ProcessedSingleFrameSessionData
+} from "@/types";
 import { subscribeWithSelector } from "zustand/middleware";
 
 const MAX_FRAMES = 2_000;
@@ -13,7 +16,7 @@ export type BoardBuffer<T> = {
 export type SessionState = {
   rawSessionData: Record<string, BoardBuffer<RawBalanceBoardEvent>>;
   processedSessionData: Record<string, BoardBuffer<ProcessedSessionData>>;
-  processedSessionPolygonData: Record<string, ProcessedPolygonData>;
+  processedSingleFrameSessionData: Record<string, ProcessedSingleFrameSessionData>;
 
   actions: {
     pushRawFrame: (f: RawBalanceBoardEvent) => void;
@@ -45,7 +48,7 @@ function createSessionDataStore() {
     subscribeWithSelector<SessionState>((set) => ({
       rawSessionData: {},
       processedSessionData: {},
-      processedSessionPolygonData: {},
+      processedSingleFrameSessionData: {},
 
       actions: {
         pushRawFrame: (f) =>
@@ -71,9 +74,10 @@ function createSessionDataStore() {
               centerOfSpectrum: f.centerOfSpectrum,
               totalPower: f.totalPower,
             };
-            const polygonData: ProcessedPolygonData = {
+            const singleFrameData: ProcessedSingleFrameSessionData = {
               confidenceEllipsePolygon: f.confidenceEllipsePolygon,
               convexHullPolygon: f.convexHullPolygon,
+              stabilityIndex: f.stabilityIndex
             };
 
             const oldSessionBuffer =
@@ -85,14 +89,14 @@ function createSessionDataStore() {
                 ...state.processedSessionData,
                 [f.macAddress]: newSessionBuffer, // ✅ new object reference
               },
-              processedSessionPolygonData: {
-                ...state.processedSessionPolygonData,
-                [f.macAddress]: polygonData,
+              processedSingleFrameSessionData: {
+                ...state.processedSingleFrameSessionData,
+                [f.macAddress]: singleFrameData,
               },
             };
           }),
 
-        clear: () => set({ rawSessionData: {}, processedSessionData: {}, processedSessionPolygonData: {} }),
+        clear: () => set({ rawSessionData: {}, processedSessionData: {}, processedSingleFrameSessionData: {} }),
       },
     })),
   );

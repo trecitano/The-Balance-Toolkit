@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { QuestionMarkCircleIcon, DocumentTextIcon, DocumentIcon, CodeBracketIcon } from "@heroicons/react/24/outline";
-import balanceToolkitLogo from "@/assets/balance-icon.svg";
+import appIcon from "@/assets/app-icon.svg";
 import fileIcon from "@/assets/file-icon.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { useQuery } from "@tanstack/react-query";
@@ -91,7 +91,7 @@ const Header: React.FC = () => {
               <div className="text-lg font-bold">The</div>
               <div className="text-lg font-bold">Balance</div>
               <div className="h-16 w-16">
-                <img src={balanceToolkitLogo} draggable={false} />
+                <img src={appIcon} draggable={false} />
               </div>
               <div className="text-lg font-bold">Toolkit</div>
             </div>
@@ -319,7 +319,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
         </>
       )}
 
-      <div className="flex justify-end">
+      <div className="mt-auto flex justify-end">
         <ToolkitButton to="/devices" color={"grey"}>
           {" "}
           Go to Devices →

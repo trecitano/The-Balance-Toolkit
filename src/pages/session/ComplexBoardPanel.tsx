@@ -27,38 +27,13 @@ export function ComplexBoardPanel({
       </div>
 
       <div className="grid grid-cols-10 grid-rows-2 gap-3">
-        {/* Top row: Board drawing (SVG) left, metrics right */}
         <div className="col-span-3 flex rounded bg-gray-100 p-2">
           <BalanceBoardWithCoPOverlay
             className="h-[100px] w-7/10"
             macAddress={macAddress}
             src={wbbTopdown}
-            showConfidenceEllipse={showConfidenceEllipse}
-            showConvexHull={showConvexHull}
             store={store}
           />
-
-          <div className="flex flex-col gap-3">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={showConfidenceEllipse}
-                onChange={(e) => setShowConfidenceEllipse(e.target.checked)}
-              />
-              <span>Confidence ellipse</span>
-            </label>
-
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={showConvexHull}
-                onChange={(e) => setShowConvexHull(e.target.checked)}
-              />
-              <span>Convex hull</span>
-            </label>
-          </div>
         </div>
 
         {/* Middle row: blue CoP-related charts */}
@@ -117,34 +92,6 @@ export function ComplexBoardPanel({
             uPlotOptions={standardPlot(RED_COLOUR)}
             dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
             dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopY)}
-            store={store}
-          />
-        </div>
-        <div className="col-span-2 rounded bg-gray-100 p-2">
-          <UPlot
-            title="Total Power"
-            uPlotOptions={standardPlot(RED_COLOUR)}
-            dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
-            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.totalPower)}
-            store={store}
-          />
-        </div>
-
-        <div className="col-span-2 rounded bg-gray-100 p-2">
-          <UPlot
-            title="Center Of Spectrum"
-            uPlotOptions={standardPlot(RED_COLOUR)}
-            dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
-            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.centerOfSpectrum)}
-            store={store}
-          />
-        </div>
-        <div className="col-span-2 rounded bg-gray-100 p-2">
-          <UPlot
-            title="Mean Power Frequency"
-            uPlotOptions={standardPlot(RED_COLOUR)}
-            dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
-            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.meanPowerFrequency)}
             store={store}
           />
         </div>

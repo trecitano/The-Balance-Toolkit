@@ -82,7 +82,7 @@ fn blocking_hid_loop(
     // By default, we use an empty tare value.
     // If the user wants to tare, then in the next balance board reading, the tare_value is updated.
     let mut update_tare = false;
-    let mut tare_value: BalanceBoardSensorRawReading = BalanceBoardSensorRawReading::default();
+    let mut tare_value: BalanceBoardCalibratedReading = BalanceBoardCalibratedReading::default();
 
     loop {
         match hid_control_rx.try_recv() {
@@ -122,14 +122,14 @@ fn blocking_hid_loop(
 
                     if update_tare {
                         update_tare = false;
-                        tare_value = reading.clone();
+                        tare_value = reading.clone().calculate_weights(&calibration, mac_address);
                     }
 
-                    let tared_reading = reading.apply_tare(&tare_value);
-                    let calibrated_reading = tared_reading.calculate_weights(&calibration, mac_address);
+                    let calibrated_reading = reading.calculate_weights(&calibration, mac_address);
+                    let tared_reading = calibrated_reading.apply_tare(&tare_value);
 
                     if let Some(tx) = &tx_channel {
-                        tx.blocking_send(calibrated_reading)?;
+                        tx.blocking_send(tared_reading)?;
                     }
                 }
             }
@@ -231,7 +231,7 @@ pub fn read_from_device(device: &HidDevice, buf: &mut [u8]) -> HidResult<usize> 
     result
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 struct BalanceBoardSensorRawReading {
     top_right: i16,
     bottom_right: i16,
@@ -240,15 +240,6 @@ struct BalanceBoardSensorRawReading {
 }
 
 impl BalanceBoardSensorRawReading {
-    fn apply_tare(&self, tare_offset: &BalanceBoardSensorRawReading) -> Self {
-        Self {
-            top_right: self.top_right.saturating_sub(tare_offset.top_right),
-            bottom_right: self.bottom_right.saturating_sub(tare_offset.bottom_right),
-            top_left: self.top_left.saturating_sub(tare_offset.top_left),
-            bottom_left: self.bottom_left.saturating_sub(tare_offset.bottom_left),
-        }
-    }
-
     fn calculate_weights(&self, cal: &BalanceBoardCalibrationData, mac_address: MacAddress) -> BalanceBoardCalibratedReading {
         BalanceBoardCalibratedReading {
             timestamp: Utc::now(),
