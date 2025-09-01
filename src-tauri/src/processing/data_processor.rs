@@ -51,6 +51,7 @@ pub struct ProcessedBoardData {
     pub timestamp: DateTime<Utc>,
     pub mac_address: MacAddress,
     pub sway_metrics: Option<SwayMetrics>,
+    pub stability_index: Option<f32>,
     pub area_metrics: Option<AreaMetrics>,
     pub frequency_metrics: Option<FrequencyMetrics>,
     pub dfa_alpha: Option<f32>,
@@ -174,6 +175,7 @@ fn data_process_loop(
         };
 
         let sway_calculation = calculate_basic_sway_metrics(&points);
+        let stability_index = calculate_stability_index(&points);
         let area_calculation = calculate_area_metrics(&points);
         let frequency_calculation = calculate_frequency_metrics(&points);
         let dfa_calculation = calculate_dfa_alpha(&points);
@@ -183,6 +185,7 @@ fn data_process_loop(
             timestamp: end_time,
             mac_address,
             sway_metrics: sway_calculation,
+            stability_index,
             area_metrics: area_calculation,
             frequency_metrics: frequency_calculation,
             dfa_alpha: dfa_calculation,
@@ -455,84 +458,29 @@ fn lagrange_interpolate(x_points: &[f32], y_points: &[f32], x: f32) -> f32 {
 // CALCULATIONS
 // ============================================================================
 
-#[derive(Debug, Clone)]
-pub struct CenterOfPressureRMS {
-    pub total_displacement: f32,
-    pub x_displacement: f32,
-    pub y_displacement: f32,
-    pub mean_x: f32,
-    pub mean_y: f32,
-}
-
-fn calculate_cop_rms(points: &[CenterOfPressurePoint]) -> Option<CenterOfPressureRMS> {
-    if points.is_empty() {
+fn calculate_stability_index(points: &[CenterOfPressurePoint]) -> Option<f32> {
+    if points.len() < 2 {
         return None;
     }
 
-    let n = points.len() as f32;
+    let mut sum_squared_diffs = 0.0;
+    let mut count = 0;
 
-    // Calculate mean position
-    let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n;
-    let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n;
+    for i in 1..points.len() {
+        let dx = points[i].x - points[i-1].x;
+        let dy = points[i].y - points[i-1].y;
 
-    // Calculate squared deviations
-    let mut sum_x_squared = 0.0;
-    let mut sum_y_squared = 0.0;
-    let mut sum_total_squared = 0.0;
-
-    for point in points {
-        let x_dev = point.x - mean_x;
-        let y_dev = point.y - mean_y;
-
-        sum_x_squared += x_dev * x_dev;
-        sum_y_squared += y_dev * y_dev;
-        sum_total_squared += x_dev * x_dev + y_dev * y_dev;  // Euclidean distance squared
+        // Sum of squared differences (both x and y components)
+        sum_squared_diffs += dx * dx + dy * dy;
+        count += 1;
     }
 
-    // Calculate RMS values
-    let rms_x = (sum_x_squared / n).sqrt();
-    let rms_y = (sum_y_squared / n).sqrt();
-    let rms_total = (sum_total_squared / n).sqrt();
-
-    Some(CenterOfPressureRMS {
-        total_displacement: rms_total,
-        x_displacement: rms_x,
-        y_displacement: rms_y,
-        mean_x,
-        mean_y,
-    })
-}
-
-fn calculate_x_rms(points: &[CenterOfPressurePoint]) -> Option<f32> {
-    if points.is_empty() {
+    if count == 0 {
         return None;
     }
 
-    let n = points.len() as f32;
-    let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n;
-
-    let sum_squared = points
-        .iter()
-        .map(|p| (p.x - mean_x).powi(2))
-        .sum::<f32>();
-
-    Some((sum_squared / n).sqrt())
-}
-
-fn calculate_y_rms(points: &[CenterOfPressurePoint]) -> Option<f32> {
-    if points.is_empty() {
-        return None;
-    }
-
-    let n = points.len() as f32;
-    let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n;
-
-    let sum_squared = points
-        .iter()
-        .map(|p| (p.y - mean_y).powi(2))
-        .sum::<f32>();
-
-    Some((sum_squared / n).sqrt())
+    // Square root of the mean of squared differences
+    Some((sum_squared_diffs / count as f32).sqrt())
 }
 
 // ============================================================================
@@ -724,7 +672,11 @@ fn convex_hull_graham_scan(points: &mut [(f32, f32)]) -> Vec<(f32, f32)> {
     points[1..].sort_by(|a, b| {
         let angle_a = (a.1 - bottom.1).atan2(a.0 - bottom.0);
         let angle_b = (b.1 - bottom.1).atan2(b.0 - bottom.0);
-        angle_a.partial_cmp(&angle_b).unwrap()
+        angle_a.partial_cmp(&angle_b).unwrap_or_else(|| {
+            let dist_a = ((a.0 - bottom.0).powi(2) + (a.1 - bottom.1).powi(2)).sqrt();
+            let dist_b = ((b.0 - bottom.0).powi(2) + (b.1 - bottom.1).powi(2)).sqrt();
+            dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
+        })
     });
 
     let mut hull = Vec::new();

@@ -45,7 +45,7 @@ impl BalanceBoardOutput {
     }
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, Default)]
 pub struct BalanceBoardCalibratedReading {
     pub timestamp: chrono::DateTime<Utc>,
     pub mac_address: MacAddress,
@@ -56,6 +56,17 @@ pub struct BalanceBoardCalibratedReading {
 }
 
 impl BalanceBoardCalibratedReading {
+    pub fn apply_tare(&self, tare: &BalanceBoardCalibratedReading) -> Self {
+        Self {
+            timestamp: self.timestamp,
+            mac_address: self.mac_address,
+            top_right: self.top_right - tare.top_right,
+            bottom_right: self.bottom_right - tare.bottom_right,
+            top_left: self.top_left - tare.top_left,
+            bottom_left: self.bottom_left - tare.bottom_left,
+        }
+    }
+
     pub fn calculate_cop(&self) -> CenterOfPressure {
         let x_value = 216.5; // TODO FIX THIS HARDCODED VALUE!
         let y_value = 119.0;
