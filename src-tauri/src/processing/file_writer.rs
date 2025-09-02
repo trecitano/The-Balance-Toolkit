@@ -228,16 +228,11 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
             BalanceBoardOutput::Processed(data) => {
                 if let Some(ref mut file) = processed_values_file {
                     let csv_line = format!(
-                        "{},{},{},{},{},{},{},{},{}\n",
+                        "{},{},{},{}\n",
                         data.timestamp.to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
                         data.sway_metrics.as_ref().map_or(String::new(), |v| v.mean_velocity.to_string()),
                         data.sway_metrics.as_ref().map_or(String::new(), |v| v.total_path_length.to_string()),
                         data.sway_metrics.as_ref().map_or(String::new(), |v| v.velocity_moment.to_string()),
-                        data.frequency_metrics.as_ref().map_or(String::new(), |f| f.mean_power_frequency.to_string()),
-                        data.frequency_metrics.as_ref().map_or(String::new(), |f| f.center_of_spectrum.to_string()),
-                        data.frequency_metrics.as_ref().map_or(String::new(), |f| f.total_power.to_string()),
-                        data.dfa_alpha.map_or(String::new(), |v| v.to_string()),
-                        data.jerk.map_or(String::new(), |v| v.to_string())
                     );
 
                     // Write and flush

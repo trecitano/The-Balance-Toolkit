@@ -45,7 +45,7 @@ impl UserFileSystem {
     }
 
     pub fn save(users: &Vec<Arc<User>>) -> Result<()> {
-        FileStore::save(Path::new(USERS_FILE), &users)
+        FileStore::save(Path::new(USERS_FILE), users)
     }
 }
 
@@ -185,8 +185,8 @@ impl ExistingSessionFileSystem {
             let entry = entry.ok()?;
             let path = entry.path();
 
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                if name.ends_with(".settings.json") && name.starts_with("tbt-") {
+            if let Some(name) = path.file_name().and_then(|n| n.to_str())
+                && name.ends_with(".settings.json") && name.starts_with("tbt-") {
                     // Extract the timestamp part: "2025-08-29T22-51-07"
                     if let Some(ts_str) = name.strip_prefix("tbt-")
                         .and_then(|s| s.strip_suffix(".settings.json")) {
@@ -199,7 +199,6 @@ impl ExistingSessionFileSystem {
                         }
                     }
                 }
-            }
         }
 
         println!("latest: #{:#?}", latest);

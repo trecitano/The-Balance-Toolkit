@@ -445,7 +445,7 @@ impl ConnectionManager {
                         let manager_tx = self.get_sender_channel();
 
                         // If the session has an activity that starts with a tare, then perform the tare
-                        if activity.timeline_blocks.len() > 0 && activity.timeline_blocks[0].id == "tare" {
+                        if !activity.timeline_blocks.is_empty() && activity.timeline_blocks[0].id == "tare" {
                             for device in self.session_settings.connections.values() {
                                 device.send(BoardAction::Tare).await?
                             }
@@ -823,7 +823,8 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
         window_size_ms: session_settings.window_size_ms,
         window_slide_ms: session_settings.window_slide_ms,
         sampling_rate: session_settings.sampling_rate,
-        interpolation: session_settings.interpolation.clone()
+        interpolation: session_settings.interpolation.clone(),
+        baseline_weight: session_settings.user.weight,
     };
 
     // 1 file writer

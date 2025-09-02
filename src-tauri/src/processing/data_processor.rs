@@ -1,12 +1,15 @@
-use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput};
+use crate::actors::balance_board_actor::{
+    BalanceBoardCalibratedReading, BalanceBoardOutput,
+};
 use anyhow::Result;
 use chrono::{DateTime, TimeDelta, Utc};
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::Sender;
-use rustfft::{FftPlanner, num_complex::Complex};
+use rustfft::{num_complex::Complex, FftPlanner};
+use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use std::thread;
-use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::Sender;
+
 use crate::types::MacAddress;
 
 #[derive(Debug, Clone)]
@@ -14,28 +17,31 @@ struct CenterOfPressurePoint {
     timestamp: DateTime<Utc>,
     x: f32,
     y: f32,
+    z: f32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessingSettings {
-    pub balance_board_x_size: f32,      // X distance (mm) of the Balance Board Force transducer.
-    pub balance_board_y_size: f32,      // Y distance (mm) of the Balance Board Force transducer.
-    pub window_size_ms: u64,            // Window size used for calculations
-    pub window_slide_ms: u64,           // How much the window moves
-    pub sampling_rate: u64,           // Sampling size to create a time series (using a specific interpolation)
-    pub interpolation: InterpolationSetting
+    pub balance_board_x_size: f32,
+    pub balance_board_y_size: f32,
+    pub window_size_ms: u64,
+    pub window_slide_ms: u64,
+    pub sampling_rate: u64,
+    pub interpolation: InterpolationSetting,
+    pub baseline_weight: Option<f32>,
 }
 
 impl ProcessingSettings {
     pub fn default() -> ProcessingSettings {
         ProcessingSettings {
-            balance_board_x_size:  446.0,
-            balance_board_y_size:  238.0,
-            window_size_ms: 1000,
+            balance_board_x_size: 446.0,
+            balance_board_y_size: 238.0,
+            window_size_ms: 5000,
             window_slide_ms: 100,
-            sampling_rate: 20,
-            interpolation: InterpolationSetting::Cubic
+            sampling_rate: 100,
+            interpolation: InterpolationSetting::Cubic,
+            baseline_weight: None,
         }
     }
 }
@@ -46,6 +52,7 @@ pub enum InterpolationSetting {
     Cubic,
     Polynomial,
 }
+
 #[derive(Serialize, Debug, Clone)]
 pub struct ProcessedBoardData {
     pub timestamp: DateTime<Utc>,
@@ -53,9 +60,8 @@ pub struct ProcessedBoardData {
     pub sway_metrics: Option<SwayMetrics>,
     pub stability_index: Option<f32>,
     pub area_metrics: Option<AreaMetrics>,
-    pub frequency_metrics: Option<FrequencyMetrics>,
-    pub dfa_alpha: Option<f32>,
-    pub jerk: Option<f32>,
+    pub frequency_spectrum: Option<FrequencySpectrum>,
+    pub dpsi_metrics: Option<DpsiMetrics>,
 }
 
 impl ProcessedBoardData {
@@ -68,10 +74,12 @@ impl ProcessedBoardData {
 
         // 2. Create flags byte indicating which fields are present
         let mut flags = 0u8;
-        if self.sway_metrics.is_some() { flags |= 0b0001; }
-        if self.area_metrics.is_some() { flags |= 0b0010; }
-        if self.dfa_alpha.is_some() { flags |= 0b0100; }
-        if self.jerk.is_some() { flags |= 0b1000; }
+        if self.sway_metrics.is_some() {
+            flags |= 0b0001;
+        }
+        if self.area_metrics.is_some() {
+            flags |= 0b0010;
+        }
 
         buf.push(flags);
 
@@ -82,24 +90,17 @@ impl ProcessedBoardData {
             buf.extend_from_slice(&sway.velocity_moment.to_be_bytes());
         }
 
-        if let Some(dfa) = self.dfa_alpha {
-            buf.extend_from_slice(&dfa.to_be_bytes());
-        }
-
-        if let Some(jerk) = self.jerk {
-            buf.extend_from_slice(&jerk.to_be_bytes());
-        }
-
         buf
     }
 }
 
-pub fn initialize(observers: Vec<Sender<BalanceBoardOutput>>,
-                  mac_address: MacAddress,
-                  settings: ProcessingSettings) -> Sender<BalanceBoardOutput> {
+pub fn initialize(
+    observers: Vec<Sender<BalanceBoardOutput>>,
+    mac_address: MacAddress,
+    settings: ProcessingSettings,
+) -> Sender<BalanceBoardOutput> {
     let (tx, rx) = mpsc::channel(3000);
 
-    // This requires some heavy processing, so we dedicate a thread to it.
     thread::spawn(move || {
         match data_process_loop(rx, observers, mac_address, settings) {
             Ok(_) => (),
@@ -112,21 +113,15 @@ pub fn initialize(observers: Vec<Sender<BalanceBoardOutput>>,
     tx
 }
 
-// The job of the processor is two fold:
-// When it receives a raw data, it needs to send to whoever is interested in it.
-// From X to X time, it will also send processed data.
 fn data_process_loop(
     mut rx: mpsc::Receiver<BalanceBoardOutput>,
     mut observers: Vec<Sender<BalanceBoardOutput>>,
     mac_address: MacAddress,
-    settings: ProcessingSettings
+    settings: ProcessingSettings,
 ) -> Result<()> {
     println!("Data processing execution start.");
     let mut buffer: Vec<CenterOfPressurePoint> = Vec::with_capacity(200);
 
-    let update_rate = std::time::Duration::from_millis(100);
-
-    // Window size of 5 seconds
     let window_size = std::time::Duration::from_millis(settings.window_size_ms);
     let window_slide_size = std::time::Duration::from_millis(settings.window_slide_ms);
 
@@ -137,26 +132,23 @@ fn data_process_loop(
     let cop_calculation_x_value = settings.balance_board_x_size / 2.0;
     let cop_calculation_y_value = settings.balance_board_y_size / 2.0;
 
-    // Initialization : We need to let the window build up first
-    thread::sleep(window_size);
-
     loop {
-        thread::sleep(window_slide_size);
-
         while let Ok(item) = rx.try_recv() {
             match item {
                 BalanceBoardOutput::Raw(data) => {
-                    let cop = balance_board_reading_to_cop(data, cop_calculation_x_value, cop_calculation_y_value);
+                    let cop = balance_board_reading_to_cop(
+                        data,
+                        cop_calculation_x_value,
+                        cop_calculation_y_value,
+                    );
                     buffer.push(cop);
                 }
                 BalanceBoardOutput::Processed(_) => {
-                    // This is a hack - it should be impossible for this channel to receive these events.
-                    // Just doing this to make my life easier :see_no_evil:
                     panic!()
                 }
             }
         }
-        
+
         if rx.is_closed() {
             break;
         }
@@ -164,22 +156,33 @@ fn data_process_loop(
         let end_time = buffer.last().map(|p| p.timestamp).unwrap_or(Utc::now());
         let start_time = end_time - window_size;
 
-        // Cleanup old raw readings
         let idx = buffer.partition_point(|p| p.timestamp < start_time);
         buffer.drain(0..idx);
 
+        let start_idx = buffer.partition_point(|p| p.timestamp < start_time);
+        let end_idx = buffer.partition_point(|p| p.timestamp <= end_time);
+        let window_slice = &buffer[start_idx..end_idx];
+        //println!("BEFORE INTERPOLATION: {:#?}", &window_slice);
+
         let points = match settings.interpolation {
-            InterpolationSetting::Linear => { linear_interpolation(&buffer, start_time, end_time, &sampling_size_time_delta)}
-            InterpolationSetting::Cubic => { cubic_interpolation(&buffer, start_time, end_time, &sampling_size_time_delta)}
-            InterpolationSetting::Polynomial => { polynomial_interpolation(&buffer, start_time, end_time, &sampling_size_time_delta)}
+            InterpolationSetting::Linear => {
+                linear_interpolation(&window_slice, start_time, end_time, &sampling_size_time_delta)
+            }
+            InterpolationSetting::Cubic => {
+                cubic_interpolation(&window_slice, start_time, end_time, &sampling_size_time_delta)
+            }
+            InterpolationSetting::Polynomial => {
+                polynomial_interpolation(&window_slice, start_time, end_time, &sampling_size_time_delta)
+            }
         };
+
+        //println!("AFTER INTERPOLATION: {:#?}", &points);
 
         let sway_calculation = calculate_basic_sway_metrics(&points);
         let stability_index = calculate_stability_index(&points);
         let area_calculation = calculate_area_metrics(&points);
-        let frequency_calculation = calculate_frequency_metrics(&points);
-        let dfa_calculation = calculate_dfa_alpha(&points);
-        let jerk_calculation = calculate_jerk(&points);
+        let frequency_spectrum = welch_psd_xy(&points, 1000, 0.5f32, 15f32);
+        let dpsi_metrics = calculate_dpsi_metrics(&points, settings.baseline_weight);
 
         let result = ProcessedBoardData {
             timestamp: end_time,
@@ -187,51 +190,66 @@ fn data_process_loop(
             sway_metrics: sway_calculation,
             stability_index,
             area_metrics: area_calculation,
-            frequency_metrics: frequency_calculation,
-            dfa_alpha: dfa_calculation,
-            jerk: jerk_calculation,
+            frequency_spectrum,
+            dpsi_metrics,
         };
 
         observers.retain(|observer| {
-            observer.try_send(BalanceBoardOutput::Processed(result.clone())).is_ok()
+            observer
+                .try_send(BalanceBoardOutput::Processed(result.clone()))
+                .is_ok()
         });
 
         if observers.is_empty() {
-            // No living channel interested in these results, so we can stop processing.
             break;
         }
+
+        thread::sleep(window_slide_size);
     }
 
     println!("Data processing execution complete.");
     Ok(())
 }
 
-fn balance_board_reading_to_cop(data: BalanceBoardCalibratedReading, x_value: f32, y_value: f32)
-    -> CenterOfPressurePoint {
-    let total_force = data.top_right + data.bottom_right + data.top_left + data.bottom_left;
+fn balance_board_reading_to_cop(
+    data: BalanceBoardCalibratedReading,
+    x_value: f32,
+    y_value: f32,
+) -> CenterOfPressurePoint {
+    let total_force =
+        data.top_right + data.bottom_right + data.top_left + data.bottom_left;
+
+    println!("Total pressure is {:#?}", total_force);
+
     if total_force.abs() < 0.1 {
         return CenterOfPressurePoint {
             timestamp: data.timestamp,
             x: 0.0,
             y: 0.0,
+            z: 0.0,
         };
     }
 
     let center_of_pressure_x =
-        x_value * ((data.top_right + data.bottom_right) - (data.top_left + data.bottom_left)) / total_force;
+        ((data.top_right + data.bottom_right)
+        - (data.top_left + data.bottom_left))
+        / total_force;
 
     let center_of_pressure_y =
-        y_value * ((data.top_right + data.top_left) - (data.bottom_right + data.bottom_left)) / total_force;
+        ((data.top_right + data.top_left)
+        - (data.bottom_right + data.bottom_left))
+        / total_force;
 
     CenterOfPressurePoint {
         timestamp: data.timestamp,
         x: center_of_pressure_x,
         y: center_of_pressure_y,
+        z: total_force,
     }
 }
 
 // ============================================================================
-// PRE-PROCESSING ALGORITHMS
+// INTERPOLATION FUNCTIONS
 // ============================================================================
 
 fn linear_interpolation(
@@ -244,7 +262,6 @@ fn linear_interpolation(
     let mut current_time = start_time;
 
     while current_time <= end_time {
-        // Find the two points to interpolate between
         if let Some((before, after)) = find_interpolation_points(points, current_time) {
             let interpolated = if before.timestamp == after.timestamp {
                 before.clone()
@@ -258,6 +275,7 @@ fn linear_interpolation(
                     timestamp: current_time,
                     x: before.x + t * (after.x - before.x),
                     y: before.y + t * (after.y - before.y),
+                    z: before.z + t * (after.z - before.z),
                 }
             };
 
@@ -282,33 +300,30 @@ fn cubic_interpolation(
 
     let mut result = Vec::new();
 
-    // Extract time points as seconds from start_time
     let times: Vec<f32> = points
         .iter()
-        .map(|p| (p.timestamp - start_time).num_milliseconds() as f32 / 1000.0)
+        .map(|p| (p.timestamp - start_time).num_microseconds().unwrap_or(0) as f32 / 1_000_000.0)
         .collect();
 
-    // Create cubic splines for x and y coordinates
-    let x_spline = create_cubic_spline(
-        &times,
-        &points.iter().map(|p| p.x).collect::<Vec<_>>()
-    );
-    let y_spline = create_cubic_spline(
-        &times,
-        &points.iter().map(|p| p.y).collect::<Vec<_>>()
-    );
+    let x_spline =
+        create_cubic_spline(&times, &points.iter().map(|p| p.x).collect::<Vec<_>>());
+    let y_spline =
+        create_cubic_spline(&times, &points.iter().map(|p| p.y).collect::<Vec<_>>());
+    let z_spline =
+        create_cubic_spline(&times, &points.iter().map(|p| p.z).collect::<Vec<_>>());
 
     let mut current_time = start_time;
 
     while current_time <= end_time {
-        let t_seconds = (current_time - start_time).num_milliseconds() as f32 / 1000.0;
+        let t_seconds =
+            (current_time - start_time).num_microseconds().unwrap_or(0) as f32 / 1_000_000.0;
 
-        // Check if we're within the interpolation range
         if t_seconds >= times[0] && t_seconds <= times[times.len() - 1] {
             let interpolated = CenterOfPressurePoint {
                 timestamp: current_time,
                 x: evaluate_cubic_spline(&x_spline, &times, t_seconds),
                 y: evaluate_cubic_spline(&y_spline, &times, t_seconds),
+                z: evaluate_cubic_spline(&z_spline, &times, t_seconds),
             };
 
             result.push(interpolated);
@@ -340,14 +355,27 @@ fn polynomial_interpolation(
     let mut current_time = start_time;
 
     while current_time <= end_time {
-        let t_seconds = (current_time - start_time).num_milliseconds() as f32 / 1000.0;
+        let t_seconds =
+            (current_time - start_time).num_milliseconds() as f32 / 1000.0;
 
-        // Check if we're within the interpolation range
         if t_seconds >= times[0] && t_seconds <= times[times.len() - 1] {
             let interpolated = CenterOfPressurePoint {
                 timestamp: current_time,
-                x: lagrange_interpolate(&times, &points.iter().map(|p| p.x).collect::<Vec<_>>(), t_seconds),
-                y: lagrange_interpolate(&times, &points.iter().map(|p| p.y).collect::<Vec<_>>(), t_seconds),
+                x: lagrange_interpolate(
+                    &times,
+                    &points.iter().map(|p| p.x).collect::<Vec<_>>(),
+                    t_seconds,
+                ),
+                y: lagrange_interpolate(
+                    &times,
+                    &points.iter().map(|p| p.y).collect::<Vec<_>>(),
+                    t_seconds,
+                ),
+                z: lagrange_interpolate(
+                    &times,
+                    &points.iter().map(|p| p.z).collect::<Vec<_>>(),
+                    t_seconds,
+                ),
             };
 
             result.push(interpolated);
@@ -392,7 +420,8 @@ fn create_cubic_spline(x: &[f32], y: &[f32]) -> CubicSpline {
     }
 
     for i in 1..n {
-        alpha[i] = 3.0 * (y[i + 1] - y[i]) / h[i] - 3.0 * (y[i] - y[i - 1]) / h[i - 1];
+        alpha[i] = 3.0 * (y[i + 1] - y[i]) / h[i]
+            - 3.0 * (y[i] - y[i - 1]) / h[i - 1];
     }
 
     let mut l = vec![1.0; n + 1];
@@ -411,7 +440,8 @@ fn create_cubic_spline(x: &[f32], y: &[f32]) -> CubicSpline {
 
     for j in (0..n).rev() {
         c[j] = z[j] - mu[j] * c[j + 1];
-        b[j] = (y[j + 1] - y[j]) / h[j] - h[j] * (c[j + 1] + 2.0 * c[j]) / 3.0;
+        b[j] = (y[j + 1] - y[j]) / h[j]
+            - h[j] * (c[j + 1] + 2.0 * c[j]) / 3.0;
         d[j] = (c[j + 1] - c[j]) / (3.0 * h[j]);
     }
 
@@ -433,7 +463,10 @@ fn evaluate_cubic_spline(spline: &CubicSpline, x_points: &[f32], x: f32) -> f32 
     }
 
     let dx = x - x_points[i];
-    spline.a[i] + spline.b[i] * dx + spline.c[i] * dx * dx + spline.d[i] * dx * dx * dx
+    spline.a[i]
+        + spline.b[i] * dx
+        + spline.c[i] * dx * dx
+        + spline.d[i] * dx * dx * dx
 }
 
 fn lagrange_interpolate(x_points: &[f32], y_points: &[f32], x: f32) -> f32 {
@@ -453,34 +486,29 @@ fn lagrange_interpolate(x_points: &[f32], y_points: &[f32], x: f32) -> f32 {
     result
 }
 
-
 // ============================================================================
 // CALCULATIONS
 // ============================================================================
 
 fn calculate_stability_index(points: &[CenterOfPressurePoint]) -> Option<f32> {
-    if points.len() < 2 {
+    if points.len() < 3 {
         return None;
     }
 
-    let mut sum_squared_diffs = 0.0;
-    let mut count = 0;
+    let n = points.len() as f32;
 
-    for i in 1..points.len() {
-        let dx = points[i].x - points[i-1].x;
-        let dy = points[i].y - points[i-1].y;
+    // 1. Calculate RMS (Root Mean Square) of COP displacement
+    let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n;
+    let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n;
 
-        // Sum of squared differences (both x and y components)
-        sum_squared_diffs += dx * dx + dy * dy;
-        count += 1;
+    let mut sum_sq_displacement = 0.0;
+    for point in points {
+        let dx = point.x - mean_x;
+        let dy = point.y - mean_y;
+        sum_sq_displacement += dx * dx + dy * dy;
     }
 
-    if count == 0 {
-        return None;
-    }
-
-    // Square root of the mean of squared differences
-    Some((sum_squared_diffs / count as f32).sqrt())
+    Some((sum_sq_displacement / n).sqrt())
 }
 
 // ============================================================================
@@ -496,7 +524,9 @@ pub struct SwayMetrics {
     pub velocity_moment: f32,
 }
 
-fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<SwayMetrics> {
+fn calculate_basic_sway_metrics(
+    points: &[CenterOfPressurePoint],
+) -> Option<SwayMetrics> {
     if points.len() < 2 {
         return None;
     }
@@ -508,7 +538,8 @@ fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<Sway
     let mut total_time = 0.0;
 
     for i in 1..points.len() {
-        let dt = (points[i].timestamp - points[i - 1].timestamp).num_milliseconds() as f32
+        let dt = (points[i].timestamp - points[i - 1].timestamp).num_milliseconds()
+            as f32
             / 1000.0;
 
         if dt > 0.0 {
@@ -534,9 +565,9 @@ fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<Sway
 
     let v_cop_x = velocities_x.iter().sum::<f32>() / velocities_x.len() as f32;
     let v_cop_y = velocities_y.iter().sum::<f32>() / velocities_y.len() as f32;
-    let mean_velocity = velocities_total.iter().sum::<f32>() / velocities_total.len() as f32;
+    let mean_velocity =
+        velocities_total.iter().sum::<f32>() / velocities_total.len() as f32;
 
-    // Velocity Moment (normalized path length)
     let velocity_moment = if total_time > 0.0 {
         total_path_length / total_time
     } else {
@@ -549,6 +580,58 @@ fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<Sway
         mean_velocity,
         total_path_length,
         velocity_moment,
+    })
+}
+
+// ============================================================================
+// DPSI METRICS
+// ============================================================================
+
+#[derive(Serialize, Debug, Clone)]
+pub struct DpsiMetrics {
+    pub mlsi: f32,
+    pub apsi: f32,
+    pub vsi: f32,
+    pub dpsi: f32,
+}
+
+fn calculate_dpsi_metrics(
+    points: &[CenterOfPressurePoint],
+    baseline_weight: Option<f32>,
+) -> Option<DpsiMetrics> {
+    if points.is_empty() {
+        return None;
+    }
+
+    let n = points.len() as f32;
+    let baseline = match baseline_weight {
+        Some(b) => b,
+        None => points.iter().map(|p| p.z).sum::<f32>() / n,
+    };
+
+    let mut sum_x2 = 0.0_f32;
+    let mut sum_y2 = 0.0_f32;
+    let mut sum_zdiff2 = 0.0_f32;
+
+    for p in points {
+        sum_x2 += p.x * p.x;
+        sum_y2 += p.y * p.y;
+        let dz = baseline - p.z;
+        sum_zdiff2 += dz * dz;
+    }
+
+    let mlsi = (sum_x2 / n).sqrt();
+    let apsi = (sum_y2 / n).sqrt();
+    let vsi = (sum_zdiff2 / n).sqrt();
+    let dpsi = ((sum_x2 + sum_y2 + sum_zdiff2) / n).sqrt();
+
+    println!("dpsi: {}, mlsi: {}, apsi: {}, vsi: {}, sum_x2: {}, sum_y2: {}, sum_zdiff2: {}, n: {}", dpsi, mlsi, apsi, vsi, sum_x2, sum_y2, sum_zdiff2, n);
+
+    Some(DpsiMetrics {
+        mlsi,
+        apsi,
+        vsi,
+        dpsi,
     })
 }
 
@@ -672,11 +755,15 @@ fn convex_hull_graham_scan(points: &mut [(f32, f32)]) -> Vec<(f32, f32)> {
     points[1..].sort_by(|a, b| {
         let angle_a = (a.1 - bottom.1).atan2(a.0 - bottom.0);
         let angle_b = (b.1 - bottom.1).atan2(b.0 - bottom.0);
-        angle_a.partial_cmp(&angle_b).unwrap_or_else(|| {
+
+        let ord = angle_a.total_cmp(&angle_b);
+        if ord == std::cmp::Ordering::Equal {
             let dist_a = ((a.0 - bottom.0).powi(2) + (a.1 - bottom.1).powi(2)).sqrt();
             let dist_b = ((b.0 - bottom.0).powi(2) + (b.1 - bottom.1).powi(2)).sqrt();
-            dist_a.partial_cmp(&dist_b).unwrap_or(std::cmp::Ordering::Equal)
-        })
+            dist_a.total_cmp(&dist_b)
+        } else {
+            ord
+        }
     });
 
     let mut hull = Vec::new();
@@ -794,21 +881,22 @@ fn chi_square_quantile_2df(p: f32) -> Option<f32> {
 // ============================================================================
 
 #[derive(Serialize, Debug, Clone)]
-pub struct FrequencyMetrics {
-    pub mean_power_frequency: f32,
-    pub center_of_spectrum: f32,
-    pub total_power: f32,
+pub struct FrequencySpectrum {
+    pub freqs_hz: Vec<f32>,
+    pub psd_xy: Vec<f32>, // summed x+y one-sided PSD (mm^2/Hz)
 }
 
-// https://en.wikipedia.org/wiki/Spectral_density#Power_spectral_density
-fn calculate_frequency_metrics(
+fn welch_psd_xy(
     points: &[CenterOfPressurePoint],
-) -> Option<FrequencyMetrics> {
-    if points.len() < 8 {
+    seg_len: usize,      // e.g., 1000 for 0.1 Hz resolution at 100 Hz sampling
+    overlap: f32,        // e.g., 0.5 (50%)
+    max_hz: f32,         // e.g., 10.0 Hz
+) -> Option<FrequencySpectrum> {
+    if points.len() < seg_len || seg_len < 8 || !(0.0..1.0).contains(&overlap) {
         return None;
     }
 
-    // Uniform dt assumed due to resampling
+    // Uniform dt assumed after your interpolation
     let dt = (points[1].timestamp - points[0].timestamp)
         .num_microseconds()? as f32
         / 1_000_000.0;
@@ -816,254 +904,85 @@ fn calculate_frequency_metrics(
         return None;
     }
     let fs = 1.0 / dt;
+    let step = (seg_len as f32 * (1.0 - overlap)).max(1.0).round() as usize;
 
-    // Use signed COP components, not speed magnitude
-    // You can average PSDs from x and y or concatenate. Here we sum PSDs.
+    // Demean x,y
     let n = points.len();
-    let mut x = Vec::with_capacity(n);
-    let mut y = Vec::with_capacity(n);
-
-    // Remove mean to reduce DC
     let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n as f32;
     let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n as f32;
 
-    for p in points {
-        x.push(p.x - mean_x);
-        y.push(p.y - mean_y);
-    }
+    let x: Vec<f32> = points.iter().map(|p| p.x - mean_x).collect();
+    let y: Vec<f32> = points.iter().map(|p| p.y - mean_y).collect();
 
-    // Hann window
-    let mut w = Vec::with_capacity(n);
-    let mut wsum = 0.0_f32;
+    // Hann window and its normalization U
+    let mut w = vec![0.0_f32; seg_len];
     let mut w2sum = 0.0_f32;
-    for i in 0..n {
-        let wi = 0.5 - 0.5 * (2.0 * std::f32::consts::PI * i as f32
-            / (n as f32 - 1.0))
-            .cos();
-        w.push(wi);
-        wsum += wi;
+    for i in 0..seg_len {
+        let wi = 0.5 - 0.5 * (2.0 * std::f32::consts::PI * i as f32 / (seg_len as f32 - 1.0)).cos();
+        w[i] = wi;
         w2sum += wi * wi;
     }
+    let u = w2sum / seg_len as f32; // window power normalization
 
-    // Apply window
-    let mut inx = Vec::with_capacity(n);
-    let mut iny = Vec::with_capacity(n);
-    for i in 0..n {
-        inx.push(Complex::new(x[i] * w[i], 0.0));
-        iny.push(Complex::new(y[i] * w[i], 0.0));
-    }
-
-    // FFT (no zero-padding for power)
+    // FFT setup
     let mut planner = FftPlanner::new();
-    let fft = planner.plan_fft_forward(n);
-    fft.process(&mut inx);
-    fft.process(&mut iny);
+    let fft = planner.plan_fft_forward(seg_len);
 
-    // One-sided PSD scaling (periodogram):
-    // Sxx[k] = (2*dt/(U*N)) * (|X[k]|^2), for k=1..N/2-1
-    // U = (1/N)*sum(w^2); DC and Nyquist not doubled.
-    let u = w2sum / n as f32;
-    let mut psd = Vec::new();
-    let mut freqs = Vec::new();
-    let nhalf = n / 2 + 1;
+    let nhalf = seg_len / 2 + 1;
+    let mut acc_psd = vec![0.0_f32; nhalf];
+    let mut nseg = 0usize;
 
-    for k in 0..nhalf {
-        let fx = inx[k].norm_sqr();
-        let fy = iny[k].norm_sqr();
-        let mut s = (fx + fy) * dt / (u * n as f32);
-        if k != 0 && k != nhalf - 1 {
-            s *= 2.0;
+    let mut start = 0usize;
+    while start + seg_len <= n {
+        // Windowed segment
+        let mut sx: Vec<Complex<f32>> = (0..seg_len)
+            .map(|i| Complex::new(x[start + i] * w[i], 0.0))
+            .collect();
+        let mut sy: Vec<Complex<f32>> = (0..seg_len)
+            .map(|i| Complex::new(y[start + i] * w[i], 0.0))
+            .collect();
+
+        fft.process(&mut sx);
+        fft.process(&mut sy);
+
+        // One-sided PSD, scale for density (mm^2/Hz)
+        for k in 0..nhalf {
+            let fx = sx[k].norm_sqr();
+            let fy = sy[k].norm_sqr();
+            let mut s = (fx + fy) * dt / (u * seg_len as f32);
+            if k != 0 && k != nhalf - 1 {
+                s *= 2.0;
+            }
+            acc_psd[k] += s;
         }
-        psd.push(s);
-        freqs.push(k as f32 * fs / n as f32);
+
+        nseg += 1;
+        start += step;
     }
 
-    let total_power: f32 = psd.iter().sum();
-    if total_power <= 0.0 {
+    if nseg == 0 {
         return None;
     }
 
-    // Mean Power Frequency
-    let mut wsumf = 0.0;
-    for i in 0..psd.len() {
-        wsumf += psd[i] * freqs[i];
-    }
-    let mean_power_frequency = wsumf / total_power;
+    let psd: Vec<f32> = acc_psd.into_iter().map(|v| v / nseg as f32).collect();
+    let freqs: Vec<f32> = (0..nhalf)
+        .map(|k| k as f32 * fs / seg_len as f32)
+        .collect();
 
-    // Median frequency
-    let mut cum = 0.0;
-    let half = total_power / 2.0;
-    let mut center_of_spectrum = freqs[0];
-    for i in 0..psd.len() {
-        cum += psd[i];
-        if cum >= half {
-            center_of_spectrum = freqs[i];
+    // --- NEW: Clip to max_hz (e.g., 10 Hz) ---
+    let mut freqs_clipped = Vec::new();
+    let mut psd_clipped = Vec::new();
+    for (f, p) in freqs.iter().zip(psd.iter()) {
+        if *f <= max_hz {
+            freqs_clipped.push(*f);
+            psd_clipped.push(*p);
+        } else {
             break;
         }
     }
 
-    Some(FrequencyMetrics {
-        mean_power_frequency,
-        center_of_spectrum,
-        total_power,
+    Some(FrequencySpectrum {
+        freqs_hz: freqs_clipped,
+        psd_xy: psd_clipped,
     })
-}
-
-// ============================================================================
-// DETRENDED FLUCTUATION ANALYSIS (DFA)
-// ============================================================================
-
-// https://en.wikipedia.org/wiki/Detrended_fluctuation_analysis
-fn calculate_dfa_alpha(points: &[CenterOfPressurePoint]) -> Option<f32> {
-    if points.len() < 16 {
-        return None;
-    }
-
-    // Create time series (resultant displacement from mean)
-    let mean_x = points.iter().map(|p| p.x).sum::<f32>() / points.len() as f32;
-    let mean_y = points.iter().map(|p| p.y).sum::<f32>() / points.len() as f32;
-
-    let time_series: Vec<f32> = points.iter()
-        .map(|p| ((p.x - mean_x).powi(2) + (p.y - mean_y).powi(2)).sqrt())
-        .collect();
-
-    // Remove mean
-    let series_mean = time_series.iter().sum::<f32>() / time_series.len() as f32;
-    let centered_series: Vec<f32> = time_series.iter().map(|x| x - series_mean).collect();
-
-    // Create cumulative sum
-    let mut cumsum = vec![0.0; centered_series.len()];
-    cumsum[0] = centered_series[0];
-    for i in 1..centered_series.len() {
-        cumsum[i] = cumsum[i-1] + centered_series[i];
-    }
-
-    // Define window sizes (powers of 2 from 4 to N/4)
-    let mut window_sizes = Vec::new();
-    let mut size = 4;
-    while size <= centered_series.len() / 4 {
-        window_sizes.push(size);
-        size *= 2;
-    }
-
-    if window_sizes.len() < 3 {
-        return None;
-    }
-
-    let mut log_sizes = Vec::new();
-    let mut log_fluctuations = Vec::new();
-
-    for &window_size in &window_sizes {
-        let mut fluctuations = Vec::new();
-
-        // Divide series into non-overlapping windows
-        let num_windows = cumsum.len() / window_size;
-
-        for w in 0..num_windows {
-            let start = w * window_size;
-            let end = start + window_size;
-
-            if end <= cumsum.len() {
-                let window = &cumsum[start..end];
-
-                // Fit linear trend
-                let n = window.len() as f32;
-                let x_mean = (n - 1.0) / 2.0;
-                let y_mean = window.iter().sum::<f32>() / n;
-
-                let mut numerator = 0.0;
-                let mut denominator = 0.0;
-
-                for (i, &y) in window.iter().enumerate() {
-                    let x = i as f32;
-                    numerator += (x - x_mean) * (y - y_mean);
-                    denominator += (x - x_mean).powi(2);
-                }
-
-                let slope = if denominator != 0.0 { numerator / denominator } else { 0.0 };
-                let intercept = y_mean - slope * x_mean;
-
-                // Calculate detrended fluctuation
-                let mut sum_sq_dev = 0.0;
-                for (i, &y) in window.iter().enumerate() {
-                    let trend = slope * i as f32 + intercept;
-                    sum_sq_dev += (y - trend).powi(2);
-                }
-
-                fluctuations.push(sum_sq_dev / n);
-            }
-        }
-
-        if !fluctuations.is_empty() {
-            let avg_fluctuation = fluctuations.iter().sum::<f32>() / fluctuations.len() as f32;
-            log_sizes.push((window_size as f32).ln());
-            log_fluctuations.push(avg_fluctuation.sqrt().ln());
-        }
-    }
-
-    // Linear regression to find alpha (slope)
-    if log_sizes.len() < 2 {
-        return None;
-    }
-
-    let n = log_sizes.len() as f32;
-    let x_mean = log_sizes.iter().sum::<f32>() / n;
-    let y_mean = log_fluctuations.iter().sum::<f32>() / n;
-
-    let mut numerator = 0.0;
-    let mut denominator = 0.0;
-
-    for i in 0..log_sizes.len() {
-        numerator += (log_sizes[i] - x_mean) * (log_fluctuations[i] - y_mean);
-        denominator += (log_sizes[i] - x_mean).powi(2);
-    }
-
-    if denominator == 0.0 {
-        return None;
-    }
-
-    Some(numerator / denominator)
-}
-
-// ============================================================================
-// ADVANCED METRICS
-// ============================================================================
-
-// https://en.wikipedia.org/wiki/Jerk_(physics)
-fn calculate_jerk(points: &[CenterOfPressurePoint]) -> Option<f32> {
-    if points.len() < 4 {
-        return None;
-    }
-    // Assume uniform dt
-    let dt = (points[1].timestamp - points[0].timestamp)
-        .num_microseconds()? as f32
-        / 1_000_000.0;
-    if dt <= 0.0 {
-        return None;
-    }
-    let dt3 = dt * dt * dt;
-
-    let mut jsq_sum = 0.0_f32;
-    let mut count = 0usize;
-
-    for i in 3..points.len() {
-        let jx = (points[i].x
-            - 3.0 * points[i - 1].x
-            + 3.0 * points[i - 2].x
-            - points[i - 3].x)
-            / dt3;
-        let jy = (points[i].y
-            - 3.0 * points[i - 1].y
-            + 3.0 * points[i - 2].y
-            - points[i - 3].y)
-            / dt3;
-        let j2 = jx * jx + jy * jy;
-        jsq_sum += j2;
-        count += 1;
-    }
-
-    if count == 0 {
-        return None;
-    }
-    Some((jsq_sum / count as f32).sqrt())
 }
