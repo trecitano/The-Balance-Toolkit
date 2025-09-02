@@ -62,7 +62,7 @@ pub struct User {
     pub gender: Option<String>,
     pub height: Option<f64>,
     pub height_metric: Option<String>,
-    pub weight: Option<f64>,
+    pub weight: Option<f32>,
     pub weight_metric: Option<String>,
     pub handedness: Option<String>,
     pub color: Option<String>,

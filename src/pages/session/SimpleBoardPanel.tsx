@@ -5,6 +5,9 @@ import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
 import { StoreApi } from "zustand";
 import { SessionState } from "@/store/sessionDataStore.tsx";
 import { ProcessedSessionData } from "@/types.ts";
+import wbbTopdown from "@/assets/wbb-topdown.svg";
+import ToolkitContainer from "@/components/ToolkitContainer.tsx";
+import {PSDPlot} from "@/pages/session/PSDPlot.tsx";
 
 export function BoardPanel({
   boardName,
@@ -19,56 +22,41 @@ export function BoardPanel({
   const [showConvexHull, setShowConvexHull] = useState(true);
 
   return (
-    <section className="rounded-lg bg-white p-3">
+    <ToolkitContainer>
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-semibold">{boardName}</h3>
         <p>{convertNumberToMacAddress(macAddress)}</p>
       </div>
 
-      <div className="grid grid-cols-12 gap-3">
+      <div className="grid grid-cols-6 gap-3">
         {/* Top row: Board drawing (SVG) left, metrics right */}
-        <div className="col-span-6 rounded bg-gray-100 p-2">
+        <div className="col-span-3 flex rounded bg-gray-100 p-2">
           <BalanceBoardWithCoPOverlay
+            className="h-[100px] w-7/10"
             macAddress={macAddress}
-            showConfidenceEllipse={showConfidenceEllipse}
-            showConvexHull={showConvexHull}
+            src={wbbTopdown}
             store={store}
           />
         </div>
 
-        <div className="col-span-6 rounded bg-gray-100 p-2">
-          <div className="flex flex-col gap-3">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={showConfidenceEllipse}
-                onChange={(e) => setShowConfidenceEllipse(e.target.checked)}
-              />
-              <span>Confidence ellipse</span>
-            </label>
-
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={showConvexHull}
-                onChange={(e) => setShowConvexHull(e.target.checked)}
-              />
-              <span>Convex hull</span>
-            </label>
-          </div>
+        <div className="col-span-3 rounded bg-gray-100 p-2">
+          <PSDPlot
+            title="Power Spectral Density"
+            macAddress={macAddress}
+            store={store}
+            maxFreq={15.0}  // Focus on 0-5 Hz range typical for postural sway
+            logScale={true}  // or true if you prefer log scale
+          />
         </div>
 
-        {/* Middle row: blue CoP-related charts */}
-        <div className="col-span-6 rounded bg-gray-100 p-2">
-          <UPlot {...copYPlotSettings(macAddress)} store={store} />
+        <div className="col-span-3 rounded bg-gray-100 p-2">
+          <UPlot title="copX" {...copXPlotSettings(macAddress)} store={store} />
         </div>
-        <div className="col-span-6 rounded bg-gray-100 p-2">
-          <UPlot {...copXPlotSettings(macAddress)} store={store} />
+        <div className="col-span-3 rounded bg-gray-100 p-2">
+          <UPlot title="copY" {...copYPlotSettings(macAddress)} store={store} />
         </div>
 
-        <div className="col-span-2 rounded bg-gray-100 p-2">
+        <div className="col-span-3 rounded bg-gray-100 p-2">
           <UPlot
             title="vCopX"
             uPlotOptions={standardPlot(RED_COLOUR)}
@@ -77,7 +65,7 @@ export function BoardPanel({
             store={store}
           />
         </div>
-        <div className="col-span-2 rounded bg-gray-100 p-2">
+        <div className="col-span-3 rounded bg-gray-100 p-2">
           <UPlot
             title="vCopY"
             uPlotOptions={standardPlot(RED_COLOUR)}
@@ -87,7 +75,7 @@ export function BoardPanel({
           />
         </div>
       </div>
-    </section>
+    </ToolkitContainer>
   );
 }
 

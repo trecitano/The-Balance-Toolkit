@@ -70,14 +70,17 @@ function createSessionDataStore() {
               timestamp: f.timestamp,
               vCopX: f.vCopX,
               vCopY: f.vCopY,
-              meanPowerFrequency: f.meanPowerFrequency,
-              centerOfSpectrum: f.centerOfSpectrum,
-              totalPower: f.totalPower,
+              mlsi: f.mlsi,
+              apsi: f.apsi,
+              vsi: f.vsi,
+              dpsi: f.dpsi
             };
+            console.log("New frame: ", f)
             const singleFrameData: ProcessedSingleFrameSessionData = {
               confidenceEllipsePolygon: f.confidenceEllipsePolygon,
               convexHullPolygon: f.convexHullPolygon,
-              stabilityIndex: f.stabilityIndex
+              stabilityIndex: f.stabilityIndex,
+              frequencySpectrum: f.frequencySpectrum
             };
 
             const oldSessionBuffer =

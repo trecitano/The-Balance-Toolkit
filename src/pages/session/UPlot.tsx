@@ -100,7 +100,7 @@ export function copYPlotSettings(macAddress: number) {
           return [now - 10, now + pad];
         },
       },
-      y: { range: [-50, 50] },
+      y: { range: [-1, 1] },
     },
     axes: [
       {
@@ -148,8 +148,8 @@ export function copXPlotSettings(macAddress: number) {
   const color = BLUE_COLOUR;
 
   // Horizontal domain (CoP-X)
-  const X_MIN = -200;
-  const X_MAX = 200;
+  const X_MIN = -1;
+  const X_MAX = 1;
 
   // Vertical domain (time window)
   const WINDOW_SEC = 10;

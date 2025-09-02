@@ -5,7 +5,11 @@ import { useState } from "react";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
 import { StoreApi } from "zustand";
 import { SessionState } from "@/store/sessionDataStore.tsx";
-import { ProcessedSessionData } from "@/types.ts";
+import {ProcessedSessionData, ProcessedSingleFrameSessionData} from "@/types.ts";
+import {PSDPlot} from "@/pages/session/PSDPlot.tsx";
+import ToolkitContainer from "@/components/ToolkitContainer.tsx";
+import {MultiMetricPlot} from "@/pages/session/MultiMetricDsiPlot.tsx";
+import {StabilityBarGauge} from "@/pages/session/StabilityBarGauge.tsx";
 
 export function ComplexBoardPanel({
   boardName,
@@ -16,65 +20,38 @@ export function ComplexBoardPanel({
   macAddress: number;
   store: StoreApi<SessionState>;
 }) {
-  const [showConfidenceEllipse, setShowConfidenceEllipse] = useState(true);
-  const [showConvexHull, setShowConvexHull] = useState(true);
-
   return (
-    <section className="flex-1 rounded-lg bg-white p-3">
+    <ToolkitContainer className={"flex-1"}>
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-semibold">{boardName}</h3>
         <p>{convertNumberToMacAddress(macAddress)}</p>
       </div>
 
       <div className="grid grid-cols-10 grid-rows-2 gap-3">
-        <div className="col-span-3 flex rounded bg-gray-100 p-2">
-          <BalanceBoardWithCoPOverlay
-            className="h-[100px] w-7/10"
-            macAddress={macAddress}
-            src={wbbTopdown}
-            store={store}
-          />
+        <div className="col-span-4 flex rounded bg-gray-100 p-2 gap-3">
+          <div className="flex-1">
+            <BalanceBoardWithCoPOverlay
+              className="h-[100px] w-full"
+              macAddress={macAddress}
+              src={wbbTopdown}
+              store={store}
+            />
+          </div>
+          <div className="flex items-center">
+            <StabilityBarGauge
+              macAddress={macAddress}
+              store={store}
+              width={50}
+              height={180}
+            />
+          </div>
         </div>
 
-        {/* Middle row: blue CoP-related charts */}
         <div className="col-span-2 rounded bg-gray-100 p-2">
           <UPlot title="copX" {...copXPlotSettings(macAddress)} store={store} />
         </div>
         <div className="col-span-2 rounded bg-gray-100 p-2">
           <UPlot title="copY" {...copYPlotSettings(macAddress)} store={store} />
-        </div>
-
-        <div className="col-span-3 flex rounded bg-gray-100 p-2">
-          <BalanceBoardWithCoPOverlay
-            className="h-[100px] w-7/10"
-            macAddress={macAddress}
-            src={wbbTopdown}
-            showConfidenceEllipse={showConfidenceEllipse}
-            showConvexHull={showConvexHull}
-            store={store}
-          />
-
-          <div className="flex flex-col gap-3">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={showConfidenceEllipse}
-                onChange={(e) => setShowConfidenceEllipse(e.target.checked)}
-              />
-              <span>Confidence ellipse</span>
-            </label>
-
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={showConvexHull}
-                onChange={(e) => setShowConvexHull(e.target.checked)}
-              />
-              <span>Convex hull</span>
-            </label>
-          </div>
         </div>
 
         <div className="col-span-2 rounded bg-gray-100 p-2">
@@ -86,6 +63,17 @@ export function ComplexBoardPanel({
             store={store}
           />
         </div>
+
+        <div className="col-span-3 rounded bg-gray-100 p-2">
+          <PSDPlot
+            title="Power Spectral Density"
+            macAddress={macAddress}
+            store={store}
+            maxFreq={15.0}  // Focus on 0-5 Hz range typical for postural sway
+            logScale={true}  // or true if you prefer log scale
+          />
+        </div>
+
         <div className="col-span-2 rounded bg-gray-100 p-2">
           <UPlot
             title="vCopY"
@@ -95,8 +83,17 @@ export function ComplexBoardPanel({
             store={store}
           />
         </div>
+
+        {/* Combined DPSI metrics plot - spans 4 columns */}
+        <div className="col-span-2 rounded bg-gray-100 p-2">
+          <MultiMetricPlot
+            title="DPSI Metrics"
+            macAddress={macAddress}
+            store={store}
+          />
+        </div>
       </div>
-    </section>
+    </ToolkitContainer>
   );
 }
 

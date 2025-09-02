@@ -68,9 +68,6 @@ impl BalanceBoardCalibratedReading {
     }
 
     pub fn calculate_cop(&self) -> CenterOfPressure {
-        let x_value = 216.5; // TODO FIX THIS HARDCODED VALUE!
-        let y_value = 119.0;
-
         let total_force = self.top_right + self.bottom_right + self.top_left + self.bottom_left;
         if total_force.abs() < 0.1 {
             return CenterOfPressure {
@@ -80,10 +77,10 @@ impl BalanceBoardCalibratedReading {
         }
 
         let center_of_pressure_x =
-            x_value * ((self.top_right + self.bottom_right) - (self.top_left + self.bottom_left)) / total_force;
+            ((self.top_right + self.bottom_right) - (self.top_left + self.bottom_left)) / total_force;
 
         let center_of_pressure_y =
-            y_value * ((self.top_right + self.top_left) - (self.bottom_right + self.bottom_left)) / total_force;
+            ((self.top_right + self.top_left) - (self.bottom_right + self.bottom_left)) / total_force;
 
         CenterOfPressure {
             x: center_of_pressure_x,

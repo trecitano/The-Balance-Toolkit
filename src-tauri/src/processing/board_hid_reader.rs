@@ -110,33 +110,34 @@ fn blocking_hid_loop(
             }
         }
 
-        match read_from_device(&device, &mut buf) {
-            Ok(len) if len > 0 => {
-                if len >= DATA_PACKET_MIN_LEN {
-                    let reading = BalanceBoardSensorRawReading {
-                        top_right: i16::from_be_bytes([buf[3], buf[4]]),
-                        bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
-                        top_left: i16::from_be_bytes([buf[7], buf[8]]),
-                        bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
-                    };
+        // If there is a listener, then read data from the balance board
+        if let Some(tx) = &tx_channel {
+            match read_from_device(&device, &mut buf) {
+                Ok(len) if len > 0 => {
+                    if len >= DATA_PACKET_MIN_LEN {
+                        let reading = BalanceBoardSensorRawReading {
+                            top_right: i16::from_be_bytes([buf[3], buf[4]]),
+                            bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
+                            top_left: i16::from_be_bytes([buf[7], buf[8]]),
+                            bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
+                        };
 
-                    if update_tare {
-                        update_tare = false;
-                        tare_value = reading.clone().calculate_weights(&calibration, mac_address);
-                    }
+                        if update_tare {
+                            update_tare = false;
+                            tare_value = reading.clone().calculate_weights(&calibration, mac_address);
+                        }
 
-                    let calibrated_reading = reading.calculate_weights(&calibration, mac_address);
-                    let tared_reading = calibrated_reading.apply_tare(&tare_value);
+                        let calibrated_reading = reading.calculate_weights(&calibration, mac_address);
+                        let tared_reading = calibrated_reading.apply_tare(&tare_value);
 
-                    if let Some(tx) = &tx_channel {
                         tx.blocking_send(tared_reading)?;
                     }
                 }
-            }
-            Ok(_) => { /* Timeout, continue */ }
-            Err(e) => {
-                eprintln!("Error reading from HID device: {}", e);
-                break;
+                Ok(_) => { /* Timeout, continue */ }
+                Err(e) => {
+                    eprintln!("Error reading from HID device: {}", e);
+                    break;
+                }
             }
         }
     }

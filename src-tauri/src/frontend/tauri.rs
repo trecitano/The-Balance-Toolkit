@@ -14,6 +14,7 @@ use tauri::{Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, oneshot};
+use crate::processing::data_processor::FrequencySpectrum;
 
 pub struct AppState {
     pub manager_tx: Sender<ToolkitCommand>,
@@ -451,10 +452,12 @@ struct FrontendProcessedReadingData {
     v_cop_y: Option<f32>,
     confidence_ellipse_polygon: Option<Vec<(f32, f32)>>,
     convex_hull_polygon: Option<Vec<(f32, f32)>>,
+    frequency_spectrum: Option<FrequencySpectrum>,
     stability_index: Option<f32>,
-    mean_power_frequency: Option<f32>,
-    center_of_spectrum: Option<f32>,
-    total_power: Option<f32>,
+    mlsi: Option<f32>,
+    apsi: Option<f32>,
+    vsi: Option<f32>,
+    dpsi: Option<f32>,
 }
 
 #[tauri::command(async)]
@@ -511,10 +514,12 @@ async fn initialize_frontend_handler(session_channel: Channel<FrontendBalanceBoa
                         v_cop_y: data.sway_metrics.as_ref().map(|m| m.v_cop_y),
                         confidence_ellipse_polygon: data.area_metrics.as_ref().map(|m| m.confidence_ellipse_polygon.clone()),
                         convex_hull_polygon: data.area_metrics.as_ref().map(|m| m.convex_hull_polygon.clone()),
-                        stability_index: data.stability_index.as_ref().map(|m| m.clone()),
-                        mean_power_frequency: data.frequency_metrics.as_ref().map(|m| m.mean_power_frequency),
-                        center_of_spectrum: data.frequency_metrics.as_ref().map(|m| m.center_of_spectrum),
-                        total_power: data.frequency_metrics.as_ref().map(|m| m.total_power),
+                        frequency_spectrum: data.frequency_spectrum.clone(),
+                        stability_index: data.stability_index.as_ref().map(|m| *m),
+                        mlsi: data.dpsi_metrics.as_ref().map(|m| m.mlsi),
+                        apsi: data.dpsi_metrics.as_ref().map(|m| m.apsi),
+                        vsi: data.dpsi_metrics.as_ref().map(|m| m.vsi),
+                        dpsi: data.dpsi_metrics.as_ref().map(|m| m.dpsi),
                     };
                     session_channel.send(FrontendBalanceBoardEvent::Processed(reading));
                 }

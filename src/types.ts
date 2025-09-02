@@ -96,6 +96,7 @@ export type RawBalanceBoardEvent = {
   event: "raw";
   macAddress: number;
   timestamp: number;
+  weight: number;
   copX: number;
   copY: number;
 };
@@ -106,25 +107,36 @@ export type ProcessedBoardEvent = {
   timestamp: number;
   vCopX: number;
   vCopY: number;
+  stabilityIndex: number;
   confidenceEllipsePolygon: [number, number][];
   convexHullPolygon: [number, number][];
-  meanPowerFrequency: number;
-  centerOfSpectrum: number;
-  totalPower: number;
+  frequencySpectrum: FrequencySpectrum;
+  mlsi?: number;
+  apsi?: number;
+  vsi?: number;
+  dpsi?: number;
 };
 
 export type ProcessedSessionData = {
   timestamp: number;
   vCopX: number;
   vCopY: number;
-  meanPowerFrequency: number;
-  centerOfSpectrum: number;
-  totalPower: number;
+  mlsi?: number;
+  apsi?: number;
+  vsi?: number;
+  dpsi?: number;
 };
 
-export type ProcessedPolygonData = {
+export type FrequencySpectrum = {
+  freqs_hz: number[];
+  psd_xy: number[]; // mm²/Hz
+};
+
+export type ProcessedSingleFrameSessionData = {
   confidenceEllipsePolygon: [number, number][];
   convexHullPolygon: [number, number][];
+  stabilityIndex: number;
+  frequencySpectrum?: FrequencySpectrum;
 };
 
 export type TimelineBlock = {

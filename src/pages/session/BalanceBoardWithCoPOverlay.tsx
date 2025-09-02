@@ -13,11 +13,10 @@ import {
 import { StoreApi } from "zustand";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 
-// Constants (same units as your CoP/polygons, typically mm)
-const COP_X_MIN = -216.5;
-const COP_X_MAX = 216.5;
-const COP_Y_MIN = -119.0;
-const COP_Y_MAX = 119.0;
+const COP_X_MIN = -1;
+const COP_X_MAX = 1;
+const COP_Y_MIN = -1;
+const COP_Y_MAX = 1;
 
 const TRAIL_SECONDS = 1;
 
@@ -50,7 +49,7 @@ export function BalanceBoardWithCoPOverlay({
   // Stability index state
   const [stabilityIndex, setStabilityIndex] = useState<number | null>(null);
 
-  const [weightKg, setWeightKg] = useState<number | null>(null);
+  const [forceKg, setForceKg] = useState<number | null>(null);
 
   // Refs to avoid re-render on every frame
   const rawRef = useRef<BoardBuffer<RawBalanceBoardEvent> | undefined>(
@@ -115,10 +114,11 @@ export function BalanceBoardWithCoPOverlay({
       (buf) => {
         rawRef.current = buf;
 
-        const lastRawFrame = buf.frames[buf.head];
-        const weight = lastRawFrame?.weight;
-
-        setWeightKg(weight ?? null);
+        if (buf) {
+          const lastRawFrame = buf.frames[buf.head];
+          const forceKg = lastRawFrame?.weight;
+          setForceKg(forceKg ?? null);
+        }
 
 
         scheduleDraw();
@@ -202,9 +202,9 @@ export function BalanceBoardWithCoPOverlay({
           </span>
         </div>
         <div className="text-sm text-gray-700">
-          Weight
+          Force (Kg):{" "}
           <span className="font-semibold">
-            {weightKg !== null ? weightKg.toFixed(2) : "—"}
+            {forceKg !== null ? forceKg.toFixed(2) : "—"}
           </span>
         </div>
       </div>

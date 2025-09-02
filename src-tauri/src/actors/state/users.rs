@@ -11,10 +11,10 @@ pub struct UserState {
 impl UserState {
     pub fn new() -> Result<Self> {
         let file_system_users = UserFileSystem::get_users()?;
-        let mut users: Vec<Arc<User>> = file_system_users.clone().into_iter().map(|user| Arc::new(user)).collect();
+        let mut users: Vec<Arc<User>> = file_system_users.clone().into_iter().map(Arc::new).collect();
 
         // Create the default user is needed.
-        if file_system_users.iter().find(|u| u.is_default).is_none() {
+        if !file_system_users.iter().any(|u| u.is_default) {
             let default_user = User::default();
             users.push(Arc::new(default_user));
             UserFileSystem::save(&users)?;
@@ -38,13 +38,13 @@ impl UserState {
     }
 
     pub fn create_user(&mut self, user: User) -> Result<()> {
-        &self.users.push(Arc::new(user));
+        self.users.push(Arc::new(user));
 
         self.save()
     }
 
     pub fn update_user(&mut self, mut updated_user: User) -> Result<()> {
-        &self.users.retain(|user| user.name != updated_user.name);
+        self.users.retain(|user| user.name != updated_user.name);
         updated_user.updated_at = Utc::now();
         self.users.push(Arc::new(updated_user));
 
@@ -52,7 +52,7 @@ impl UserState {
     }
 
     pub fn delete_user(&mut self, user_name: &str) -> Result<()> {
-        &self.users.retain(|user| user.name != user_name);
+        self.users.retain(|user| user.name != user_name);
 
         self.save()
     }
