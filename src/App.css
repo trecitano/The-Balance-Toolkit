@@ -84,3 +84,15 @@ body {
   font-family: "Segoe UI", "Inter", "Roboto", Arial, sans-serif;
   -webkit-user-select: none;
 }
+
+.carousel-list {
+  -webkit-mask-image: linear-gradient(
+          to right,
+          transparent 0%,
+          black 15%,
+          black 85%,
+          transparent 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+}
