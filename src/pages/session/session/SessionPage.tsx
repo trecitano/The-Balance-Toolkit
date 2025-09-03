@@ -38,6 +38,7 @@ export default function SessionPage() {
       availableUsers: [],
       selectedBoards: [],
       core: {},
+      activity: {},
       hasOngoingSession: false,
     },
     activities: [],
@@ -53,7 +54,7 @@ export default function SessionPage() {
     mutationFn: (newState: SessionPanelConfiguration) => commands.session.updateSession(newState),
     onMutate: async (next) => {
       await queryClient.cancelQueries({ queryKey: SESSION_QUERY_KEY });
-      const previous = queryClient.getQueryData(SESSION_QUERY_KEY);
+      const previous = queryClient.getQueryData<SessionQueryData>(SESSION_QUERY_KEY);
 
       queryClient.setQueryData(SESSION_QUERY_KEY, (old: SessionQueryData) => {
         if (!old?.sessionInformation) return old;

@@ -11,7 +11,7 @@ import {
   UserPageInformation,
   UserType,
   LastSessionInformation,
-  TimelineBlock,
+  TimelineBlock, SessionActivityState,
 } from "@/types.ts";
 
 export const commands = {
@@ -62,6 +62,7 @@ export const commands = {
 
     tareDevices: async () => invoke<void>("session_taring_devices"),
     stopSession: async () => invoke<void>("session_stop_session"),
+    getActivityState: async() => invoke<SessionActivityState | null>("session_activity_state"),
   },
 
   replay: {

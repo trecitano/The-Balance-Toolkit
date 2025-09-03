@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import {BrowserRouter, Routes, Route, useNavigate, useLocation, Outlet} from "react-router-dom";
 import Navigation from "@/components/navigation/Navigation";
 import Home from "@/pages/home/Home.tsx";
 import DevicesPage, { DevicesQuery } from "@/pages/devices/Devices";
@@ -9,8 +9,10 @@ import Activities from "@/pages/activities/Activities";
 import "./App.css";
 import { QueryClient, QueryClientProvider, usePrefetchQuery } from "@tanstack/react-query";
 import { SettingsQuery } from "@/components/settings/Settings.tsx";
+import ActivityPopup from "./pages/session-activity-pop-up/activityPopup.tsx";
+import {ReactQueryDevtools} from "@tanstack/react-query-devtools";
 
-function AppContent() {
+function DefaultLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -32,29 +34,45 @@ function AppContent() {
         onViewChange={handleViewChange}
       />
       <main className="flex h-screen w-95/100 flex-col bg-(--bg-primary) px-20 py-8">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/users" element={<UsersPage />} />
-          <Route path="/devices" element={<DevicesPage />} />
-          <Route path="/session" element={<SessionPage />} />
-          <Route path="/replay" element={<ReplayPage />} />
-          <Route path="/activities" element={<Activities />} />
-        </Routes>
+        <Outlet />
       </main>
     </div>
   );
 }
 
-const queryClient = new QueryClient();
+function BareLayout() {
+  return (
+    <div className="flex h-screen w-screen items-center justify-center bg-(--bg-primary)">
+      <Outlet />
+    </div>
+  );
+}
 
-function App() {
+
+const queryClient = new QueryClient();
+export function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ReactQueryDevtools initialIsOpen={false} />
       <BrowserRouter>
-        <AppContent />
+        <Routes>
+          {/* Routes with Navigation */}
+          <Route element={<DefaultLayout />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/users" element={<UsersPage />} />
+            <Route path="/devices" element={<DevicesPage />} />
+            <Route path="/session" element={<SessionPage />} />
+            <Route path="/replay" element={<ReplayPage />} />
+            <Route path="/activities" element={<Activities />} />
+          </Route>
+
+          {/* Routes without Navigation */}
+          <Route element={<BareLayout />}>
+            <Route path="/session-activity-pop-up" element={<ActivityPopup />} />
+          </Route>
+        </Routes>
       </BrowserRouter>
     </QueryClientProvider>
   );
 }
 
-export default App;

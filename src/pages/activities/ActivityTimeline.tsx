@@ -44,7 +44,7 @@ type InteractionState = DragState | ResizeState | null;
 
 export default function ActivityTimeline({
   blocks,
-  editable,
+  editable = false,
   onChange,
   onBlockSelect,
   height = "h-100",
@@ -207,7 +207,7 @@ export default function ActivityTimeline({
       className={`flex flex-col ${!editable ? "opacity-75" : ""}`}
       style={{ cursor: isDragging && editable ? "grabbing" : "default" }}
     >
-      <div className={`flex h-full flex-1 ${editable && "gap-1"}`}>
+      <div className={`flex h-full flex-1 ${editable ? "gap-1" : ""}`}>
         {blocks.map((block, idx) => (
           <React.Fragment key={idx}>
             {editable && dragOverIdx === idx && (
@@ -221,7 +221,7 @@ export default function ActivityTimeline({
               onClick={() => onBlockSelect?.(block)}
               style={{
                 flex: block.duration,
-                minWidth: 40,
+                minWidth: 1,
                 cursor: getBlockCursor(idx),
               }}
             >

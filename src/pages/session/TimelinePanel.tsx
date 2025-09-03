@@ -5,6 +5,19 @@ import { createProgressTimer } from "@/pages/session/ProgressTimer";
 import { Activity } from "@/types.ts";
 import { useRef } from "react";
 
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow"
+
+export async function openPopup() {
+  console.log("Opening popup");
+
+  new WebviewWindow('session-activity-pop-up', {
+    url: '/session-activity-pop-up',
+    width: 1000,
+    height: 800,
+    title: "Activity",
+  });
+}
+
 type TimelinePanelProps = {
   activity?: Activity;
   placeholderMessage?: string;
@@ -45,27 +58,30 @@ export function TimelinePanel({ activity, placeholderMessage, hasOngoingSession,
         </div>
       )}
 
-      <button
-        className={clsx(
-          "mr-2 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full p-0 transition-all",
-          hasOngoingSession
-            ? "border-2 border-[#e50012] bg-[#e50012] text-white"
-            : "border-2 border-[#e50012] bg-white text-black",
-          "disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-50",
-        )}
-        onClick={async () => {
-          if (!hasOngoingSession) {
-            await onStart();
-            if (activityDuration) await timer.startTimeline(activityDuration * 1000);
-          } else {
-            await onStop();
-            await timer.stopTimeline();
-          }
-        }}
-        disabled={!canStart}
-      >
-        <span className={`h-6 w-6 ${hasOngoingSession ? "rounded-sm bg-white" : "rounded-full bg-[#e50012]"}`} />
-      </button>
+      <div>
+        <button
+          className={clsx(
+            "mr-2 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full p-0 transition-all",
+            hasOngoingSession
+              ? "border-2 border-[#e50012] bg-[#e50012] text-white"
+              : "border-2 border-[#e50012] bg-white text-black",
+            "disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-50",
+          )}
+          onClick={async () => {
+            if (!hasOngoingSession) {
+              await onStart();
+              if (activityDuration) await timer.startTimeline(activityDuration * 1000);
+            } else {
+              await onStop();
+              await timer.stopTimeline();
+            }
+          }}
+          disabled={!canStart}
+        >
+          <span className={`h-6 w-6 ${hasOngoingSession ? "rounded-sm bg-white" : "rounded-full bg-[#e50012]"}`} />
+        </button>
+        <button onClick={openPopup}>Open popup</button>
+      </div>
     </div>
   );
 }

@@ -56,6 +56,20 @@ pub struct UserPageInformation {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct SessionActivityState {
+    pub activity: Activity,
+    pub ongoing_state: Option<OngoingSessionActivityState>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct OngoingSessionActivityState {
+    pub current_block_index: usize,
+    pub time_to_next_block_ms: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct User {
     pub name: String,
     pub age: Option<u8>,
@@ -168,7 +182,7 @@ impl From<&ReplayConfiguration> for FrontendReplayConfiguration {
             core: FrontendCoreSession::from(&cfg.core),
             activity: cfg.core.activity.clone(),
             file_path: cfg.file_path.clone(),
-            has_ongoing_session: cfg.has_ongoing_session,
+            has_ongoing_session: cfg.replay_start_time.is_some(),
         }
     }
 }
