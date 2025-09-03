@@ -392,7 +392,7 @@ export default function Users() {
       </header>
 
       <ul
-        className="carousel-list flex min-h-80 gap-8 overflow-hidden px-[calc(50%-125px)] py-[3.5vh]"
+        className="carousel-list mt-12 flex min-h-80 gap-8 overflow-hidden px-[calc(50%-125px)] py-[3.5vh]"
         ref={userListRef}
       >
         {sortedUsers.map((user) => (
@@ -426,6 +426,7 @@ export default function Users() {
       </ul>
 
       <CarouselIndicators
+        className={"mt-5"}
         entries={sortedUsers.map((user) => user.name)}
         selectedIndex={currentIndex}
         onSelect={(index) => {
@@ -434,7 +435,7 @@ export default function Users() {
         }}
       />
 
-      <ToolkitContainer className="mt-20 p-12">
+      <ToolkitContainer className="mt-auto p-12">
         {editingUserData ? (
           <form className="" onSubmit={handleSubmit}>
             <div className="user-display">
@@ -579,7 +580,7 @@ export default function Users() {
                         { label: "lb", value: "lb" },
                       ]}
                     />
-                    <ToolkitButton type="button" color={"blue"} onClick={() => setShowWeightMeasure(true)}>
+                    <ToolkitButton size={"sm"} type="button" color={"blue"} onClick={() => setShowWeightMeasure(true)}>
                       Weight
                     </ToolkitButton>
                   </div>
@@ -625,94 +626,107 @@ export default function Users() {
                     )}
                   </div>
                 </SingleColumn>
+
+                {/* Notes */}
+                <SingleColumn className={"row-start-3 col-span-4"} label="Notes:">
+                  <InputPrimitive
+                    editable
+                    required
+                    value={editingUserData.notes}
+                    onChange={(e) => handleEditUpdate("notes", e.target.value)}
+                  />
+                </SingleColumn>
               </div>
             </div>
           </form>
         ) : (
-          <div className="">
-            <div className="user-display">
-              <div className="user-display-header">
-                {renderUserIcon(selectedUserData, "w-[3.5vw] h-[3.5vw]")}
-                <div className="user-header-info">
-                  <h2>{selectedUserData.name}</h2>
-                  <div className="user-metadata">
-                    <span className="metadata-item">
-                      <span className="metadata-label">Created:</span>
-                      <span className="metadata-value">
-                        {new Date(selectedUserData.createdAt).toLocaleDateString()}
-                      </span>
+          <div className="user-display">
+            <div className="user-display-header">
+              {renderUserIcon(selectedUserData, "w-[3.5vw] h-[3.5vw]")}
+              <div className="user-header-info">
+                <h2>{selectedUserData.name}</h2>
+                <div className="user-metadata">
+                  <span className="metadata-item">
+                    <span className="metadata-label">Created:</span>
+                    <span className="metadata-value">
+                      {new Date(selectedUserData.createdAt).toLocaleDateString()}
                     </span>
-                    <span className="metadata-item">
-                      <span className="metadata-label">Updated:</span>
-                      <span className="metadata-value">
-                        {new Date(selectedUserData.updatedAt).toLocaleDateString()}
-                      </span>
+                  </span>
+                  <span className="metadata-item">
+                    <span className="metadata-label">Updated:</span>
+                    <span className="metadata-value">
+                      {new Date(selectedUserData.updatedAt).toLocaleDateString()}
                     </span>
-                  </div>
+                  </span>
                 </div>
-                <div className="user-display-actions">
-                  {!selectedUserData.isDefault && (
-                    <ToolkitButton
-                      type="button"
-                      color="red"
-                      onClick={() => setShowDeleteConfirm(selectedUserData.name)}
-                    >
-                      Delete
-                    </ToolkitButton>
-                  )}
-                  <ToolkitButton type="button" color="blue" onClick={() => setEditingUserData(selectedUserData)}>
-                    Edit
+              </div>
+              <div className="user-display-actions">
+                {!selectedUserData.isDefault && (
+                  <ToolkitButton
+                    type="button"
+                    color="red"
+                    onClick={() => setShowDeleteConfirm(selectedUserData.name)}
+                  >
+                    Delete
                   </ToolkitButton>
-                </div>
+                )}
+                <ToolkitButton type="button" color="blue" onClick={() => setEditingUserData(selectedUserData)}>
+                  Edit
+                </ToolkitButton>
               </div>
+            </div>
 
-              <div className="mt-2 grid grid-cols-4 gap-2.5 text-base">
-                {/* Name */}
-                <SingleColumn label="Name:" icon={<img src={personIcon} />}>
-                  <InputPrimitive value={selectedUserData.name ?? "N/A"} />
-                </SingleColumn>
+            <div className="mt-2 grid grid-cols-4 grid-rows-3 gap-2.5 text-base">
+              {/* Name */}
+              <SingleColumn label="Name:" icon={<img src={personIcon} />}>
+                <InputPrimitive value={selectedUserData.name ?? "N/A"} />
+              </SingleColumn>
 
-                {/* Age */}
-                <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
-                  <InputPrimitive value={selectedUserData.age ?? "N/A"} />
-                </SingleColumn>
+              {/* Age */}
+              <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
+                <InputPrimitive value={selectedUserData.age ?? "N/A"} />
+              </SingleColumn>
 
-                {/* Gender */}
-                <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
-                  <InputPrimitive value={selectedUserData.gender ?? "N/A"} />
-                </SingleColumn>
+              {/* Gender */}
+              <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
+                <InputPrimitive value={selectedUserData.gender ?? "N/A"} />
+              </SingleColumn>
 
-                {/* Height */}
-                <SingleColumn label="Height:" icon={<img src={heightIcon} />}>
-                  <InputPrimitive
-                    value={
-                      selectedUserData.height ? `${selectedUserData.height} ${selectedUserData.heightMetric}` : "N/A"
-                    }
-                  />
-                </SingleColumn>
+              {/* Height */}
+              <SingleColumn label="Height:" icon={<img src={heightIcon} />}>
+                <InputPrimitive
+                  value={
+                    selectedUserData.height ? `${selectedUserData.height} ${selectedUserData.heightMetric}` : "N/A"
+                  }
+                />
+              </SingleColumn>
 
-                {/* Weight */}
-                <SingleColumn label="Weight:" icon={<img src={weightIcon} />}>
-                  <InputPrimitive
-                    value={
-                      selectedUserData.weight ? `${selectedUserData.weight} ${selectedUserData.weightMetric}` : "N/A"
-                    }
-                  />
-                </SingleColumn>
+              {/* Weight */}
+              <SingleColumn label="Weight:" icon={<img src={weightIcon} />}>
+                <InputPrimitive
+                  value={
+                    selectedUserData.weight ? `${selectedUserData.weight} ${selectedUserData.weightMetric}` : "N/A"
+                  }
+                />
+              </SingleColumn>
 
-                {/* Handedness */}
-                <SingleColumn label="Handedness:" icon={<img src={handIcon} />}>
-                  <InputPrimitive value={selectedUserData.handedness ?? "N/A"} />
-                </SingleColumn>
+              {/* Handedness */}
+              <SingleColumn label="Handedness:" icon={<img src={handIcon} />}>
+                <InputPrimitive value={selectedUserData.handedness ?? "N/A"} />
+              </SingleColumn>
 
-                {/* Color */}
-                <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
-                  <InputPrimitive
-                    style={{ backgroundColor: selectedUserData.color ?? "#ccc" }}
-                    title={selectedUserData.color ?? "No color selected"}
-                  ></InputPrimitive>
-                </SingleColumn>
-              </div>
+              {/* Color */}
+              <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
+                <InputPrimitive
+                  style={{ backgroundColor: selectedUserData.color ?? "#ccc" }}
+                  title={selectedUserData.color ?? "No color selected"}
+                ></InputPrimitive>
+              </SingleColumn>
+
+              {/* Notes */}
+              <SingleColumn className={"row-start-3 col-span-4"} label="Notes:">
+                <InputPrimitive value={selectedUserData.notes ?? ""} />
+              </SingleColumn>
             </div>
           </div>
         )}

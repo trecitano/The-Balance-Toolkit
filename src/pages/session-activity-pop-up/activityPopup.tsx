@@ -155,13 +155,9 @@ export default function Popup() {
       )}
 
       {/* Session status indicator */}
-      {!isSessionRunning ? (
+      {!isSessionRunning && (
         <div className="absolute top-10 left-0 rounded-lg bg-(--secondary) px-3 py-2 z-1 text-white text-lg font-semibold ">
           Session not started
-        </div>
-      ) : (
-        <div className="absolute top-10 left-0 rounded-lg bg-(--primary) px-3 py-2 z-1 text-white text-lg font-semibold ">
-          Session running!
         </div>
       )}
 
@@ -185,10 +181,10 @@ export default function Popup() {
               data-blockid={index}
               className={`h-full justify-center flex flex-col rounded-lg p-3`}
             >
-              <div className={`mt-top flex min-h-110 min-w-120 justify-center duration-900 transition ease-in-out ${
+              <div className={`mt-top flex min-h-110 min-w-120 justify-center duration-100 transition linear ${
                 displayIsActive
-                  ? "scale-130 bg-blue-100 opacity-100 shadow-lg ring-1 ring-blue-500"
-                  : "scale-70 bg-gray-100 "
+                  ? "scale-110 bg-gray-100 opacity-100 shadow-lg ring-1 ring-blue-500"
+                  : "scale-100 bg-gray-100 "
               }`}>
                 <img
                   src={getBlockImage(block.id)}
