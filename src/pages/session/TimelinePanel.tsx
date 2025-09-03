@@ -36,7 +36,7 @@ export function TimelinePanel({ activity, placeholderMessage, hasOngoingSession,
     <div className="mt-auto min-h-33 flex w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
       {activity ? (
         <div className="relative mx-10 mt-5 mb-1 w-9/10">
-          <ActivityTimeline activityId={activity.id} blocks={activity.timelineBlocks} height={"h-20"} />
+          <ActivityTimeline blocks={activity.timelineBlocks} height={"h-20"} />
           <div
             ref={(el) => {
               if (el) {

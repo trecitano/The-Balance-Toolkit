@@ -392,7 +392,7 @@ export default function Users() {
       </header>
 
       <ul
-        className="users-list-panel users-list flex min-h-80 gap-8 overflow-hidden px-[calc(50%-125px)] py-[3.5vh]"
+        className="users-list flex min-h-80 gap-8 overflow-hidden px-[calc(50%-125px)] py-[3.5vh]"
         ref={userListRef}
       >
         {sortedUsers.map((user) => (
