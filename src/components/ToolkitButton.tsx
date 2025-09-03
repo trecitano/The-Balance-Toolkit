@@ -37,9 +37,9 @@ const base =
   "enabled:focus:outline-none enabled:focus:shadow-[var(--shadow-focus)]";
 
 const byColor: Record<Color, string> = {
-  grey: "bg-[var(--secondary)] text-[var(--white)] enabled:hover:bg-[var(--secondary-dark)]",
-  blue: "bg-[var(--primary)] text-[var(--white)] enabled:hover:bg-[var(--primary-dark)]",
-  red: "bg-[var(--red)] text-[var(--white)] enabled:hover:bg-[var(--red-dark)]",
+  grey: "bg-(--secondary) text-[var(--white)] enabled:hover:bg-[var(--secondary-dark)]",
+  blue: "bg-(--primary) text-[var(--white)] enabled:hover:bg-[var(--primary-dark)]",
+  red: "bg-(--red) text-[var(--white)] enabled:hover:bg-[var(--red-dark)]",
 };
 
 const byShape: Record<Shape, string> = {
