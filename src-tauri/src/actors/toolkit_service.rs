@@ -6,7 +6,7 @@ use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem, SettingsFi
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::lsl_writer::LslConnectionSettings;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
-use crate::types::{FrontendCoreSession, FrontendSessionInformation, FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, SelectedBoard, FrontendLastSessionInformation, User};
+use crate::types::{FrontendCoreSession, FrontendSessionInformation, FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, SelectedBoard, FrontendLastSessionInformation, User, OngoingSessionActivityState, SessionActivityState};
 use crate::{file_system, utils};
 use anyhow::{anyhow, Result};
 use file_system::UserFileSystem;
@@ -14,6 +14,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use chrono::Utc;
 use tokio_util::sync::CancellationToken;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::mpsc::Receiver;
@@ -115,6 +116,9 @@ pub enum ToolkitCommand {
     StopSession {
         response: oneshot::Sender<()>,
     },
+    SessionActivityState {
+        response: oneshot::Sender<Option<SessionActivityState>>
+    },
 
     // Replay session
     ReplayInformation {
@@ -145,6 +149,8 @@ pub enum ToolkitResponse {
     NewDeviceFound(MacAddress),
     SessionCompleted,
     ReplayCompleted,
+    SessionStarted,
+    SessionActivityChanged,
 }
 
 pub struct ConnectionManager {
@@ -164,7 +170,7 @@ pub struct ConnectionManager {
 pub struct SessionConfiguration {
     pub core: CoreSessionConfiguration,
     pub connections: HashMap<MacAddress, Sender<BoardAction>>,
-    pub has_ongoing_session: bool,
+    pub session_start_time: Option<chrono::DateTime<Utc>>,
     pub cancel_token: Option<CancellationToken>
 }
 
@@ -187,7 +193,7 @@ pub struct ReplayConfiguration {
     pub file_path: PathBuf,
     pub device_names: HashMap<MacAddress, String>,
     pub connections: HashMap<MacAddress, Sender<BoardAction>>,
-    pub has_ongoing_session: bool,
+    pub replay_start_time: Option<chrono::DateTime<Utc>>,
     pub cancel_token: Option<CancellationToken>
 }
 
@@ -212,7 +218,7 @@ impl ConnectionManager {
                 interpolation: general_settings.processing_settings.interpolation.clone(),
             },
             connections: HashMap::new(),
-            has_ongoing_session: false,
+            session_start_time: None,
             cancel_token: None,
         };
 
@@ -269,7 +275,7 @@ impl ConnectionManager {
                     // 1 - We cannot make a weight measurement if a session is ongoing
                     // 2 - We only perform a weight measurement on a specific board
                     // 3 - When the user closes the channel, we stop reading from the board.
-                    if self.session_settings.has_ongoing_session {
+                    if self.session_settings.session_start_time.is_some() {
                         continue;
                     }
 
@@ -398,7 +404,7 @@ impl ConnectionManager {
                         selected_boards,
                         core: (&self.session_settings.core).into(),
                         activity: self.session_settings.core.activity.clone(),
-                        has_ongoing_session: self.session_settings.has_ongoing_session,
+                        has_ongoing_session: self.session_settings.session_start_time.is_some(),
                     };
                     response.send(session_information).unwrap();
                 }
@@ -423,6 +429,9 @@ impl ConnectionManager {
 
                         if needs_update {
                             self.session_settings.core.activity = self.activity_state.get_copy_of_activity(&activity_id);
+
+                            // Warn any interested listeners
+                            self.response_tx.send(ToolkitResponse::SessionActivityChanged).await?;
                         }
                     }
 
@@ -431,7 +440,7 @@ impl ConnectionManager {
                 ToolkitCommand::StartSession { frontend_channel } => {
                     let cancellation_token = CancellationToken::new();
                     self.session_settings.cancel_token = Some(cancellation_token.clone());
-                    self.session_settings.has_ongoing_session = true;
+                    self.session_settings.session_start_time = Some(Utc::now());
                     let device_names = self.get_connected_device_names().await?;
 
                     start_session(frontend_channel,
@@ -440,6 +449,9 @@ impl ConnectionManager {
                                   &self.session_settings.connections,
                                   device_names)
                         .await;
+
+                    // Warn any interested listeners
+                    self.response_tx.send(ToolkitResponse::SessionStarted).await?;
 
                     if let Some(activity) = &self.session_settings.core.activity {
                         let manager_tx = self.get_sender_channel();
@@ -472,7 +484,6 @@ impl ConnectionManager {
                         });
                     }
                 },
-
                 ToolkitCommand::StopSession { response } => {
                     if let Some(token) = self.session_settings.cancel_token.take() {
                         token.cancel();
@@ -483,10 +494,50 @@ impl ConnectionManager {
                         board.send(command).await?
                     }
 
-                    self.session_settings.has_ongoing_session = false;
+                    self.session_settings.session_start_time = None;
                     response.send(()).unwrap();
 
                 },
+                ToolkitCommand::SessionActivityState { response } => {
+                    if self.session_settings.core.activity.is_none() {
+                        response.send(None).unwrap();
+                    } else {
+                        let activity = self.session_settings.core.activity.clone().unwrap();
+
+                        if self.session_settings.session_start_time.is_none() {
+                            response.send(Some(SessionActivityState { activity: activity, ongoing_state: None })).unwrap();
+                        } else {
+                            let start_time = self.session_settings.session_start_time.unwrap();
+                            let elapsed_ms = (Utc::now() - start_time).num_milliseconds().max(0) as usize;
+
+                            let mut accumulated = 0;
+                            let mut current_block_index = 0;
+                            let mut time_to_next_block_ms = 0;
+
+                            for (i, block) in activity.timeline_blocks.iter().enumerate() {
+                                let block_duration_ms = (block.duration as usize) * 1000;
+                                if elapsed_ms < accumulated + block_duration_ms {
+                                    current_block_index = i;
+                                    time_to_next_block_ms =
+                                        (accumulated + block_duration_ms).saturating_sub(elapsed_ms);
+                                    break;
+                                }
+                                accumulated += block_duration_ms;
+                            }
+
+                            let state = Some(SessionActivityState {
+                                activity,
+                                ongoing_state: Some(OngoingSessionActivityState {
+                                    current_block_index,
+                                    time_to_next_block_ms,
+                                })
+                            });
+                            response.send(state).unwrap();
+                        }
+                    }
+                }
+
+
                 ToolkitCommand::BoardAction { mac_address, action } => {
                     self.board_action(mac_address, action).await;
                 },
@@ -530,7 +581,7 @@ impl ConnectionManager {
                         file_path,
                         device_names: file_session.device_names,
                         connections,
-                        has_ongoing_session: false,
+                        replay_start_time: None,
                         cancel_token: None,
                     });
 
@@ -553,7 +604,7 @@ impl ConnectionManager {
                     if let Some(settings) = self.replay_settings.as_mut() {
                         let cancellation_token = CancellationToken::new();
                         settings.cancel_token = Some(cancellation_token.clone());
-                        settings.has_ongoing_session = true;
+                        settings.replay_start_time = Some(Utc::now());
 
                         start_session(frontend_channel,
                                       &self.general_settings,
@@ -593,7 +644,7 @@ impl ConnectionManager {
                             board.send(command).await?
                         }
 
-                        settings.has_ongoing_session = false;
+                        settings.replay_start_time = None;
                     }
 
                     response.send(()).unwrap();

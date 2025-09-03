@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use crate::file_system;
 use crate::file_system::UserFileSystem;
-use crate::types::{FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, FrontendSessionInformation, User, UserPageInformation, FrontendCoreSession, FrontendLastSessionInformation};
+use crate::types::{FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, FrontendSessionInformation, User, UserPageInformation, FrontendCoreSession, FrontendLastSessionInformation, SessionActivityState};
 use serde::Serialize;
 use std::time::Duration;
 
@@ -43,6 +43,12 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
                         },
                         ToolkitResponse::ReplayCompleted => {
                             app_handle.emit("replay_completed", ()).unwrap()
+                        },
+                        ToolkitResponse::SessionStarted => {
+                            app_handle.emit("session_started", ()).unwrap()
+                        },
+                        ToolkitResponse::SessionActivityChanged => {
+                            app_handle.emit("session_activity_changed", ()).unwrap()
                         }
                     }
                 }
@@ -74,6 +80,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             session_stop_session,
             session_information,
             session_update_session_configuration,
+            session_activity_state,
             replay_start_replay,
             replay_stop_replay,
             replay_information,
@@ -424,6 +431,21 @@ async fn session_update_session_configuration(configuration: FrontendCoreSession
 
     println!("<< session_update_session_configuration.\n");
     Ok(())
+}
+
+// This returns all of the data needed for the Activity Popup.
+// Namely, it gives the data for the activity, the current timeblock and the time until the next block.
+#[tauri::command(async)]
+async fn session_activity_state(state: State<'_, AppState>) -> Result<Option<SessionActivityState>, String> {
+    println!(">> session_activity_state");
+
+    let (tx, rx) = oneshot::channel();
+    let command = ToolkitCommand::SessionActivityState { response: tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let result = rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< session_activity_state. {:#?}\n", result);
+    Ok(result)
 }
 
 #[derive(Serialize, Debug, Clone)]

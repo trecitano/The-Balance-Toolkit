@@ -168,3 +168,13 @@ export type LastSessionInformation = {
   fileLocation: String;
   activity?: Activity;
 };
+
+export type OngoingSessionActivityState = {
+  currentBlockIndex: number;
+  timeToNextBlockMs: number;
+}
+
+export type SessionActivityState = {
+  activity: Activity;
+  ongoingState?: OngoingSessionActivityState;
+}
