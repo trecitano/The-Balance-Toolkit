@@ -3,6 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBlockImage } from "@/utils/activityImages.ts";
 import { listen } from "@tauri-apps/api/event";
 import { commands } from "@/utils/requests.ts";
+import CarouselIndicators from "@/components/CarouselIndicators.tsx";
+import "@/App.css";
 
 const SESSION_ACTIVITY_POP_UP_QUERY_KEY = ["session_activity_pop_up"];
 
@@ -34,9 +36,7 @@ export default function Popup() {
 
   // Scroll to current block
   const scrollToBlock = (index: number) => {
-    console.log("Scrolling to", index);
     const el = listRef.current?.querySelector(`[data-blockid="${index}"]`);
-    console.log("Found element:", el);
     el?.scrollIntoView({
       behavior: "smooth",
       inline: "center",
@@ -44,11 +44,9 @@ export default function Popup() {
     });
   };
 
-
   // Initialize local state when data changes
   useEffect(() => {
     if (sessionActivityState?.ongoingState) {
-      console.log("Initializing local state");
       setLocalTimeLeft(sessionActivityState.ongoingState.timeToNextBlockMs);
       setLocalBlockIndex(sessionActivityState.ongoingState.currentBlockIndex);
     }
@@ -60,6 +58,7 @@ export default function Popup() {
   // Countdown timer with local block progression
   useEffect(() => {
     if (localTimeLeft === null || localTimeLeft <= 0) return;
+    if (!sessionActivityState?.ongoingState) return;
 
     const interval = setInterval(() => {
       setLocalTimeLeft((prev) => {
@@ -85,7 +84,7 @@ export default function Popup() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [localTimeLeft, localBlockIndex, sessionActivityState?.activity?.timelineBlocks]);
+  }, [localTimeLeft, localBlockIndex, sessionActivityState]);
 
   // Auto-scroll to current block when it changes
   useEffect(() => {
@@ -113,6 +112,14 @@ export default function Popup() {
     };
   }, []);
 
+  // When we initialize, ensure that we scroll to the first block, if it exists.
+  useEffect(() => {
+    if (!sessionActivityState?.ongoingState) {
+      setLocalBlockIndex(0);
+    }
+
+  }, [sessionActivityState]);
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -132,104 +139,76 @@ export default function Popup() {
     return <div>No blocks in activity</div>;
   }
 
-
+  // Determine session state
+  const isSessionRunning = !!ongoingState;
   const currentBlockIndex = localBlockIndex ?? ongoingState?.currentBlockIndex ?? 0;
   const timeLeftMs = localTimeLeft ?? ongoingState?.timeToNextBlockMs ?? 0;
-  const showCountdown = timeLeftMs <= 3000;
-
-  console.log("Current block index:", currentBlockIndex);
-
-  if (!ongoingState) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 p-4">
-        <h3 className="text-lg font-semibold text-center text-red-600">
-          Session not started!
-        </h3>
-        <div className="text-sm text-gray-600">
-          Please start the session to view the activity.
-        </div>
-      </div>
-    )
-  }
-
-  // Check if session is completed
-  if (currentBlockIndex >= blocks.length) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 p-4">
-        <h3 className="text-lg font-semibold text-center text-green-600">
-          Session Completed! 🎉
-        </h3>
-        <div className="text-sm text-gray-600">
-          Great job finishing all {blocks.length} blocks!
-        </div>
-      </div>
-    );
-  }
+  const showCountdown = isSessionRunning && timeLeftMs <= 3000;
 
   return (
-    <div className="flex h-screen w-95/100 flex-col bg-(--bg-primary) px-20 py-8">
+    <div className="flex h-screen w-95/100 flex-col bg-(--bg-primary) px-20 py-8 relative">
+      {/* Countdown in top right corner */}
+      {showCountdown && (
+        <div className="absolute top-10 right-0 rounded-lg bg-(--primary) px-3 py-2 text-white text-lg font-semibold z-10">
+          Next block in {formatMs(timeLeftMs)}
+        </div>
+      )}
+
+      {/* Session status indicator */}
+      {!isSessionRunning ? (
+        <div className="absolute top-10 left-0 rounded-lg bg-(--secondary) px-3 py-2 z-1 text-white text-lg font-semibold ">
+          Session not started
+        </div>
+      ) : (
+        <div className="absolute top-10 left-0 rounded-lg bg-(--primary) px-3 py-2 z-1 text-white text-lg font-semibold ">
+          Session running!
+        </div>
+      )}
+
       {/* Activity Title */}
       <h2 className="text-xl font-bold text-center">{activity.title}</h2>
 
       {/* Blocks Carousel */}
+      <ul
+        ref={listRef}
+        className="carousel-list flex flex-1 gap-6 overflow-hidden px-[calc(50%-75px)] py-4"
+      >
+        {blocks.map((block, index) => {
+          const isActive = index === currentBlockIndex;
 
-        <ul
-          ref={listRef}
-          className="flex flex-1 gap-6 overflow-hidden px-[calc(50%-75px)] py-4"
-        >
-          {blocks.map((block, index) => {
-            const isActive = index === currentBlockIndex;
-            const isPast = index < currentBlockIndex;
+          // For non-running sessions, only show the first block as active
+          const displayIsActive = isSessionRunning ? isActive : index === 0;
 
-            return (
-              <li
-                key={index}
-                data-blockid={index}
-                className={`h-full justify-center flex flex-col rounded-lg p-3 transition-all duration-500 snap-center`}
-              >
-                <div className={`mt-top flex  min-h-110 min-w-120 justify-center  ${
-                  isActive
+          return (
+            <li
+              key={index}
+              data-blockid={index}
+              className={`h-full justify-center flex flex-col rounded-lg p-3`}
+            >
+              <div className={`mt-top flex min-h-110 min-w-120 justify-center duration-900 transition ease-in-out ${
+                displayIsActive
                   ? "scale-130 bg-blue-100 opacity-100 shadow-lg ring-1 ring-blue-500"
-                  : isPast
-                  ? "scale-70 bg-green-100 opacity-60"
-                  : "scale-70 bg-gray-100 opacity-50"
-                }`}>
-                  <img
-                    src={getBlockImage(block.id)}
-                    alt={block.title}
-                    className="rounded-lg mb-2"
-                  />
-                </div>
-                <span className={`text-sm font-medium text-center ${
-                  isActive ? "text-blue-900" : isPast ? "text-green-700" : "text-gray-600"
-                }`}>
-                  {block.title}
-                </span>
-                {isActive && showCountdown && (
-                  <div className="mt-2 rounded bg-red-600/90 px-2 py-1 text-white text-xs font-medium">
-                    {formatMs(timeLeftMs)}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                  : "scale-70 bg-gray-100 "
+              }`}>
+                <img
+                  src={getBlockImage(block.id)}
+                  alt={block.title}
+                  className="rounded-lg mb-2"
+                />
+              </div>
+              <span className={`text-sm font-medium text-center text-gray-600`}>
+                {block.title}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
 
-      {/* Progress indicator */}
-      <div className="flex items-center gap-1">
-        {blocks.map((_, index) => (
-          <div
-            key={index}
-            className={`h-2 w-2 rounded-full transition-colors ${
-              index === currentBlockIndex
-                ? "bg-blue-500"
-                : index < currentBlockIndex
-                  ? "bg-green-500"
-                  : "bg-gray-300"
-            }`}
-          />
-        ))}
-      </div>
+      <CarouselIndicators
+        entries={blocks.map((_, index) => String(index))}
+        selectedIndex={currentBlockIndex}
+        nearbyThreshold={1}
+      />
     </div>
   );
 }
