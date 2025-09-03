@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBlockImage } from "@/utils/activityImages.ts";
 import { listen } from "@tauri-apps/api/event";
@@ -20,6 +20,7 @@ export default function Popup() {
   const queryClient = useQueryClient();
   const [localTimeLeft, setLocalTimeLeft] = useState<number | null>(null);
   const [localBlockIndex, setLocalBlockIndex] = useState<number | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY,
@@ -31,10 +32,23 @@ export default function Popup() {
 
   const sessionActivityState = data?.sessionActivityState;
 
+  // Scroll to current block
+  const scrollToBlock = (index: number) => {
+    console.log("Scrolling to", index);
+    const el = listRef.current?.querySelector(`[data-blockid="${index}"]`);
+    console.log("Found element:", el);
+    el?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "center",
+    });
+  };
+
 
   // Initialize local state when data changes
   useEffect(() => {
     if (sessionActivityState?.ongoingState) {
+      console.log("Initializing local state");
       setLocalTimeLeft(sessionActivityState.ongoingState.timeToNextBlockMs);
       setLocalBlockIndex(sessionActivityState.ongoingState.currentBlockIndex);
     }
@@ -73,8 +87,16 @@ export default function Popup() {
     return () => clearInterval(interval);
   }, [localTimeLeft, localBlockIndex, sessionActivityState?.activity?.timelineBlocks]);
 
+  // Auto-scroll to current block when it changes
+  useEffect(() => {
+    if (localBlockIndex !== null && sessionActivityState?.activity?.timelineBlocks) {
+      scrollToBlock(localBlockIndex);
+    }
+  }, [localBlockIndex, sessionActivityState?.activity?.timelineBlocks]);
+
   useEffect(() => {
     const sessionStartedListener = listen<void>("session_started", (_) => {
+      console.log("Session started");
       queryClient.invalidateQueries({queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY});
     });
     const sessionActivityChangedListener = listen<void>("session_activity_changed", (_) => {
@@ -110,80 +132,95 @@ export default function Popup() {
     return <div>No blocks in activity</div>;
   }
 
-  if (!ongoingState) {
-    return <div>No ongoing session</div>;
-  }
 
-  const currentBlockIndex = localBlockIndex ?? ongoingState.currentBlockIndex;
-  const currentBlock = blocks[currentBlockIndex];
-  const timeLeftMs = localTimeLeft ?? ongoingState.timeToNextBlockMs;
+  const currentBlockIndex = localBlockIndex ?? ongoingState?.currentBlockIndex ?? 0;
+  const timeLeftMs = localTimeLeft ?? ongoingState?.timeToNextBlockMs ?? 0;
   const showCountdown = timeLeftMs <= 3000;
 
-  // Get next 2 blocks for carousel
-  const nextBlocks = [];
-  for (let i = 1; i <= 2; i++) {
-    const nextIndex = currentBlockIndex + i;
-    if (nextIndex < blocks.length) {
-      nextBlocks.push(blocks[nextIndex]);
-    }
+  console.log("Current block index:", currentBlockIndex);
+
+  if (!ongoingState) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 p-4">
+        <h3 className="text-lg font-semibold text-center text-red-600">
+          Session not started!
+        </h3>
+        <div className="text-sm text-gray-600">
+          Please start the session to view the activity.
+        </div>
+      </div>
+    )
   }
 
-  if (!currentBlock) {
-    return <div>Invalid block index</div>;
+  // Check if session is completed
+  if (currentBlockIndex >= blocks.length) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 p-4">
+        <h3 className="text-lg font-semibold text-center text-green-600">
+          Session Completed! 🎉
+        </h3>
+        <div className="text-sm text-gray-600">
+          Great job finishing all {blocks.length} blocks!
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4 p-4">
-      {/* Current Block */}
-      <div className="flex flex-col items-center gap-2">
-        <h3 className="text-lg font-semibold text-center">
-          {currentBlock.title}
-        </h3>
-        <img
-          src={getBlockImage(currentBlock.id)}
-          alt={currentBlock.title}
-          className="h-32 w-32 object-cover rounded-lg"
-        />
-        {showCountdown && (
-          <div className="rounded bg-red-600/90 px-3 py-1 text-white text-sm font-medium">
-            Next block in {formatMs(timeLeftMs)}
-          </div>
-        )}
-      </div>
+    <div className="flex h-screen w-95/100 flex-col bg-(--bg-primary) px-20 py-8">
+      {/* Activity Title */}
+      <h2 className="text-xl font-bold text-center">{activity.title}</h2>
 
-      {/* Next Blocks Carousel */}
-      {nextBlocks.length > 0 && (
-        <div className="flex flex-col items-center gap-2">
-          <h4 className="text-sm font-medium text-gray-600">Coming up:</h4>
-          <div className="flex gap-3">
-            {nextBlocks.map((block, index) => (
-              <div
-                key={block.id}
-                className="flex flex-col items-center gap-1 opacity-70"
+      {/* Blocks Carousel */}
+
+        <ul
+          ref={listRef}
+          className="flex flex-1 gap-6 overflow-hidden px-[calc(50%-75px)] py-4"
+        >
+          {blocks.map((block, index) => {
+            const isActive = index === currentBlockIndex;
+            const isPast = index < currentBlockIndex;
+
+            return (
+              <li
+                key={index}
+                data-blockid={index}
+                className={`h-full justify-center flex flex-col rounded-lg p-3 transition-all duration-500 snap-center`}
               >
-                <img
-                  src={getBlockImage(block.id)}
-                  alt={block.title}
-                  className="h-16 w-16 object-cover rounded"
-                />
-                <span className="text-xs text-center max-w-16 truncate">
+                <div className={`mt-top flex  min-h-110 min-w-120 justify-center  ${
+                  isActive
+                  ? "scale-130 bg-blue-100 opacity-100 shadow-lg ring-1 ring-blue-500"
+                  : isPast
+                  ? "scale-70 bg-green-100 opacity-60"
+                  : "scale-70 bg-gray-100 opacity-50"
+                }`}>
+                  <img
+                    src={getBlockImage(block.id)}
+                    alt={block.title}
+                    className="rounded-lg mb-2"
+                  />
+                </div>
+                <span className={`text-sm font-medium text-center ${
+                  isActive ? "text-blue-900" : isPast ? "text-green-700" : "text-gray-600"
+                }`}>
                   {block.title}
                 </span>
-                <span className="text-xs text-gray-500">
-                  {index === 0 ? "Next" : "Then"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                {isActive && showCountdown && (
+                  <div className="mt-2 rounded bg-red-600/90 px-2 py-1 text-white text-xs font-medium">
+                    {formatMs(timeLeftMs)}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
 
       {/* Progress indicator */}
       <div className="flex items-center gap-1">
         {blocks.map((_, index) => (
           <div
             key={index}
-            className={`h-2 w-2 rounded-full ${
+            className={`h-2 w-2 rounded-full transition-colors ${
               index === currentBlockIndex
                 ? "bg-blue-500"
                 : index < currentBlockIndex
