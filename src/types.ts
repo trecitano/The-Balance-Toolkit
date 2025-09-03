@@ -36,6 +36,7 @@ export interface UserType {
   weightMetric?: string; // Weight unit (kg/lb)
   handedness?: "Right" | "Left" | "Ambidextrous";
   color?: string;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
   isDefault: boolean;
