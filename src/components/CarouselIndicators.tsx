@@ -3,7 +3,7 @@ import clsx from "clsx";
 type Props = {
   entries: string[];
   selectedIndex: number;
-  onSelect: (index: number) => void | Promise<void>;
+  onSelect?: (index: number) => void | Promise<void>;
   nearbyThreshold?: number;
   className?: string;
 };
@@ -20,7 +20,7 @@ export default function CarouselIndicators({
       {entries.map((entry, index) => {
         const distance = Math.abs(index - selectedIndex);
 
-        let dotClass = "w-[12px] h-[12px] rounded-full bg-[var(--border)] opacity-50 transition cursor-pointer";
+        let dotClass = `w-[12px] h-[12px] rounded-full bg-[var(--border)] opacity-50 transition ${onSelect && "cursor-pointer"}`;
 
         if (index === selectedIndex) {
           dotClass += " bg-[var(--primary)] opacity-100 scale-125";
@@ -32,12 +32,12 @@ export default function CarouselIndicators({
           <div
             key={entry}
             className={dotClass}
-            onClick={() => onSelect(index)}
+            onClick={() => onSelect?.(index)}
             title={entry}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
+              if (onSelect && (e.key === "Enter" || e.key === " ")) {
                 e.preventDefault();
                 onSelect(index);
               }
