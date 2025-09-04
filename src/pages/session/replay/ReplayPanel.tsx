@@ -1,5 +1,4 @@
-import { CheckboxOption, MultiSelect } from "@/components/MultiSelect.tsx";
-import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
+import {BaseOption, SelectPrimitive} from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, ReplayConfiguration, SessionPanelConfiguration } from "@/types.ts";
@@ -11,6 +10,7 @@ export function ReplayPanel({
   boardDisplaySelected,
   onBoardDisplayChange,
   boardDisplayOptions,
+  disabled,
   onChange,
   onPickSessionFile,
   onResetFile,
@@ -18,7 +18,8 @@ export function ReplayPanel({
   config: ReplayConfiguration;
   boardDisplaySelected: string[];
   onBoardDisplayChange: (ids: string[]) => void;
-  boardDisplayOptions: CheckboxOption[];
+  boardDisplayOptions: BaseOption[];
+  disabled: boolean;
   onChange: (v: ReplayConfiguration) => void;
   onPickSessionFile: () => void;
   onResetFile: () => void;
@@ -43,7 +44,8 @@ export function ReplayPanel({
 
       <ToolkitContainer className="grid grid-cols-14 grid-rows-2 gap-1">
         <SingleColumn label="Board to Display" backgroundType="transparent" className="col-span-3">
-          <MultiSelect
+          <SelectPrimitive
+            mode={"multi"}
             options={boardDisplayOptions}
             noOptionsMessage={"No boards in session."}
             value={boardDisplaySelected}
@@ -53,12 +55,12 @@ export function ReplayPanel({
         </SingleColumn>
 
         <SingleColumn label="User" backgroundType="transparent" className="col-span-3">
-          <InputPrimitive value={config.core.selectedUser ?? "No User"} />
+          <InputPrimitive disabled={true} value={config.core.selectedUser ?? "No User"} />
         </SingleColumn>
 
         <SingleColumn label="Window Size (ms)" backgroundType="transparent" className="col-span-2">
           <InputPrimitive
-            editable
+            disabled={disabled}
             type="number"
             value={config.core.windowSizeMs}
             onChange={(e) => update("windowSizeMs", Number(e.target.value))}
@@ -67,7 +69,7 @@ export function ReplayPanel({
 
         <SingleColumn label="Window Slide (ms)" backgroundType="transparent" className="col-span-2">
           <InputPrimitive
-            editable
+            disabled={disabled}
             type="number"
             value={config.core.windowSlideMs}
             onChange={(e) => update("windowSlideMs", Number(e.target.value))}
@@ -75,7 +77,7 @@ export function ReplayPanel({
         </SingleColumn>
         <SingleColumn label="Sampling Rate" backgroundType="transparent" className="col-span-2">
           <InputPrimitive
-            editable
+            disabled={disabled}
             type="number"
             value={config.core.samplingRate}
             onChange={(e) => update("samplingRate", Number(e.target.value))}
@@ -84,6 +86,8 @@ export function ReplayPanel({
 
         <SingleColumn label="Interpolation" backgroundType="transparent" className="col-span-2">
           <SelectPrimitive
+            mode={"single"}
+            disabled={disabled}
             value={config.core.interpolation}
             onChange={(v) => update("interpolation", v as InterpolationOption)}
             options={interpolationOptions.map((i) => ({ label: i, value: i }))}
@@ -91,29 +95,30 @@ export function ReplayPanel({
         </SingleColumn>
 
         <SingleColumn label="Activity" backgroundType="transparent" className="col-span-3">
-          <InputPrimitive value={config.activity?.title ?? "No Activity"} />
+          <InputPrimitive disabled={true}
+                          value={config.activity?.title ?? "No Activity"} />
         </SingleColumn>
 
         <SingleColumn label="LSL" backgroundType="transparent" direction="row">
           <InputPrimitive
-            editable
+            disabled={disabled}
             type="checkbox"
             className={"w-5"}
             checked={config.core.lslEnabled ?? false}
             onChange={(e) => update("lslEnabled", e.target.checked)}
           />
-          <span className="font-semibold">{config.core.lslEnabled ? "ON" : "OFF"}</span>
+          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{config.core.lslEnabled ? "ON" : "OFF"}</span>
         </SingleColumn>
 
         <SingleColumn label="TCP" backgroundType="transparent" direction="row">
           <InputPrimitive
-            editable
+            disabled={disabled}
             type="checkbox"
             className={"w-5"}
             checked={config.core.tcpEnabled ?? false}
             onChange={(e) => update("tcpEnabled", e.target.checked)}
           />
-          <span className="font-semibold">{config.core.tcpEnabled ? "ON" : "OFF"}</span>
+          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{config.core.tcpEnabled ? "ON" : "OFF"}</span>
         </SingleColumn>
 
         <SingleColumn
@@ -123,15 +128,18 @@ export function ReplayPanel({
           actionText="Clear"
           onActionClick={onResetFile}
         >
-          <div className="flex h-10 items-center gap-2">
+          <div className="flex h-8 items-center gap-2">
             <button
               type="button"
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200"
+              disabled={disabled}
+              className="h-8 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200"
               onClick={onPickSessionFile}
             >
               Choose…
             </button>
-            <div className="min-w-0 flex-1 truncate text-sm text-gray-700">{config.filePath || "No file selected"}</div>
+            <div className={`min-w-0 flex-1 truncate text-sm ${disabled ? "text-gray-600" : "text-gray-800"}`}>
+              {config.filePath || "No file selected"}
+            </div>
           </div>
         </SingleColumn>
       </ToolkitContainer>

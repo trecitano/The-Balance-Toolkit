@@ -484,7 +484,6 @@ export default function Users() {
                 {/* Name */}
                 <SingleColumn requiredField label="Name:" icon={<img src={personIcon} />}>
                   <InputPrimitive
-                    editable
                     required
                     value={editingUserData.name}
                     onChange={(e) => handleEditUpdate("name", e.target.value)}
@@ -494,7 +493,6 @@ export default function Users() {
                 {/* Age */}
                 <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
                   <InputPrimitive
-                    editable
                     type="number"
                     value={editingUserData.age}
                     onChange={(e) => handleEditUpdate("age", Number(e.target.value))}
@@ -504,6 +502,7 @@ export default function Users() {
                 {/* Gender */}
                 <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
                   <SelectPrimitive
+                    mode={"single"}
                     value={
                       ["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "")
                         ? (editingUserData.gender ?? "")
@@ -524,7 +523,6 @@ export default function Users() {
                 {!["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "Male") && (
                   <SingleColumn label="Specify Gender:" icon={<img src={sexIcon} alt="" />}>
                     <InputPrimitive
-                      editable
                       value={editingUserData.gender ?? ""}
                       onChange={(e) => handleEditUpdate("gender", e.target.value)}
                     />
@@ -535,7 +533,6 @@ export default function Users() {
                 <SingleColumn label="Height:" icon={<img src={heightIcon} />}>
                   <div className="flex gap-3">
                     <InputPrimitive
-                      editable
                       type="number"
                       value={editingUserData.height ?? ""}
                       onChange={(e) => {
@@ -546,6 +543,7 @@ export default function Users() {
                       }}
                     />
                     <SelectPrimitive
+                      mode={"single"}
                       value={editingUserData.heightMetric ?? "cm"}
                       onChange={(v) => handleEditUpdate("heightMetric", v)}
                       options={[
@@ -560,7 +558,6 @@ export default function Users() {
                 <SingleColumn requiredField label="Weight:" icon={<img src={weightIcon} />}>
                   <div className="flex justify-between gap-1">
                     <InputPrimitive
-                      editable
                       required
                       type="number"
                       className={"w-30"}
@@ -573,6 +570,7 @@ export default function Users() {
                       }}
                     />
                     <SelectPrimitive
+                      mode={"single"}
                       value={editingUserData.weightMetric ?? "kg"}
                       onChange={(v) => handleEditUpdate("weightMetric", v)}
                       options={[
@@ -589,6 +587,7 @@ export default function Users() {
                 {/* Handedness */}
                 <SingleColumn label="Handedness:" icon={<img src={handIcon} />}>
                   <SelectPrimitive
+                    mode={"single"}
                     value={editingUserData.handedness ?? ""}
                     onChange={(v) => handleEditUpdate("handedness", v as UserType["handedness"])}
                     options={[
@@ -630,7 +629,6 @@ export default function Users() {
                 {/* Notes */}
                 <SingleColumn className={"col-span-4 row-start-3"} label="Notes:">
                   <InputPrimitive
-                    editable
                     required
                     value={editingUserData.notes}
                     onChange={(e) => handleEditUpdate("notes", e.target.value)}
@@ -671,22 +669,23 @@ export default function Users() {
             <div className="mt-2 grid grid-cols-4 grid-rows-3 gap-2.5 text-base">
               {/* Name */}
               <SingleColumn label="Name:" icon={<img src={personIcon} />}>
-                <InputPrimitive value={selectedUserData.name ?? "N/A"} />
+                <InputPrimitive disabled={true} value={selectedUserData.name ?? "N/A"} />
               </SingleColumn>
 
               {/* Age */}
               <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
-                <InputPrimitive value={selectedUserData.age ?? "N/A"} />
+                <InputPrimitive disabled={true} value={selectedUserData.age ?? "N/A"} />
               </SingleColumn>
 
               {/* Gender */}
               <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
-                <InputPrimitive value={selectedUserData.gender ?? "N/A"} />
+                <InputPrimitive disabled={true} value={selectedUserData.gender ?? "N/A"} />
               </SingleColumn>
 
               {/* Height */}
               <SingleColumn label="Height:" icon={<img src={heightIcon} />}>
                 <InputPrimitive
+                  disabled={true}
                   value={
                     selectedUserData.height ? `${selectedUserData.height} ${selectedUserData.heightMetric}` : "N/A"
                   }
@@ -696,6 +695,7 @@ export default function Users() {
               {/* Weight */}
               <SingleColumn label="Weight:" icon={<img src={weightIcon} />}>
                 <InputPrimitive
+                  disabled={true}
                   value={
                     selectedUserData.weight ? `${selectedUserData.weight} ${selectedUserData.weightMetric}` : "N/A"
                   }
@@ -704,12 +704,13 @@ export default function Users() {
 
               {/* Handedness */}
               <SingleColumn label="Handedness:" icon={<img src={handIcon} />}>
-                <InputPrimitive value={selectedUserData.handedness ?? "N/A"} />
+                <InputPrimitive disabled={true} value={selectedUserData.handedness ?? "N/A"} />
               </SingleColumn>
 
               {/* Color */}
               <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
                 <InputPrimitive
+                  disabled={true}
                   style={{ backgroundColor: selectedUserData.color ?? "#ccc" }}
                   title={selectedUserData.color ?? "No color selected"}
                 ></InputPrimitive>
@@ -717,7 +718,7 @@ export default function Users() {
 
               {/* Notes */}
               <SingleColumn className={"col-span-4 row-start-3"} label="Notes:">
-                <InputPrimitive value={selectedUserData.notes ?? ""} />
+                <InputPrimitive disabled={true} value={selectedUserData.notes ?? ""} />
               </SingleColumn>
             </div>
           </div>

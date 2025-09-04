@@ -98,6 +98,7 @@ export default function ReplayPage() {
         boardDisplaySelected={boardDisplaySelected}
         onBoardDisplayChange={setBoardDisplaySelected}
         boardDisplayOptions={boardDisplayOptions}
+        disabled={replayInformation.hasOngoingSession}
         onChange={(newState) => updateReplay.mutate(newState.core)}
         onPickSessionFile={pickSessionFile}
         onResetFile={resetReplay}

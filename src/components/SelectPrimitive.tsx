@@ -1,32 +1,47 @@
 import React, { useMemo, useRef, useState } from "react";
 
-export type SelectOption = {
+export type BaseOption = {
   value: string;
   label: string;
   disabled?: boolean;
 };
 
-export function SelectPrimitive({
-  label,
-  options,
-  value,
-  onChange,
-  placeholder = "Select an option",
-  className = "",
-  disabled = false,
-  maxHeight = 260,
-  noneOption,
-}: {
-  label?: string;
-  options: SelectOption[];
+type SingleSelectProps = {
+  mode: "single";
   value: string | null;
   onChange: (next: string) => void;
   placeholder?: string;
+  noneOption?: string | false;
+};
+
+type MultiSelectProps = {
+  mode: "multi";
+  value: string[];
+  onChange: (next: string[]) => void;
+  placeholder?: string;
+  noOptionsMessage?: string;
+};
+
+type CommonProps = {
+  options: BaseOption[];
   className?: string;
   disabled?: boolean;
   maxHeight?: number;
-  noneOption?: string | false;
-}) {
+};
+
+type SelectProps = CommonProps & (SingleSelectProps | MultiSelectProps);
+
+export function SelectPrimitive(props: SelectProps) {
+  const {
+    options,
+    value,
+    onChange,
+    className = "",
+    disabled = false,
+    maxHeight = 260,
+    mode,
+  } = props;
+
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -34,10 +49,31 @@ export function SelectPrimitive({
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
-  const selectedLabel = useMemo(() => {
+  const hasOptions = options.length > 0;
+  const isDisabled = disabled || !hasOptions;
+
+  const selectedLabels = useMemo(() => {
     const map = new Map(options.map((o) => [o.value, o.label]));
-    return value ? (map.get(value) ?? value) : null;
-  }, [options, value]);
+    if (mode === "single") {
+      return value ? [map.get(value) ?? value] : [];
+    }
+    return value.map((v) => map.get(v) ?? v);
+  }, [options, value, mode]);
+
+  const toggleValue = (v: string) => {
+    if (mode === "multi") {
+      const currentValue = value as string[];
+      if (currentValue.includes(v)) {
+        (onChange as (next: string[]) => void)(currentValue.filter((x) => x !== v));
+      } else {
+        (onChange as (next: string[]) => void)([...currentValue, v]);
+      }
+    } else {
+      (onChange as (next: string) => void)(v);
+      setOpen(false);
+      buttonRef.current?.focus();
+    }
+  };
 
   const handleBlur: React.FocusEventHandler<HTMLDivElement> = (e) => {
     const next = e.relatedTarget as Node | null;
@@ -47,7 +83,7 @@ export function SelectPrimitive({
   };
 
   const onTriggerKeyDown: React.KeyboardEventHandler<HTMLButtonElement> = (e) => {
-    if (disabled) return;
+    if (isDisabled) return;
     if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       setActiveIdx(0);
@@ -66,9 +102,11 @@ export function SelectPrimitive({
       buttonRef.current?.focus();
       return;
     }
+
+    const maxIdx = options.length - 1;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIdx((i) => Math.min(i + 1, options.length - 1));
+      setActiveIdx((i) => Math.min(i + 1, maxIdx));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIdx((i) => Math.max(i - 1, 0));
@@ -76,26 +114,40 @@ export function SelectPrimitive({
       e.preventDefault();
       const opt = options[activeIdx];
       if (opt && !opt.disabled) {
-        onChange(opt.value);
-        setOpen(false);
-        buttonRef.current?.focus();
+        toggleValue(opt.value);
       }
     }
   };
 
-  return (
-    <div ref={rootRef} className={className} onBlur={handleBlur} tabIndex={-1}>
-      {label ? <label className="mb-1 block text-xs font-semibold text-gray-700">{label}</label> : null}
+  const getDisplayText = () => {
+    if (mode === "single") {
+      const placeholder = (props as SingleSelectProps).placeholder ?? "Select an option";
+      return selectedLabels[0] ?? placeholder;
+    } else {
+      const placeholder = (props as MultiSelectProps).placeholder ?? "None selected";
+      const noOptionsMessage = (props as MultiSelectProps).noOptionsMessage ?? "No options available";
 
+      if (!hasOptions) return noOptionsMessage;
+      if (selectedLabels.length === 0) return placeholder;
+      if (selectedLabels.length === 1) return selectedLabels[0];
+      return `${selectedLabels.length} selected`;
+    }
+  };
+
+  const displayText = getDisplayText();
+  const hasSelection = selectedLabels.length > 0;
+
+  return (
+    <div ref={rootRef} className={className} onBlur={handleBlur} tabIndex={1}>
       <div className="relative">
         {/* Trigger */}
         <button
           ref={buttonRef}
           type="button"
-          disabled={disabled}
+          disabled={isDisabled}
           onMouseDown={(e) => {
             e.preventDefault();
-            if (disabled) return;
+            if (isDisabled) return;
             const willOpen = !open;
             setOpen(willOpen);
             if (willOpen) {
@@ -106,12 +158,16 @@ export function SelectPrimitive({
             }
           }}
           onKeyDown={onTriggerKeyDown}
-          className={`relative flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed ${
+          className={`h-8 w-full rounded-lg 
+          flex items-center justify-between text-left
+          border border-gray-300 bg-white px-3 text-sm
+          disabled:bg-gray-100/80 disabled:cursor-not-allowed
+          focus:border-blue-500 focus:outline-none ${
             open ? "ring-2 ring-blue-100" : ""
           }`}
         >
-          <span className={`truncate ${selectedLabel ? "text-gray-900" : "text-gray-500"}`}>
-            {selectedLabel ?? placeholder}
+          <span className={`truncate ${isDisabled ? "text-gray-600" : hasSelection ? "text-gray-900" : "text-gray-600"}`}>
+            {displayText}
           </span>
           <svg className="ml-2 h-4 w-4 shrink-0 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -123,7 +179,7 @@ export function SelectPrimitive({
         </button>
 
         {/* Dropdown */}
-        {open ? (
+        {open && hasOptions ? (
           <div
             ref={listRef}
             role="listbox"
@@ -132,26 +188,32 @@ export function SelectPrimitive({
             className="absolute top-full left-0 z-40 mt-1 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg focus:outline-none"
           >
             <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>
-              {noneOption && (
+              {/* None option for single select */}
+              {mode === "single" && (props as SingleSelectProps).noneOption && (
                 <button
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    onChange("");
+                    (onChange as (next: string) => void)("");
                     setOpen(false);
                     buttonRef.current?.focus();
                   }}
-                  onMouseEnter={() => setActiveIdx(-1)} // 👈 track hover for keyboard nav
-                  className={`italic" flex w-full items-center px-3 py-2 text-left text-sm text-gray-400 ${activeIdx === -1 ? "bg-blue-50" : ""} `}
+                  onMouseEnter={() => setActiveIdx(-1)}
+                  className={`flex w-full items-center px-3 py-2 text-left text-sm italic text-gray-400 ${
+                    activeIdx === -1 ? "bg-blue-50" : ""
+                  }`}
                   role="option"
                 >
-                  {noneOption}
+                  {(props as SingleSelectProps).noneOption}
                 </button>
               )}
 
               {options.map((opt, idx) => {
                 const active = idx === activeIdx;
-                const selected = value === opt.value;
+                const selected = mode === "single"
+                  ? value === opt.value
+                  : (value as string[]).includes(opt.value);
+
                 return (
                   <button
                     key={opt.value}
@@ -161,19 +223,29 @@ export function SelectPrimitive({
                     onMouseDown={(e) => {
                       e.preventDefault();
                       if (!opt.disabled) {
-                        onChange(opt.value);
-                        setOpen(false);
-                        buttonRef.current?.focus();
+                        toggleValue(opt.value);
                       }
                     }}
-                    className={`flex w-full cursor-pointer items-center px-3 py-2 text-left text-sm ${
+                    className={`flex w-full cursor-pointer items-center ${
+                      mode === "multi" ? "gap-2" : ""
+                    } px-3 py-2 text-left text-sm ${
                       active ? "bg-blue-50" : ""
-                    } ${selected ? "font-semibold text-blue-600" : ""} ${
+                    } ${
+                      mode === "single" && selected ? "font-semibold text-blue-600" : ""
+                    } ${
                       opt.disabled ? "cursor-not-allowed opacity-50" : ""
                     }`}
                     role="option"
                   >
-                    {opt.label}
+                    {mode === "multi" && (
+                      <input
+                        type="checkbox"
+                        readOnly
+                        checked={selected}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                      />
+                    )}
+                    <span className="truncate">{opt.label}</span>
                   </button>
                 );
               })}
