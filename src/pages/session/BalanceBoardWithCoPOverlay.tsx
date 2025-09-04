@@ -1,17 +1,9 @@
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useCallback,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useCallback, useState } from "react";
 import { BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
-import {
-  RawBalanceBoardEvent,
-  processedSingleFrameSessionData,
-} from "@/types.ts";
+import { RawBalanceBoardEvent, processedSingleFrameSessionData } from "@/types.ts";
 import { StoreApi } from "zustand";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
+import { StabilityBarGauge } from "@/pages/session/StabilityBarGauge.tsx";
 
 const COP_X_MIN = -1;
 const COP_X_MAX = 1;
@@ -35,10 +27,7 @@ type Props = {
   store: StoreApi<SessionState>;
 };
 
-export function BalanceBoardWithCoPOverlay({
-                                             macAddress,
-                                             store,
-                                           }: Props) {
+export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -52,9 +41,7 @@ export function BalanceBoardWithCoPOverlay({
   const [forceKg, setForceKg] = useState<number | null>(null);
 
   // Refs to avoid re-render on every frame
-  const rawRef = useRef<BoardBuffer<RawBalanceBoardEvent> | undefined>(
-    undefined,
-  );
+  const rawRef = useRef<BoardBuffer<RawBalanceBoardEvent> | undefined>(undefined);
   const polyRef = useRef<processedSingleFrameSessionData | undefined>(undefined);
   const showCERef = useRef<boolean>(showConfidenceEllipse);
   const showHullRef = useRef<boolean>(showConvexHull);
@@ -64,13 +51,7 @@ export function BalanceBoardWithCoPOverlay({
   const scheduleDraw = useCallback(() => {
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
-      draw(
-        canvasRef.current,
-        rawRef.current,
-        polyRef.current,
-        showCERef.current,
-        showHullRef.current,
-      );
+      draw(canvasRef.current, rawRef.current, polyRef.current, showCERef.current, showHullRef.current);
     });
   }, []);
 
@@ -120,7 +101,6 @@ export function BalanceBoardWithCoPOverlay({
           setForceKg(forceKg ?? null);
         }
 
-
         scheduleDraw();
       },
       { equalityFn: (a, b) => a === b },
@@ -140,7 +120,7 @@ export function BalanceBoardWithCoPOverlay({
     return () => {
       rawDataUnsub();
       lastFrameDataUnsub();
-    }
+    };
   }, [macAddress, scheduleDraw]);
 
   // Keep refs in sync with state
@@ -158,8 +138,8 @@ export function BalanceBoardWithCoPOverlay({
   }, []);
 
   return (
-    <div className="relative flex gap-3 h-full">
-      <div className="relative w-7/10">
+    <div className="relative flex h-full items-center justify-around">
+      <div className="relative w-5/10">
         <img
           ref={imgRef}
           src={wbbTopdown}
@@ -167,14 +147,11 @@ export function BalanceBoardWithCoPOverlay({
           draggable={false}
           onLoad={scheduleDraw}
         />
-        <canvas
-          className="pointer-events-none absolute inset-0"
-          ref={canvasRef}
-        />
+        <canvas className="pointer-events-none absolute inset-0" ref={canvasRef} />
       </div>
 
       {/* Controls + Stability Index */}
-      <div className="flex flex-col w-3/10 gap-3">
+      <div className="flex w-22/100 flex-col gap-3">
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -182,7 +159,7 @@ export function BalanceBoardWithCoPOverlay({
             checked={showConfidenceEllipse}
             onChange={(e) => setShowConfidenceEllipse(e.target.checked)}
           />
-          <span>Confidence ellipse</span>
+          <span className={"text-sm text-gray-700"}>Confidence ellipse</span>
         </label>
 
         <label className="flex items-center gap-2">
@@ -192,22 +169,19 @@ export function BalanceBoardWithCoPOverlay({
             checked={showConvexHull}
             onChange={(e) => setShowConvexHull(e.target.checked)}
           />
-          <span>Convex hull</span>
+          <span className={"text-sm text-gray-700"}>Convex hull</span>
         </label>
 
         <div className="text-sm text-gray-700">
           Stability Index:{" "}
-          <span className="font-semibold">
-            {stabilityIndex !== null ? stabilityIndex.toFixed(2) : "—"}
-          </span>
+          <span className="font-semibold">{stabilityIndex !== null ? stabilityIndex.toFixed(2) : "—"}</span>
         </div>
         <div className="text-sm text-gray-700">
-          Force (Kg):{" "}
-          <span className="font-semibold">
-            {forceKg !== null ? forceKg.toFixed(2) : "—"}
-          </span>
+          Force (Kg): <span className="font-semibold">{forceKg !== null ? forceKg.toFixed(2) : "—"}</span>
         </div>
       </div>
+
+      <StabilityBarGauge macAddress={macAddress} store={store} width={50} height={200} />
     </div>
   );
 }
@@ -315,12 +289,8 @@ function drawPolygon(
   ctx.restore();
 }
 
-function getLastSeconds(
-  buf: BoardBuffer<RawBalanceBoardEvent>,
-  seconds: number,
-) {
-  if (!buf || buf.len === 0)
-    return [] as { x: number; y: number; t: number }[];
+function getLastSeconds(buf: BoardBuffer<RawBalanceBoardEvent>, seconds: number) {
+  if (!buf || buf.len === 0) return [] as { x: number; y: number; t: number }[];
 
   const frames = buf.frames;
   const cap = frames.length;

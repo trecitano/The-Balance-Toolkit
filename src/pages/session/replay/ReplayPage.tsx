@@ -9,8 +9,8 @@ import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useReplayDataStore } from "@/store/sessionDataStore.tsx";
 import { listen } from "@tauri-apps/api/event";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
-import {open} from "@tauri-apps/plugin-dialog";
-import {ToolkitButton} from "@/components/ToolkitButton.tsx";
+import { open } from "@tauri-apps/plugin-dialog";
+import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 
 const REPLAY_QUERY_KEY = ["replay_key"];
 export const ReplayQuery = {
@@ -43,6 +43,13 @@ export default function ReplayPage() {
 
   const updateFileLoad = useMutation({
     mutationFn: (filePath: string) => commands.replay.loadReplayFile(filePath),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
+    },
+  });
+
+  const { mutate: resetReplay } = useMutation({
+    mutationFn: () => commands.replay.clearReplay(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
     },
@@ -93,6 +100,7 @@ export default function ReplayPage() {
         boardDisplayOptions={boardDisplayOptions}
         onChange={(newState) => updateReplay.mutate(newState.core)}
         onPickSessionFile={pickSessionFile}
+        onResetFile={resetReplay}
       />
 
       {replayInformation.devices.length === 0 ? (

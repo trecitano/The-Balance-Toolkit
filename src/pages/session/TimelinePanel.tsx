@@ -5,13 +5,13 @@ import { createProgressTimer } from "@/pages/session/ProgressTimer";
 import { Activity } from "@/types.ts";
 import { useRef } from "react";
 
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow"
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 export async function openPopup() {
   console.log("Opening popup");
 
-  new WebviewWindow('session-activity-pop-up', {
-    url: '/session-activity-pop-up',
+  new WebviewWindow("session-activity-pop-up", {
+    url: "/session-activity-pop-up",
     width: 1000,
     height: 800,
     title: "Activity",
@@ -27,13 +27,20 @@ type TimelinePanelProps = {
   onStop: () => Promise<void>;
 };
 
-export function TimelinePanel({ activity, placeholderMessage, hasOngoingSession, canStart, onStart, onStop }: TimelinePanelProps) {
+export function TimelinePanel({
+  activity,
+  placeholderMessage,
+  hasOngoingSession,
+  canStart,
+  onStart,
+  onStop,
+}: TimelinePanelProps) {
   const timerRef = useRef(createProgressTimer());
   const timer = timerRef.current;
   const activityDuration = activity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0);
 
   return (
-    <div className="mt-auto min-h-33 flex w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
+    <div className="mt-auto flex min-h-33 w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
       {activity ? (
         <div className="relative mx-10 mt-5 mb-1 w-9/10">
           <ActivityTimeline blocks={activity.timelineBlocks} height={"h-20"} />
@@ -45,7 +52,7 @@ export function TimelinePanel({ activity, placeholderMessage, hasOngoingSession,
               }
             }}
             className={clsx(
-              "absolute top-0 bottom-0 z-10 h-full w-[2px] bg-[var(--red)]",
+              "absolute top-[-10px] z-10 h-[110%] w-[2px] bg-[var(--red)]",
               !hasOngoingSession && "hidden",
             )}
           >
@@ -53,7 +60,7 @@ export function TimelinePanel({ activity, placeholderMessage, hasOngoingSession,
           </div>
         </div>
       ) : (
-        <div className="h-20 w-9/10 items-center flex-1 flex justify-center">
+        <div className="flex h-20 w-9/10 flex-1 items-center justify-center">
           <p className="text-xl text-gray-500/80">{placeholderMessage}</p>
         </div>
       )}

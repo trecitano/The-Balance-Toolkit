@@ -86,6 +86,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             replay_information,
             replay_update,
             replay_load_file,
+            replay_clear_replay,
             replay_load_last_session_info,
             activity_get_available_time_blocks,
             activity_get_activities,
@@ -612,6 +613,19 @@ async fn replay_load_file(file_path: PathBuf, state: State<'_, AppState>) -> Res
     response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< replay_load_file.\n");
+    Ok(())
+}
+
+#[tauri::command(async)]
+async fn replay_clear_replay(state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> replay_clear_replay");
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::ClearReplay { response: response_tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< replay_clear_replay.\n");
     Ok(())
 }
 

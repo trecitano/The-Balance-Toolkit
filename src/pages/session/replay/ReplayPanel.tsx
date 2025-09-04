@@ -1,4 +1,3 @@
-import { open } from "@tauri-apps/plugin-dialog";
 import { CheckboxOption, MultiSelect } from "@/components/MultiSelect.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
@@ -14,6 +13,7 @@ export function ReplayPanel({
   boardDisplayOptions,
   onChange,
   onPickSessionFile,
+  onResetFile,
 }: {
   config: ReplayConfiguration;
   boardDisplaySelected: string[];
@@ -21,6 +21,7 @@ export function ReplayPanel({
   boardDisplayOptions: CheckboxOption[];
   onChange: (v: ReplayConfiguration) => void;
   onPickSessionFile: () => void;
+  onResetFile: () => void;
 }) {
   const update = <K extends keyof SessionPanelConfiguration>(key: K, val: SessionPanelConfiguration[K]) => {
     const next: ReplayConfiguration = {
@@ -115,7 +116,13 @@ export function ReplayPanel({
           <span className="font-semibold">{config.core.tcpEnabled ? "ON" : "OFF"}</span>
         </SingleColumn>
 
-        <SingleColumn label="Load Session" backgroundType="transparent" className="col-start-7 col-end-15">
+        <SingleColumn
+          label="Load Session"
+          backgroundType="transparent"
+          className="col-start-7 col-end-15"
+          actionText="Clear"
+          onActionClick={onResetFile}
+        >
           <div className="flex h-10 items-center gap-2">
             <button
               type="button"
@@ -124,9 +131,7 @@ export function ReplayPanel({
             >
               Choose…
             </button>
-            <div className="min-w-0 flex-1 truncate text-sm text-gray-700">
-              {config.filePath ?? "No folder selected"}
-            </div>
+            <div className="min-w-0 flex-1 truncate text-sm text-gray-700">{config.filePath || "No file selected"}</div>
           </div>
         </SingleColumn>
       </ToolkitContainer>

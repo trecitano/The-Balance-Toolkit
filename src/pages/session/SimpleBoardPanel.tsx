@@ -7,7 +7,7 @@ import { SessionState } from "@/store/sessionDataStore.tsx";
 import { ProcessedSessionData } from "@/types.ts";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
-import {PSDPlot} from "@/pages/session/PSDPlot.tsx";
+import { PSDPlot } from "@/pages/session/PSDPlot.tsx";
 
 export function BoardPanel({
   boardName,
@@ -44,8 +44,8 @@ export function BoardPanel({
             title="Power Spectral Density"
             macAddress={macAddress}
             store={store}
-            maxFreq={15.0}  // Focus on 0-5 Hz range typical for postural sway
-            logScale={true}  // or true if you prefer log scale
+            maxFreq={15.0} // Focus on 0-5 Hz range typical for postural sway
+            logScale={true} // or true if you prefer log scale
           />
         </div>
 

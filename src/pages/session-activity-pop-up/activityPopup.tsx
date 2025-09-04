@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBlockImage } from "@/utils/activityImages.ts";
 import { listen } from "@tauri-apps/api/event";
@@ -13,9 +13,7 @@ const formatMs = (ms: number): string => {
   const totalSeconds = Math.ceil(ms / 1000);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, "0")}:${seconds
-    .toString()
-    .padStart(2, "0")}`;
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 };
 
 export default function Popup() {
@@ -50,10 +48,7 @@ export default function Popup() {
       setLocalTimeLeft(sessionActivityState.ongoingState.timeToNextBlockMs);
       setLocalBlockIndex(sessionActivityState.ongoingState.currentBlockIndex);
     }
-  }, [
-    sessionActivityState?.ongoingState?.timeToNextBlockMs,
-    sessionActivityState?.ongoingState?.currentBlockIndex,
-  ]);
+  }, [sessionActivityState?.ongoingState?.timeToNextBlockMs, sessionActivityState?.ongoingState?.currentBlockIndex]);
 
   // Countdown timer with local block progression
   useEffect(() => {
@@ -96,13 +91,13 @@ export default function Popup() {
   useEffect(() => {
     const sessionStartedListener = listen<void>("session_started", (_) => {
       console.log("Session started");
-      queryClient.invalidateQueries({queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY});
+      queryClient.invalidateQueries({ queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY });
     });
     const sessionActivityChangedListener = listen<void>("session_activity_changed", (_) => {
-      queryClient.invalidateQueries({queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY});
+      queryClient.invalidateQueries({ queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY });
     });
     const sessionCompletedListener = listen<void>("session_completed", (_) => {
-      queryClient.invalidateQueries({queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY});
+      queryClient.invalidateQueries({ queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY });
     });
 
     return () => {
@@ -117,7 +112,6 @@ export default function Popup() {
     if (!sessionActivityState?.ongoingState) {
       setLocalBlockIndex(0);
     }
-
   }, [sessionActivityState]);
 
   if (isLoading) {
@@ -146,29 +140,26 @@ export default function Popup() {
   const showCountdown = isSessionRunning && timeLeftMs <= 3000;
 
   return (
-    <div className="flex h-screen w-95/100 flex-col bg-(--bg-primary) px-20 py-8 relative">
+    <div className="relative flex h-screen w-95/100 flex-col bg-(--bg-primary) px-20 py-8">
       {/* Countdown in top right corner */}
       {showCountdown && (
-        <div className="absolute top-10 right-0 rounded-lg bg-(--primary) px-3 py-2 text-white text-lg font-semibold z-10">
+        <div className="absolute top-10 right-0 z-10 rounded-lg bg-(--primary) px-3 py-2 text-lg font-semibold text-white">
           Next block in {formatMs(timeLeftMs)}
         </div>
       )}
 
       {/* Session status indicator */}
       {!isSessionRunning && (
-        <div className="absolute top-10 left-0 rounded-lg bg-(--secondary) px-3 py-2 z-1 text-white text-lg font-semibold ">
+        <div className="absolute top-10 left-0 z-1 rounded-lg bg-(--secondary) px-3 py-2 text-lg font-semibold text-white">
           Session not started
         </div>
       )}
 
       {/* Activity Title */}
-      <h2 className="text-xl font-bold text-center">{activity.title}</h2>
+      <h2 className="text-center text-xl font-bold">{activity.title}</h2>
 
       {/* Blocks Carousel */}
-      <ul
-        ref={listRef}
-        className="carousel-list flex flex-1 gap-6 overflow-hidden px-[calc(50%-75px)] py-4"
-      >
+      <ul ref={listRef} className="carousel-list flex flex-1 gap-6 overflow-hidden px-[calc(50%-75px)] py-4">
         {blocks.map((block, index) => {
           const isActive = index === currentBlockIndex;
 
@@ -176,25 +167,17 @@ export default function Popup() {
           const displayIsActive = isSessionRunning ? isActive : index === 0;
 
           return (
-            <li
-              key={index}
-              data-blockid={index}
-              className={`h-full justify-center flex flex-col rounded-lg p-3`}
-            >
-              <div className={`mt-top flex min-h-110 min-w-120 justify-center duration-100 transition linear ${
-                displayIsActive
-                  ? "scale-110 bg-gray-100 opacity-100 shadow-lg ring-1 ring-blue-500"
-                  : "scale-100 bg-gray-100 "
-              }`}>
-                <img
-                  src={getBlockImage(block.id)}
-                  alt={block.title}
-                  className="rounded-lg mb-2"
-                />
+            <li key={index} data-blockid={index} className={`flex h-full flex-col justify-center rounded-lg p-3`}>
+              <div
+                className={`mt-top linear flex min-h-110 min-w-120 justify-center transition duration-100 ${
+                  displayIsActive
+                    ? "scale-110 bg-gray-100 opacity-100 shadow-lg ring-1 ring-blue-500"
+                    : "scale-100 bg-gray-100"
+                }`}
+              >
+                <img src={getBlockImage(block.id)} alt={block.title} className="mb-2 rounded-lg" />
               </div>
-              <span className={`text-sm font-medium text-center text-gray-600`}>
-                {block.title}
-              </span>
+              <span className={`text-center text-sm font-medium text-gray-600`}>{block.title}</span>
             </li>
           );
         })}

@@ -13,6 +13,7 @@ export function SessionPanel({
   boardDisplayOptions,
   activityOptions,
   userOptions,
+  editable,
   value,
   onChange,
 }: {
@@ -21,6 +22,7 @@ export function SessionPanel({
   boardDisplayOptions: CheckboxOption[];
   activityOptions: CheckboxOption[];
   userOptions: string[];
+  editable: boolean;
   value: SessionPanelConfiguration;
   onChange: (v: SessionPanelConfiguration) => void;
 }) {
@@ -59,15 +61,21 @@ export function SessionPanel({
 
         <SingleColumn label="User" backgroundType="transparent" className="col-span-3">
           <SelectPrimitive
+            disabled={!editable}
             value={value.selectedUser ?? ""}
             onChange={(v) => update("selectedUser", v ?? "")}
             options={userOptions.map((u) => ({ label: u, value: u }))}
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Size (ms)" backgroundType="transparent" className="col-span-2">
+        <SingleColumn
+          label="Window Size (ms)"
+          tooltipText={"Ursine Big Potato"}
+          backgroundType="transparent"
+          className="col-span-2"
+        >
           <InputPrimitive
-            editable
+            editable={editable}
             type="number"
             value={value.windowSizeMs}
             onChange={(e) => update("windowSizeMs", Number(e.target.value))}
@@ -76,7 +84,7 @@ export function SessionPanel({
 
         <SingleColumn label="Window Slide (ms)" backgroundType="transparent" className="col-span-2">
           <InputPrimitive
-            editable
+            editable={editable}
             type="number"
             value={value.windowSlideMs}
             onChange={(e) => update("windowSlideMs", Number(e.target.value))}
@@ -84,7 +92,7 @@ export function SessionPanel({
         </SingleColumn>
         <SingleColumn label="Sampling Rate" backgroundType="transparent" className="col-span-2">
           <InputPrimitive
-            editable
+            editable={editable}
             type="number"
             value={value.samplingRate}
             onChange={(e) => update("samplingRate", Number(e.target.value))}
@@ -93,14 +101,22 @@ export function SessionPanel({
 
         <SingleColumn label="Interpolation" backgroundType="transparent" className="col-span-2">
           <SelectPrimitive
+            disabled={!editable}
             value={value.interpolation}
             onChange={(v) => update("interpolation", v as InterpolationOption)}
             options={interpolationOptions.map((i) => ({ label: i, value: i }))}
           />
         </SingleColumn>
 
-        <SingleColumn label="Activity" backgroundType="transparent" className="col-span-3">
+        <SingleColumn
+          label="Activity"
+          backgroundType="transparent"
+          className="col-span-3"
+          actionText="Clear"
+          onActionClick={() => update("activityId", "")}
+        >
           <SelectPrimitive
+            disabled={!editable}
             value={value.activityId}
             onChange={(v) => update("activityId", v)}
             options={activityOptions}
@@ -108,9 +124,9 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="LSL" backgroundType="transparent" direction="row">
+        <SingleColumn label="LSL" backgroundType="transparent" direction="row" tooltipText={"Big potato"}>
           <InputPrimitive
-            editable
+            editable={editable}
             type="checkbox"
             className={"w-5"}
             checked={value.lslEnabled ?? false}
@@ -121,7 +137,7 @@ export function SessionPanel({
 
         <SingleColumn label="TCP" backgroundType="transparent" direction="row">
           <InputPrimitive
-            editable
+            editable={editable}
             type="checkbox"
             className={"w-5"}
             checked={value.tcpEnabled ?? false}
@@ -130,17 +146,24 @@ export function SessionPanel({
           <span className="font-semibold">{value.tcpEnabled ? "ON" : "OFF"}</span>
         </SingleColumn>
 
-        <SingleColumn label="Save Location" backgroundType="transparent" className="col-start-7 col-end-15">
+        <SingleColumn
+          label="Save Location"
+          backgroundType="transparent"
+          className="col-start-7 col-end-15"
+          actionText="Clear"
+          onActionClick={() => update("outputDirectory", "")}
+        >
           <div className="flex h-10 items-center gap-2">
             <button
               type="button"
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200"
+              disabled={!editable}
+              className="h-10 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200 disabled:bg-gray-100"
               onClick={pickDirectory}
             >
               Choose…
             </button>
             <div className="min-w-0 flex-1 truncate text-sm text-gray-700">
-              {value.outputDirectory ?? "No folder selected"}
+              {value.outputDirectory || "No folder selected"}
             </div>
           </div>
         </SingleColumn>

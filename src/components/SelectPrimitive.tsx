@@ -106,7 +106,7 @@ export function SelectPrimitive({
             }
           }}
           onKeyDown={onTriggerKeyDown}
-          className={`relative flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 ${
+          className={`relative flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed ${
             open ? "ring-2 ring-blue-100" : ""
           }`}
         >
