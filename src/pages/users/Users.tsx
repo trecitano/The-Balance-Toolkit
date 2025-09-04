@@ -628,7 +628,7 @@ export default function Users() {
                 </SingleColumn>
 
                 {/* Notes */}
-                <SingleColumn className={"row-start-3 col-span-4"} label="Notes:">
+                <SingleColumn className={"col-span-4 row-start-3"} label="Notes:">
                   <InputPrimitive
                     editable
                     required
@@ -648,25 +648,17 @@ export default function Users() {
                 <div className="user-metadata">
                   <span className="metadata-item">
                     <span className="metadata-label">Created:</span>
-                    <span className="metadata-value">
-                      {new Date(selectedUserData.createdAt).toLocaleDateString()}
-                    </span>
+                    <span className="metadata-value">{new Date(selectedUserData.createdAt).toLocaleDateString()}</span>
                   </span>
                   <span className="metadata-item">
                     <span className="metadata-label">Updated:</span>
-                    <span className="metadata-value">
-                      {new Date(selectedUserData.updatedAt).toLocaleDateString()}
-                    </span>
+                    <span className="metadata-value">{new Date(selectedUserData.updatedAt).toLocaleDateString()}</span>
                   </span>
                 </div>
               </div>
               <div className="user-display-actions">
                 {!selectedUserData.isDefault && (
-                  <ToolkitButton
-                    type="button"
-                    color="red"
-                    onClick={() => setShowDeleteConfirm(selectedUserData.name)}
-                  >
+                  <ToolkitButton type="button" color="red" onClick={() => setShowDeleteConfirm(selectedUserData.name)}>
                     Delete
                   </ToolkitButton>
                 )}
@@ -724,7 +716,7 @@ export default function Users() {
               </SingleColumn>
 
               {/* Notes */}
-              <SingleColumn className={"row-start-3 col-span-4"} label="Notes:">
+              <SingleColumn className={"col-span-4 row-start-3"} label="Notes:">
                 <InputPrimitive value={selectedUserData.notes ?? ""} />
               </SingleColumn>
             </div>

@@ -128,6 +128,9 @@ pub enum ToolkitCommand {
         file_path: PathBuf,
         response: oneshot::Sender<()>,
     },
+    ClearReplay {
+        response: oneshot::Sender<()>,
+    },
     UpdateReplayInformation {
         configuration: FrontendCoreSession,
         response: oneshot::Sender<()>,
@@ -587,6 +590,10 @@ impl ConnectionManager {
 
                     response.send(()).unwrap()
                 },
+                ToolkitCommand::ClearReplay { response } => {
+                    self.replay_settings = None;
+                    response.send(()).unwrap();
+                }
                 ToolkitCommand::UpdateReplayInformation { configuration, response } => {
                     if let Some(settings) = self.replay_settings.as_mut() {
                         settings.core.lsl_enabled = configuration.lsl_enabled;

@@ -16,10 +16,10 @@ const WINDOW_SEC = 10;
 const PAD_SEC = 1.5;
 
 export function MultiMetricPlot({
-                                  title,
-                                  macAddress,
-                                  store,
-                                }: {
+  title,
+  macAddress,
+  store,
+}: {
   title: string;
   macAddress: number;
   store: StoreApi<SessionState>;
@@ -31,22 +31,20 @@ export function MultiMetricPlot({
   const [metrics, setMetrics] = useState<MetricConfig[]>([
     { key: "mlsi", label: "MLSI", color: "#ef4444", enabled: true }, // red
     { key: "apsi", label: "APSI", color: "#3b82f6", enabled: true }, // blue
-    { key: "vsi", label: "VSI", color: "#10b981", enabled: true },  // green
+    { key: "vsi", label: "VSI", color: "#10b981", enabled: true }, // green
     { key: "dpsi", label: "DPSI", color: "#f59e0b", enabled: true }, // orange
   ]);
 
   // Toggle metric visibility
   const toggleMetric = (index: number) => {
-    setMetrics(prev => prev.map((m, i) =>
-      i === index ? { ...m, enabled: !m.enabled } : m
-    ));
+    setMetrics((prev) => prev.map((m, i) => (i === index ? { ...m, enabled: !m.enabled } : m)));
   };
 
   // Create uPlot options based on enabled metrics
   const createOptions = (): uPlot.Options => {
     const series: uPlot.Series[] = [{}]; // time series
 
-    metrics.forEach(metric => {
+    metrics.forEach((metric) => {
       series.push({
         label: metric.label,
         stroke: metric.color,
@@ -64,7 +62,7 @@ export function MultiMetricPlot({
         points: {
           size: 8,
           width: 2,
-        }
+        },
       },
       scales: {
         x: {
@@ -150,11 +148,7 @@ export function MultiMetricPlot({
     // Initialize with empty data arrays (time + 4 metrics)
     const initialData = [[], [], [], [], []];
 
-    plotRef.current = new uPlot(
-      { ...opts, width: rect.width, height: rect.height },
-      initialData,
-      hostRef.current
-    );
+    plotRef.current = new uPlot({ ...opts, width: rect.width, height: rect.height }, initialData, hostRef.current);
 
     const resizeObserver = new ResizeObserver(() => {
       if (!hostRef.current || !plotRef.current) return;
@@ -215,29 +209,21 @@ export function MultiMetricPlot({
 
         plotRef.current.setData([t, mlsi, apsi, vsi, dpsi]);
       },
-      { equalityFn: (a, b) => a === b }
+      { equalityFn: (a, b) => a === b },
     );
 
     return () => unsub();
   }, [store, macAddress]);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-2">
+    <div className="flex h-full flex-col">
+      <div className="mb-2 flex items-center justify-between">
         <p className="font-medium">{title}</p>
         <div className="flex gap-3">
           {metrics.map((metric, i) => (
-            <label key={metric.key} className="flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={metric.enabled}
-                onChange={() => toggleMetric(i)}
-                className="h-3 w-3"
-              />
-              <span
-                className="text-sm font-medium"
-                style={{ color: metric.enabled ? metric.color : '#9ca3af' }}
-              >
+            <label key={metric.key} className="flex cursor-pointer items-center gap-1">
+              <input type="checkbox" checked={metric.enabled} onChange={() => toggleMetric(i)} className="h-3 w-3" />
+              <span className="text-sm font-medium" style={{ color: metric.enabled ? metric.color : "#9ca3af" }}>
                 {metric.label}
               </span>
             </label>

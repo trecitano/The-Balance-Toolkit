@@ -173,9 +173,9 @@ export type LastSessionInformation = {
 export type OngoingSessionActivityState = {
   currentBlockIndex: number;
   timeToNextBlockMs: number;
-}
+};
 
 export type SessionActivityState = {
   activity: Activity;
   ongoingState?: OngoingSessionActivityState;
-}
+};

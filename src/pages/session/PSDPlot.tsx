@@ -14,12 +14,12 @@ type Props = {
 };
 
 export function PSDPlot({
-                          title,
-                          macAddress,
-                          store,
-                          maxFreq = 5.0, // Default to 5 Hz (typical for postural sway)
-                          logScale = false
-                        }: Props) {
+  title,
+  macAddress,
+  store,
+  maxFreq = 5.0, // Default to 5 Hz (typical for postural sway)
+  logScale = false,
+}: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
 
@@ -66,7 +66,7 @@ export function PSDPlot({
           stroke: "#3b82f6",
           width: 2,
           fill: "rgba(59, 130, 246, 0.1)",
-        }
+        },
       ],
     };
 
@@ -105,7 +105,7 @@ export function PSDPlot({
             }
             return acc;
           },
-          { freqs: [] as number[], psd: [] as number[] }
+          { freqs: [] as number[], psd: [] as number[] },
         );
 
         plotRef.current.setData([filteredData.freqs, filteredData.psd]);
@@ -122,7 +122,7 @@ export function PSDPlot({
             a.psd_xy.every((p, i) => Math.abs(p - b.psd_xy[i]) < 1e-6)
           );
         },
-      }
+      },
     );
 
     return () => unsub();

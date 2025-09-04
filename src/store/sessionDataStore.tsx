@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import {
-  RawBalanceBoardEvent, ProcessedBoardEvent, ProcessedSessionData,
-  ProcessedSingleFrameSessionData
+  RawBalanceBoardEvent,
+  ProcessedBoardEvent,
+  ProcessedSessionData,
+  ProcessedSingleFrameSessionData,
 } from "@/types";
 import { subscribeWithSelector } from "zustand/middleware";
 
@@ -73,14 +75,14 @@ function createSessionDataStore() {
               mlsi: f.mlsi,
               apsi: f.apsi,
               vsi: f.vsi,
-              dpsi: f.dpsi
+              dpsi: f.dpsi,
             };
-            console.log("New frame: ", f)
+            console.log("New frame: ", f);
             const singleFrameData: ProcessedSingleFrameSessionData = {
               confidenceEllipsePolygon: f.confidenceEllipsePolygon,
               convexHullPolygon: f.convexHullPolygon,
               stabilityIndex: f.stabilityIndex,
-              frequencySpectrum: f.frequencySpectrum
+              frequencySpectrum: f.frequencySpectrum,
             };
 
             const oldSessionBuffer =

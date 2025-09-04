@@ -1,4 +1,4 @@
-import {BrowserRouter, Routes, Route, useNavigate, useLocation, Outlet} from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Outlet } from "react-router-dom";
 import Navigation from "@/components/navigation/Navigation";
 import Home from "@/pages/home/Home.tsx";
 import DevicesPage, { DevicesQuery } from "@/pages/devices/Devices";
@@ -10,7 +10,7 @@ import "./App.css";
 import { QueryClient, QueryClientProvider, usePrefetchQuery } from "@tanstack/react-query";
 import { SettingsQuery } from "@/components/settings/Settings.tsx";
 import ActivityPopup from "./pages/session-activity-pop-up/activityPopup.tsx";
-import {ReactQueryDevtools} from "@tanstack/react-query-devtools";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 function DefaultLayout() {
   const navigate = useNavigate();
@@ -48,7 +48,6 @@ function BareLayout() {
   );
 }
 
-
 const queryClient = new QueryClient();
 export function App() {
   return (
@@ -75,4 +74,3 @@ export function App() {
     </QueryClientProvider>
   );
 }
-

@@ -12,7 +12,7 @@ export const RED_COLOUR = "#ef4444";
 export const BLACK_COLOUR = "#000";
 export const BLUE_COLOUR = "#3b82f6";
 
-function UPlotLineGeneric<T>({
+export function UPlot<T>({
   title,
   uPlotOptions,
   dataSelector,
@@ -81,8 +81,6 @@ function UPlotLineGeneric<T>({
     </div>
   );
 }
-
-export const UPlot = UPlotLineGeneric;
 
 export function copYPlotSettings(macAddress: number) {
   const color = BLUE_COLOUR;
@@ -160,7 +158,7 @@ export function copXPlotSettings(macAddress: number) {
     height: 0,
     legend: { show: false },
     cursor: { show: false },
-    padding: [0, 0, 0, 0], // top, right, bottom, left
+    padding: [0, 30, 20, 30], // top, right, bottom, left
 
     // Keep uPlot's native orientation (time on x, value on y),
     // but hide built-in axes, and draw everything transposed in hooks.
@@ -196,8 +194,8 @@ export function copXPlotSettings(macAddress: number) {
       draw: [
         (u) => {
           drawVerticalZeroAxis(u, BLACK_COLOUR, X_MIN, X_MAX);
-          drawPlotLastPointAsCircle(u, color, true);
           drawTopAxisLabels(u);
+          drawPlotLastPointAsCircle(u, color, true);
         },
       ],
     },

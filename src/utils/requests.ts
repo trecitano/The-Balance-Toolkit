@@ -11,7 +11,8 @@ import {
   UserPageInformation,
   UserType,
   LastSessionInformation,
-  TimelineBlock, SessionActivityState,
+  TimelineBlock,
+  SessionActivityState,
 } from "@/types.ts";
 
 export const commands = {
@@ -62,19 +63,20 @@ export const commands = {
 
     tareDevices: async () => invoke<void>("session_taring_devices"),
     stopSession: async () => invoke<void>("session_stop_session"),
-    getActivityState: async() => invoke<SessionActivityState | null>("session_activity_state"),
+    getActivityState: async () => invoke<SessionActivityState | null>("session_activity_state"),
   },
 
   replay: {
     loadLastSessionDetails: async () => invoke<LastSessionInformation>("replay_load_last_session_info"),
     replayInfo: async () => invoke<ReplayConfiguration>("replay_information"),
     loadReplayFile: async (filePath: string) => invoke<void>("replay_load_file", { filePath: filePath }),
-    updateReplay: async (configuration: SessionPanelConfiguration) =>
+    updateReplay: async (configuration: ReplayConfiguration) =>
       invoke<void>("replay_update", { configuration: configuration }),
     startReplay: async (sessionChannel: Channel<BalanceBoardEvent>) => {
       return invoke<Device[]>("replay_start_replay", { sessionChannel: sessionChannel });
     },
-    stopReplay: async () => invoke("replay_stop_replay"),
+    stopReplay: async () => invoke<void>("replay_stop_replay"),
+    clearReplay: async () => invoke<void>("replay_clear_replay"),
   },
 
   activity: {

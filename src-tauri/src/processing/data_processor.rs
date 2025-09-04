@@ -162,7 +162,6 @@ fn data_process_loop(
         let start_idx = buffer.partition_point(|p| p.timestamp < start_time);
         let end_idx = buffer.partition_point(|p| p.timestamp <= end_time);
         let window_slice = &buffer[start_idx..end_idx];
-        //println!("BEFORE INTERPOLATION: {:#?}", &window_slice);
 
         let points = match settings.interpolation {
             InterpolationSetting::Linear => {
@@ -175,8 +174,6 @@ fn data_process_loop(
                 polynomial_interpolation(&window_slice, start_time, end_time, &sampling_size_time_delta)
             }
         };
-
-        //println!("AFTER INTERPOLATION: {:#?}", &points);
 
         let sway_calculation = calculate_basic_sway_metrics(&points);
         let stability_index = calculate_stability_index(&points);
@@ -218,8 +215,6 @@ fn balance_board_reading_to_cop(
 ) -> CenterOfPressurePoint {
     let total_force =
         data.top_right + data.bottom_right + data.top_left + data.bottom_left;
-
-    println!("Total pressure is {:#?}", total_force);
 
     if total_force.abs() < 0.1 {
         return CenterOfPressurePoint {
@@ -624,8 +619,6 @@ fn calculate_dpsi_metrics(
     let apsi = (sum_y2 / n).sqrt();
     let vsi = (sum_zdiff2 / n).sqrt();
     let dpsi = ((sum_x2 + sum_y2 + sum_zdiff2) / n).sqrt();
-
-    println!("dpsi: {}, mlsi: {}, apsi: {}, vsi: {}, sum_x2: {}, sum_y2: {}, sum_zdiff2: {}, n: {}", dpsi, mlsi, apsi, vsi, sum_x2, sum_y2, sum_zdiff2, n);
 
     Some(DpsiMetrics {
         mlsi,

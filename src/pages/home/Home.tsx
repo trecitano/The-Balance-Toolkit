@@ -313,8 +313,8 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
           </div>
 
           <div className="relative flex items-center justify-center">
-              <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
-              <img src={wbbIconBlue} className="z-10 h-4/5 w-4/5 object-contain" />
+            <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
+            <img src={wbbIconBlue} className="z-10 h-4/5 w-4/5 object-contain" />
           </div>
         </>
       )}

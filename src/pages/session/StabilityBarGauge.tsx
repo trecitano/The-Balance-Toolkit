@@ -9,12 +9,7 @@ interface StabilityBarGaugeProps {
   height?: number;
 }
 
-export function StabilityBarGauge({
-                                    macAddress,
-                                    store,
-                                    width = 60,
-                                    height = 200,
-                                  }: StabilityBarGaugeProps) {
+export function StabilityBarGauge({ macAddress, store, width = 60, height = 200 }: StabilityBarGaugeProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [stabilityIndex, setStabilityIndex] = useState<number | null>(null);
 
@@ -54,9 +49,9 @@ export function StabilityBarGauge({
 
     // Define bar dimensions
     const barWidth = width * 0.5;
-    const barHeight = height * 0.8;
+    const barHeight = height * 0.85;
     const barX = (width - barWidth) / 2;
-    const barY = height * 0.1;
+    const barY = 5 + height * 0.1;
 
     // Draw background (empty bar)
     ctx.fillStyle = "#1f2937"; // dark gray
@@ -91,26 +86,12 @@ export function StabilityBarGauge({
       ctx.stroke();
     }
 
-    // Draw value display below the bar
-    if (stabilityIndex !== null) {
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "14px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillText(
-        stabilityIndex.toFixed(3),
-        width / 2,
-        barY + barHeight + 10
-      );
-    }
-
     // Draw label at top
     ctx.fillStyle = "#000000";
     ctx.font = "13px sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.fillText("Stability", width / 2, barY - 5);
-
   }, [stabilityIndex, width, height]);
 
   return (
