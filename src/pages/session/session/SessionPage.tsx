@@ -104,7 +104,7 @@ export default function SessionPage() {
         boardDisplayOptions={boardDisplayOptions}
         activityOptions={activityOptions}
         userOptions={sessionInformation.availableUsers}
-        editable={!sessionInformation.hasOngoingSession}
+        disabled={sessionInformation.hasOngoingSession}
         value={sessionConfiguration}
         onChange={(newState) => updateSession.mutate(newState)}
       />

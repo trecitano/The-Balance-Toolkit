@@ -77,7 +77,7 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
             <button
               type="button"
               onClick={onActionClick}
-              className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+              className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
             >
               {actionText}
             </button>

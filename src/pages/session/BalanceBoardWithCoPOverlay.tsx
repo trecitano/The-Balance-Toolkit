@@ -151,26 +151,28 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
       </div>
 
       {/* Controls + Stability Index */}
-      <div className="flex w-22/100 flex-col gap-3">
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            className="h-4 w-4"
-            checked={showConfidenceEllipse}
-            onChange={(e) => setShowConfidenceEllipse(e.target.checked)}
-          />
-          <span className={"text-sm text-gray-700"}>Confidence ellipse</span>
-        </label>
+      <div className="flex w-22/100 flex-col gap-8">
+        <div className={"flex flex-col gap-4"}>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={showConfidenceEllipse}
+              onChange={(e) => setShowConfidenceEllipse(e.target.checked)}
+            />
+            <span className={"text-sm text-gray-700"}>Confidence ellipse</span>
+          </label>
 
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            className="h-4 w-4"
-            checked={showConvexHull}
-            onChange={(e) => setShowConvexHull(e.target.checked)}
-          />
-          <span className={"text-sm text-gray-700"}>Convex hull</span>
-        </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={showConvexHull}
+              onChange={(e) => setShowConvexHull(e.target.checked)}
+            />
+            <span className={"text-sm text-gray-700"}>Convex hull</span>
+          </label>
+        </div>
 
         <div className="text-sm text-gray-700">
           Stability Index:{" "}

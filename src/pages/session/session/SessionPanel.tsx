@@ -1,6 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { CheckboxOption, MultiSelect } from "@/components/MultiSelect.tsx";
-import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
+import {BaseOption, SelectPrimitive} from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, SessionPanelConfiguration } from "@/types.ts";
@@ -13,16 +12,16 @@ export function SessionPanel({
   boardDisplayOptions,
   activityOptions,
   userOptions,
-  editable,
+  disabled,
   value,
   onChange,
 }: {
   boardDisplaySelected: string[];
   onBoardDisplayChange: (ids: string[]) => void;
-  boardDisplayOptions: CheckboxOption[];
-  activityOptions: CheckboxOption[];
+  boardDisplayOptions: BaseOption[];
+  activityOptions: BaseOption[];
   userOptions: string[];
-  editable: boolean;
+  disabled: boolean;
   value: SessionPanelConfiguration;
   onChange: (v: SessionPanelConfiguration) => void;
 }) {
@@ -48,9 +47,11 @@ export function SessionPanel({
         <PageTitle>Session</PageTitle>
       </header>
 
-      <ToolkitContainer className="grid grid-cols-14 grid-rows-2 gap-1">
+      <ToolkitContainer className="grid grid-cols-14 grid-rows-2">
         <SingleColumn label="Board to Display" backgroundType="transparent" className="col-span-3">
-          <MultiSelect
+          <SelectPrimitive
+            mode={"multi"}
+            disabled={disabled}
             options={boardDisplayOptions}
             noOptionsMessage={"No boards in session."}
             value={boardDisplaySelected}
@@ -61,7 +62,8 @@ export function SessionPanel({
 
         <SingleColumn label="User" backgroundType="transparent" className="col-span-3">
           <SelectPrimitive
-            disabled={!editable}
+            mode={"single"}
+            disabled={disabled}
             value={value.selectedUser ?? ""}
             onChange={(v) => update("selectedUser", v ?? "")}
             options={userOptions.map((u) => ({ label: u, value: u }))}
@@ -75,7 +77,7 @@ export function SessionPanel({
           className="col-span-2"
         >
           <InputPrimitive
-            editable={editable}
+            disabled={disabled}
             type="number"
             value={value.windowSizeMs}
             onChange={(e) => update("windowSizeMs", Number(e.target.value))}
@@ -84,7 +86,7 @@ export function SessionPanel({
 
         <SingleColumn label="Window Slide (ms)" backgroundType="transparent" className="col-span-2">
           <InputPrimitive
-            editable={editable}
+            disabled={disabled}
             type="number"
             value={value.windowSlideMs}
             onChange={(e) => update("windowSlideMs", Number(e.target.value))}
@@ -92,7 +94,7 @@ export function SessionPanel({
         </SingleColumn>
         <SingleColumn label="Sampling Rate" backgroundType="transparent" className="col-span-2">
           <InputPrimitive
-            editable={editable}
+            disabled={disabled}
             type="number"
             value={value.samplingRate}
             onChange={(e) => update("samplingRate", Number(e.target.value))}
@@ -101,7 +103,8 @@ export function SessionPanel({
 
         <SingleColumn label="Interpolation" backgroundType="transparent" className="col-span-2">
           <SelectPrimitive
-            disabled={!editable}
+            mode={"single"}
+            disabled={disabled}
             value={value.interpolation}
             onChange={(v) => update("interpolation", v as InterpolationOption)}
             options={interpolationOptions.map((i) => ({ label: i, value: i }))}
@@ -116,7 +119,8 @@ export function SessionPanel({
           onActionClick={() => update("activityId", "")}
         >
           <SelectPrimitive
-            disabled={!editable}
+            mode={"single"}
+            disabled={disabled}
             value={value.activityId}
             onChange={(v) => update("activityId", v)}
             options={activityOptions}
@@ -126,24 +130,24 @@ export function SessionPanel({
 
         <SingleColumn label="LSL" backgroundType="transparent" direction="row" tooltipText={"Big potato"}>
           <InputPrimitive
-            editable={editable}
+            disabled={disabled}
             type="checkbox"
             className={"w-5"}
             checked={value.lslEnabled ?? false}
             onChange={(e) => update("lslEnabled", e.target.checked)}
           />
-          <span className="font-semibold">{value.lslEnabled ? "ON" : "OFF"}</span>
+          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{value.lslEnabled ? "ON" : "OFF"}</span>
         </SingleColumn>
 
         <SingleColumn label="TCP" backgroundType="transparent" direction="row">
           <InputPrimitive
-            editable={editable}
+            disabled={disabled}
             type="checkbox"
             className={"w-5"}
             checked={value.tcpEnabled ?? false}
             onChange={(e) => update("tcpEnabled", e.target.checked)}
           />
-          <span className="font-semibold">{value.tcpEnabled ? "ON" : "OFF"}</span>
+          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{value.tcpEnabled ? "ON" : "OFF"}</span>
         </SingleColumn>
 
         <SingleColumn
@@ -153,16 +157,16 @@ export function SessionPanel({
           actionText="Clear"
           onActionClick={() => update("outputDirectory", "")}
         >
-          <div className="flex h-10 items-center gap-2">
+          <div className={"flex h-8 items-center gap-2"}>
             <button
               type="button"
-              disabled={!editable}
-              className="h-10 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200 disabled:bg-gray-100"
+              disabled={disabled}
+              className="h-8 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200 disabled:text-gray-600 disabled:bg-gray-100/80 disabled:cursor-not-allowed"
               onClick={pickDirectory}
             >
               Choose…
             </button>
-            <div className="min-w-0 flex-1 truncate text-sm text-gray-700">
+            <div className={`min-w-0 flex-1 truncate text-sm ${disabled ? "text-gray-600" : "text-gray-800"}`}>
               {value.outputDirectory || "No folder selected"}
             </div>
           </div>
