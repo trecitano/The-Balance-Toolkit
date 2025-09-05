@@ -12,6 +12,14 @@ pub struct Activity {
     pub timeline_blocks: Vec<TimelineBlock>,
     boards_required: i32,
     description: String,
+    pub loops: i32,
+}
+
+impl Activity {
+    pub fn get_total_duration_ms(&self) -> i32 {
+        let loop_duration: i32 = self.timeline_blocks.iter().map(|tb| tb.duration).sum();
+        loop_duration * self.loops * 1000
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -45,6 +53,7 @@ impl ActivityState {
     }
 
     pub fn update_activity(&mut self, activity: Activity) -> Result<()> {
+        println!("Updating activity: {:?}", activity);
         let index = self.activities.iter().position(|a| a.id == activity.id).unwrap();
         self.activities[index] = activity;
         ActivitiesFileSystem::save_activities(&self.activities)?;
@@ -101,8 +110,9 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Assess balance during quiet standing with eyes open and closed".into(),
                 timeline_blocks: vec![
-                    tare(), step_onto_board(), eyes_open(), eyes_close()
+                    step_onto_board(), eyes_open(), eyes_close()
                 ],
+                loops: 2,
             },
             // Dynamic Weight Shifting
             Activity {
@@ -112,9 +122,10 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Assess controlled weight shifting ability".into(),
                 timeline_blocks: vec![
-                    tare(), step_onto_board(), stand_upright(), lean_forward(), stand_upright(), lean_backwards(),
+                    step_onto_board(), stand_upright(), lean_forward(), stand_upright(), lean_backwards(),
                     stand_upright(), lean_to_the_left(), stand_upright(), lean_to_the_right(), stand_upright(),
                 ],
+                loops: 2,
             },
             // Functional Reach
             Activity {
@@ -124,9 +135,10 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Measure reaching capability while maintaining balance".into(),
                 timeline_blocks: vec![
-                    tare(), step_onto_board(), stand_on_board_reach(), left_arm_up(), left_arm_reach(),
+                    step_onto_board(), stand_on_board_reach(), left_arm_up(), left_arm_reach(),
                     left_arm_down(), right_arm_up(), right_arm_reach(), right_arm_down()
                 ],
+                loops: 2,
             },
             // Single Leg Stance
             Activity {
@@ -136,8 +148,9 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Assess balance while standing on one leg".into(),
                 timeline_blocks: vec![
-                    tare(), step_onto_board(), stand_on_board(), left_leg_up(), stand_on_board(), right_leg_up(), stand_on_board()
+                    step_onto_board(), stand_on_board(), left_leg_up(), stand_on_board(), right_leg_up(), stand_on_board()
                 ],
+                loops: 2,
             },
             // Tandem Stance
             Activity {
@@ -147,9 +160,10 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Assess balance with feet in tandem position".into(),
                 timeline_blocks: vec![
-                    tare(), step_onto_board(), stand_on_board(), left_foot_in_front(),
+                    step_onto_board(), stand_on_board(), left_foot_in_front(),
                     stand_on_board(), right_foot_in_front(), stand_on_board()
                 ],
+                loops: 2,
             },
             // TUG
             Activity {
@@ -159,8 +173,9 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Evaluate mobility and fall risk".into(),
                 timeline_blocks: vec![
-                    tare(), sit(), stand(), walk_forward(), turn_around(), walk_back(), sit_again()
+                    sit(), stand(), walk_forward(), turn_around(), walk_back(), sit_again()
                 ],
+                loops: 2,
             },
         ]
     }

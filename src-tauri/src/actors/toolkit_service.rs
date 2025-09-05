@@ -467,12 +467,12 @@ impl ConnectionManager {
                         }
 
                         // Cancel the session when the activity ends
-                        let duration = activity.timeline_blocks.iter().map(|b| b.duration).sum::<i32>() as u64;
+                        let duration = activity.get_total_duration_ms() as u64;
                         let response_tx = self.response_tx.clone();
                         tokio::spawn(async move {
                             println!("Going to sleep for {duration}");
                             tokio::select! {
-                                _ = tokio::time::sleep(Duration::from_secs(duration)) => {
+                                _ = tokio::time::sleep(Duration::from_millis(duration)) => {
                                     println!("Activity duration ended, stopping session...");
                                     let (stop_tx, stop_rx) = oneshot::channel();
                                     let _ = manager_tx.send(ToolkitCommand::StopSession { response: stop_tx }).await;
@@ -511,18 +511,23 @@ impl ConnectionManager {
                             response.send(Some(SessionActivityState { activity: activity, ongoing_state: None })).unwrap();
                         } else {
                             let start_time = self.session_settings.session_start_time.unwrap();
-                            let elapsed_ms = (Utc::now() - start_time).num_milliseconds().max(0) as usize;
+                            let elapsed_ms = (Utc::now() - start_time).num_milliseconds().max(0) as i32;
+
+                            let total_loop_duration_ms: i32 = activity.get_total_duration_ms();
+
+
+                            let current_loop_number = elapsed_ms / total_loop_duration_ms;
+                            let elapsed_in_current_loop = elapsed_ms % total_loop_duration_ms;
 
                             let mut accumulated = 0;
-                            let mut current_block_index = 0;
+                            let mut current_block_index: i32 = 0;
                             let mut time_to_next_block_ms = 0;
 
                             for (i, block) in activity.timeline_blocks.iter().enumerate() {
-                                let block_duration_ms = (block.duration as usize) * 1000;
-                                if elapsed_ms < accumulated + block_duration_ms {
-                                    current_block_index = i;
-                                    time_to_next_block_ms =
-                                        (accumulated + block_duration_ms).saturating_sub(elapsed_ms);
+                                let block_duration_ms = block.duration * 1000;
+                                if elapsed_in_current_loop < accumulated + block_duration_ms {
+                                    current_block_index = i as i32;
+                                    time_to_next_block_ms = (accumulated + block_duration_ms).saturating_sub(elapsed_in_current_loop);
                                     break;
                                 }
                                 accumulated += block_duration_ms;
@@ -533,6 +538,7 @@ impl ConnectionManager {
                                 ongoing_state: Some(OngoingSessionActivityState {
                                     current_block_index,
                                     time_to_next_block_ms,
+                                    loop_number: current_loop_number,
                                 })
                             });
                             response.send(state).unwrap();
@@ -622,13 +628,13 @@ impl ConnectionManager {
 
                         // Cancel the replay when the activity ends
                         if let Some(activity) = &settings.core.activity {
-                            let duration = activity.timeline_blocks.iter().map(|b| b.duration).sum::<i32>() as u64;
+                            let duration = activity.get_total_duration_ms() as u64;
 
                             let manager_tx = self.get_sender_channel();
                             let response_tx = self.response_tx.clone();
                             tokio::spawn(async move {
                                 tokio::select! {
-                                _ = tokio::time::sleep(Duration::from_secs(duration)) => {
+                                _ = tokio::time::sleep(Duration::from_millis(duration)) => {
                                     println!("Activity duration ended, stopping replay...");
                                     let (stop_tx, stop_rx) = oneshot::channel();
                                     let _ = manager_tx.send(ToolkitCommand::StopReplay { response: stop_tx }).await;

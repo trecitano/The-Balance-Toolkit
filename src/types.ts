@@ -153,6 +153,7 @@ export type Activity = {
   timelineBlocks: TimelineBlock[];
   boardsRequired: number;
   description?: string;
+  loops: number;
 };
 
 export type SessionStats = {
@@ -173,6 +174,7 @@ export type LastSessionInformation = {
 export type OngoingSessionActivityState = {
   currentBlockIndex: number;
   timeToNextBlockMs: number;
+  loopNumber: number;
 };
 
 export type SessionActivityState = {

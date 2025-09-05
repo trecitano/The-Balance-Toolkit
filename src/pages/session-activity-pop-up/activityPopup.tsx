@@ -8,18 +8,11 @@ import "@/App.css";
 
 const SESSION_ACTIVITY_POP_UP_QUERY_KEY = ["session_activity_pop_up"];
 
-// Utility function to format milliseconds to MM:SS
-const formatMs = (ms: number): string => {
-  const totalSeconds = Math.ceil(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-};
-
 export default function Popup() {
   const queryClient = useQueryClient();
   const [localTimeLeft, setLocalTimeLeft] = useState<number | null>(null);
   const [localBlockIndex, setLocalBlockIndex] = useState<number | null>(null);
+  const [localLoopNumber, setLocalLoopNumber] = useState<number | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
   const { data, isLoading, error } = useQuery({
@@ -47,10 +40,15 @@ export default function Popup() {
     if (sessionActivityState?.ongoingState) {
       setLocalTimeLeft(sessionActivityState.ongoingState.timeToNextBlockMs);
       setLocalBlockIndex(sessionActivityState.ongoingState.currentBlockIndex);
+      setLocalLoopNumber(sessionActivityState.ongoingState.loopNumber);
     }
-  }, [sessionActivityState?.ongoingState?.timeToNextBlockMs, sessionActivityState?.ongoingState?.currentBlockIndex]);
+  }, [
+    sessionActivityState?.ongoingState?.timeToNextBlockMs,
+    sessionActivityState?.ongoingState?.currentBlockIndex,
+    sessionActivityState?.ongoingState?.loopNumber
+  ]);
 
-  // Countdown timer with local block progression
+  // Countdown timer with local block progression and loop handling
   useEffect(() => {
     if (localTimeLeft === null || localTimeLeft <= 0) return;
     if (!sessionActivityState?.ongoingState) return;
@@ -58,20 +56,31 @@ export default function Popup() {
     const interval = setInterval(() => {
       setLocalTimeLeft((prev) => {
         if (prev === null || prev <= 1000) {
-          // Time's up - move to next block locally
+          // Time's up - move to next block or next loop
           const blocks = sessionActivityState?.activity?.timelineBlocks ?? [];
+          const totalLoops = sessionActivityState?.activity?.loops ?? 1;
           const currentIndex = localBlockIndex ?? 0;
+          const currentLoop = localLoopNumber ?? 0;
           const nextIndex = currentIndex + 1;
 
           if (nextIndex < blocks.length) {
-            // Move to next block
+            // Move to next block in current loop
             setLocalBlockIndex(nextIndex);
             const nextBlock = blocks[nextIndex];
-            // Assuming duration is in milliseconds, adjust if needed
             return nextBlock.duration * 1000;
           } else {
-            // Session completed
-            return null;
+            // Reached end of blocks, check if we need to start next loop
+            const nextLoop = currentLoop + 1;
+            if (nextLoop < totalLoops) {
+              // Start next loop from first block
+              setLocalBlockIndex(0);
+              setLocalLoopNumber(nextLoop);
+              const firstBlock = blocks[0];
+              return firstBlock.duration * 1000;
+            } else {
+              // All loops completed - session finished
+              return null;
+            }
           }
         }
         return prev - 1000;
@@ -79,7 +88,7 @@ export default function Popup() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [localTimeLeft, localBlockIndex, sessionActivityState]);
+  }, [localTimeLeft, localBlockIndex, localLoopNumber, sessionActivityState]);
 
   // Auto-scroll to current block when it changes
   useEffect(() => {
@@ -111,6 +120,7 @@ export default function Popup() {
   useEffect(() => {
     if (!sessionActivityState?.ongoingState) {
       setLocalBlockIndex(0);
+      setLocalLoopNumber(0);
     }
   }, [sessionActivityState]);
 
@@ -136,22 +146,28 @@ export default function Popup() {
   // Determine session state
   const isSessionRunning = !!ongoingState;
   const currentBlockIndex = localBlockIndex ?? ongoingState?.currentBlockIndex ?? 0;
+  const currentLoopNumber = localLoopNumber ?? ongoingState?.loopNumber ?? 0;
   const timeLeftMs = localTimeLeft ?? ongoingState?.timeToNextBlockMs ?? 0;
   const showCountdown = isSessionRunning && timeLeftMs <= 3000;
+  const totalLoops = activity?.loops ?? 1;
 
   return (
     <div className="relative flex h-screen w-95/100 flex-col bg-(--bg-primary) px-20 py-8">
       {/* Countdown in top right corner */}
       {showCountdown && (
-        <div className="absolute top-10 right-0 z-10 rounded-lg bg-(--primary) px-3 py-2 text-lg font-semibold text-white">
-          Next block in {formatMs(timeLeftMs)}
+        <div className="absolute top-10 right-0 z-10 rounded-full bg-(--primary) p-5 size-20 text-4xl font-semibold text-white">
+          {Math.ceil(timeLeftMs / 1000)}..
         </div>
       )}
 
-      {/* Session status indicator */}
-      {!isSessionRunning && (
+      {/* Session status indicator or Loop counter */}
+      {!isSessionRunning ? (
         <div className="absolute top-10 left-0 z-1 rounded-lg bg-(--secondary) px-3 py-2 text-lg font-semibold text-white">
           Session not started
+        </div>
+      ) : (
+        <div className="absolute top-10 left-0 z-1 rounded-lg bg-(--primary) px-3 py-2 text-lg font-semibold text-white">
+          Loop {currentLoopNumber + 1} of {totalLoops}
         </div>
       )}
 

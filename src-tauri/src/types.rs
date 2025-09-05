@@ -64,8 +64,9 @@ pub struct SessionActivityState {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OngoingSessionActivityState {
-    pub current_block_index: usize,
-    pub time_to_next_block_ms: usize,
+    pub current_block_index: i32,
+    pub time_to_next_block_ms: i32,
+    pub loop_number: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
