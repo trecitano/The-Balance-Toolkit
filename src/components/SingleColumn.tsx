@@ -63,7 +63,7 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
               {requiredField && <span className="font-bold text-red-500">*</span>}
               {tooltipText && (
                 <div className="group relative">
-                  <InfoIcon className="h-4 w-4 cursor-help text-gray-400 hover:text-gray-600" />
+                  <InfoIcon className="size-3 cursor-help text-gray-400 hover:text-gray-600" />
                   <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 transform rounded-md bg-gray-900 px-3 py-2 text-sm whitespace-nowrap text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100">
                     {tooltipText}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 transform border-4 border-transparent border-t-gray-900"></div>
