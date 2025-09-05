@@ -480,7 +480,7 @@ export default function Users() {
               </div>
 
               {/* Editable fields */}
-              <div className="mt-2 grid grid-cols-4 gap-2.5 text-base">
+              <div className="mt-5 grid grid-cols-4 grid-rows-3 gap-2 text-base">
                 {/* Name */}
                 <SingleColumn requiredField label="Name:" icon={<img src={personIcon} />}>
                   <InputPrimitive
@@ -602,7 +602,7 @@ export default function Users() {
                 <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
                   <div className="relative">
                     <InputPrimitive
-                      className={"cursor-pointer"}
+                      className={"cursor-pointer w-full"}
                       style={{
                         backgroundColor: editingUserData.color || "#397aac",
                       }}
@@ -666,7 +666,7 @@ export default function Users() {
               </div>
             </div>
 
-            <div className="mt-2 grid grid-cols-4 grid-rows-3 gap-2.5 text-base">
+            <div className="mt-5 grid grid-cols-4 grid-rows-3 gap-2 text-base">
               {/* Name */}
               <SingleColumn label="Name:" icon={<img src={personIcon} />}>
                 <InputPrimitive disabled={true} value={selectedUserData.name ?? "N/A"} />

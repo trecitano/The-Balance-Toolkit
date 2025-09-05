@@ -10,7 +10,6 @@ export function ReplayPanel({
   boardDisplaySelected,
   onBoardDisplayChange,
   boardDisplayOptions,
-  disabled,
   onChange,
   onPickSessionFile,
   onResetFile,
@@ -19,7 +18,6 @@ export function ReplayPanel({
   boardDisplaySelected: string[];
   onBoardDisplayChange: (ids: string[]) => void;
   boardDisplayOptions: BaseOption[];
-  disabled: boolean;
   onChange: (v: ReplayConfiguration) => void;
   onPickSessionFile: () => void;
   onResetFile: () => void;
@@ -36,13 +34,15 @@ export function ReplayPanel({
     onChange(next);
   };
 
+  const disabled = Object.keys(config.core).length === 0 || config.hasOngoingSession;
+
   return (
     <>
       <header>
         <PageTitle>Replay</PageTitle>
       </header>
 
-      <ToolkitContainer className="grid grid-cols-14 grid-rows-2 gap-1">
+      <ToolkitContainer className="grid grid-cols-14 grid-rows-2">
         <SingleColumn label="Board to Display" backgroundType="transparent" className="col-span-3">
           <SelectPrimitive
             mode={"multi"}
