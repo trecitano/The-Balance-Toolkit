@@ -3,7 +3,7 @@ import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
 import wbbIcon from "../../assets/wbb-icon-line.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import { Activity, interpolationOptions, TimelineBlock } from "@/types.ts";
+import { Activity, TimelineBlock } from "@/types.ts";
 import { getBlockImage } from "@/utils/activityImages.ts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
@@ -13,7 +13,6 @@ import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
-import sexIcon from "@/assets/sex-icon.svg";
 
 /**
  * ActivityCard component displays an activity with its details
@@ -52,11 +51,12 @@ export default function ActivityCard({
   const [newActionName, setNewActionName] = useState("");
   const [newActionDuration, setNewActionDuration] = useState(10);
   const [newActionImage, setNewActionImage] = useState("");
+  const [loopCount, setLoopCount] = useState(activity.loops ?? 1);
 
   const cardRef = useRef<HTMLDivElement>(null);
 
   const queryClient = useQueryClient();
-  const saveMutation = useMutation({
+  const { mutate: saveMutation } = useMutation({
     mutationFn: (updated: Activity) => commands.activity.updateActivity(updated),
     onSuccess: (_, updated) => {
       // update cache so UI reflects saved state
@@ -231,7 +231,7 @@ export default function ActivityCard({
    * Adds a new action to the timeline
    */
   const handleAddAction = () => {
-    const title = newActionName ? newActionName : existingActionImages.find((b) => b.id === newActionImage)?.title;
+    const title = newActionName ? newActionName : existingActionImages.find((b) => b.id === newActionImage)?.title!;
 
     const newBlock = {
       id: newActionImage,
@@ -285,6 +285,7 @@ export default function ActivityCard({
           </div>
         </>
       </ToolkitContainer>
+
       {maximized && (
         <ToolkitContainer className="absolute flex flex-col gap-10 bg-white" background="bg-white" style={maxStyle}>
           <div className="activity-details-header">
@@ -299,6 +300,7 @@ export default function ActivityCard({
             ) : (
               <>
                 <SelectPrimitive
+                  mode="single"
                   value={newActionImage}
                   placeholder="Action"
                   className={"w-40"}
@@ -312,7 +314,7 @@ export default function ActivityCard({
                   onChange={(e) => setNewActionImage(e)}
                 />
                 {newActionImage === "custom-action-flamingo" && (
-                  <InputPrimitive editable value={newActionName} onChange={(e) => setNewActionName(e.target.value)} />
+                  <InputPrimitive value={newActionName} onChange={(e) => setNewActionName(e.target.value)} />
                 )}
 
                 <div>
@@ -322,7 +324,6 @@ export default function ActivityCard({
                     placeholder="Duration"
                     className={"w-20"}
                     value={newActionDuration}
-                    editable
                     onChange={(e) => setNewActionDuration(Number(e.target.value))}
                   />
                   <span className={"ml-1 text-base font-medium"}>secs</span>
@@ -350,31 +351,44 @@ export default function ActivityCard({
             onBlockSelect={(block) => setCurrentActionLabel(block.title)}
           />
 
-          <div className="flex justify-end gap-4">
-            <ToolkitButton
-              type="button"
-              color={"blue"}
-              onClick={() => {
-                const updated: Activity = {
-                  ...activity,
-                  timelineBlocks: timelineBlocks,
-                };
-                saveMutation.mutate(updated, {
-                  onSuccess: () => onMinimize?.(),
-                });
-              }}
-              disabled={saveMutation.isPending}
-            >
-              {saveMutation.isPending ? "Saving..." : "Save"}
-            </ToolkitButton>
+          <div className={"flex flex-col items-end gap-3"}>
+            <SingleColumn label={"Loops"}>
+              <InputPrimitive
+                type="number"
+                min={1}
+                placeholder="Loops"
+                className={"w-20"}
+                value={loopCount || 1}
+                onChange={(e) => setLoopCount(Number(e.target.value))}
+              />
+            </SingleColumn>
 
-            <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} color={"grey"}>
-              Reset to Default
-            </ToolkitButton>
+            <div className="flex gap-2">
+              <ToolkitButton
+                type="button"
+                color={"blue"}
+                onClick={() => {
+                  const updated: Activity = {
+                    ...activity,
+                    loops: loopCount,
+                    timelineBlocks: timelineBlocks,
+                  };
+                  saveMutation(updated, {
+                    onSuccess: () => onMinimize?.(),
+                  });
+                }}
+              >
+                Save
+              </ToolkitButton>
 
-            <ToolkitButton type="button" onClick={onMinimize} color={"grey"}>
-              Close
-            </ToolkitButton>
+              <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} color={"grey"}>
+                Reset to Default
+              </ToolkitButton>
+
+              <ToolkitButton type="button" onClick={onMinimize} color={"grey"}>
+                Close
+              </ToolkitButton>
+            </div>
           </div>
         </ToolkitContainer>
       )}
