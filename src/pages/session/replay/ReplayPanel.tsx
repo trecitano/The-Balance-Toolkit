@@ -1,4 +1,4 @@
-import {BaseOption, SelectPrimitive} from "@/components/SelectPrimitive.tsx";
+import { BaseOption, SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, ReplayConfiguration, SessionPanelConfiguration } from "@/types.ts";
@@ -14,19 +14,19 @@ export function ReplayPanel({
   onPickSessionFile,
   onResetFile,
 }: {
-  config: ReplayConfiguration;
-  boardDisplaySelected: string[];
-  onBoardDisplayChange: (ids: string[]) => void;
-  boardDisplayOptions: BaseOption[];
+  config: ReplayConfiguration | null;
+  boardDisplaySelected: number[];
+  onBoardDisplayChange: (ids: number[]) => void;
+  boardDisplayOptions: BaseOption<number>[];
   onChange: (v: ReplayConfiguration) => void;
   onPickSessionFile: () => void;
   onResetFile: () => void;
 }) {
   const update = <K extends keyof SessionPanelConfiguration>(key: K, val: SessionPanelConfiguration[K]) => {
     const next: ReplayConfiguration = {
-      ...config,
+      ...config!,
       core: {
-        ...config.core,
+        ...config!.core,
         [key]: val,
       },
     };
@@ -34,7 +34,7 @@ export function ReplayPanel({
     onChange(next);
   };
 
-  const disabled = Object.keys(config.core).length === 0 || config.hasOngoingSession;
+  const disabled = config === null || config.hasOngoingSession;
 
   return (
     <>
@@ -43,7 +43,7 @@ export function ReplayPanel({
       </header>
 
       <ToolkitContainer className="grid grid-cols-14 grid-rows-2">
-        <SingleColumn label="Board to Display" backgroundType="transparent" className="col-span-3">
+        <SingleColumn label="Board to Display" className="col-span-3">
           <SelectPrimitive
             mode={"multi"}
             options={boardDisplayOptions}
@@ -54,71 +54,73 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="User" backgroundType="transparent" className="col-span-3">
-          <InputPrimitive disabled={true} value={config.core.selectedUser ?? "No User"} />
+        <SingleColumn label="User" className="col-span-3" tooltipText={"TODO!!!!!!!"}>
+          <InputPrimitive disabled={true} value={config?.core.selectedUser ?? "No User"} />
         </SingleColumn>
 
-        <SingleColumn label="Window Size (ms)" backgroundType="transparent" className="col-span-2">
+        <SingleColumn label="Window Size (ms)" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
-            value={config.core.windowSizeMs}
+            value={config?.core.windowSizeMs}
             onChange={(e) => update("windowSizeMs", Number(e.target.value))}
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Slide (ms)" backgroundType="transparent" className="col-span-2">
+        <SingleColumn label="Window Slide (ms)" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
-            value={config.core.windowSlideMs}
+            value={config?.core.windowSlideMs}
             onChange={(e) => update("windowSlideMs", Number(e.target.value))}
           />
         </SingleColumn>
-        <SingleColumn label="Sampling Rate" backgroundType="transparent" className="col-span-2">
+        <SingleColumn label="Sampling Rate" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
-            value={config.core.samplingRate}
+            value={config?.core.samplingRate}
             onChange={(e) => update("samplingRate", Number(e.target.value))}
           />
         </SingleColumn>
 
-        <SingleColumn label="Interpolation" backgroundType="transparent" className="col-span-2">
+        <SingleColumn label="Interpolation" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
           <SelectPrimitive
-            mode={"single"}
             disabled={disabled}
-            value={config.core.interpolation}
+            value={config?.core.interpolation ?? "Linear"}
             onChange={(v) => update("interpolation", v as InterpolationOption)}
             options={interpolationOptions.map((i) => ({ label: i, value: i }))}
           />
         </SingleColumn>
 
-        <SingleColumn label="Activity" backgroundType="transparent" className="col-span-3">
-          <InputPrimitive disabled={true}
-                          value={config.activity?.title ?? "No Activity"} />
+        <SingleColumn label="Activity" className="col-span-3">
+          <InputPrimitive disabled={true} value={config?.activity?.title ?? "No Activity"} />
         </SingleColumn>
 
-        <SingleColumn label="LSL" backgroundType="transparent" direction="row">
+        <SingleColumn label="LSL" direction="row" tooltipText={"TODO!!!!!!!"}>
           <InputPrimitive
             disabled={disabled}
             type="checkbox"
             className={"w-5"}
-            checked={config.core.lslEnabled ?? false}
+            checked={config?.core.lslEnabled ?? false}
             onChange={(e) => update("lslEnabled", e.target.checked)}
           />
-          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{config.core.lslEnabled ? "ON" : "OFF"}</span>
+          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>
+            {config?.core.lslEnabled ? "ON" : "OFF"}
+          </span>
         </SingleColumn>
 
-        <SingleColumn label="TCP" backgroundType="transparent" direction="row">
+        <SingleColumn label="TCP" direction="row" tooltipText={"TODO!!!!!!!"}>
           <InputPrimitive
             disabled={disabled}
             type="checkbox"
             className={"w-5"}
-            checked={config.core.tcpEnabled ?? false}
+            checked={config?.core.tcpEnabled ?? false}
             onChange={(e) => update("tcpEnabled", e.target.checked)}
           />
-          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{config.core.tcpEnabled ? "ON" : "OFF"}</span>
+          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>
+            {config?.core.tcpEnabled ? "ON" : "OFF"}
+          </span>
         </SingleColumn>
 
         <SingleColumn
@@ -126,6 +128,7 @@ export function ReplayPanel({
           backgroundType="transparent"
           className="col-start-7 col-end-15"
           actionText="Clear"
+          tooltipText={"TODO!!!!!!!"}
           onActionClick={onResetFile}
         >
           <div className="flex h-8 items-center gap-2">
@@ -138,7 +141,7 @@ export function ReplayPanel({
               Choose…
             </button>
             <div className={`min-w-0 flex-1 truncate text-sm ${disabled ? "text-gray-600" : "text-gray-800"}`}>
-              {config.filePath || "No file selected"}
+              {config?.filePath || "No file selected"}
             </div>
           </div>
         </SingleColumn>

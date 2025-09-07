@@ -45,7 +45,7 @@ export default function Popup() {
   }, [
     sessionActivityState?.ongoingState?.timeToNextBlockMs,
     sessionActivityState?.ongoingState?.currentBlockIndex,
-    sessionActivityState?.ongoingState?.loopNumber
+    sessionActivityState?.ongoingState?.loopNumber,
   ]);
 
   // Countdown timer with local block progression and loop handling
@@ -99,7 +99,6 @@ export default function Popup() {
 
   useEffect(() => {
     const sessionStartedListener = listen<void>("session_started", (_) => {
-      console.log("Session started");
       queryClient.invalidateQueries({ queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY });
     });
     const sessionActivityChangedListener = listen<void>("session_activity_changed", (_) => {
@@ -155,7 +154,7 @@ export default function Popup() {
     <div className="relative flex h-screen w-95/100 flex-col bg-(--bg-primary) px-20 py-8">
       {/* Countdown in top right corner */}
       {showCountdown && (
-        <div className="absolute top-10 right-0 z-10 rounded-full bg-(--primary) p-5 size-20 text-4xl font-semibold text-white">
+        <div className="absolute top-10 right-0 z-10 size-20 rounded-full bg-(--primary) p-5 text-4xl font-semibold text-white">
           {Math.ceil(timeLeftMs / 1000)}..
         </div>
       )}

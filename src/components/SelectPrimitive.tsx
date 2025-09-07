@@ -1,46 +1,42 @@
 import React, { useMemo, useRef, useState } from "react";
 
-export type BaseOption = {
-  value: string;
+export type BaseOption<T = string> = {
+  value: T;
   label: string;
   disabled?: boolean;
 };
 
-type SingleSelectProps = {
-  mode: "single";
-  value: string | null;
-  onChange: (next: string) => void;
+type SingleSelectProps<T> = {
+  mode?: "single";
+  value: T | null;
+  onChange: (next: T) => void;
   placeholder?: string;
   noneOption?: string | false;
 };
 
-type MultiSelectProps = {
+type MultiSelectProps<T> = {
   mode: "multi";
-  value: string[];
-  onChange: (next: string[]) => void;
+  value: T[];
+  onChange: (next: T[]) => void;
   placeholder?: string;
   noOptionsMessage?: string;
 };
 
-type CommonProps = {
-  options: BaseOption[];
+type CommonProps<T> = {
+  options: BaseOption<T>[];
   className?: string;
   disabled?: boolean;
   maxHeight?: number;
 };
 
-type SelectProps = CommonProps & (SingleSelectProps | MultiSelectProps);
+function isMulti<T>(props: SelectProps<T>): props is CommonProps<T> & MultiSelectProps<T> {
+  return props.mode === "multi";
+}
 
-export function SelectPrimitive(props: SelectProps) {
-  const {
-    options,
-    value,
-    onChange,
-    className = "",
-    disabled = false,
-    maxHeight = 260,
-    mode,
-  } = props;
+type SelectProps<T> = CommonProps<T> & (SingleSelectProps<T> | MultiSelectProps<T>);
+
+export function SelectPrimitive<T extends React.Key = string>(props: SelectProps<T>) {
+  const { options, value, onChange, className = "", disabled = false, maxHeight = 260, mode = "single" } = props;
 
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -54,22 +50,23 @@ export function SelectPrimitive(props: SelectProps) {
 
   const selectedLabels = useMemo(() => {
     const map = new Map(options.map((o) => [o.value, o.label]));
-    if (mode === "single") {
-      return value ? [map.get(value) ?? value] : [];
+    if (isMulti(props)) {
+      return props.value.map((v) => map.get(v) ?? String(v));
+    } else {
+      return props.value ? [map.get(props.value) ?? String(props.value)] : [];
     }
-    return value.map((v) => map.get(v) ?? v);
   }, [options, value, mode]);
 
-  const toggleValue = (v: string) => {
+  const toggleValue = (v: T) => {
     if (mode === "multi") {
-      const currentValue = value as string[];
+      const currentValue = value as T[];
       if (currentValue.includes(v)) {
-        (onChange as (next: string[]) => void)(currentValue.filter((x) => x !== v));
+        (onChange as (next: T[]) => void)(currentValue.filter((x) => x !== v));
       } else {
-        (onChange as (next: string[]) => void)([...currentValue, v]);
+        (onChange as (next: T[]) => void)([...currentValue, v]);
       }
     } else {
-      (onChange as (next: string) => void)(v);
+      (onChange as (next: T) => void)(v);
       setOpen(false);
       buttonRef.current?.focus();
     }
@@ -121,11 +118,11 @@ export function SelectPrimitive(props: SelectProps) {
 
   const getDisplayText = () => {
     if (mode === "single") {
-      const placeholder = (props as SingleSelectProps).placeholder ?? "Select an option";
+      const placeholder = (props as SingleSelectProps<T>).placeholder ?? "Select an option";
       return selectedLabels[0] ?? placeholder;
     } else {
-      const placeholder = (props as MultiSelectProps).placeholder ?? "None selected";
-      const noOptionsMessage = (props as MultiSelectProps).noOptionsMessage ?? "No options available";
+      const placeholder = (props as MultiSelectProps<T>).placeholder ?? "None selected";
+      const noOptionsMessage = (props as MultiSelectProps<T>).noOptionsMessage ?? "No options available";
 
       if (!hasOptions) return noOptionsMessage;
       if (selectedLabels.length === 0) return placeholder;
@@ -158,15 +155,13 @@ export function SelectPrimitive(props: SelectProps) {
             }
           }}
           onKeyDown={onTriggerKeyDown}
-          className={`h-8 w-full rounded-lg 
-          flex items-center justify-between text-left
-          border border-gray-300 bg-white px-3 text-sm
-          disabled:bg-gray-100/80 disabled:cursor-not-allowed
-          focus:border-blue-500 focus:outline-none ${
+          className={`flex h-8 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100/80 ${
             open ? "ring-2 ring-blue-100" : ""
           }`}
         >
-          <span className={`truncate ${isDisabled ? "text-gray-600" : hasSelection ? "text-gray-900" : "text-gray-600"}`}>
+          <span
+            className={`truncate ${isDisabled ? "text-gray-600" : hasSelection ? "text-gray-900" : "text-gray-600"}`}
+          >
             {displayText}
           </span>
           <svg className="ml-2 h-4 w-4 shrink-0 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
@@ -189,7 +184,7 @@ export function SelectPrimitive(props: SelectProps) {
           >
             <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>
               {/* None option for single select */}
-              {mode === "single" && (props as SingleSelectProps).noneOption && (
+              {mode === "single" && (props as SingleSelectProps<T>).noneOption && (
                 <button
                   type="button"
                   onMouseDown={(e) => {
@@ -199,20 +194,18 @@ export function SelectPrimitive(props: SelectProps) {
                     buttonRef.current?.focus();
                   }}
                   onMouseEnter={() => setActiveIdx(-1)}
-                  className={`flex w-full items-center px-3 py-2 text-left text-sm italic text-gray-400 ${
+                  className={`flex w-full items-center px-3 py-2 text-left text-sm text-gray-400 italic ${
                     activeIdx === -1 ? "bg-blue-50" : ""
                   }`}
                   role="option"
                 >
-                  {(props as SingleSelectProps).noneOption}
+                  {(props as SingleSelectProps<T>).noneOption}
                 </button>
               )}
 
               {options.map((opt, idx) => {
                 const active = idx === activeIdx;
-                const selected = mode === "single"
-                  ? value === opt.value
-                  : (value as string[]).includes(opt.value);
+                const selected = mode === "single" ? value === opt.value : (value as T[]).includes(opt.value);
 
                 return (
                   <button
@@ -222,19 +215,15 @@ export function SelectPrimitive(props: SelectProps) {
                     onMouseEnter={() => setActiveIdx(idx)}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      if (!opt.disabled) {
-                        toggleValue(opt.value);
-                      }
+                      (onChange as (next: T) => void)("" as T);
+                      setOpen(false);
+                      buttonRef.current?.focus();
                     }}
                     className={`flex w-full cursor-pointer items-center ${
                       mode === "multi" ? "gap-2" : ""
-                    } px-3 py-2 text-left text-sm ${
-                      active ? "bg-blue-50" : ""
-                    } ${
+                    } px-3 py-2 text-left text-sm ${active ? "bg-blue-50" : ""} ${
                       mode === "single" && selected ? "font-semibold text-blue-600" : ""
-                    } ${
-                      opt.disabled ? "cursor-not-allowed opacity-50" : ""
-                    }`}
+                    } ${opt.disabled ? "cursor-not-allowed opacity-50" : ""}`}
                     role="option"
                   >
                     {mode === "multi" && (

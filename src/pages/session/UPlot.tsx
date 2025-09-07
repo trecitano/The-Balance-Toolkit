@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
-import { BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
+import { BoardBuffer, SessionState, SessionStore } from "@/store/sessionDataStore.tsx";
 import { RawBalanceBoardEvent } from "@/types.ts";
-import { StoreApi } from "zustand";
+import { Tooltip } from "@/components/Tooltip.tsx";
 
 type DataSelector<T> = (state: SessionState) => BoardBuffer<T> | undefined;
 type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: number[] };
@@ -11,19 +11,23 @@ type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: number[] };
 export const RED_COLOUR = "#ef4444";
 export const BLACK_COLOUR = "#000";
 export const BLUE_COLOUR = "#3b82f6";
+export const YELLOW_COLOUR = "#f59e0b";
+export const GREEN_COLOUR = "#10b981";
 
 export function UPlot<T>({
   title,
+  tooltipText,
   uPlotOptions,
   dataSelector,
   dataMapper,
   store,
 }: {
   title: string;
+  tooltipText?: string;
   uPlotOptions: uPlot.Options;
   dataSelector: DataSelector<T>;
   dataMapper: DataMapper<T>;
-  store: StoreApi<SessionState>;
+  store: SessionStore;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
@@ -57,7 +61,7 @@ export function UPlot<T>({
     const unsub = store.subscribe(
       (state) => dataSelector(state),
       (buffer) => {
-        if (!plotRef || buffer === undefined) {
+        if (!plotRef || !plotRef.current || buffer === undefined) {
           return;
         }
 
@@ -76,20 +80,30 @@ export function UPlot<T>({
 
   return (
     <div className="h-full w-full">
-      <p className={"h-1/10 text-center"}>{title}</p>
+      <div className={"relative flex h-1/10 items-center justify-center"}>
+        <div className={"relative font-semibold"}>
+          {title}
+          {tooltipText && (
+            <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
+              <Tooltip tooltipText={tooltipText} />
+            </div>
+          )}
+        </div>
+      </div>
       <div ref={hostRef} className="h-9/10 w-full" />
     </div>
   );
 }
 
 export function copYPlotSettings(macAddress: number) {
-  const color = BLUE_COLOUR;
+  const color = RED_COLOUR;
 
   const uPlotOptions: uPlot.Options = {
     width: 0,
     height: 0,
     legend: { show: false },
     cursor: { show: false },
+    padding: [20, 30, 20, 15], // top, right, bottom, left
     scales: {
       x: {
         range: (_u, _min, max) => {
@@ -112,12 +126,24 @@ export function copYPlotSettings(macAddress: number) {
         scale: "y",
         grid: { show: false },
         border: { show: true, stroke: BLACK_COLOUR, width: 2 },
-        values: (u, splits) => {
-          return splits.map((v, i) => {
-            if (i === 0) return "Back"; // bottom tick
-            if (i === splits.length - 1) return "Front"; // top tick
+        font: "10px sans-serif",
+        stroke: "#3d3d3d",
+        values: (_, splits) => {
+          return splits.map((_, i) => {
+            if (i === 0) return "Back (-1)"; // bottom tick
+            if (i === splits.length - 1) return "Front (1)"; // top tick
             return ""; // hide all other labels
           });
+        },
+        ticks: {
+          show: true,
+          size: 6,
+          stroke: "#b2b2b2",
+          filter: (_, splits) => {
+            return splits.map((v, i) => {
+              return i === 0 || i === splits.length - 1 ? v : null;
+            });
+          },
         },
       },
     ],
@@ -228,12 +254,14 @@ export function standardPlot(color: string) {
         },
       },
       y: {
-        range: (_u, min, max) => {
+        range: (_, min, max) => {
           if (!Number.isFinite(min) || !Number.isFinite(max)) {
             return [0, 1];
           }
-          const pad = (max - min) * 0.1;
-          return [min - pad, max + pad];
+          if (min === max) {
+            return [0, max + 0.1];
+          }
+          return [0, Number((max + 0.1).toFixed(1))];
         },
       },
     },
@@ -249,9 +277,9 @@ export function standardPlot(color: string) {
       {
         scale: "y",
         grid: { show: false },
-        ticks: { show: false },
+        ticks: { show: true, size: 6, stroke: "#b2b2b2" },
         border: { show: true, stroke: BLACK_COLOUR, width: 2 },
-        size: 30,
+        size: 35,
       },
     ],
     series: [{}, { stroke: color, width: 2 }],
@@ -337,17 +365,17 @@ function drawTopAxisLabels(u: uPlot) {
   const { left, top, width } = u.bbox;
 
   ctx.save();
-  ctx.fillStyle = "#666";
+  ctx.fillStyle = "#3d3d3d";
   ctx.font = "12px sans-serif";
   ctx.textBaseline = "bottom";
 
   // Left
   ctx.textAlign = "left";
-  ctx.fillText("Left", left, top - 4);
+  ctx.fillText("Left (-1)", left, top - 4);
 
   // Right
   ctx.textAlign = "right";
-  ctx.fillText("Right", left + width, top - 4);
+  ctx.fillText("Right (1)", left + width, top - 4);
 
   ctx.restore();
 }

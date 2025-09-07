@@ -61,7 +61,7 @@ function createSessionDataStore() {
             return {
               rawSessionData: {
                 ...state.rawSessionData,
-                [f.macAddress]: newBuffer, // ✅ new object reference
+                [f.macAddress]: newBuffer,
               },
             };
           }),
@@ -77,13 +77,14 @@ function createSessionDataStore() {
               vsi: f.vsi,
               dpsi: f.dpsi,
             };
-            console.log("New frame: ", f);
             const singleFrameData: ProcessedSingleFrameSessionData = {
               confidenceEllipsePolygon: f.confidenceEllipsePolygon,
               convexHullPolygon: f.convexHullPolygon,
               stabilityIndex: f.stabilityIndex,
-              frequencySpectrum: f.frequencySpectrum,
+              amplitudeSpectrum: f.amplitudeSpectrum,
             };
+
+            console.log("New frame", f);
 
             const oldSessionBuffer =
               state.processedSessionData[f.macAddress] || createEmptyBuffer<ProcessedSessionData>();
@@ -92,7 +93,7 @@ function createSessionDataStore() {
             return {
               processedSessionData: {
                 ...state.processedSessionData,
-                [f.macAddress]: newSessionBuffer, // ✅ new object reference
+                [f.macAddress]: newSessionBuffer,
               },
               processedSingleFrameSessionData: {
                 ...state.processedSingleFrameSessionData,
@@ -113,3 +114,5 @@ export const useReplayDataStore = createSessionDataStore();
 // Selectors
 export const useSessionActions = () => useSessionDataStore.getState().actions;
 export const useReplayActions = () => useReplayDataStore.getState().actions;
+
+export type SessionStore = ReturnType<typeof createSessionDataStore>;

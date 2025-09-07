@@ -60,7 +60,7 @@ pub struct ProcessedBoardData {
     pub sway_metrics: Option<SwayMetrics>,
     pub stability_index: Option<f32>,
     pub area_metrics: Option<AreaMetrics>,
-    pub frequency_spectrum: Option<FrequencySpectrum>,
+    pub amplitude_spectrum: Option<AmplitudeSpectrum>,
     pub dpsi_metrics: Option<DpsiMetrics>,
 }
 
@@ -178,7 +178,7 @@ fn data_process_loop(
         let sway_calculation = calculate_basic_sway_metrics(&points);
         let stability_index = calculate_stability_index(&points);
         let area_calculation = calculate_area_metrics(&points);
-        let frequency_spectrum = welch_psd_xy(&points, 1000, 0.5f32, 15f32);
+        let amplitude_spectrum = compute_fft_amplitude_spectrum(&points, 2.0);
         let dpsi_metrics = calculate_dpsi_metrics(&points, settings.baseline_weight);
 
         let result = ProcessedBoardData {
@@ -187,7 +187,7 @@ fn data_process_loop(
             sway_metrics: sway_calculation,
             stability_index,
             area_metrics: area_calculation,
-            frequency_spectrum,
+            amplitude_spectrum: amplitude_spectrum,
             dpsi_metrics,
         };
 
@@ -340,35 +340,41 @@ fn polynomial_interpolation(
         return Vec::new();
     }
 
+    // Use cubic interpolation for small datasets
+    if points.len() <= 4 {
+        return cubic_interpolation(points, start_time, end_time, time_step);
+    }
+
     let mut result = Vec::new();
-
-    let times: Vec<f32> = points
-        .iter()
-        .map(|p| (p.timestamp - start_time).num_milliseconds() as f32 / 1000.0)
-        .collect();
-
     let mut current_time = start_time;
 
     while current_time <= end_time {
-        let t_seconds =
-            (current_time - start_time).num_milliseconds() as f32 / 1000.0;
+        // Find nearby points for local polynomial interpolation
+        let nearby_points = find_nearby_points(points, current_time, 4); // Use 4 points for cubic
 
-        if t_seconds >= times[0] && t_seconds <= times[times.len() - 1] {
+        if nearby_points.len() >= 2 {
+            let local_times: Vec<f32> = nearby_points
+                .iter()
+                .map(|p| (p.timestamp - start_time).num_milliseconds() as f32 / 1000.0)
+                .collect();
+
+            let t_seconds = (current_time - start_time).num_milliseconds() as f32 / 1000.0;
+
             let interpolated = CenterOfPressurePoint {
                 timestamp: current_time,
                 x: lagrange_interpolate(
-                    &times,
-                    &points.iter().map(|p| p.x).collect::<Vec<_>>(),
+                    &local_times,
+                    &nearby_points.iter().map(|p| p.x).collect::<Vec<_>>(),
                     t_seconds,
                 ),
                 y: lagrange_interpolate(
-                    &times,
-                    &points.iter().map(|p| p.y).collect::<Vec<_>>(),
+                    &local_times,
+                    &nearby_points.iter().map(|p| p.y).collect::<Vec<_>>(),
                     t_seconds,
                 ),
                 z: lagrange_interpolate(
-                    &times,
-                    &points.iter().map(|p| p.z).collect::<Vec<_>>(),
+                    &local_times,
+                    &nearby_points.iter().map(|p| p.z).collect::<Vec<_>>(),
                     t_seconds,
                 ),
             };
@@ -380,6 +386,35 @@ fn polynomial_interpolation(
     }
 
     result
+}
+
+fn find_nearby_points(
+    points: &[CenterOfPressurePoint],
+    target_time: DateTime<Utc>,
+    max_points: usize,
+) -> Vec<CenterOfPressurePoint> {
+    if points.is_empty() {
+        return Vec::new();
+    }
+
+    // Find the closest point
+    let mut closest_idx = 0;
+    let mut min_diff = (points[0].timestamp - target_time).num_milliseconds().abs();
+
+    for (i, point) in points.iter().enumerate().skip(1) {
+        let diff = (point.timestamp - target_time).num_milliseconds().abs();
+        if diff < min_diff {
+            min_diff = diff;
+            closest_idx = i;
+        }
+    }
+
+    // Collect points around the closest point
+    let half = max_points / 2;
+    let start_idx = closest_idx.saturating_sub(half);
+    let end_idx = (closest_idx + half + 1).min(points.len());
+
+    points[start_idx..end_idx].to_vec()
 }
 
 fn find_interpolation_points(
@@ -643,9 +678,6 @@ fn calculate_area_metrics(points: &[CenterOfPressurePoint]) -> Option<AreaMetric
         return None;
     }
 
-    let confidence_ = calculate_95_confidence_ellipse_area(points)?;
-    let convex_hull_area = calculate_convex_hull_area(points)?;
-
     let confidence_ellipse_polygon = generate_confidence_ellipse_points(points, 0.95, 180)?;
     let convex_hull_polygon = calculate_convex_hull_polygon(points)?;
 
@@ -653,79 +685,6 @@ fn calculate_area_metrics(points: &[CenterOfPressurePoint]) -> Option<AreaMetric
         confidence_ellipse_polygon,
         convex_hull_polygon,
     })
-}
-
-fn calculate_95_confidence_ellipse_area(points: &[CenterOfPressurePoint]) -> Option<f32> {
-    if points.len() < 3 {
-        return None;
-    }
-
-    let n = points.len() as f32;
-
-    // Calculate means
-    let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n;
-    let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n;
-
-    // Calculate covariance matrix elements
-    let mut cov_xx = 0.0;
-    let mut cov_yy = 0.0;
-    let mut cov_xy = 0.0;
-
-    for point in points {
-        let dx = point.x - mean_x;
-        let dy = point.y - mean_y;
-        cov_xx += dx * dx;
-        cov_yy += dy * dy;
-        cov_xy += dx * dy;
-    }
-
-    cov_xx /= n - 1.0;
-    cov_yy /= n - 1.0;
-    cov_xy /= n - 1.0;
-
-    // Calculate eigenvalues
-    let trace = cov_xx + cov_yy;
-    let det = cov_xx * cov_yy - cov_xy * cov_xy;
-    let discriminant = trace * trace - 4.0 * det;
-
-    if discriminant < 0.0 {
-        return None;
-    }
-
-    let lambda1 = (trace + discriminant.sqrt()) / 2.0;
-    let lambda2 = (trace - discriminant.sqrt()) / 2.0;
-
-    // 95% confidence ellipse (chi-square critical value for 2 DOF at 95% = 5.991)
-    let chi_square_95 = 5.991;
-    let area = PI * (chi_square_95 * lambda1).sqrt() * (chi_square_95 * lambda2).sqrt();
-
-    Some(area)
-}
-
-fn calculate_convex_hull_area(points: &[CenterOfPressurePoint]) -> Option<f32> {
-    if points.len() < 3 {
-        return None;
-    }
-
-    // Extract x,y coordinates
-    let mut coords: Vec<(f32, f32)> = points.iter().map(|p| (p.x, p.y)).collect();
-
-    // Graham scan algorithm for convex hull
-    let hull = convex_hull_graham_scan(&mut coords);
-
-    if hull.len() < 3 {
-        return None;
-    }
-
-    // Calculate area using shoelace formula
-    let mut area = 0.0;
-    for i in 0..hull.len() {
-        let j = (i + 1) % hull.len();
-        area += hull[i].0 * hull[j].1;
-        area -= hull[j].0 * hull[i].1;
-    }
-
-    Some((area / 2.0).abs())
 }
 
 fn convex_hull_graham_scan(points: &mut [(f32, f32)]) -> Vec<(f32, f32)> {
@@ -879,103 +838,108 @@ pub struct FrequencySpectrum {
     pub psd_xy: Vec<f32>, // summed x+y one-sided PSD (mm^2/Hz)
 }
 
-fn welch_psd_xy(
+#[derive(Serialize, Debug, Clone)]
+pub struct AmplitudeSpectrum {
+    pub freqs_hz: Vec<f32>,
+    pub amplitude_x: Vec<f32>,  // Amplitude in mm for X direction
+    pub amplitude_y: Vec<f32>,  // Amplitude in mm for Y direction
+    pub amplitude_xy: Vec<f32>, // Combined amplitude (sqrt(x^2 + y^2))
+}
+
+fn compute_fft_amplitude_spectrum(
     points: &[CenterOfPressurePoint],
-    seg_len: usize,      // e.g., 1000 for 0.1 Hz resolution at 100 Hz sampling
-    overlap: f32,        // e.g., 0.5 (50%)
-    max_hz: f32,         // e.g., 10.0 Hz
-) -> Option<FrequencySpectrum> {
-    if points.len() < seg_len || seg_len < 8 || !(0.0..1.0).contains(&overlap) {
+    max_hz: f32,
+) -> Option<AmplitudeSpectrum> {
+    if points.len() < 8 {
         return None;
     }
 
-    // Uniform dt assumed after your interpolation
-    let dt = (points[1].timestamp - points[0].timestamp)
-        .num_microseconds()? as f32
-        / 1_000_000.0;
-    if dt <= 0.0 {
-        return None;
-    }
-    let fs = 1.0 / dt;
-    let step = (seg_len as f32 * (1.0 - overlap)).max(1.0).round() as usize;
-
-    // Demean x,y
+    // Demean the signals
     let n = points.len();
     let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n as f32;
     let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n as f32;
 
-    let x: Vec<f32> = points.iter().map(|p| p.x - mean_x).collect();
-    let y: Vec<f32> = points.iter().map(|p| p.y - mean_y).collect();
+    let mut x: Vec<f32> = points.iter().map(|p| p.x - mean_x).collect();
+    let mut y: Vec<f32> = points.iter().map(|p| p.y - mean_y).collect();
 
-    // Hann window and its normalization U
-    let mut w = vec![0.0_f32; seg_len];
-    let mut w2sum = 0.0_f32;
-    for i in 0..seg_len {
-        let wi = 0.5 - 0.5 * (2.0 * std::f32::consts::PI * i as f32 / (seg_len as f32 - 1.0)).cos();
-        w[i] = wi;
-        w2sum += wi * wi;
-    }
-    let u = w2sum / seg_len as f32; // window power normalization
+    // Assume uniform sampling after interpolation
+    let dt = (points[1].timestamp - points[0].timestamp)
+        .num_microseconds()
+        .unwrap_or(0) as f32 / 1_000_000.0;
 
-    // FFT setup
-    let mut planner = FftPlanner::new();
-    let fft = planner.plan_fft_forward(seg_len);
-
-    let nhalf = seg_len / 2 + 1;
-    let mut acc_psd = vec![0.0_f32; nhalf];
-    let mut nseg = 0usize;
-
-    let mut start = 0usize;
-    while start + seg_len <= n {
-        // Windowed segment
-        let mut sx: Vec<Complex<f32>> = (0..seg_len)
-            .map(|i| Complex::new(x[start + i] * w[i], 0.0))
-            .collect();
-        let mut sy: Vec<Complex<f32>> = (0..seg_len)
-            .map(|i| Complex::new(y[start + i] * w[i], 0.0))
-            .collect();
-
-        fft.process(&mut sx);
-        fft.process(&mut sy);
-
-        // One-sided PSD, scale for density (mm^2/Hz)
-        for k in 0..nhalf {
-            let fx = sx[k].norm_sqr();
-            let fy = sy[k].norm_sqr();
-            let mut s = (fx + fy) * dt / (u * seg_len as f32);
-            if k != 0 && k != nhalf - 1 {
-                s *= 2.0;
-            }
-            acc_psd[k] += s;
-        }
-
-        nseg += 1;
-        start += step;
-    }
-
-    if nseg == 0 {
+    if dt <= 0.0 {
         return None;
     }
 
-    let psd: Vec<f32> = acc_psd.into_iter().map(|v| v / nseg as f32).collect();
-    let freqs: Vec<f32> = (0..nhalf)
-        .map(|k| k as f32 * fs / seg_len as f32)
+    let fs = 1.0 / dt;  // Sampling frequency in Hz
+
+       // Apply Hann window and correct amplitude by coherent gain
+       let mut window = Vec::with_capacity(n);
+       for i in 0..n {
+           let w = 0.5 - 0.5 * (2.0 * PI * i as f32 / (n as f32 - 1.0)).cos();
+           window.push(w);
+           x[i] *= w;
+           y[i] *= w;
+       }
+      let coherent_gain = window.iter().sum::<f32>() / n as f32; // = 0.5 for Hann
+
+    // Prepare FFT
+    let mut planner = FftPlanner::new();
+    let fft = planner.plan_fft_forward(n);
+
+    // Convert to complex and apply FFT
+    let mut x_complex: Vec<Complex<f32>> = x.iter()
+        .map(|&val| Complex::new(val, 0.0))
         .collect();
 
-    // --- NEW: Clip to max_hz (e.g., 10 Hz) ---
-    let mut freqs_clipped = Vec::new();
-    let mut psd_clipped = Vec::new();
-    for (f, p) in freqs.iter().zip(psd.iter()) {
-        if *f <= max_hz {
-            freqs_clipped.push(*f);
-            psd_clipped.push(*p);
-        } else {
+    let mut y_complex: Vec<Complex<f32>> = y.iter()
+        .map(|&val| Complex::new(val, 0.0))
+        .collect();
+
+    fft.process(&mut x_complex);
+    fft.process(&mut y_complex);
+
+    // Compute amplitude spectrum (not PSD)
+    // For real signals, we only need the first half
+    let n_half = n / 2 + 1;
+    let mut freqs = Vec::with_capacity(n_half);
+    let mut amp_x = Vec::with_capacity(n_half);
+    let mut amp_y = Vec::with_capacity(n_half);
+    let mut amp_xy = Vec::with_capacity(n_half);
+
+    for k in 0..n_half {
+        let freq = k as f32 * fs / n as f32;
+
+        // Only include up to max_hz
+        if freq > max_hz {
             break;
         }
+
+           // One-sided amplitude scaling. For even N, Nyquist is k == N/2.
+           // For odd N there is no Nyquist bin, so only DC uses 1/N.
+           let is_nyquist = n % 2 == 0 && k == n / 2;
+           let scale = if k == 0 || is_nyquist {
+               1.0 / n as f32
+           } else {
+               2.0 / n as f32
+           };
+           // Correct for window coherent gain
+           let scale = scale / coherent_gain;
+
+        let ax = x_complex[k].norm() * scale;
+        let ay = y_complex[k].norm() * scale;
+        let axy = (ax * ax + ay * ay).sqrt();
+
+        freqs.push(freq);
+        amp_x.push(ax);
+        amp_y.push(ay);
+        amp_xy.push(axy);
     }
 
-    Some(FrequencySpectrum {
-        freqs_hz: freqs_clipped,
-        psd_xy: psd_clipped,
+    Some(AmplitudeSpectrum {
+        freqs_hz: freqs,
+        amplitude_x: amp_x,
+        amplitude_y: amp_y,
+        amplitude_xy: amp_xy,
     })
 }

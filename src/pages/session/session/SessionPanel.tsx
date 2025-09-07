@@ -1,5 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import {BaseOption, SelectPrimitive} from "@/components/SelectPrimitive.tsx";
+import { BaseOption, SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, SessionPanelConfiguration } from "@/types.ts";
@@ -16,17 +16,17 @@ export function SessionPanel({
   value,
   onChange,
 }: {
-  boardDisplaySelected: string[];
-  onBoardDisplayChange: (ids: string[]) => void;
-  boardDisplayOptions: BaseOption[];
+  boardDisplaySelected: number[];
+  onBoardDisplayChange: (ids: number[]) => void;
+  boardDisplayOptions: BaseOption<number>[];
   activityOptions: BaseOption[];
   userOptions: string[];
   disabled: boolean;
-  value: SessionPanelConfiguration;
+  value: SessionPanelConfiguration | null;
   onChange: (v: SessionPanelConfiguration) => void;
 }) {
   const update = <K extends keyof SessionPanelConfiguration>(key: K, val: SessionPanelConfiguration[K]) => {
-    const next = { ...value, [key]: val };
+    const next = { ...value!, [key]: val };
     onChange(next);
   };
 
@@ -48,7 +48,7 @@ export function SessionPanel({
       </header>
 
       <ToolkitContainer className="grid grid-cols-14 grid-rows-2">
-        <SingleColumn label="Board to Display" backgroundType="transparent" className="col-span-3">
+        <SingleColumn label="Board to Display" className="col-span-3">
           <SelectPrimitive
             mode={"multi"}
             disabled={disabled}
@@ -60,52 +60,45 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="User" backgroundType="transparent" className="col-span-3">
+        <SingleColumn label="User" className="col-span-3" tooltipText={"TODO!!!!!!!"}>
           <SelectPrimitive
-            mode={"single"}
             disabled={disabled}
-            value={value.selectedUser ?? ""}
+            value={value?.selectedUser ?? ""}
             onChange={(v) => update("selectedUser", v ?? "")}
             options={userOptions.map((u) => ({ label: u, value: u }))}
           />
         </SingleColumn>
 
-        <SingleColumn
-          label="Window Size (ms)"
-          tooltipText={"Ursine Big Potato"}
-          backgroundType="transparent"
-          className="col-span-2"
-        >
+        <SingleColumn label="Window Size (ms)" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
-            value={value.windowSizeMs}
+            value={value?.windowSizeMs}
             onChange={(e) => update("windowSizeMs", Number(e.target.value))}
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Slide (ms)" backgroundType="transparent" className="col-span-2">
+        <SingleColumn label="Window Slide (ms)" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
-            value={value.windowSlideMs}
+            value={value?.windowSlideMs}
             onChange={(e) => update("windowSlideMs", Number(e.target.value))}
           />
         </SingleColumn>
-        <SingleColumn label="Sampling Rate" backgroundType="transparent" className="col-span-2">
+        <SingleColumn label="Sampling Rate" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
-            value={value.samplingRate}
+            value={value?.samplingRate}
             onChange={(e) => update("samplingRate", Number(e.target.value))}
           />
         </SingleColumn>
 
-        <SingleColumn label="Interpolation" backgroundType="transparent" className="col-span-2">
+        <SingleColumn label="Interpolation" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
           <SelectPrimitive
-            mode={"single"}
             disabled={disabled}
-            value={value.interpolation}
+            value={value?.interpolation ?? "Linear"}
             onChange={(v) => update("interpolation", v as InterpolationOption)}
             options={interpolationOptions.map((i) => ({ label: i, value: i }))}
           />
@@ -113,41 +106,39 @@ export function SessionPanel({
 
         <SingleColumn
           label="Activity"
-          backgroundType="transparent"
           className="col-span-3"
           actionText="Clear"
           onActionClick={() => update("activityId", "")}
         >
           <SelectPrimitive
-            mode={"single"}
             disabled={disabled}
-            value={value.activityId}
+            value={value?.activityId ?? ""}
             onChange={(v) => update("activityId", v)}
             options={activityOptions}
             noneOption="None"
           />
         </SingleColumn>
 
-        <SingleColumn label="LSL" backgroundType="transparent" direction="row" tooltipText={"Big potato"}>
+        <SingleColumn label="LSL" direction="row" tooltipText={"TODO!!!!!!!"}>
           <InputPrimitive
             disabled={disabled}
             type="checkbox"
             className={"w-5"}
-            checked={value.lslEnabled ?? false}
+            checked={value?.lslEnabled ?? false}
             onChange={(e) => update("lslEnabled", e.target.checked)}
           />
-          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{value.lslEnabled ? "ON" : "OFF"}</span>
+          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{value?.lslEnabled ? "ON" : "OFF"}</span>
         </SingleColumn>
 
-        <SingleColumn label="TCP" backgroundType="transparent" direction="row">
+        <SingleColumn label="TCP" direction="row" tooltipText={"TODO!!!!!!!"}>
           <InputPrimitive
             disabled={disabled}
             type="checkbox"
             className={"w-5"}
-            checked={value.tcpEnabled ?? false}
+            checked={value?.tcpEnabled ?? false}
             onChange={(e) => update("tcpEnabled", e.target.checked)}
           />
-          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{value.tcpEnabled ? "ON" : "OFF"}</span>
+          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{value?.tcpEnabled ? "ON" : "OFF"}</span>
         </SingleColumn>
 
         <SingleColumn
@@ -155,19 +146,20 @@ export function SessionPanel({
           backgroundType="transparent"
           className="col-start-7 col-end-15"
           actionText="Clear"
+          tooltipText={"TODO!!!!!!!"}
           onActionClick={() => update("outputDirectory", "")}
         >
           <div className={"flex h-8 items-center gap-2"}>
             <button
               type="button"
               disabled={disabled}
-              className="h-8 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200 disabled:text-gray-600 disabled:bg-gray-100/80 disabled:cursor-not-allowed"
+              className="h-8 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100/80 disabled:text-gray-600"
               onClick={pickDirectory}
             >
               Choose…
             </button>
             <div className={`min-w-0 flex-1 truncate text-sm ${disabled ? "text-gray-600" : "text-gray-800"}`}>
-              {value.outputDirectory || "No folder selected"}
+              {value?.outputDirectory || "No folder selected"}
             </div>
           </div>
         </SingleColumn>

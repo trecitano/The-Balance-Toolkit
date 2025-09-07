@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useCallback, useState } from "react";
-import { BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
-import { RawBalanceBoardEvent, processedSingleFrameSessionData } from "@/types.ts";
-import { StoreApi } from "zustand";
+import { BoardBuffer, SessionStore } from "@/store/sessionDataStore.tsx";
+import { ProcessedSingleFrameSessionData, RawBalanceBoardEvent } from "@/types.ts";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { StabilityBarGauge } from "@/pages/session/StabilityBarGauge.tsx";
 
@@ -24,7 +23,7 @@ type Props = {
   src: string;
   alt?: string;
   className?: string;
-  store: StoreApi<SessionState>;
+  store: SessionStore;
 };
 
 export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
@@ -35,14 +34,11 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
   const [showConfidenceEllipse, setShowConfidenceEllipse] = useState(true);
   const [showConvexHull, setShowConvexHull] = useState(true);
 
-  // Stability index state
-  const [stabilityIndex, setStabilityIndex] = useState<number | null>(null);
-
   const [forceKg, setForceKg] = useState<number | null>(null);
 
   // Refs to avoid re-render on every frame
   const rawRef = useRef<BoardBuffer<RawBalanceBoardEvent> | undefined>(undefined);
-  const polyRef = useRef<processedSingleFrameSessionData | undefined>(undefined);
+  const polyRef = useRef<ProcessedSingleFrameSessionData | undefined>(undefined);
   const showCERef = useRef<boolean>(showConfidenceEllipse);
   const showHullRef = useRef<boolean>(showConvexHull);
 
@@ -110,7 +106,6 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
       (s) => s.processedSingleFrameSessionData?.[macAddress],
       (lastFrameData) => {
         polyRef.current = lastFrameData;
-        setStabilityIndex(lastFrameData?.stabilityIndex ?? null);
 
         scheduleDraw();
       },
@@ -138,7 +133,7 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
   }, []);
 
   return (
-    <div className="relative flex h-full items-center justify-around">
+    <div className="relative flex h-full items-center justify-evenly">
       <div className="relative w-5/10">
         <img
           ref={imgRef}
@@ -160,7 +155,7 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
               checked={showConfidenceEllipse}
               onChange={(e) => setShowConfidenceEllipse(e.target.checked)}
             />
-            <span className={"text-sm text-gray-700"}>Confidence ellipse</span>
+            <span className={"text-sm font-medium text-(--primary)"}>Confidence ellipse</span>
           </label>
 
           <label className="flex items-center gap-2">
@@ -170,20 +165,17 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
               checked={showConvexHull}
               onChange={(e) => setShowConvexHull(e.target.checked)}
             />
-            <span className={"text-sm text-gray-700"}>Convex hull</span>
+            <span className={"text-sm font-medium text-(--red)"}>Convex hull</span>
           </label>
         </div>
 
-        <div className="text-sm text-gray-700">
-          Stability Index:{" "}
-          <span className="font-semibold">{stabilityIndex !== null ? stabilityIndex.toFixed(2) : "—"}</span>
-        </div>
-        <div className="text-sm text-gray-700">
-          Force (Kg): <span className="font-semibold">{forceKg !== null ? forceKg.toFixed(2) : "—"}</span>
+        <div className="inset-(--secondary) bg-(--light-accent-stronger) py-2 text-center text-sm text-gray-700 inset-ring-1">
+          <p>Force (Kg)</p>
+          <p className="font-semibold">{forceKg !== null ? forceKg.toFixed(2) : "—"}</p>
         </div>
       </div>
 
-      <StabilityBarGauge macAddress={macAddress} store={store} width={50} height={200} />
+      <StabilityBarGauge macAddress={macAddress} store={store} width={50} height={150} tooltipText={"TODO"} />
     </div>
   );
 }
@@ -193,7 +185,7 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
 function draw(
   canvas: HTMLCanvasElement | null,
   raw: BoardBuffer<RawBalanceBoardEvent> | undefined,
-  poly: processedSingleFrameSessionData | undefined,
+  poly: ProcessedSingleFrameSessionData | undefined,
   showCE: boolean,
   showHull: boolean,
 ) {

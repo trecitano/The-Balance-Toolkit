@@ -121,8 +121,8 @@ export default function Devices() {
     const scrollBottom = scrollHeight - clientHeight - scrollTop;
     const bottomOpacity = Math.min(scrollBottom / maxFade, 1);
 
-    e.currentTarget.style.setProperty("--top-opacity", topOpacity);
-    e.currentTarget.style.setProperty("--bottom-opacity", bottomOpacity);
+    e.currentTarget.style.setProperty("--top-opacity", String(topOpacity));
+    e.currentTarget.style.setProperty("--bottom-opacity", String(bottomOpacity));
   }, []);
 
   const sortDevices = (devices: Device[]): Device[] => {

@@ -1,15 +1,24 @@
 import { useEffect, useRef, useState } from "react";
-import { SessionState } from "@/store/sessionDataStore.tsx";
-import { StoreApi } from "zustand";
+import { SessionStore } from "@/store/sessionDataStore.tsx";
+import { Tooltip } from "@/components/Tooltip.tsx";
 
 interface StabilityBarGaugeProps {
   macAddress: number;
-  store: StoreApi<SessionState>;
+  store: SessionStore;
+  title?: string;
+  tooltipText?: string;
   width?: number;
   height?: number;
 }
 
-export function StabilityBarGauge({ macAddress, store, width = 60, height = 200 }: StabilityBarGaugeProps) {
+export function StabilityBarGauge({
+  macAddress,
+  store,
+  title = "Stability",
+  tooltipText,
+  width = 60,
+  height = 200,
+}: StabilityBarGaugeProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [stabilityIndex, setStabilityIndex] = useState<number | null>(null);
 
@@ -47,20 +56,20 @@ export function StabilityBarGauge({ macAddress, store, width = 60, height = 200 
     // Clear canvas
     ctx.clearRect(0, 0, width, height);
 
-    // Define bar dimensions
+    // Define bar dimensions (use more of the canvas now that title is external)
     const barWidth = width * 0.5;
-    const barHeight = height * 0.85;
+    const barHeight = height * 0.9;
     const barX = (width - barWidth) / 2;
-    const barY = 5 + height * 0.1;
+    const barY = height * 0.05;
 
-    // Draw background (empty bar)
-    ctx.fillStyle = "#1f2937"; // dark gray
-    ctx.fillRect(barX, barY, barWidth, barHeight);
+    // Draw background border (empty bar)
+    ctx.strokeStyle = "#1f2937"; // dark gray border
+    ctx.lineWidth = 2;
+    ctx.strokeRect(barX, barY, barWidth, barHeight);
 
     // Draw the filled portion if we have a value
     if (stabilityIndex !== null && stabilityIndex >= 0 && stabilityIndex <= 1) {
       // Invert the value since lower is better for stability
-      // If your stability index already has 0 as best and 1 as worst, remove this inversion
       const displayValue = 1 - stabilityIndex;
 
       const fillHeight = barHeight * displayValue;
@@ -68,9 +77,6 @@ export function StabilityBarGauge({ macAddress, store, width = 60, height = 200 
 
       // Create gradient
       const gradient = ctx.createLinearGradient(0, barY + barHeight, 0, barY);
-
-      // Color stops from bottom to top
-      // Bottom (good stability) - green
       gradient.addColorStop(0, "#e50012");
       gradient.addColorStop(1, "#e50012");
 
@@ -85,18 +91,22 @@ export function StabilityBarGauge({ macAddress, store, width = 60, height = 200 
       ctx.lineTo(barX + barWidth + 5, fillY);
       ctx.stroke();
     }
-
-    // Draw label at top
-    ctx.fillStyle = "#000000";
-    ctx.font = "13px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillText("Stability", width / 2, barY - 5);
   }, [stabilityIndex, width, height]);
 
   return (
     <div className="flex flex-col items-center">
-      <canvas ref={canvasRef} />
+      <div className={"relative font-semibold"}>
+        {title}
+        {tooltipText && (
+          <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
+            <Tooltip tooltipText={tooltipText} />
+          </div>
+        )}
+      </div>
+      <div>
+        <canvas ref={canvasRef} />
+      </div>
+      <div className="mt-1 text-xs">{stabilityIndex !== null ? stabilityIndex.toFixed(2) : "--"}</div>
     </div>
   );
 }

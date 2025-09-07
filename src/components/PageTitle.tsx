@@ -6,5 +6,5 @@ interface HeadingProps {
 }
 
 export default function PageTitle({ children, className = "" }: HeadingProps) {
-  return <h1 className={`text-4xl font-semibold ${className}`}>{children}</h1>;
+  return <h1 className={`ml-2 text-4xl font-semibold ${className}`}>{children}</h1>;
 }

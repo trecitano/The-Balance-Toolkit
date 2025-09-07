@@ -502,7 +502,6 @@ export default function Users() {
                 {/* Gender */}
                 <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
                   <SelectPrimitive
-                    mode={"single"}
                     value={
                       ["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "")
                         ? (editingUserData.gender ?? "")
@@ -543,7 +542,6 @@ export default function Users() {
                       }}
                     />
                     <SelectPrimitive
-                      mode={"single"}
                       value={editingUserData.heightMetric ?? "cm"}
                       onChange={(v) => handleEditUpdate("heightMetric", v)}
                       options={[
@@ -570,7 +568,6 @@ export default function Users() {
                       }}
                     />
                     <SelectPrimitive
-                      mode={"single"}
                       value={editingUserData.weightMetric ?? "kg"}
                       onChange={(v) => handleEditUpdate("weightMetric", v)}
                       options={[
@@ -587,7 +584,6 @@ export default function Users() {
                 {/* Handedness */}
                 <SingleColumn label="Handedness:" icon={<img src={handIcon} />}>
                   <SelectPrimitive
-                    mode={"single"}
                     value={editingUserData.handedness ?? ""}
                     onChange={(v) => handleEditUpdate("handedness", v as UserType["handedness"])}
                     options={[
@@ -602,7 +598,7 @@ export default function Users() {
                 <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
                   <div className="relative">
                     <InputPrimitive
-                      className={"cursor-pointer w-full"}
+                      className={"w-full cursor-pointer"}
                       style={{
                         backgroundColor: editingUserData.color || "#397aac",
                       }}
@@ -731,7 +727,7 @@ export default function Users() {
           {`Are you sure you want to delete user "${users.find((u) => u.name === showDeleteConfirm)?.name}"?`}
         </p>
         <div className="flex justify-center gap-6">
-          <ToolkitButton type="button" color="red" onClick={() => handleDeleteUser(showDeleteConfirm)}>
+          <ToolkitButton type="button" color="red" onClick={() => handleDeleteUser(showDeleteConfirm!)}>
             Delete
           </ToolkitButton>
           <ToolkitButton type="button" color="grey" onClick={() => setShowDeleteConfirm(null)}>
@@ -742,8 +738,8 @@ export default function Users() {
 
       <Modal
         open={showWeightMeasure}
-        onClose={() => {
-          stopWeightMeasurement(false);
+        onClose={async () => {
+          await stopWeightMeasurement();
           setShowWeightMeasure(false);
         }}
         className={"min-w-lg"}
@@ -799,7 +795,7 @@ export default function Users() {
               <ToolkitButton
                 disabled={!selectedWeightMeasureDeviceMac || isMeasuringWeight}
                 color="blue"
-                onClick={() => handleEditUpdate("weight", liveWeight?.toFixed(2) ?? 0)}
+                onClick={() => handleEditUpdate("weight", Number(liveWeight?.toFixed(2)) ?? 0)}
               >
                 Save
               </ToolkitButton>

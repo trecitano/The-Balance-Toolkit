@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
-import { BoardBuffer, SessionState } from "@/store/sessionDataStore.tsx";
+import { BoardBuffer, SessionStore } from "@/store/sessionDataStore.tsx";
 import { ProcessedSessionData } from "@/types.ts";
-import { StoreApi } from "zustand";
+import { Tooltip } from "@/components/Tooltip.tsx";
+import { BLUE_COLOUR, GREEN_COLOUR, RED_COLOUR, YELLOW_COLOUR } from "@/pages/session/UPlot.tsx";
 
 interface MetricConfig {
   key: keyof ProcessedSessionData;
@@ -17,22 +18,24 @@ const PAD_SEC = 1.5;
 
 export function MultiMetricPlot({
   title,
+  tooltipText,
   macAddress,
   store,
 }: {
   title: string;
+  tooltipText?: string;
   macAddress: number;
-  store: StoreApi<SessionState>;
+  store: SessionStore;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
 
   // State for which metrics to show
   const [metrics, setMetrics] = useState<MetricConfig[]>([
-    { key: "mlsi", label: "MLSI", color: "#ef4444", enabled: true }, // red
-    { key: "apsi", label: "APSI", color: "#3b82f6", enabled: true }, // blue
-    { key: "vsi", label: "VSI", color: "#10b981", enabled: true }, // green
-    { key: "dpsi", label: "DPSI", color: "#f59e0b", enabled: true }, // orange
+    { key: "mlsi", label: "MLSI", color: BLUE_COLOUR, enabled: true },
+    { key: "apsi", label: "APSI", color: RED_COLOUR, enabled: true },
+    { key: "vsi", label: "VSI", color: YELLOW_COLOUR, enabled: true },
+    { key: "dpsi", label: "DPSI", color: GREEN_COLOUR, enabled: true },
   ]);
 
   // Toggle metric visibility
@@ -57,13 +60,7 @@ export function MultiMetricPlot({
       width: 0,
       height: 0,
       legend: { show: false },
-      cursor: {
-        show: true,
-        points: {
-          size: 8,
-          width: 2,
-        },
-      },
+      cursor: { show: false },
       scales: {
         x: {
           range: (_u, _min, max) => {
@@ -76,6 +73,9 @@ export function MultiMetricPlot({
             if (!Number.isFinite(min) || !Number.isFinite(max)) {
               return [0, 1];
             }
+            if (min === max) {
+              return [min - 0.1, max + 0.1];
+            }
             const pad = (max - min) * 0.1;
             return [min - pad, max + pad];
           },
@@ -85,15 +85,15 @@ export function MultiMetricPlot({
         {
           scale: "x",
           values: () => [],
-          grid: { show: true, stroke: "#e5e7eb", width: 1 },
+          grid: { show: false },
           ticks: { show: false },
           border: { show: true, stroke: "#000", width: 2 },
           size: 0,
         },
         {
           scale: "y",
-          grid: { show: true, stroke: "#e5e7eb", width: 1 },
-          ticks: { show: true },
+          grid: { show: false },
+          ticks: { show: true, size: 6, stroke: "#b2b2b2" },
           border: { show: true, stroke: "#000", width: 2 },
           size: 40,
         },
@@ -146,7 +146,7 @@ export function MultiMetricPlot({
     const opts = createOptions();
 
     // Initialize with empty data arrays (time + 4 metrics)
-    const initialData = [[], [], [], [], []];
+    const initialData: uPlot.AlignedData = [[], [], [], [], []];
 
     plotRef.current = new uPlot({ ...opts, width: rect.width, height: rect.height }, initialData, hostRef.current);
 
@@ -216,10 +216,20 @@ export function MultiMetricPlot({
   }, [store, macAddress]);
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="mb-2 flex items-center justify-between">
-        <p className="font-medium">{title}</p>
-        <div className="flex gap-3">
+    <div className="h-full w-full">
+      <div className={"relative flex h-1/10 items-center justify-center"}>
+        <div className={"relative font-semibold"}>
+          {title}
+          {tooltipText && (
+            <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
+              <Tooltip tooltipText={tooltipText} />
+            </div>
+          )}
+        </div>
+      </div>
+      <div ref={hostRef} className="h-78/100 w-full" />
+      <div className="mb-2 flex h-1/10 items-center justify-between">
+        <div className="ml-auto flex gap-3">
           {metrics.map((metric, i) => (
             <label key={metric.key} className="flex cursor-pointer items-center gap-1">
               <input type="checkbox" checked={metric.enabled} onChange={() => toggleMetric(i)} className="h-3 w-3" />
@@ -230,7 +240,6 @@ export function MultiMetricPlot({
           ))}
         </div>
       </div>
-      <div ref={hostRef} className="flex-1" />
     </div>
   );
 }

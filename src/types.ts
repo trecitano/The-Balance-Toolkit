@@ -102,6 +102,13 @@ export type RawBalanceBoardEvent = {
   copY: number;
 };
 
+export interface AmplitudeSpectrum {
+  freqs_hz: number[];
+  amplitude_x: number[];
+  amplitude_y: number[];
+  amplitude_xy: number[];
+}
+
 export type ProcessedBoardEvent = {
   event: "processed";
   macAddress: number;
@@ -111,7 +118,7 @@ export type ProcessedBoardEvent = {
   stabilityIndex: number;
   confidenceEllipsePolygon: [number, number][];
   convexHullPolygon: [number, number][];
-  frequencySpectrum: FrequencySpectrum;
+  amplitudeSpectrum?: AmplitudeSpectrum;
   mlsi?: number;
   apsi?: number;
   vsi?: number;
@@ -137,7 +144,7 @@ export type ProcessedSingleFrameSessionData = {
   confidenceEllipsePolygon: [number, number][];
   convexHullPolygon: [number, number][];
   stabilityIndex: number;
-  frequencySpectrum?: FrequencySpectrum;
+  amplitudeSpectrum?: AmplitudeSpectrum;
 };
 
 export type TimelineBlock = {
