@@ -5,6 +5,7 @@ import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, SessionPanelConfiguration } from "@/types.ts";
 import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
+import {Checkbox} from "@/components/Checkbox.tsx";
 
 export function SessionPanel({
   boardDisplaySelected,
@@ -120,10 +121,9 @@ export function SessionPanel({
         </SingleColumn>
 
         <SingleColumn label="LSL" direction="row" tooltipText={"TODO!!!!!!!"}>
-          <InputPrimitive
+          <Checkbox
             disabled={disabled}
-            type="checkbox"
-            className={"w-5"}
+            className={"ml-2"}
             checked={value?.lslEnabled ?? false}
             onChange={(e) => update("lslEnabled", e.target.checked)}
           />
@@ -131,10 +131,9 @@ export function SessionPanel({
         </SingleColumn>
 
         <SingleColumn label="TCP" direction="row" tooltipText={"TODO!!!!!!!"}>
-          <InputPrimitive
+          <Checkbox
             disabled={disabled}
-            type="checkbox"
-            className={"w-5"}
+            className={"ml-2"}
             checked={value?.tcpEnabled ?? false}
             onChange={(e) => update("tcpEnabled", e.target.checked)}
           />

@@ -4,6 +4,7 @@ import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, ReplayConfiguration, SessionPanelConfiguration } from "@/types.ts";
 import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
+import {Checkbox} from "@/components/Checkbox.tsx";
 
 export function ReplayPanel({
   config,
@@ -98,9 +99,8 @@ export function ReplayPanel({
         </SingleColumn>
 
         <SingleColumn label="LSL" direction="row" tooltipText={"TODO!!!!!!!"}>
-          <InputPrimitive
+          <Checkbox
             disabled={disabled}
-            type="checkbox"
             className={"w-5"}
             checked={config?.core.lslEnabled ?? false}
             onChange={(e) => update("lslEnabled", e.target.checked)}
@@ -111,9 +111,8 @@ export function ReplayPanel({
         </SingleColumn>
 
         <SingleColumn label="TCP" direction="row" tooltipText={"TODO!!!!!!!"}>
-          <InputPrimitive
+          <Checkbox
             disabled={disabled}
-            type="checkbox"
             className={"w-5"}
             checked={config?.core.tcpEnabled ?? false}
             onChange={(e) => update("tcpEnabled", e.target.checked)}

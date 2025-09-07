@@ -7,6 +7,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { DEVICES_QUERY_KEY } from "@/pages/devices/Devices.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
+import {Checkbox} from "@/components/Checkbox.tsx";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -124,18 +125,14 @@ function Settings({ isOpen, onClose }: SettingsProps) {
               />
             </SettingField>
             <SettingField label={"Send Raw Data?"}>
-              <InputPrimitive
-                type="checkbox"
+              <Checkbox
                 checked={tempSettings.tcpSendRawData}
-                className={"min-w-4.5"}
                 onChange={(e) => handleGeneralSettingsUpdate("tcpSendRawData", e.target.checked)}
               />
             </SettingField>
             <SettingField label={"Send Processed Data?"}>
-              <InputPrimitive
-                type="checkbox"
+              <Checkbox
                 checked={tempSettings.tcpSendProcessedData}
-                className={"min-w-4.5"}
                 onChange={(e) => handleGeneralSettingsUpdate("tcpSendProcessedData", e.target.checked)}
               />
             </SettingField>
@@ -158,18 +155,14 @@ function Settings({ isOpen, onClose }: SettingsProps) {
               />
             </SettingField>
             <SettingField label={"Send Raw Data?"}>
-              <InputPrimitive
-                type="checkbox"
+              <Checkbox
                 checked={tempSettings.lslSendRawData}
-                className={"min-w-4.5"}
                 onChange={(e) => handleGeneralSettingsUpdate("lslSendRawData", e.target.checked)}
               />
             </SettingField>
             <SettingField label={"Send Processed Data?"}>
-              <InputPrimitive
-                type="checkbox"
+              <Checkbox
                 checked={tempSettings.lslSendProcessedData}
-                className={"min-w-4.5"}
                 onChange={(e) => handleGeneralSettingsUpdate("lslSendProcessedData", e.target.checked)}
               />
             </SettingField>
@@ -196,18 +189,14 @@ function Settings({ isOpen, onClose }: SettingsProps) {
               </button>
             </SettingField>
             <SettingField label={"Store Raw Data"}>
-              <InputPrimitive
-                type="checkbox"
+              <Checkbox
                 checked={tempSettings.storeRawSession}
-                className={"min-w-4.5"}
                 onChange={(e) => handleGeneralSettingsUpdate("storeRawSession", e.target.checked)}
               />
             </SettingField>
             <SettingField label={"Store Processed Data"}>
-              <InputPrimitive
-                type="checkbox"
+              <Checkbox
                 checked={tempSettings.storeProcessedData}
-                className={"min-w-4.5"}
                 onChange={(e) => handleGeneralSettingsUpdate("storeProcessedData", e.target.checked)}
               />
             </SettingField>
@@ -251,10 +240,8 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             <h3>Demo Mode</h3>
 
             <SettingField label={"Enable Demo Mode"}>
-              <InputPrimitive
-                type="checkbox"
+              <Checkbox
                 checked={tempSettings.isDemoMode}
-                className={"min-w-4.5"}
                 onChange={(e) => handleGeneralSettingsUpdate("isDemoMode", e.target.checked)}
               />
             </SettingField>

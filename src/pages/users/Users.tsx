@@ -629,7 +629,6 @@ export default function Users() {
                 {/* Notes */}
                 <SingleColumn className={"col-span-4 row-start-3"} label="Notes:">
                   <InputPrimitive
-                    required
                     value={editingUserData.notes}
                     onChange={(e) => handleEditUpdate("notes", e.target.value)}
                   />
