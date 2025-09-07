@@ -392,10 +392,7 @@ export default function ActivityCard({
                 Save
               </ToolkitButton>
 
-              <ToolkitButton type="button" onClick={() => {
-                console.log("Resting");
-                resetMutation.mutate(activity.id)
-              }} color={"grey"}>
+              <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} color={"grey"}>
                 Reset to Default
               </ToolkitButton>
 
