@@ -66,7 +66,7 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
         </div>
       )}
 
-      <div className={clsx("flex", direction === "col" ? "flex-col gap-(--space-xs)" : "flex-row items-center gap-2")}>
+      <div className={clsx("flex", direction === "col" ? "flex-col gap-(--space-xs)" : "flex-row flex-1 items-center gap-2")}>
         {children}
       </div>
 
