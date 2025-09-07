@@ -1,5 +1,4 @@
 import React, { useRef, useState } from "react";
-import { QuestionMarkCircleIcon, DocumentTextIcon, DocumentIcon, CodeBracketIcon } from "@heroicons/react/24/outline";
 import logoLettering from "@/assets/logo/logo-lettering-white.svg";
 import fileIcon from "@/assets/file-icon.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
@@ -87,12 +86,10 @@ const Header: React.FC = () => {
         {/* Right: Links */}
         <div className="mt-auto flex flex-col items-end gap-3">
           <button className="inline-flex items-center gap-2 text-white/95 hover:text-white" type="button">
-            <DocumentIcon className="h-5 w-5" />
             <span className="text-base">Cite</span>
           </button>
 
           <button className="inline-flex items-center gap-2 text-white/95 hover:text-white" type="button">
-            <CodeBracketIcon className="h-5 w-5" />
             <span className="text-base">Source Code</span>
           </button>
         </div>
@@ -320,9 +317,6 @@ const HelpSupportCard: React.FC = () => {
   return (
     <div className="flex h-full flex-col p-(--space-sm)">
       <div className="mb-4 flex items-center space-x-2">
-        <div className="rounded-full bg-red-600 p-1 text-white">
-          <QuestionMarkCircleIcon className="h-4 w-4" />
-        </div>
         <PageSubtitle>Help and Support</PageSubtitle>
       </div>
 
@@ -338,9 +332,6 @@ const DocumentationCard: React.FC = () => {
   return (
     <div className="flex h-full flex-col p-(--space-sm)">
       <div className="mb-4 flex items-center space-x-2">
-        <div className="rounded bg-red-600 p-1 text-white">
-          <DocumentTextIcon className="h-4 w-4" />
-        </div>
         <PageSubtitle>Documentation</PageSubtitle>
       </div>
 
