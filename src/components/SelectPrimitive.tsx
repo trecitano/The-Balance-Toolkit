@@ -189,7 +189,7 @@ export function SelectPrimitive<T extends React.Key = string>(props: SelectProps
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    (onChange as (next: string) => void)("");
+                    (onChange as (next: T) => void)(null as any);
                     setOpen(false);
                     buttonRef.current?.focus();
                   }}
@@ -215,9 +215,9 @@ export function SelectPrimitive<T extends React.Key = string>(props: SelectProps
                     onMouseEnter={() => setActiveIdx(idx)}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      (onChange as (next: T) => void)("" as T);
-                      setOpen(false);
-                      buttonRef.current?.focus();
+                      if (!opt.disabled) {
+                        toggleValue(opt.value);
+                      }
                     }}
                     className={`flex w-full cursor-pointer items-center ${
                       mode === "multi" ? "gap-2" : ""

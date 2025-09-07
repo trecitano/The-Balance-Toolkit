@@ -21,6 +21,7 @@ import { Modal } from "@/components/Modal.tsx";
 import { Channel } from "@tauri-apps/api/core";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
+import { confirm } from '@tauri-apps/plugin-dialog';
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -212,12 +213,15 @@ export default function Users() {
   };
 
   const handleSelectUser = async (userName: string) => {
-    if (editingUserData && editingUserData.name != userName) {
-      if (window.confirm("You have unsaved changes. Discard changes and select a different user?")) {
-        setEditingUserData(null);
-      } else {
+    if (editingUserData && editingUserData.name !== userName) {
+      const shouldContinue = await confirm(
+        'You have unsaved changes. Discard changes and select a different user?',
+        { kind: 'warning' }
+      );
+      if (!shouldContinue) {
         return;
       }
+      setEditingUserData(null);
     }
 
     await commands.users.selectUser(userName);

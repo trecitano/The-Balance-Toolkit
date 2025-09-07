@@ -97,6 +97,11 @@ impl ActivityState {
             turn_around(),
             walk_back(),
             walk_forward(),
+            dual_tare(),
+            dual_step_on_the_boards(),
+            dual_one_foot_on_each_board(),
+            dual_squat_on_the_boards(),
+            dual_stand_on_the_boards()
         ]
     }
 
@@ -111,19 +116,6 @@ impl ActivityState {
                 description: "Assess balance during quiet standing with eyes open and closed".into(),
                 timeline_blocks: vec![
                     step_onto_board(), eyes_open(), eyes_close()
-                ],
-                loops: 2,
-            },
-            // Dynamic Weight Shifting
-            Activity {
-                id: "dynamic-weight-shifting".into(),
-                title: "Dynamic weight shifting".into(),
-                static_image: "lean-forward".into(),
-                boards_required: 1,
-                description: "Assess controlled weight shifting ability".into(),
-                timeline_blocks: vec![
-                    step_onto_board(), stand_upright(), lean_forward(), stand_upright(), lean_backwards(),
-                    stand_upright(), lean_to_the_left(), stand_upright(), lean_to_the_right(), stand_upright(),
                 ],
                 loops: 2,
             },
@@ -174,6 +166,21 @@ impl ActivityState {
                 description: "Evaluate mobility and fall risk".into(),
                 timeline_blocks: vec![
                     sit(), stand(), walk_forward(), turn_around(), walk_back(), sit_again()
+                ],
+                loops: 2,
+            },
+            // Squat on Two Boards
+            Activity {
+                id: "squat-two-boards".into(),
+                title: "Squat on two boards".into(),
+                static_image: "dual-board-squat-on-the-boards".into(),
+                boards_required: 2,
+                description: "Assess controlled weight shifting ability".into(),
+                timeline_blocks: vec![
+                    dual_step_on_the_boards(),
+                    dual_one_foot_on_each_board(),
+                    dual_squat_on_the_boards(),
+                    dual_stand_on_the_boards()
                 ],
                 loops: 2,
             },
@@ -394,5 +401,45 @@ fn walk_forward() -> TimelineBlock {
         title: "Walk Forward".to_string(),
         id: "walk-forward".to_string(),
         duration: 12,
+    }
+}
+
+fn dual_tare() -> TimelineBlock {
+    TimelineBlock {
+        title: "Step on the boards".to_string(),
+        id: "dual-board-tare".to_string(),
+        duration: 3,
+    }
+}
+
+fn dual_step_on_the_boards() -> TimelineBlock {
+    TimelineBlock {
+        title: "Step on the boards".to_string(),
+        id: "dual-board-step-on-the-boards".to_string(),
+        duration: 3,
+    }
+}
+
+fn dual_one_foot_on_each_board() -> TimelineBlock {
+    TimelineBlock {
+        title: "One foot on each board".to_string(),
+        id: "dual-board-one-foot-on-each-board".to_string(),
+        duration: 3,
+    }
+}
+
+fn dual_squat_on_the_boards() -> TimelineBlock {
+    TimelineBlock {
+        title: "Squat on the boards".to_string(),
+        id: "dual-board-squat-on-the-boards".to_string(),
+        duration: 3,
+    }
+}
+
+fn dual_stand_on_the_boards() -> TimelineBlock {
+    TimelineBlock {
+        title: "Stand on the boards".to_string(),
+        id: "dual-board-stand-on-the-boards".to_string(),
+        duration: 3,
     }
 }

@@ -303,7 +303,7 @@ export default function ActivityCard({
                   mode="single"
                   value={newActionImage}
                   placeholder="Action"
-                  className={"w-40"}
+                  className={"w-70"}
                   options={[
                     { label: "Custom Action", value: "custom-action-flamingo" },
                     ...existingActionImages.map((action) => ({
