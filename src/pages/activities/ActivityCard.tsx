@@ -73,17 +73,18 @@ export default function ActivityCard({
   });
   const resetMutation = useMutation({
     mutationFn: (activityId: string) => commands.activity.resetActivity(activityId),
-    onSuccess: (activity) => {
+    onSuccess: (resetActivity) => {
       // update cache so UI reflects saved state
       queryClient.setQueryData(
         ACTIVITIES_QUERY_KEY,
         (old: { activities: Activity[] } | undefined): { activities: Activity[] } | undefined => {
           if (!old) return old;
           return {
-            activities: old.activities.map((a) => (a.id === activity.id ? activity : a)),
+            activities: old.activities.map((a) => (a.id === resetActivity.id ? resetActivity : a)),
           };
         },
       );
+      setTimelineBlocks(resetActivity.timelineBlocks);
     },
   });
 
@@ -297,7 +298,7 @@ export default function ActivityCard({
       </ToolkitContainer>
 
       {maximized && (
-        <ToolkitContainer className="absolute flex flex-col gap-10 bg-white" background="bg-white" style={maxStyle}>
+        <ToolkitContainer className="absolute flex flex-col gap-10 bg-white p-5" background="bg-white" style={maxStyle}>
           <div className="activity-details-header">
             <h3>{activity.title}</h3>
           </div>
@@ -315,7 +316,7 @@ export default function ActivityCard({
                   placeholder="Action"
                   className={"w-70"}
                   options={[
-                    { label: "Custom Action", value: "custom-action-flamingo" },
+                    { label: "Custom Action", value: "logo-flamingo-blue" },
                     ...existingActionImages.map((action) => ({
                       label: action.title,
                       value: action.id,
@@ -323,7 +324,7 @@ export default function ActivityCard({
                   ]}
                   onChange={(e) => setNewActionImage(e)}
                 />
-                {newActionImage === "custom-action-flamingo" && (
+                {newActionImage === "logo-flamingo-blue" && (
                   <InputPrimitive value={newActionName} onChange={(e) => setNewActionName(e.target.value)} />
                 )}
 
@@ -391,7 +392,10 @@ export default function ActivityCard({
                 Save
               </ToolkitButton>
 
-              <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} color={"grey"}>
+              <ToolkitButton type="button" onClick={() => {
+                console.log("Resting");
+                resetMutation.mutate(activity.id)
+              }} color={"grey"}>
                 Reset to Default
               </ToolkitButton>
 
