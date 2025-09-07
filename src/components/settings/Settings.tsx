@@ -104,7 +104,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
               <InputPrimitive
                 type="text"
                 value={tempSettings.tcpConnectionString}
-                editable
                 onChange={(e) => handleGeneralSettingsUpdate("tcpConnectionString", e.target.value)}
               />
             </SettingField>
@@ -113,7 +112,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 type="checkbox"
                 checked={tempSettings.tcpSendRawData}
                 className={"min-w-4.5"}
-                editable
                 onChange={(e) => handleGeneralSettingsUpdate("tcpSendRawData", e.target.checked)}
               />
             </SettingField>
@@ -122,7 +120,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 type="checkbox"
                 checked={tempSettings.tcpSendProcessedData}
                 className={"min-w-4.5"}
-                editable
                 onChange={(e) => handleGeneralSettingsUpdate("tcpSendProcessedData", e.target.checked)}
               />
             </SettingField>
@@ -134,7 +131,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
             <SettingField label={"LSL Stream Name"}>
               <InputPrimitive
                 value={tempSettings.lslStreamName}
-                editable
                 onChange={(e) => handleGeneralSettingsUpdate("lslStreamName", e.target.value)}
               />
             </SettingField>
@@ -142,7 +138,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
               <InputPrimitive
                 type="text"
                 value={tempSettings.lslSourceId}
-                editable
                 onChange={(e) => handleGeneralSettingsUpdate("lslSourceId", e.target.value)}
               />
             </SettingField>
@@ -151,7 +146,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 type="checkbox"
                 checked={tempSettings.lslSendRawData}
                 className={"min-w-4.5"}
-                editable
                 onChange={(e) => handleGeneralSettingsUpdate("lslSendRawData", e.target.checked)}
               />
             </SettingField>
@@ -160,7 +154,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 type="checkbox"
                 checked={tempSettings.lslSendProcessedData}
                 className={"min-w-4.5"}
-                editable
                 onChange={(e) => handleGeneralSettingsUpdate("lslSendProcessedData", e.target.checked)}
               />
             </SettingField>
@@ -191,7 +184,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 type="checkbox"
                 checked={tempSettings.storeRawSession}
                 className={"min-w-4.5"}
-                editable
                 onChange={(e) => handleGeneralSettingsUpdate("storeRawSession", e.target.checked)}
               />
             </SettingField>
@@ -200,7 +192,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 type="checkbox"
                 checked={tempSettings.storeProcessedData}
                 className={"min-w-4.5"}
-                editable
                 onChange={(e) => handleGeneralSettingsUpdate("storeProcessedData", e.target.checked)}
               />
             </SettingField>
@@ -209,27 +200,10 @@ function Settings({ isOpen, onClose }: SettingsProps) {
           <div className="settings-section">
             <h3>Session Processing Configuration</h3>
 
-            <SettingField label={"Balance Board X Size (mm)"}>
-              <InputPrimitive
-                type="number"
-                value={tempSettings.processingSettings.balanceBoardXSize}
-                editable
-                onChange={(e) => handleProcessedSettingsUpdate("balanceBoardXSize", Number(e.target.value))}
-              />
-            </SettingField>
-            <SettingField label={"Balance Board Y Size (mm)"}>
-              <InputPrimitive
-                type="number"
-                value={tempSettings.processingSettings.balanceBoardYSize}
-                editable
-                onChange={(e) => handleProcessedSettingsUpdate("balanceBoardYSize", Number(e.target.value))}
-              />
-            </SettingField>
             <SettingField label={"Window size (ms)"}>
               <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.windowSizeMs}
-                editable
                 onChange={(e) => handleProcessedSettingsUpdate("windowSizeMs", Number(e.target.value))}
               />
             </SettingField>
@@ -237,7 +211,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
               <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.windowSlideMs}
-                editable
                 onChange={(e) => handleProcessedSettingsUpdate("windowSlideMs", Number(e.target.value))}
               />
             </SettingField>
@@ -245,7 +218,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
               <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.samplingRate}
-                editable
                 onChange={(e) => handleProcessedSettingsUpdate("samplingRate", Number(e.target.value))}
               />
             </SettingField>
@@ -267,7 +239,6 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 type="checkbox"
                 checked={tempSettings.isDemoMode}
                 className={"min-w-4.5"}
-                editable
                 onChange={(e) => handleGeneralSettingsUpdate("isDemoMode", e.target.checked)}
               />
             </SettingField>

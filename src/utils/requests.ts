@@ -1,4 +1,3 @@
-// When using the Tauri API npm package:
 import { Channel, invoke } from "@tauri-apps/api/core";
 import {
   Activity,
@@ -70,7 +69,7 @@ export const commands = {
     loadLastSessionDetails: async () => invoke<LastSessionInformation>("replay_load_last_session_info"),
     replayInfo: async () => invoke<ReplayConfiguration>("replay_information"),
     loadReplayFile: async (filePath: string) => invoke<void>("replay_load_file", { filePath: filePath }),
-    updateReplay: async (configuration: ReplayConfiguration) =>
+    updateReplay: async (configuration: SessionPanelConfiguration) =>
       invoke<void>("replay_update", { configuration: configuration }),
     startReplay: async (sessionChannel: Channel<BalanceBoardEvent>) => {
       return invoke<Device[]>("replay_start_replay", { sessionChannel: sessionChannel });

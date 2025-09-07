@@ -327,7 +327,7 @@ export default function ActivityTimeline({
                 <span className="text-sm text-blue-800">s</span>
               </>
             ) : (
-              <span className="text-sm text-blue-800">{block.duration} s</span>
+              <span className="text-xs text-blue-800">{block.duration} s</span>
             )}
           </div>
         ))}

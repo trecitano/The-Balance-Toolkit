@@ -1,13 +1,10 @@
 import { copXPlotSettings, copYPlotSettings, makeDataMapper, RED_COLOUR, standardPlot, UPlot } from "./UPlot.tsx";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
-import { useState } from "react";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
-import { StoreApi } from "zustand";
-import { SessionState } from "@/store/sessionDataStore.tsx";
+import { SessionState, SessionStore } from "@/store/sessionDataStore.tsx";
 import { ProcessedSessionData } from "@/types.ts";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
-import { PSDPlot } from "@/pages/session/PSDPlot.tsx";
 
 export function BoardPanel({
   boardName,
@@ -16,11 +13,8 @@ export function BoardPanel({
 }: {
   boardName: string;
   macAddress: number;
-  store: StoreApi<SessionState>;
+  store: SessionStore;
 }) {
-  const [showConfidenceEllipse, setShowConfidenceEllipse] = useState(true);
-  const [showConvexHull, setShowConvexHull] = useState(true);
-
   return (
     <ToolkitContainer>
       <div className="mb-2 flex items-center justify-between">
@@ -36,16 +30,6 @@ export function BoardPanel({
             macAddress={macAddress}
             src={wbbTopdown}
             store={store}
-          />
-        </div>
-
-        <div className="col-span-3 rounded bg-gray-100 p-2">
-          <PSDPlot
-            title="Power Spectral Density"
-            macAddress={macAddress}
-            store={store}
-            maxFreq={15.0} // Focus on 0-5 Hz range typical for postural sway
-            logScale={true} // or true if you prefer log scale
           />
         </div>
 

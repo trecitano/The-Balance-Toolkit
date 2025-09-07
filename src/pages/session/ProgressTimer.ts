@@ -1,20 +1,35 @@
+type ProgressCallback = (data: {
+  currentLoop: number;
+  totalLoops: number;
+  currentSeconds: number;
+  totalSeconds: number;
+}) => void;
+
 export function createProgressTimer() {
   let startTime: number | null = null;
-  let duration = 0;
+  let singleLoopDuration = 0;
+  let totalLoops = 1;
+  let currentLoop = 0;
   let rafId: number | null = null;
   let playhead: HTMLDivElement | null = null;
+  let progressCallback: ProgressCallback | null = null;
 
   function registerPlayhead(el: HTMLDivElement) {
     playhead = el;
   }
 
-  async function startTimeline(totalDurationMs: number) {
+  function registerProgressCallback(callback: ProgressCallback) {
+    progressCallback = callback;
+  }
+
+  async function startTimeline(singleLoopDurationMs: number, loops: number = 1) {
     await stopTimeline(); // reset if already running
     startTime = performance.now();
-    duration = totalDurationMs;
+    singleLoopDuration = singleLoopDurationMs;
+    totalLoops = loops;
+    currentLoop = 0;
 
     if (playhead) {
-      //playhead.style.display = "block";
       playhead.style.transform = "translateX(0px)";
     }
 
@@ -25,9 +40,10 @@ export function createProgressTimer() {
     if (rafId) cancelAnimationFrame(rafId);
     rafId = null;
     startTime = null;
+    currentLoop = 0;
     if (playhead) {
-      //playhead.style.display = "none";
-      //playhead.style.transform = "translateX(0px)";
+      // Keep the playhead visible but reset position if needed
+      // playhead.style.transform = "translateX(0px)";
     }
   }
 
@@ -35,20 +51,46 @@ export function createProgressTimer() {
     if (!playhead || startTime === null) return;
 
     const elapsed = performance.now() - startTime;
-    const progress = Math.min(elapsed / duration, 1);
 
+    // Calculate which loop we should be in based on elapsed time
+    const expectedLoop = Math.floor(elapsed / singleLoopDuration);
+
+    // Check if we've moved to a new loop
+    if (expectedLoop > currentLoop && expectedLoop < totalLoops) {
+      currentLoop = expectedLoop;
+      playhead.style.transform = "translateX(0px)";
+      // Small delay to show the reset visually
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    // Calculate progress within current loop
+    const elapsedInCurrentLoop = elapsed - currentLoop * singleLoopDuration;
+    const progressInLoop = Math.min(elapsedInCurrentLoop / singleLoopDuration, 1);
+
+    // Update playhead position based on progress in current loop
     const container = playhead.parentElement!;
     const width = container.clientWidth;
-    const x = width * progress;
-
+    const x = width * progressInLoop;
     playhead.style.transform = `translateX(${x}px)`;
 
-    if (progress < 1) {
-      rafId = requestAnimationFrame(loop);
-    } else {
-      await stopTimeline();
+    // Call progress callback if registered
+    if (progressCallback) {
+      progressCallback({
+        currentLoop: currentLoop + 1, // Display as 1-indexed
+        totalLoops,
+        currentSeconds: Math.floor(elapsed / 1000),
+        totalSeconds: Math.floor((singleLoopDuration * totalLoops) / 1000),
+      });
     }
+
+    // Check if we've completed all loops
+    if (elapsed >= singleLoopDuration * totalLoops) {
+      await stopTimeline();
+      return;
+    }
+
+    rafId = requestAnimationFrame(loop);
   }
 
-  return { registerPlayhead, startTimeline, stopTimeline };
+  return { registerPlayhead, registerProgressCallback, startTimeline, stopTimeline };
 }

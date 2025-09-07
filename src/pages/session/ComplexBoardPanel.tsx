@@ -1,15 +1,20 @@
-import { copXPlotSettings, copYPlotSettings, makeDataMapper, RED_COLOUR, standardPlot, UPlot } from "./UPlot.tsx";
+import {
+  BLUE_COLOUR,
+  copXPlotSettings,
+  copYPlotSettings,
+  makeDataMapper,
+  RED_COLOUR,
+  standardPlot,
+  UPlot,
+} from "./UPlot.tsx";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
-import { useState } from "react";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
-import { StoreApi } from "zustand";
-import { SessionState } from "@/store/sessionDataStore.tsx";
-import { ProcessedSessionData, ProcessedSingleFrameSessionData } from "@/types.ts";
-import { PSDPlot } from "@/pages/session/PSDPlot.tsx";
+import { SessionState, SessionStore } from "@/store/sessionDataStore.tsx";
+import { ProcessedSessionData } from "@/types.ts";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import { MultiMetricPlot } from "@/pages/session/MultiMetricDsiPlot.tsx";
-import { StabilityBarGauge } from "@/pages/session/StabilityBarGauge.tsx";
+import { FFTAmplitudePlot } from "@/pages/session/FFTAmplitudePlot.tsx";
 
 export function ComplexBoardPanel({
   boardName,
@@ -18,10 +23,10 @@ export function ComplexBoardPanel({
 }: {
   boardName: string;
   macAddress: number;
-  store: StoreApi<SessionState>;
+  store: SessionStore;
 }) {
   return (
-    <ToolkitContainer className={"flex flex-1 flex-col gap-3"}>
+    <ToolkitContainer className={"flex flex-auto flex-col gap-3"}>
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">{boardName}</h3>
         <p>{convertNumberToMacAddress(macAddress)}</p>
@@ -38,43 +43,44 @@ export function ComplexBoardPanel({
         </div>
 
         <div className="col-span-3 rounded bg-gray-100 p-2">
-          <UPlot title="copX" {...copXPlotSettings(macAddress)} store={store} />
+          <UPlot title="copX" tooltipText={"TODO"} {...copXPlotSettings(macAddress)} store={store} />
         </div>
         <div className="col-span-3 rounded bg-gray-100 p-2">
-          <UPlot title="copY" {...copYPlotSettings(macAddress)} store={store} />
+          <UPlot title="copY" tooltipText={"TODO"} {...copYPlotSettings(macAddress)} store={store} />
         </div>
 
         <div className="col-span-3 rounded bg-gray-100 p-2">
-          <PSDPlot
-            title="Power Spectral Density"
+          <FFTAmplitudePlot
+            title="FFT Amplitude Spectrum (Normalized)"
+            tooltipText={"TODO"}
             macAddress={macAddress}
             store={store}
-            maxFreq={15.0} // Focus on 0-5 Hz range typical for postural sway
-            logScale={true} // or true if you prefer log scale
           />
         </div>
 
         {/* Combined DPSI metrics plot - spans 4 columns */}
         <div className="col-span-3 rounded bg-gray-100 p-2">
-          <MultiMetricPlot title="DPSI Metrics" macAddress={macAddress} store={store} />
+          <MultiMetricPlot title="DPSI Metrics" tooltipText={"TODO"} macAddress={macAddress} store={store} />
         </div>
 
         <div className="col-span-3 rounded bg-gray-100 p-2">
           <UPlot
-            title="vCopY"
-            uPlotOptions={standardPlot(RED_COLOUR)}
+            title="vCopX"
+            tooltipText={"TODO"}
+            uPlotOptions={standardPlot(BLUE_COLOUR)}
             dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
-            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopY)}
+            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopX)}
             store={store}
           />
         </div>
 
         <div className="col-span-3 rounded bg-gray-100 p-2">
           <UPlot
-            title="vCopX"
+            title="vCopY"
+            tooltipText={"TODO"}
             uPlotOptions={standardPlot(RED_COLOUR)}
             dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
-            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopX)}
+            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopY)}
             store={store}
           />
         </div>

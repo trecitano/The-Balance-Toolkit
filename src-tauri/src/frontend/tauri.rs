@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, oneshot};
-use crate::processing::data_processor::FrequencySpectrum;
+use crate::processing::data_processor::{AmplitudeSpectrum, FrequencySpectrum};
 
 pub struct AppState {
     pub manager_tx: Sender<ToolkitCommand>,
@@ -475,7 +475,7 @@ struct FrontendProcessedReadingData {
     v_cop_y: Option<f32>,
     confidence_ellipse_polygon: Option<Vec<(f32, f32)>>,
     convex_hull_polygon: Option<Vec<(f32, f32)>>,
-    frequency_spectrum: Option<FrequencySpectrum>,
+    amplitude_spectrum: Option<AmplitudeSpectrum>,
     stability_index: Option<f32>,
     mlsi: Option<f32>,
     apsi: Option<f32>,
@@ -537,7 +537,7 @@ async fn initialize_frontend_handler(session_channel: Channel<FrontendBalanceBoa
                         v_cop_y: data.sway_metrics.as_ref().map(|m| m.v_cop_y),
                         confidence_ellipse_polygon: data.area_metrics.as_ref().map(|m| m.confidence_ellipse_polygon.clone()),
                         convex_hull_polygon: data.area_metrics.as_ref().map(|m| m.convex_hull_polygon.clone()),
-                        frequency_spectrum: data.frequency_spectrum.clone(),
+                        amplitude_spectrum: data.amplitude_spectrum.clone(),
                         stability_index: data.stability_index.as_ref().map(|m| *m),
                         mlsi: data.dpsi_metrics.as_ref().map(|m| m.mlsi),
                         apsi: data.dpsi_metrics.as_ref().map(|m| m.apsi),

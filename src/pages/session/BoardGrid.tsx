@@ -1,12 +1,11 @@
 import { SelectedBoard } from "@/types.ts";
 import ComplexBoardPanel from "@/pages/session/ComplexBoardPanel.tsx";
-import { StoreApi } from "zustand";
-import { SessionState } from "@/store/sessionDataStore.tsx";
+import { SessionStore } from "@/store/sessionDataStore.tsx";
 import SimpleBoardPanel from "@/pages/session/SimpleBoardPanel.tsx";
 
-export function BoardGrid({ boards, store }: { boards: SelectedBoard[]; store: StoreApi<SessionState> }) {
+export function BoardGrid({ boards, store }: { boards: SelectedBoard[]; store: SessionStore }) {
   return boards.length === 0 ? (
-    <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
+    <div className="flex h-full flex-1 flex-col items-center justify-center py-12 text-center text-gray-500">
       <p className="text-3xl font-medium">No boards selected</p>
       <p className="text-xl text-gray-400">Choose a board from the panel above to get started.</p>
     </div>
