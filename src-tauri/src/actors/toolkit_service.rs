@@ -436,6 +436,8 @@ impl ConnectionManager {
                             // Warn any interested listeners
                             self.response_tx.send(ToolkitResponse::SessionActivityChanged).await?;
                         }
+                    } else {
+                        self.session_settings.core.activity = None;
                     }
 
                     response.send(()).unwrap();

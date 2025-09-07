@@ -9,7 +9,7 @@ export type BaseOption<T = string> = {
 type SingleSelectProps<T> = {
   mode?: "single";
   value: T | null;
-  onChange: (next: T) => void;
+  onChange: (next: T | null) => void;
   placeholder?: string;
   noneOption?: string | false;
 };
@@ -189,7 +189,7 @@ export function SelectPrimitive<T extends React.Key = string>(props: SelectProps
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    (onChange as (next: T) => void)(null as any);
+                    (onChange as (next: T | null) => void)(null);
                     setOpen(false);
                     buttonRef.current?.focus();
                   }}
