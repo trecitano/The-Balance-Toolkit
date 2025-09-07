@@ -34,7 +34,7 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
   return (
     <div
       className={clsx(
-        "box-border flex flex-col gap-(--space-xs) rounded-lg p-(--space-sm)",
+        "box-border flex flex-col gap-(--space-xs) rounded-lg p-2",
         {
           "bg-gray-100": backgroundType === "default",
           "bg-transparent": backgroundType === "transparent",
