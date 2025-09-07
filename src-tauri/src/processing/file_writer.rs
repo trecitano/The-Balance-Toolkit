@@ -201,7 +201,7 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
     let mut processed_values_file = if observe_processed_data {
         let file_path = output_directory.join(&file_mapping.processed_file_name);
         let mut file = create_file(file_path).await?;
-        file.write_all(b"timestamp,mean_velocity,total_path_length,velocity_moment,mean_power_frequency,center_of_spectrum,frequency_total_power,dfa_alpha,jerk\n").await?;
+        file.write_all(b"timestamp,vcopx,vcopy,stability_index,mlsi,apsi,vsi,dpsi\n").await?;
         Some(file)
     } else {
         None
@@ -228,11 +228,15 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
             BalanceBoardOutput::Processed(data) => {
                 if let Some(ref mut file) = processed_values_file {
                     let csv_line = format!(
-                        "{},{},{},{}\n",
+                        "{},{},{},{},{},{},{},{}\n",
                         data.timestamp.to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
-                        data.sway_metrics.as_ref().map_or(String::new(), |v| v.mean_velocity.to_string()),
-                        data.sway_metrics.as_ref().map_or(String::new(), |v| v.total_path_length.to_string()),
-                        data.sway_metrics.as_ref().map_or(String::new(), |v| v.velocity_moment.to_string()),
+                        data.sway_metrics.as_ref().map_or(String::new(), |v| v.v_cop_x.to_string()),
+                        data.sway_metrics.as_ref().map_or(String::new(), |v| v.v_cop_y.to_string()),
+                        data.stability_index.as_ref().map_or(String::new(), |v| v.to_string()),
+                        data.dpsi_metrics.as_ref().map_or(String::new(), |d| d.mlsi.to_string()),
+                        data.dpsi_metrics.as_ref().map_or(String::new(), |d| d.apsi.to_string()),
+                        data.dpsi_metrics.as_ref().map_or(String::new(), |d| d.vsi.to_string()),
+                        data.dpsi_metrics.as_ref().map_or(String::new(), |d| d.dpsi.to_string()),
                     );
 
                     // Write and flush

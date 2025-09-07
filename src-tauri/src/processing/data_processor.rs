@@ -77,17 +77,27 @@ impl ProcessedBoardData {
         if self.sway_metrics.is_some() {
             flags |= 0b0001;
         }
-        if self.area_metrics.is_some() {
+        if self.stability_index.is_some() {
             flags |= 0b0010;
+        }
+        if self.dpsi_metrics.is_some() {
+            flags |= 0b0100;
         }
 
         buf.push(flags);
 
-        // 3. Serialize optional fields based on flags
         if let Some(ref sway) = self.sway_metrics {
-            buf.extend_from_slice(&sway.mean_velocity.to_be_bytes());
-            buf.extend_from_slice(&sway.total_path_length.to_be_bytes());
-            buf.extend_from_slice(&sway.velocity_moment.to_be_bytes());
+            buf.extend_from_slice(&sway.v_cop_x.to_be_bytes());
+            buf.extend_from_slice(&sway.v_cop_y.to_be_bytes());
+        }
+        if let Some(ref index) = self.stability_index {
+            buf.extend_from_slice(&index.to_be_bytes());
+        }
+        if let Some(ref dpsi) = self.dpsi_metrics {
+            buf.extend_from_slice(&dpsi.mlsi.to_be_bytes());
+            buf.extend_from_slice(&dpsi.apsi.to_be_bytes());
+            buf.extend_from_slice(&dpsi.vsi.to_be_bytes());
+            buf.extend_from_slice(&dpsi.dpsi.to_be_bytes());
         }
 
         buf

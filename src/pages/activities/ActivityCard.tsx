@@ -270,12 +270,22 @@ export default function ActivityCard({
             />
           </div>
           <div className="">
-            <div className="activity-board-tag">
-              <img src={wbbIcon} alt="Balance Board" className="board-icon" />
-              <span>
-                {activity.boardsRequired} {activity.boardsRequired === 1 ? "board" : "boards"}
-              </span>
-            </div>
+            {activity.boardsRequired === 1 ? (
+              <div className="activity-board-tag">
+                <img src={wbbIcon} alt="Balance Board" className="board-icon" />
+                <span>
+                  1 board
+                </span>
+              </div>
+            ) : (
+              <div className="activity-board-tag">
+                <img src={wbbIcon} alt="Balance Board" className="board-icon" />
+                <img src={wbbIcon} alt="Balance Board" className="board-icon" />
+                <span>
+                  {activity.boardsRequired} boards
+                </span>
+              </div>
+            )}
             <PageSubtitle>{activity.title}</PageSubtitle>
           </div>
           <div className="mt-auto flex justify-end">
