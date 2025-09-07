@@ -101,7 +101,7 @@ export function ReplayPanel({
         <SingleColumn label="LSL" direction="row" tooltipText={"TODO!!!!!!!"}>
           <Checkbox
             disabled={disabled}
-            className={"w-5"}
+            className={"ml-2"}
             checked={config?.core.lslEnabled ?? false}
             onChange={(e) => update("lslEnabled", e.target.checked)}
           />
@@ -113,7 +113,7 @@ export function ReplayPanel({
         <SingleColumn label="TCP" direction="row" tooltipText={"TODO!!!!!!!"}>
           <Checkbox
             disabled={disabled}
-            className={"w-5"}
+            className={"ml-2"}
             checked={config?.core.tcpEnabled ?? false}
             onChange={(e) => update("tcpEnabled", e.target.checked)}
           />
