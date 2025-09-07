@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import React from "react";
+import React, {useEffect} from "react";
 
 interface ModalProps extends React.PropsWithChildren {
   open: boolean;
@@ -9,6 +9,22 @@ interface ModalProps extends React.PropsWithChildren {
 
 export function Modal({ open, onClose, children, className }: ModalProps) {
   if (!open) return null;
+
+  // Keyboard support
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onClose]);
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/35" onClick={onClose}>

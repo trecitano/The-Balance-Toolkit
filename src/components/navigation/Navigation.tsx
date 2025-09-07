@@ -1,7 +1,7 @@
 import { useState } from "react";
-import logo from "@/assets/app-logo.png";
+import logo from "@/assets/logo/logo-flamingo-white.svg";
 import homeIcon from "@/assets/home-icon.svg";
-import devicesIcon from "@/assets/wbb-icon-line.svg";
+import devicesIcon from "@/assets/wbb-top-white.svg";
 import usersIcon from "@/assets/users-icon.svg";
 import sessionIcon from "@/assets/session-icon.svg";
 import replayIcon from "@/assets/replay-icon.svg";
@@ -10,6 +10,8 @@ import activitiesIcon from "@/assets/activities-icon.svg";
 import Settings from "@/components/settings/Settings.tsx";
 import "./Navigation.css";
 import clsx from "clsx";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
+import {SESSION_QUERY_KEY, SessionQueryData} from "@/pages/session/session/SessionPage.tsx";
 
 interface NavigationProps {
   activeView: string;
@@ -34,9 +36,26 @@ const menuItems: MenuItemType[] = [
 
 function Navigation({ activeView, onViewChange, className }: NavigationProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: hasOngoingSession = false } = useQuery({
+    queryKey: SESSION_QUERY_KEY,
+    queryFn: async () => {
+      // This will never run because enabled: false
+      return queryClient.getQueryData(SESSION_QUERY_KEY);
+    },
+    enabled: false, // don’t fetch, just subscribe
+    initialData: () => queryClient.getQueryData(SESSION_QUERY_KEY),
+    select: (d: SessionQueryData | undefined) =>
+      d?.sessionInformation?.hasOngoingSession ?? false,
+  });
+
+  console.log("hasOngoingSession", hasOngoingSession);
 
   const handleSettingsClick = () => {
-    setSettingsOpen(true);
+    if (!hasOngoingSession) {
+      setSettingsOpen(true);
+    }
   };
 
   return (
@@ -47,14 +66,18 @@ function Navigation({ activeView, onViewChange, className }: NavigationProps) {
       )}
     >
       <div>
-        <img src={logo} alt="Logo" className="logo-placeholder" />
+        <img src={logo} alt="Logo" className="mt-3 mx-auto size-13 object-contain" />
         <div className="menu-container">
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
             {menuItems.map((item) => (
               <li
                 key={item.id}
-                className={`menu-item ${item.id} ${activeView === item.id ? "active" : ""}`}
-                onClick={() => onViewChange(item.id)}
+                className={clsx("menu-item", item.id, activeView === item.id && "active", hasOngoingSession && "opacity-65")}
+                onClick={() => {
+                  if (!hasOngoingSession) {
+                    onViewChange(item.id);
+                  }
+                }}
               >
                 <span className="menu-item-icon">
                   <img src={item.icon} alt={item.label} className="nav-icon" />

@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import ActivityTimeline from "@/pages/activities/ActivityTimeline";
-import { createProgressTimer } from "@/pages/session/ProgressTimer";
+import { ProgressTimer } from "@/pages/session/ProgressTimer";
 import { Activity } from "@/types.ts";
 import { useRef, useState, useEffect } from "react";
 
@@ -39,7 +39,8 @@ export function TimelinePanel({
   onStart,
   onStop,
 }: TimelinePanelProps) {
-  const timerRef = useRef(createProgressTimer());
+  const timerRef = useRef<ProgressTimer>(new ProgressTimer());
+  const playheadRef = useRef<HTMLDivElement | null>(null);
   const timer = timerRef.current;
 
   const [progressInfo, setProgressInfo] = useState({
@@ -54,9 +55,11 @@ export function TimelinePanel({
 
   useEffect(() => {
     timer.registerProgressCallback(setProgressInfo);
-  }, [timer]);
+    if (playheadRef.current) {
+      timer.registerPlayhead(playheadRef.current);
+    }
+  }, [playheadRef.current]);
 
-  // Use actual progress when session is running, defaults when not
   const displayLoop = hasOngoingSession ? progressInfo.currentLoop : 1;
   const displayTotalLoops = hasOngoingSession ? progressInfo.totalLoops : totalLoops;
   const displayCurrentSeconds = hasOngoingSession ? progressInfo.currentSeconds : 0;
@@ -73,12 +76,7 @@ export function TimelinePanel({
           <div className={"relative"}>
             <ActivityTimeline blocks={activity.timelineBlocks} height={"h-20"} />
             <div
-              ref={(el) => {
-                if (el) {
-                  el.style.transform = "translateX(0px)";
-                  timer.registerPlayhead(el);
-                }
-              }}
+              ref={playheadRef}
               className={clsx(
                 "absolute top-[-14px] z-10 h-[110%] w-[2px] bg-[var(--red)]",
                 !hasOngoingSession && "hidden",
@@ -110,8 +108,8 @@ export function TimelinePanel({
                 await timer.startTimeline(singleLoopDuration * 1000, totalLoops);
               }
             } else {
-              await onStop();
               await timer.stopTimeline();
+              await onStop();
             }
           }}
           disabled={!canStart}

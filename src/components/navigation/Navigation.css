@@ -69,7 +69,6 @@
 }
 
 .menu-item.active {
-  background: transparent;
   color: var(--white);
 }
 
@@ -87,12 +86,6 @@
   padding: 4px 8px;
 }
 
-.menu-bottom .menu-item:hover:not(.active) .menu-item-icon {
-  background: var(--red-dark);
-  border-radius: 20px;
-  width: calc(var(--icon-size-md) * 2.5);
-  padding: 4px 8px;
-}
 
 .menu-item-icon {
   width: var(--icon-size-md);

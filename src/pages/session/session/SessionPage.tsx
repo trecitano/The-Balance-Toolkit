@@ -11,8 +11,8 @@ import { listen } from "@tauri-apps/api/event";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 import { BaseOption } from "@/components/SelectPrimitive.tsx";
 
-const SESSION_QUERY_KEY = ["session_key"];
-type SessionQueryData = {
+export const SESSION_QUERY_KEY = ["session_key"];
+export type SessionQueryData = {
   sessionInformation: SessionInformation;
   activities: Activity[];
 };

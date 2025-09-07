@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { QuestionMarkCircleIcon, DocumentTextIcon, DocumentIcon, CodeBracketIcon } from "@heroicons/react/24/outline";
-import appIcon from "@/assets/app-icon.svg";
+import logoLettering from "@/assets/logo/logo-lettering-white.svg";
 import fileIcon from "@/assets/file-icon.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { useQuery } from "@tanstack/react-query";
@@ -9,8 +9,8 @@ import { Activity, Device, LastSessionInformation } from "@/types.ts";
 import { getBlockImage } from "@/utils/activityImages.ts";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
-import wbbIcon from "@/assets/wbb-icon-line.svg";
-import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
+import wbbIcon from "@/assets/wbb-top-white.svg";
+import wbbIconBlue from "@/assets/wbb-top-blue.svg";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import rippleIcon from "@/assets/ripple-icon.svg";
 
@@ -77,29 +77,15 @@ const Home: React.FC = () => {
 const Header: React.FC = () => {
   return (
     <div className="bg-(--red) px-6 py-6 text-white">
-      <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
+      <div className="flex gap-6 items-center grid grid-cols-3">
         {/* Left: Greeting */}
-        <div className="mb-auto md:flex-1">
-          <h1 className="text-6xl leading-tight font-bold">Hello!</h1>
-          <p className="mt-2 text-xl opacity-90">Welcome back to the balance tool kit</p>
-        </div>
+        <img className={"w-34"} src={logoLettering} draggable={false}  />
 
         {/* Center: Circle logo */}
-        <div className="flex w-full justify-center md:w-auto md:flex-1">
-          <div className="relative flex h-44 w-44 items-center justify-center rounded-full border-4 border-white">
-            <div className="text-center leading-tight">
-              <div className="text-lg font-bold">The</div>
-              <div className="text-lg font-bold">Balance</div>
-              <div className="h-16 w-16">
-                <img src={appIcon} draggable={false} />
-              </div>
-              <div className="text-lg font-bold">Toolkit</div>
-            </div>
-          </div>
-        </div>
+        <h1 className="text-6xl italic leading-tight font-semibold text-center">Welcome!</h1>
 
         {/* Right: Links */}
-        <div className="mt-auto flex w-full flex-col items-end gap-3 md:w-auto md:flex-1 md:items-end">
+        <div className="mt-auto flex flex-col items-end gap-3">
           <button className="inline-flex items-center gap-2 text-white/95 hover:text-white" type="button">
             <DocumentIcon className="h-5 w-5" />
             <span className="text-base">Cite</span>
@@ -312,7 +298,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
             <p> Go to the Devices page to select them to start a session.</p>
           </div>
 
-          <div className="relative flex items-center justify-center">
+          <div className="relative flex flex-1 items-center justify-center">
             <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
             <img src={wbbIconBlue} className="z-10 h-4/5 w-4/5 object-contain" />
           </div>

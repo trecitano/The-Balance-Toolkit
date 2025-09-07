@@ -28,7 +28,7 @@ fn lsl_stream_loop(mut rx: Receiver<BalanceBoardOutput>,
 
     let info = lsl::StreamInfo::new(
         settings.stream_name.as_str(),
-        "MoCap", // Might have to change this!
+        "MoCap",
         4,
         100.0,
         ChannelFormat::Double64,

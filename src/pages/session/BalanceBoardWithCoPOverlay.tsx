@@ -169,7 +169,7 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
           </label>
         </div>
 
-        <div className="inset-(--secondary) bg-(--light-accent-stronger) py-2 text-center text-sm text-gray-700 inset-ring-1">
+        <div className="inset-(--secondary) bg-(--light-accent) rounded-lg py-2 text-center text-sm text-gray-700">
           <p>Force (Kg)</p>
           <p className="font-semibold">{forceKg !== null ? forceKg.toFixed(2) : "—"}</p>
         </div>
