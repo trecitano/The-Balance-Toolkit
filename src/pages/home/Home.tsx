@@ -12,6 +12,9 @@ import wbbIcon from "@/assets/wbb-top-white.svg";
 import wbbIconBlue from "@/assets/wbb-top-blue.svg";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import rippleIcon from "@/assets/ripple-icon.svg";
+import underConstructionHelp from "@/assets/under-construction-1-grey.svg";
+import underConstructionDoc from "@/assets/under-construction-2-grey.svg";
+import underConstructionResources from "@/assets/under-construction-3-grey.svg";
 
 const HOME_QUERY_KEY = ["home"];
 
@@ -315,13 +318,21 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
 // Help Support Card
 const HelpSupportCard: React.FC = () => {
   return (
-    <div className="flex h-full flex-col p-(--space-sm)">
+    <div className="relative flex h-full flex-col p-(--space-sm) overflow-hidden z-1">
+      <img
+        src={underConstructionHelp}
+        className="absolute inset-0 m-auto w-1/2 opacity-60 -z-1"
+        draggable={false}
+      />
+
       <div className="mb-4 flex items-center space-x-2">
         <PageSubtitle>Help and Support</PageSubtitle>
       </div>
 
       <div className="flex flex-1 items-center justify-center">
-        <span className="text-lg font-bold text-gray-500 italic">🚧 This section is under construction 🚧</span>
+        <span className="text-lg font-bold text-gray-500 italic">
+          🚧 This section is under construction 🚧
+        </span>
       </div>
     </div>
   );
@@ -330,7 +341,13 @@ const HelpSupportCard: React.FC = () => {
 // Documentation Card
 const DocumentationCard: React.FC = () => {
   return (
-    <div className="flex h-full flex-col p-(--space-sm)">
+    <div className="relative flex h-full flex-col p-(--space-sm) z-1">
+      <img
+        src={underConstructionDoc}
+        className="absolute inset-0 m-auto w-1/2 opacity-60 -z-1"
+        draggable={false}
+      />
+
       <div className="mb-4 flex items-center space-x-2">
         <PageSubtitle>Documentation</PageSubtitle>
       </div>
@@ -345,7 +362,13 @@ const DocumentationCard: React.FC = () => {
 // Other Resources Card
 const OtherResourcesCard: React.FC = () => {
   return (
-    <div className="flex h-full flex-col p-(--space-sm)">
+    <div className="flex h-full flex-col p-(--space-sm) relative z-1">
+      <img
+        src={underConstructionResources}
+        className="absolute inset-0 m-auto w-1/2 opacity-60 -z-1"
+        draggable={false}
+      />
+
       <PageSubtitle>Other Resources</PageSubtitle>
 
       <div className="flex flex-1 items-center justify-center">
