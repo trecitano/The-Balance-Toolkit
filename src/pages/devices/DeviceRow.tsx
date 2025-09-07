@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { Device } from "@/types";
-import wbbIcon from "@/assets/wbb-icon-line.svg";
-import wbbIconBlue from "@/assets/wbb-icon-line-blue.svg";
+import wbbIcon from "@/assets/wbb-top-white.svg";
+import wbbIconBlue from "@/assets/wbb-top-blue.svg";
 import "./DeviceRow.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";

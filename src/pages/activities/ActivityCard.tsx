@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ActivityTimeline from "./ActivityTimeline";
 import "./Activities.css";
-import wbbIcon from "../../assets/wbb-icon-line.svg";
+import wbbIcon from "../../assets/wbb-top-white.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { Activity, TimelineBlock } from "@/types.ts";
 import { getBlockImage } from "@/utils/activityImages.ts";

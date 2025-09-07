@@ -256,7 +256,7 @@ async fn devices_scan_without_timeout(state: State<'_, AppState>) -> Result<(), 
     // Flow: First we connect via bluetooth, then we connect via HID.
     tokio::spawn(async move {
         while let Some(device) = new_bluetooth_rx.recv().await {
-            tokio::time::sleep(Duration::from_millis(2000)).await; // TODO Improve
+            tokio::time::sleep(Duration::from_millis(4000)).await; // TODO Improve
             manager_tx_clone.send(ToolkitCommand::Connect { mac_address: device.mac_address}).await.unwrap();
         }
     });

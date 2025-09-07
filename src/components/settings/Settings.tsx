@@ -1,4 +1,4 @@
-import React, { ReactNode, useRef, useState } from "react";
+import React, {ReactNode, useEffect, useRef, useState} from "react";
 import "./Settings.css";
 import { commands } from "@/utils/requests.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,6 +44,22 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   const queryClient = useQueryClient();
 
   const [tempSettings, setTempSettings] = useState<GeneralSettings | null>(() => loadedSettings ?? null);
+
+  // Keyboard support
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onClose]);
 
   if (!tempSettings && loadedSettings) {
     setTempSettings(loadedSettings);
@@ -221,7 +237,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 onChange={(e) => handleProcessedSettingsUpdate("samplingRate", Number(e.target.value))}
               />
             </SettingField>
-            <SettingField label={"Interpolation Type"}>
+            <SettingField label={"Interpolation Method"}>
               <SelectPrimitive
                 className={"min-w-35"}
                 value={tempSettings.processingSettings.interpolation}

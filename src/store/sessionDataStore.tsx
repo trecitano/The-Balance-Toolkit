@@ -84,8 +84,6 @@ function createSessionDataStore() {
               amplitudeSpectrum: f.amplitudeSpectrum,
             };
 
-            console.log("New frame", f);
-
             const oldSessionBuffer =
               state.processedSessionData[f.macAddress] || createEmptyBuffer<ProcessedSessionData>();
             const newSessionBuffer = updateBuffer(oldSessionBuffer, sessionData);

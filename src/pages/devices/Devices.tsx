@@ -11,6 +11,7 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import PageTitle from "@/components/PageTitle.tsx";
 import { Modal } from "@/components/Modal.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
+import IdentifyDeviceModal from "@/pages/devices/IdentifyDeviceModal.tsx";
 
 export const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
@@ -226,17 +227,10 @@ export default function Devices() {
         </div>
       </Modal>
 
-      <Modal open={!!showIdentifyModal} onClose={() => setShowIdentifyModal(null)}>
-        <h4 className="mb-4 text-lg font-bold">Identifying {showIdentifyModal?.name}</h4>
-        <p className="mb-6 text-base leading-relaxed text-gray-700">
-          A flashing sequence will appear on the LED of the board.
-        </p>
-        <div className="flex justify-center gap-6">
-          <ToolkitButton type="button" color="grey" onClick={() => setShowIdentifyModal(null)}>
-            Close
-          </ToolkitButton>
-        </div>
-      </Modal>
+      <IdentifyDeviceModal
+        device={showIdentifyModal}
+        onClose={() => setShowIdentifyModal(null)}
+      />
     </>
   );
 }
