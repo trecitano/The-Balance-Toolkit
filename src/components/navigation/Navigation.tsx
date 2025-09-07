@@ -41,8 +41,7 @@ function Navigation({ activeView, onViewChange, className }: NavigationProps) {
   const { data: hasOngoingSession = false } = useQuery({
     queryKey: SESSION_QUERY_KEY,
     queryFn: async () => {
-      // This will never run because enabled: false
-      return queryClient.getQueryData(SESSION_QUERY_KEY);
+      return queryClient.getQueryData<SessionQueryData>(SESSION_QUERY_KEY);
     },
     enabled: false, // don’t fetch, just subscribe
     initialData: () => queryClient.getQueryData(SESSION_QUERY_KEY),

@@ -1,4 +1,4 @@
-import React, {ReactNode, useEffect, useRef, useState} from "react";
+import React, {ReactNode, useState} from "react";
 import "./Settings.css";
 import { commands } from "@/utils/requests.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { DEVICES_QUERY_KEY } from "@/pages/devices/Devices.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import {Checkbox} from "@/components/Checkbox.tsx";
+import {Modal} from "@/components/Modal.tsx";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -46,27 +47,9 @@ function Settings({ isOpen, onClose }: SettingsProps) {
 
   const [tempSettings, setTempSettings] = useState<GeneralSettings | null>(() => loadedSettings ?? null);
 
-  // Keyboard support
-  useEffect(() => {
-    if (!open) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, onClose]);
-
   if (!tempSettings && loadedSettings) {
     setTempSettings(loadedSettings);
   }
-
-  const settingsRef = useRef<HTMLDivElement>(null);
 
   const handleGeneralSettingsUpdate = <K extends keyof GeneralSettings>(field: K, value: GeneralSettings[K]) => {
     setTempSettings((prev) => prev && { ...prev, [field]: value });
@@ -104,8 +87,8 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   if (!tempSettings) return null;
 
   return (
-    <div className="settings-overlay">
-      <div className="settings-popup" ref={settingsRef}>
+    <Modal open={isOpen} onClose={onClose} defaultLayout={false}>
+      <div className="settings-popup p-2">
         <div className="settings-header">
           <h2>Settings</h2>
           <button className="settings-close-btn" onClick={onClose}>
@@ -254,7 +237,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

@@ -601,11 +601,9 @@ export default function Users() {
                 {/* Color */}
                 <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
                   <div className="relative">
-                    <InputPrimitive
-                      className={"w-full cursor-pointer"}
-                      style={{
-                        backgroundColor: editingUserData.color || "#397aac",
-                      }}
+                    <div
+                      className="w-full h-8 rounded-lg border border-gray-300 cursor-pointer"
+                      style={{ backgroundColor: editingUserData.color || "#ccc" }}
                       onClick={handleColorClick}
                     />
                     {showColorDropdown && (
