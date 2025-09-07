@@ -5,6 +5,7 @@ import { Activity } from "@/types.ts";
 import { useRef, useState, useEffect } from "react";
 
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import popout from "@/assets/pop-out-icon.svg";
 
 export async function openPopup() {
   new WebviewWindow("session-activity-pop-up", {
@@ -66,7 +67,8 @@ export function TimelinePanel({
   const displayTotalSeconds = hasOngoingSession ? progressInfo.totalSeconds : singleLoopDuration * totalLoops;
 
   return (
-    <div className="mt-auto flex min-h-38 w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
+    <div className="relative mt-auto flex min-h-38 w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
+      <img src={popout} onClick={openPopup} className="absolute top-3 right-3 size-4 object-contain" />
       {activity ? (
         <div className="mx-10 mt-2 mb-1 w-9/10">
           <div className="mb-3 flex justify-end text-sm font-medium text-gray-700">
@@ -116,7 +118,6 @@ export function TimelinePanel({
         >
           <span className={`h-6 w-6 ${hasOngoingSession ? "rounded-sm bg-white" : "rounded-full bg-[#e50012]"}`} />
         </button>
-        <button onClick={openPopup}>Open popup</button>
       </div>
     </div>
   );
