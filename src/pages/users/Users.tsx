@@ -21,7 +21,8 @@ import { Modal } from "@/components/Modal.tsx";
 import { Channel } from "@tauri-apps/api/core";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
-import { confirm } from '@tauri-apps/plugin-dialog';
+import {useAlert} from "@/hooks/useAlert.tsx";
+import {useConfirm} from "@/hooks/useConfirm.tsx";
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -37,6 +38,10 @@ export default function Users() {
   const [selectedWeightMeasureDeviceMac, setSelectedWeightMeasureDeviceMac] = useState<string>("");
   const weightChannelRef = useRef<Channel<number> | null>(null);
   const [isMeasuringWeight, setIsMeasuringWeight] = useState<boolean>(false);
+
+  // Modals
+  const { showAlert, AlertDialog } = useAlert();
+  const { confirm: customConfirm, ConfirmDialog } = useConfirm();
 
   const hasInitialScroll = useRef(false);
   const userListRef = useRef<HTMLUListElement>(null);
@@ -214,10 +219,14 @@ export default function Users() {
 
   const handleSelectUser = async (userName: string) => {
     if (editingUserData && editingUserData.name !== userName) {
-      const shouldContinue = await confirm(
-        'You have unsaved changes. Discard changes and select a different user?',
-        { kind: 'warning' }
-      );
+      const shouldContinue = await customConfirm({
+        title: "Unsaved Changes",
+        message: 'You have unsaved changes. Discard changes and select a different user?',
+        confirmText: "Discard Changes",
+        cancelText: "Keep Editing",
+        confirmColor: "red"
+      });
+
       if (!shouldContinue) {
         return;
       }
@@ -240,7 +249,10 @@ export default function Users() {
 
   const handleAddUser = async (usersArg: UserType[]) => {
     if (editingUserData !== null) {
-      alert("Please save or cancel current edits before adding a new user.");
+      showAlert({
+        title: "Cannot Add User",
+        message: "Please save or cancel current edits before adding a new user."
+      });
       return;
     }
 
@@ -806,6 +818,9 @@ export default function Users() {
           </>
         )}
       </Modal>
+
+      <AlertDialog />
+      <ConfirmDialog />
     </>
   );
 }

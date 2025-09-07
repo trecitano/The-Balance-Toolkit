@@ -49,8 +49,6 @@ function Navigation({ activeView, onViewChange, className }: NavigationProps) {
       d?.sessionInformation?.hasOngoingSession ?? false,
   });
 
-  console.log("hasOngoingSession", hasOngoingSession);
-
   const handleSettingsClick = () => {
     if (!hasOngoingSession) {
       setSettingsOpen(true);

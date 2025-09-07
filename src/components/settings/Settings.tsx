@@ -87,8 +87,8 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   if (!tempSettings) return null;
 
   return (
-    <Modal open={isOpen} onClose={onClose} defaultLayout={false}>
-      <div className="settings-popup p-2">
+    <Modal open={isOpen} onClose={onClose} defaultLayout={false} >
+      <div className="settings-popup p-2" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
           <h2>Settings</h2>
           <button className="settings-close-btn" onClick={onClose}>
