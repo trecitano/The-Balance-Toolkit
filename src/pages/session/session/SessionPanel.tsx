@@ -21,7 +21,7 @@ export function SessionPanel({
   onBoardDisplayChange: (ids: number[]) => void;
   boardDisplayOptions: BaseOption<number>[];
   activityOptions: BaseOption[];
-  userOptions: string[];
+  userOptions: BaseOption<number>[];
   disabled: boolean;
   value: SessionPanelConfiguration | null;
   onChange: (v: SessionPanelConfiguration) => void;
@@ -62,11 +62,11 @@ export function SessionPanel({
         </SingleColumn>
 
         <SingleColumn label="User" className="col-span-3" tooltipId={"session_user"}>
-          <SelectPrimitive
+          <SelectPrimitive<number>
             disabled={disabled}
-            value={value?.selectedUser ?? ""}
-            onChange={(v) => update("selectedUser", v ?? "")}
-            options={userOptions.map((u) => ({ label: u, value: u }))}
+            value={value?.selectedUser ?? 0}
+            onChange={(v) => update("selectedUser", v ?? 0)}
+            options={userOptions}
           />
         </SingleColumn>
 

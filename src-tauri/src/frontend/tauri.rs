@@ -61,7 +61,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             settings_set_settings,
             user_page_information,
             user_select_user,
-            user_add,
+            user_create,
             user_update,
             user_delete,
             user_measure_weight,
@@ -134,7 +134,7 @@ async fn user_page_information(state: State<'_, AppState>) -> Result<UserPageInf
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::GetSelectedUser { response: tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
-    let selected_user = rx.await.map_err(|e| e.to_string())?;
+    let selected_user_id = rx.await.map_err(|e| e.to_string())?;
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::SelectedBoardsForSession { response: tx };
@@ -149,7 +149,7 @@ async fn user_page_information(state: State<'_, AppState>) -> Result<UserPageInf
 
     let response = UserPageInformation {
         users,
-        selected_user,
+        selected_user_id,
         session_devices: devices
     };
 
@@ -158,26 +158,26 @@ async fn user_page_information(state: State<'_, AppState>) -> Result<UserPageInf
 }
 
 #[tauri::command]
-async fn user_select_user(state: State<'_, AppState>, user_name: String) -> Result<(), String> {
-    println!(">> user_select_user: {}", user_name);
+async fn user_select_user(state: State<'_, AppState>, user_id: usize) -> Result<(), String> {
+    println!(">> user_select_user: {}", user_id);
 
-    let command = ToolkitCommand::SelectUser { user_name };
+    let command = ToolkitCommand::SelectUser { user_id };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 #[tauri::command(async)]
-async fn user_add(user: User, state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> user_add: {:?}", user);
+async fn user_create(state: State<'_, AppState>) -> Result<User, String> {
+    println!(">> user_create");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::CreateUser { user, response: response_tx };
+    let command = ToolkitCommand::CreateUser { response: response_tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
-    response_rx.await.map_err(|e| e.to_string())?;
+    let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    println!("<< user_add\n");
-    Ok(())
+    println!("<< user_create {:#?}\n", result);
+    Ok(result.as_ref().clone())
 }
 
 #[tauri::command(async)]
@@ -194,11 +194,11 @@ async fn user_update(user: User, state: State<'_, AppState>) -> Result<(), Strin
 }
 
 #[tauri::command(async)]
-async fn user_delete(user_name: String, state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> user_delete: {:?}", user_name);
+async fn user_delete(user_id: usize, state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> user_delete: {:?}", user_id);
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::DeleteUser { user_name, response: response_tx };
+    let command = ToolkitCommand::DeleteUser { user_id, response: response_tx };
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 

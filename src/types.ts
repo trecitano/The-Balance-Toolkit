@@ -1,3 +1,5 @@
+import {BaseOption} from "@/components/SelectPrimitive.tsx";
+
 export interface GeneralSettings {
   tcpConnectionString: string;
   tcpSendRawData: boolean;
@@ -26,6 +28,7 @@ export type InterpolationOption = "Linear" | "Cubic" | "Polynomial";
 export const interpolationOptions = ["Linear", "Cubic", "Polynomial"] as const;
 
 export interface UserType {
+  id: number;
   name: string;
   age?: number;
   gender?: string;
@@ -44,7 +47,7 @@ export interface UserType {
 
 export interface UserPageInformation {
   users: UserType[];
-  selectedUser: string;
+  selectedUserId: number;
   sessionDevices: Device[];
 }
 
@@ -59,7 +62,7 @@ export interface Device {
 }
 
 export interface SessionInformation {
-  availableUsers: string[];
+  availableUsers: BaseOption<number>[];
   selectedBoards: SelectedBoard[];
   core: SessionPanelConfiguration;
   activity?: Activity;
@@ -67,7 +70,7 @@ export interface SessionInformation {
 }
 
 export type SessionPanelConfiguration = {
-  selectedUser: string;
+  selectedUser: number;
   activityId?: string;
   lslEnabled: boolean;
   tcpEnabled: boolean;

@@ -28,7 +28,7 @@ const USERS_QUERY_KEY = ["users"];
 
 export default function Users() {
   const [editingUserData, setEditingUserData] = useState<UserType | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showColorDropdown, setShowColorDropdown] = useState<boolean>(false);
 
@@ -51,15 +51,16 @@ export default function Users() {
   const { data, isLoading, error } = useQuery({
     queryKey: USERS_QUERY_KEY,
     queryFn: async () => {
-      const { users, selectedUser, sessionDevices } = await commands.users.userPageInformation();
-      return { users, selectedUser, sessionDevices };
+      const { users, selectedUserId, sessionDevices } = await commands.users.userPageInformation();
+      return { users, selectedUserId: selectedUserId, sessionDevices };
     },
   });
 
   const users = data?.users ?? [];
-  const selectedUser = data?.selectedUser ?? "";
+  const selectedUserId = data?.selectedUserId ?? 0;
+  console.log("selected user id:", selectedUserId);
   const sessionDevices = data?.sessionDevices ?? [];
-  const selectedUserData = users.find((user) => user.name === selectedUser)!;
+  const selectedUserData = users.find((user) => user.id === selectedUserId)!;
   const isSearching = searchTerm.trim().length > 0;
   const sortedUsers = [...users].sort((a, b) => {
     if (a.isDefault) return -1;
@@ -69,7 +70,7 @@ export default function Users() {
   const searchResults = searchTerm.trim()
     ? users.filter((user) => user.name.toLowerCase().includes(searchTerm.toLowerCase()))
     : [];
-  const currentIndex = sortedUsers.findIndex((user) => user.name === selectedUser);
+  const currentIndex = sortedUsers.findIndex((user) => user.id === selectedUserId);
 
   // Resize user cards
   useEffect(() => {
@@ -125,7 +126,7 @@ export default function Users() {
 
         const newSelectedUser = sortedUsers[newIndex];
         if (newSelectedUser) {
-          await handleSelectUser(newSelectedUser.name);
+          await handleSelectUser(newSelectedUser.id);
         }
       }
     };
@@ -175,7 +176,7 @@ export default function Users() {
 
       const newSelectedUser = sortedUsers[newIndex];
       if (newSelectedUser) {
-        await handleSelectUser(newSelectedUser.name);
+        await handleSelectUser(newSelectedUser.id);
       }
     };
 
@@ -194,7 +195,7 @@ export default function Users() {
     return <div></div>;
   }
 
-  const scrollToSelectedUser = (userId: string) => {
+  const scrollToSelectedUser = (userId: number) => {
     if (!userListRef.current) return;
 
     const selectedUserElement = userListRef.current.querySelector(`[data-userid="${userId}"]`) as HTMLLIElement | null;
@@ -212,13 +213,13 @@ export default function Users() {
     setSearchTerm(e.target.value);
   };
 
-  const handleSelectSearchResult = async (userName: string) => {
-    await handleSelectUser(userName);
+  const handleSelectSearchResult = async (userId: number) => {
+    await handleSelectUser(userId);
     setSearchTerm("");
   };
 
-  const handleSelectUser = async (userName: string) => {
-    if (editingUserData && editingUserData.name !== userName) {
+  const handleSelectUser = async (userId: number) => {
+    if (editingUserData && editingUserData.id !== userId) {
       const shouldContinue = await customConfirm({
         title: "Unsaved Changes",
         message: 'You have unsaved changes. Discard changes and select a different user?',
@@ -233,21 +234,21 @@ export default function Users() {
       setEditingUserData(null);
     }
 
-    await commands.users.selectUser(userName);
+    await commands.users.selectUser(userId);
     queryClient.setQueryData(USERS_QUERY_KEY, (oldData: UserPageInformation) => {
       if (!oldData) return oldData;
 
       return {
         ...oldData,
-        selectedUser: userName,
+        selectedUserId: userId,
       };
     });
 
     setEditingUserData(null);
-    scrollToSelectedUser(userName);
+    scrollToSelectedUser(userId);
   };
 
-  const handleAddUser = async (usersArg: UserType[]) => {
+  const handleAddUser = async () => {
     if (editingUserData !== null) {
       showAlert({
         title: "Cannot Add User",
@@ -256,43 +257,22 @@ export default function Users() {
       return;
     }
 
-    const newUser: UserType = {
-      name: createNewUniqueUsername(usersArg),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      color: `#${Math.floor(Math.random() * 16777215)
-        .toString(16)
-        .padStart(6, "0")}`,
-      isDefault: false,
-    };
-
-    await commands.users.addUser(newUser);
+    const newUser = await commands.users.createUser();
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
     setEditingUserData({ ...newUser });
-    await handleSelectUser(newUser.name);
+    await handleSelectUser(newUser.id);
   };
 
-  const createNewUniqueUsername = (usersArg: UserType[]) => {
-    let baseNumber = usersArg.length;
-    while (true) {
-      const newUsername = `New User ${baseNumber}`;
-      if (!usersArg.some((u) => u.name === newUsername)) {
-        return newUsername;
-      }
-      baseNumber++;
-    }
-  };
-
-  const handleDeleteUser = async (userIdToDelete: string) => {
+  const handleDeleteUser = async (userIdToDelete: number) => {
     const nextSelectedUser = sortedUsers[currentIndex - 1];
     await commands.users.deleteUser(userIdToDelete);
-    await commands.users.selectUser(nextSelectedUser.name);
+    await commands.users.selectUser(nextSelectedUser.id);
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
     setEditingUserData(null);
     setShowDeleteConfirm(null);
-    scrollToSelectedUser(nextSelectedUser.name);
+    scrollToSelectedUser(nextSelectedUser.id);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -305,9 +285,9 @@ export default function Users() {
 
     // Need to wait for the DOM to be updated
     setTimeout(() => {
-      const newUsername = editingUserData.name;
+      const newUserId = editingUserData.id;
       setEditingUserData(null);
-      handleSelectUser(newUsername);
+      handleSelectUser(newUserId);
     }, 0);
   };
 
@@ -368,7 +348,7 @@ export default function Users() {
       <header className="z-1 mb-5 grid grid-cols-8">
         <PageTitle>Users</PageTitle>
 
-        <ToolkitButton className="" type="button" color="blue" onClick={() => handleAddUser(users)}>
+        <ToolkitButton className="" type="button" color="blue" onClick={handleAddUser}>
           Add new user
         </ToolkitButton>
 
@@ -386,7 +366,7 @@ export default function Users() {
           {isSearching && searchResults.length > 0 && (
             <div className="search-results">
               {searchResults.map((user) => (
-                <div key={user.name} className="search-result-item" onClick={() => handleSelectSearchResult(user.name)}>
+                <div key={user.id} className="search-result-item" onClick={() => handleSelectSearchResult(user.id)}>
                   <img
                     src={personIcon}
                     alt=""
@@ -413,10 +393,10 @@ export default function Users() {
       >
         {sortedUsers.map((user) => (
           <li
-            key={user.name}
-            data-userid={user.name}
+            key={user.id}
+            data-userid={user.id}
             ref={(el) => {
-              if (el && user.name === selectedUser && !hasInitialScroll.current) {
+              if (el && user.id === selectedUserId && !hasInitialScroll.current) {
                 hasInitialScroll.current = true;
                 el.scrollIntoView({
                   behavior: "instant",
@@ -425,11 +405,11 @@ export default function Users() {
                 });
               }
             }}
-            className={`user-carousel-item ${selectedUser === user.name ? "selected" : ""} ${editingUserData?.name === user.name ? "editing" : ""} ${user.isDefault ? "default-user" : ""}`}
-            onClick={() => handleSelectUser(user.name)}
+            className={`user-carousel-item ${selectedUserId === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""} ${user.isDefault ? "default-user" : ""}`}
+            onClick={() => handleSelectUser(user.id)}
           >
             <div className="user-selection-status">
-              {selectedUser === user.name && (user.isDefault ? "Default" : "Selected")}
+              {selectedUserId === user.id && (user.isDefault ? "Default" : "Selected")}
             </div>
             {renderUserIcon(user, "w-[5vw] h-[5vw]")}
             <span className="user-carousel-name">{user.name}</span>
@@ -445,9 +425,9 @@ export default function Users() {
         className={"mt-5"}
         entries={sortedUsers.map((user) => user.name)}
         selectedIndex={currentIndex}
-        onSelect={(index) => {
+        onSelect={async (index) => {
           const user = sortedUsers[index];
-          handleSelectUser(user.name);
+          await handleSelectUser(user.id);
         }}
       />
 
@@ -458,7 +438,7 @@ export default function Users() {
               <div className="user-display-header">
                 {renderUserIcon(selectedUserData, "w-[3.5vw] h-[3.5vw]")}
                 <div className="user-header-info">
-                  <h2>{selectedUserData.name}</h2>
+                  <h2>{selectedUserData.id}</h2>
                   <div className="user-metadata">
                     <span className="metadata-item">
                       <span className="metadata-label">Created:</span>
@@ -483,7 +463,7 @@ export default function Users() {
                     <ToolkitButton
                       type="button"
                       color="red"
-                      onClick={() => setShowDeleteConfirm(selectedUserData.name)}
+                      onClick={() => setShowDeleteConfirm(selectedUserData.id)}
                     >
                       Delete
                     </ToolkitButton>
@@ -665,7 +645,7 @@ export default function Users() {
               </div>
               <div className="user-display-actions">
                 {!selectedUserData.isDefault && (
-                  <ToolkitButton type="button" color="red" onClick={() => setShowDeleteConfirm(selectedUserData.name)}>
+                  <ToolkitButton type="button" color="red" onClick={() => setShowDeleteConfirm(selectedUserData.id)}>
                     Delete
                   </ToolkitButton>
                 )}
@@ -737,7 +717,7 @@ export default function Users() {
       <Modal open={!!showDeleteConfirm} onClose={() => setShowDeleteConfirm(null)}>
         <h4 className="mb-4 text-lg font-bold">Confirm Delete</h4>
         <p className="mb-6 text-base leading-relaxed text-gray-700">
-          {`Are you sure you want to delete user "${users.find((u) => u.name === showDeleteConfirm)?.name}"?`}
+          {`Are you sure you want to delete user "${users.find((u) => u.id === showDeleteConfirm)?.name}"?`}
         </p>
         <div className="flex justify-center gap-6">
           <ToolkitButton type="button" color="red" onClick={() => handleDeleteUser(showDeleteConfirm!)}>

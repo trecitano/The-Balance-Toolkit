@@ -1,7 +1,8 @@
 use crate::file_system::UserFileSystem;
 use crate::types::User;
 use anyhow::Result;
-use chrono::Utc;
+use rand::Rng;
+use chrono::{DateTime, Utc};
 use std::sync::Arc;
 
 pub struct UserState {
@@ -33,32 +34,67 @@ impl UserState {
         self.users.clone()
     }
 
-    pub fn get_user(&self, user_name: &str) -> Arc<User> {
-        self.users.iter().find(|user| user.name == user_name).cloned().unwrap()
+    pub fn get_user(&self, user_id: usize) -> Arc<User> {
+        self.users.iter().find(|user| user.id == user_id).cloned().unwrap()
     }
 
-    pub fn create_user(&mut self, user: User) -> Result<()> {
-        self.users.push(Arc::new(user));
+    pub fn create_user(&mut self) -> Result<Arc<User>> {
+        let now = Utc::now();
+        let user_id = create_new_unique_id(&self.users);
+        let new_user = User {
+            id: user_id,
+            name: format!("New User {}", user_id),
+            age: None,
+            gender: None,
+            height: None,
+            height_metric: Some("cm".to_string()),
+            weight: None,
+            weight_metric: Some("kg".to_string()),
+            handedness: None,
+            color: Some(format!("#{:06x}", rand::rng().gen_range(0..=0xFFFFFF))),
+            notes: None,
+            created_at: now,
+            updated_at: now,
+            is_default: false,
+        };
 
-        self.save()
+        let user_reference = Arc::new(new_user.clone());
+
+        self.users.push(user_reference.clone());
+        self.save()?;
+
+        Ok(user_reference)
     }
 
     pub fn update_user(&mut self, mut updated_user: User) -> Result<()> {
-        self.users.retain(|user| user.name != updated_user.name);
+        self.users.retain(|user| user.id != updated_user.id);
         updated_user.updated_at = Utc::now();
         self.users.push(Arc::new(updated_user));
 
         self.save()
     }
 
-    pub fn delete_user(&mut self, user_name: &str) -> Result<()> {
-        self.users.retain(|user| user.name != user_name);
+    pub fn delete_user(&mut self, user_id: usize) -> Result<()> {
+        self.users.retain(|user| user.id != user_id);
 
         self.save()
     }
 
     fn save(&self) -> Result<()> {
         UserFileSystem::save(&self.users)
+    }
+}
+
+fn create_new_unique_id(users: &Vec<Arc<User>>) -> usize {
+    let mut base_number = users.len();
+
+    loop {
+        let candidate = format!("New User {}", base_number);
+        let exists = users.iter().any(|u| u.name == candidate || u.id == base_number);
+        if !exists {
+            return base_number;
+        }
+        base_number += 1;
     }
 }
 

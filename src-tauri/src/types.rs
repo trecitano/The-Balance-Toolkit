@@ -50,7 +50,7 @@ impl Default for GeneralSettings {
 #[serde(rename_all = "camelCase")]
 pub struct UserPageInformation {
     pub users: Vec<User>,
-    pub selected_user: String,
+    pub selected_user_id: usize,
     pub session_devices: Vec<NintendoDevice>,
 }
 
@@ -72,6 +72,7 @@ pub struct OngoingSessionActivityState {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
+    pub id: usize,
     pub name: String,
     pub age: Option<u8>,
     pub gender: Option<String>,
@@ -90,6 +91,7 @@ pub struct User {
 impl Default for User {
     fn default() -> User {
         User {
+            id: 1,
             name: "Default User".to_string(),
             age: None,
             gender: None,
@@ -110,11 +112,18 @@ impl Default for User {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FrontendSessionInformation {
-    pub available_users: Vec<String>,
+    pub available_users: Vec<SelectOption<usize>>,
     pub selected_boards: Vec<SelectedBoard>,
     pub core: FrontendCoreSession,
     pub activity: Option<Activity>,
     pub has_ongoing_session: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SelectOption<T> {
+    pub label: String,
+    pub value: T,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -136,7 +145,7 @@ pub struct SelectedBoard {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FrontendCoreSession {
-    pub selected_user: String,
+    pub selected_user: usize,
     pub activity_id: Option<String>,
     pub lsl_enabled: bool,
     pub tcp_enabled: bool,
@@ -150,7 +159,7 @@ pub struct FrontendCoreSession {
 impl From<&CoreSessionConfiguration> for FrontendCoreSession {
     fn from(cfg: &CoreSessionConfiguration) -> Self {
         FrontendCoreSession {
-            selected_user: cfg.user.name.clone(),
+            selected_user: cfg.user.id,
             activity_id: cfg.activity.clone().map(|act| act.id.clone()),
             lsl_enabled: cfg.lsl_enabled,
             tcp_enabled: cfg.tcp_enabled,
