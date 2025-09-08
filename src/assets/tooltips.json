@@ -202,6 +202,13 @@
     "description": []
   },
   {
+    "id": "replay_load_session",
+    "name": "Load File",
+    "equation": "",
+    "tooltip": "Choose a \".settings.json\" file to view a previous session.",
+    "description":[]
+  },
+  {
     "id": "session_amplitude_spectrum",
     "name": "Amplitude Spectrum",
     "equation": "A_x(f_k) = scale·|FFT_x[k]|, A_y(f_k) = scale·|FFT_y[k]|, A_xy = sqrt(A_x^2 + A_y^2)",

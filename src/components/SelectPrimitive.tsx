@@ -6,36 +6,44 @@ export type BaseOption<T = string> = {
   disabled?: boolean;
 };
 
-type SingleSelectProps<T> = {
+export function SelectPrimitive<T extends React.Key = string>(props: {
   mode?: "single";
-  value: T | null;
-  onChange: (next: T | null) => void;
-  placeholder?: string;
-  noneOption?: string | false;
-};
-
-type MultiSelectProps<T> = {
-  mode: "multi";
-  value: T[];
-  onChange: (next: T[]) => void;
-  placeholder?: string;
-  noOptionsMessage?: string;
-};
-
-type CommonProps<T> = {
+  value: T;
+  onChange: (next: T) => void;
   options: BaseOption<T>[];
+  placeholder?: string;
+  noneOption?: false;
   className?: string;
   disabled?: boolean;
   maxHeight?: number;
-};
+}): JSX.Element;
 
-function isMulti<T>(props: SelectProps<T>): props is CommonProps<T> & MultiSelectProps<T> {
-  return props.mode === "multi";
-}
+export function SelectPrimitive<T extends React.Key = string>(props: {
+  mode?: "single";
+  value: T | undefined;
+  onChange: (next: T | undefined) => void;
+  options: BaseOption<T>[];
+  placeholder?: string;
+  noneOption: string;
+  className?: string;
+  disabled?: boolean;
+  maxHeight?: number;
+}): JSX.Element;
 
-type SelectProps<T> = CommonProps<T> & (SingleSelectProps<T> | MultiSelectProps<T>);
+export function SelectPrimitive<T extends React.Key = string>(props: {
+  mode: "multi";
+  value: T[];
+  onChange: (next: T[]) => void;
+  options: BaseOption<T>[];
+  placeholder?: string;
+  noOptionsMessage?: string;
+  className?: string;
+  disabled?: boolean;
+  maxHeight?: number;
+}): JSX.Element;
 
-export function SelectPrimitive<T extends React.Key = string>(props: SelectProps<T>) {
+// Implementation
+export function SelectPrimitive<T extends React.Key = string>(props: any) {
   const { options, value, onChange, className = "", disabled = false, maxHeight = 260, mode = "single" } = props;
 
   const [open, setOpen] = useState(false);
@@ -47,13 +55,14 @@ export function SelectPrimitive<T extends React.Key = string>(props: SelectProps
 
   const hasOptions = options.length > 0;
   const isDisabled = disabled || !hasOptions;
+  const hasNoneOptionProp = 'noneOption' in props && props.noneOption !== false && typeof props.noneOption === 'string';
 
   const selectedLabels = useMemo(() => {
-    const map = new Map(options.map((o) => [o.value, o.label]));
-    if (isMulti(props)) {
-      return props.value.map((v) => map.get(v) ?? String(v));
+    const map = new Map(options.map((o: BaseOption<T>) => [o.value, o.label]));
+    if (mode === "multi") {
+      return (value as T[]).map((v) => map.get(v) ?? String(v));
     } else {
-      return props.value ? [map.get(props.value) ?? String(props.value)] : [];
+      return value ? [map.get(value) ?? String(value)] : [];
     }
   }, [options, value, mode]);
 
@@ -61,12 +70,12 @@ export function SelectPrimitive<T extends React.Key = string>(props: SelectProps
     if (mode === "multi") {
       const currentValue = value as T[];
       if (currentValue.includes(v)) {
-        (onChange as (next: T[]) => void)(currentValue.filter((x) => x !== v));
+        onChange(currentValue.filter((x) => x !== v));
       } else {
-        (onChange as (next: T[]) => void)([...currentValue, v]);
+        onChange([...currentValue, v]);
       }
     } else {
-      (onChange as (next: T) => void)(v);
+      onChange(v);
       setOpen(false);
       buttonRef.current?.focus();
     }
@@ -118,11 +127,11 @@ export function SelectPrimitive<T extends React.Key = string>(props: SelectProps
 
   const getDisplayText = () => {
     if (mode === "single") {
-      const placeholder = (props as SingleSelectProps<T>).placeholder ?? "Select an option";
+      const placeholder = props.placeholder ?? "Select an option";
       return selectedLabels[0] ?? placeholder;
     } else {
-      const placeholder = (props as MultiSelectProps<T>).placeholder ?? "None selected";
-      const noOptionsMessage = (props as MultiSelectProps<T>).noOptionsMessage ?? "No options available";
+      const placeholder = props.placeholder ?? "None selected";
+      const noOptionsMessage = props.noOptionsMessage ?? "No options available";
 
       if (!hasOptions) return noOptionsMessage;
       if (selectedLabels.length === 0) return placeholder;
@@ -184,12 +193,12 @@ export function SelectPrimitive<T extends React.Key = string>(props: SelectProps
           >
             <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>
               {/* None option for single select */}
-              {mode === "single" && (props as SingleSelectProps<T>).noneOption && (
+              {mode === "single" && hasNoneOptionProp && (
                 <button
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    (onChange as (next: T | null) => void)(null);
+                    onChange(undefined);
                     setOpen(false);
                     buttonRef.current?.focus();
                   }}
@@ -199,11 +208,11 @@ export function SelectPrimitive<T extends React.Key = string>(props: SelectProps
                   }`}
                   role="option"
                 >
-                  {(props as SingleSelectProps<T>).noneOption}
+                  {props.noneOption}
                 </button>
               )}
 
-              {options.map((opt, idx) => {
+              {options.map((opt: BaseOption<T>, idx: number) => {
                 const active = idx === activeIdx;
                 const selected = mode === "single" ? value === opt.value : (value as T[]).includes(opt.value);
 

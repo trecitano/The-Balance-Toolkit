@@ -311,7 +311,6 @@ export default function ActivityCard({
             ) : (
               <>
                 <SelectPrimitive
-                  mode="single"
                   value={newActionImage}
                   placeholder="Action"
                   className={"w-70"}
@@ -322,7 +321,7 @@ export default function ActivityCard({
                       value: action.id,
                     })),
                   ]}
-                  onChange={(e) => setNewActionImage(e)}
+                  onChange={(e) => setNewActionImage(e ?? "")}
                 />
                 {newActionImage === "logo-flamingo-blue" && (
                   <InputPrimitive value={newActionName} onChange={(e) => setNewActionName(e.target.value)} />
