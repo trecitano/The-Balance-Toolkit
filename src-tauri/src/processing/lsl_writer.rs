@@ -71,8 +71,8 @@ fn lsl_stream_loop_raw(
     settings: LslConnectionSettings,
 ) -> Result<()> {
     println!("LSL raw writer execution start.");
-    let stream_name = format!("{}_raw", settings.stream_name);
-    let source_id = format!("{}_raw", settings.source_id);
+    let stream_name = format!("{}_basic", settings.stream_name);
+    let source_id = format!("{}_basic", settings.source_id);
 
     let mut stream_info = StreamInfo::new(
         &stream_name,
@@ -125,8 +125,8 @@ fn lsl_stream_loop_processed(
     settings: LslConnectionSettings,
 ) -> Result<()> {
     println!("LSL processed writer execution start.");
-    let stream_name = format!("{}_processed", settings.stream_name);
-    let source_id = format!("{}_processed", settings.source_id);
+    let stream_name = format!("{}_complex", settings.stream_name);
+    let source_id = format!("{}_complex", settings.source_id);
 
     let mut stream_info = StreamInfo::new(
         &stream_name,
