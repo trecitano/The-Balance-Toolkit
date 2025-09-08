@@ -23,7 +23,7 @@
   {
     "id": "session_window_size",
     "name": "Window Size",
-    "equation": "T_window = window_size_ms / 1000",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>T</mi><mi>window</mi></msub><mo>=</mo><mfrac><mi>window_size_ms</mi><mn>1000</mn></mfrac></mrow></math>",
     "tooltip": "Duration of data used per computation window. Larger windows smooth metrics; smaller windows react faster.",
     "description": [
       "Units: milliseconds (ms)."
@@ -32,7 +32,7 @@
   {
     "id": "session_window_slide",
     "name": "Window Slide (Hop)",
-    "equation": "T_hop = window_slide_ms / 1000",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>T</mi><mi>hop</mi></msub><mo>=</mo><mfrac><mi>window_slide_ms</mi><mn>1000</mn></mfrac></mrow></math>",
     "tooltip": "Time step between consecutive windows. Smaller hops update graphs more often with more overlap.",
     "description": [
       "Units: milliseconds (ms)."
@@ -41,7 +41,7 @@
   {
     "id": "session_sampling_rate",
     "name": "Sampling Rate",
-    "equation": "f_s = sampling_rate; dt = 1 / f_s",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>f</mi><mi>s</mi></msub><mo>=</mo><mi>sampling_rate</mi><mo>;</mo><mi>dt</mi><mo>=</mo><mfrac><mn>1</mn><msub><mi>f</mi><mi>s</mi></msub></mfrac></mrow></math>",
     "tooltip": "Uniform resampling rate used after interpolation. Higher f_s captures faster sway but increases compute.",
     "description": [
       "Units: Hertz (Hz); dt in seconds (s)."
@@ -63,12 +63,12 @@
     "name": "Save Location",
     "equation": "",
     "tooltip": "Folder where session outputs are stored.",
-    "description":[]
+    "description": []
   },
   {
     "id": "session_cop_x",
     "name": "Center of Pressure (X)",
-    "equation": "COP_x = ((TR + BR) − (TL + BL)) / (TR + BR + TL + BL)",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>COP</mi><mi>x</mi></msub><mo>=</mo><mfrac><mrow><mfenced><mrow><mi>TR</mi><mo>+</mo><mi>BR</mi></mrow></mfenced><mo>−</mo><mfenced><mrow><mi>TL</mi><mo>+</mo><mi>BL</mi></mrow></mfenced></mrow><mrow><mi>TR</mi><mo>+</mo><mi>BR</mi><mo>+</mo><mi>TL</mi><mo>+</mo><mi>BL</mi></mrow></mfrac></mrow></math>",
     "tooltip": "Lateral COP position (unitless ratio, ~−1 left to +1 right).",
     "description": [
       "TR: Top right force",
@@ -80,7 +80,7 @@
   {
     "id": "session_cop_y",
     "name": "Center of Pressure (Y)",
-    "equation": "COP_y = ((TR + TL) − (BR + BL)) / (TR + BR + TL + BL)",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>COP</mi><mi>y</mi></msub><mo>=</mo><mfrac><mrow><mfenced><mrow><mi>TR</mi><mo>+</mo><mi>TL</mi></mrow></mfenced><mo>−</mo><mfenced><mrow><mi>BR</mi><mo>+</mo><mi>BL</mi></mrow></mfenced></mrow><mrow><mi>TR</mi><mo>+</mo><mi>BR</mi><mo>+</mo><mi>TL</mi><mo>+</mo><mi>BL</mi></mrow></mfrac></mrow></math>",
     "tooltip": "Anterior–posterior COP position (unitless ratio, ~−1 back to +1 front).",
     "description": [
       "TR: Top right force",
@@ -92,14 +92,14 @@
   {
     "id": "session_cop_z",
     "name": "Total Force",
-    "equation": "COP_z = TR + BR + TL + BL",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>COP</mi><mi>z</mi></msub><mo>=</mo><mi>TR</mi><mo>+</mo><mi>BR</mi><mo>+</mo><mi>TL</mi><mo>+</mo><mi>BL</mi></mrow></math>",
     "tooltip": "Total load on the board (Newtons).",
     "description": []
   },
   {
     "id": "session_stability_index",
     "name": "Stability Index",
-    "equation": "SI = sqrt( (1/N) * Σ_i [ (x_i − x̄)^2 + (y_i − ȳ)^2 ] )",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>SI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><mo>[</mo><mrow><msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover accent=\"true\"><mi>x</mi><mo>¯</mo></mover><mo>)</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover accent=\"true\"><mi>y</mi><mo>¯</mo></mover><mo>)</mo></mrow><mn>2</mn></msup></mrow><mo>]</mo></mrow></msqrt></mrow></math>",
     "tooltip": "RMS distance of COP from its mean (unitless).",
     "description": [
       "N: number of samples",
@@ -110,7 +110,7 @@
   {
     "id": "session_mean_velocity_x",
     "name": "Mean Velocity (X)",
-    "equation": "v_cop_x = mean( |Δx_i| / Δt_i )",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>v</mi><mrow><mi>cop</mi><mo>,</mo><mi>x</mi></mrow></msub><mo>=</mo><mi>mean</mi><mo>(</mo><mfrac><mrow><mo>|</mo><mo>Δ</mo><msub><mi>x</mi><mi>i</mi></msub><mo>|</mo></mrow><mrow><mo>Δ</mo><msub><mi>t</mi><mi>i</mi></msub></mrow></mfrac><mo>)</mo></mrow></math>",
     "tooltip": "Average absolute COP velocity along X (units: ratio/s).",
     "description": [
       "Δx_i: COP X change",
@@ -120,7 +120,7 @@
   {
     "id": "session_mean_velocity_y",
     "name": "Mean Velocity (Y)",
-    "equation": "v_cop_y = mean( |Δy_i| / Δt_i )",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>v</mi><mrow><mi>cop</mi><mo>,</mo><mi>y</mi></mrow></msub><mo>=</mo><mi>mean</mi><mo>(</mo><mfrac><mrow><mo>|</mo><mo>Δ</mo><msub><mi>y</mi><mi>i</mi></msub><mo>|</mo></mrow><mrow><mo>Δ</mo><msub><mi>t</mi><mi>i</mi></msub></mrow></mfrac><mo>)</mo></mrow></math>",
     "tooltip": "Average absolute COP velocity along Y (units: ratio/s).",
     "description": [
       "Δy_i: COP Y change",
@@ -130,7 +130,7 @@
   {
     "id": "session_mean_velocity",
     "name": "Mean Velocity",
-    "equation": "mean_velocity = mean( sqrt( (Δx_i)^2 + (Δy_i)^2 ) / Δt_i )",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>mean_velocity</mi><mo>=</mo><mi>mean</mi><mo>(</mo><mfrac><mrow><msqrt><mrow><msup><mrow><mo>Δ</mo><msub><mi>x</mi><mi>i</mi></msub></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>Δ</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mn>2</mn></msup></mrow></msqrt></mrow><mrow><mo>Δ</mo><msub><mi>t</mi><mi>i</mi></msub></mrow></mfrac><mo>)</mo></mrow></math>",
     "tooltip": "Average resultant COP speed (units: ratio/s).",
     "description": [
       "Δx_i, Δy_i: COP changes",
@@ -140,45 +140,45 @@
   {
     "id": "session_total_path_length",
     "name": "Total Path Length",
-    "equation": "L = Σ_i sqrt( (Δx_i)^2 + (Δy_i)^2 )",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>L</mi><mo>=</mo><msub><mo>∑</mo><mi>i</mi></msub><msqrt><mrow><msup><mrow><mo>Δ</mo><msub><mi>x</mi><mi>i</mi></msub></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>Δ</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mn>2</mn></msup></mrow></msqrt></mrow></math>",
     "tooltip": "Total distance traveled by COP (unitless path length in ratio units).",
     "description": []
   },
   {
     "id": "session_velocity_moment",
     "name": "Velocity Moment",
-    "equation": "velocity_moment = total_path_length / total_time",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>velocity_moment</mi><mo>=</mo><mfrac><mi>total_path_length</mi><mi>total_time</mi></mfrac></mrow></math>",
     "tooltip": "Average speed of COP over time (units: ratio/s).",
     "description": []
   },
   {
     "id": "session_mlsi",
     "name": "Medio-Lateral Stability Index",
-    "equation": "MLSI = sqrt( (1/N) * Σ_i x_i^2 )",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>MLSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><msup><msub><mi>x</mi><mi>i</mi></msub><mn>2</mn></msup></mrow></msqrt></mrow></math>",
     "tooltip": "RMS COP excursion along X (unitless ratio).",
     "description": []
   },
   {
     "id": "session_apsi",
     "name": "Anterior–Posterior Stability Index",
-    "equation": "APSI = sqrt( (1/N) * Σ_i y_i^2 )",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>APSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><msup><msub><mi>y</mi><mi>i</mi></msub><mn>2</mn></msup></mrow></msqrt></mrow></math>",
     "tooltip": "RMS COP excursion along Y (unitless ratio).",
     "description": []
   },
   {
     "id": "session_vsi",
     "name": "Vertical Stability Index",
-    "equation": "VSI = sqrt( (1/N) * Σ_i (baseline − z_i)^2 )",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>VSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><msup><mrow><mo>(</mo><mi>baseline</mi><mo>−</mo><msub><mi>z</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup></mrow></msqrt></mrow></math>",
     "tooltip": "RMS deviation of force from baseline load (Newtons).",
     "description": [
-      "z_i: total force",
-      "baseline: given or mean(z)."
+      "zᵢ: total force",
+      "baseline: User weight (Kg)"
     ]
   },
   {
     "id": "session_dpsi",
     "name": "Dynamic Postural Stability Index",
-    "equation": "DPSI = sqrt( (1/N) * Σ_i [ x_i^2 + y_i^2 + (baseline − z_i)^2 ] )",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>DPSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><mo>[</mo><mrow><msup><msub><mi>x</mi><mi>i</mi></msub><mn>2</mn></msup><mo>+</mo><msup><msub><mi>y</mi><mi>i</mi></msub><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>(</mo><mi>baseline</mi><mo>−</mo><msub><mi>z</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup></mrow><mo>]</mo></mrow></msqrt></mrow></math>",
     "tooltip": "Combined RMS of medio-lateral, anterior–posterior, and vertical components.",
     "description": [
       "Mixed units: ratio + Newtons."
@@ -187,7 +187,7 @@
   {
     "id": "session_confidence_ellipse",
     "name": "Confidence Ellipse (95%)",
-    "equation": "r1 = sqrt(χ²₂(0.95)·λ1), r2 = sqrt(χ²₂(0.95)·λ2), θ = eigenvector angle",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>r</mi><mn>1</mn></msub><mo>=</mo><msqrt><mrow><msubsup><mi>χ</mi><mn>2</mn><mn>2</mn></msubsup><mo>(</mo><mn>0.95</mn><mo>)</mo><mo>·</mo><msub><mi>λ</mi><mn>1</mn></msub></mrow></msqrt><mo>,</mo><msub><mi>r</mi><mn>2</mn></msub><mo>=</mo><msqrt><mrow><msubsup><mi>χ</mi><mn>2</mn><mn>2</mn></msubsup><mo>(</mo><mn>0.95</mn><mo>)</mo><mo>·</mo><msub><mi>λ</mi><mn>2</mn></msub></mrow></msqrt></mrow></math>",
     "tooltip": "Ellipse enclosing ~95% of COP points (unitless).",
     "description": [
       "r1, r2: semi-axes",
@@ -197,8 +197,8 @@
   {
     "id": "session_convex_hull",
     "name": "Convex Hull",
-    "equation": "Polygon enclosing all {(x_i, y_i)} with minimal convex boundary",
-    "tooltip": "Smallest convex polygon containing all COP points (unitless).",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>CH</mi><mo>=</mo><mi>conv</mi><mo>(</mo><mo>{</mo><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo><mo>}</mo><mo>)</mo></mrow></math>",
+    "tooltip": "Polygon enclosing all {(x_i, y_i)} with minimal convex boundary",
     "description": []
   },
   {
@@ -206,12 +206,12 @@
     "name": "Load File",
     "equation": "",
     "tooltip": "Choose a \".settings.json\" file to view a previous session.",
-    "description":[]
+    "description": []
   },
   {
     "id": "session_amplitude_spectrum",
     "name": "Amplitude Spectrum",
-    "equation": "A_x(f_k) = scale·|FFT_x[k]|, A_y(f_k) = scale·|FFT_y[k]|, A_xy = sqrt(A_x^2 + A_y^2)",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>A</mi><mi>x</mi></msub><mo>(</mo><msub><mi>f</mi><mi>k</mi></msub><mo>)</mo><mo>=</mo><mi>scale</mi><mo>·</mo><mo>|</mo><mrow><msub><mi>FFT</mi><mi>x</mi></msub><mo>[</mo><mi>k</mi><mo>]</mo></mrow><mo>|</mo><mo>,</mo><msub><mi>A</mi><mi>y</mi></msub><mo>(</mo><msub><mi>f</mi><mi>k</mi></msub><mo>)</mo><mo>=</mo><mi>scale</mi><mo>·</mo><mo>|</mo><mrow><msub><mi>FFT</mi><mi>y</mi></msub><mo>[</mo><mi>k</mi><mo>]</mo></mrow><mo>|</mo><mo>,</mo><msub><mi>A</mi><mrow><mi>x</mi><mi>y</mi></mrow></msub><mo>=</mo><msqrt><mrow><msup><msub><mi>A</mi><mi>x</mi></msub><mn>2</mn></msup><mo>+</mo><msup><msub><mi>A</mi><mi>y</mi></msub><mn>2</mn></msup></mrow></msqrt></mrow></math>",
     "tooltip": "Frequency amplitudes of COP (unitless ratios vs Hz).",
     "description": [
       "f_k: frequency bin (Hz)",

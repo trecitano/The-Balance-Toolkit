@@ -68,7 +68,7 @@ export function TimelinePanel({
 
   return (
     <div className="relative mt-auto flex min-h-38 w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
-      <img src={popout} onClick={openPopup} className="absolute top-3 right-3 size-4 object-contain transition-all hover:-translate-y-[1px]" />
+      <img src={popout} onClick={openPopup} className="absolute top-3 right-3 size-5 object-contain transition-all hover:-translate-y-[1px] cursor-pointer" />
       {activity ? (
         <div className="mx-10 mt-2 mb-1 w-9/10">
           <div className="mb-3 flex justify-end text-sm font-medium text-gray-700">
@@ -97,7 +97,7 @@ export function TimelinePanel({
       <div>
         <button
           className={clsx(
-            "mr-2 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full p-0 transition-all",
+            "mr-2 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full transition-all duration-300",
             hasOngoingSession
               ? "border-2 border-[#e50012] bg-[#e50012] text-white"
               : "border-2 border-[#e50012] bg-white text-black",
