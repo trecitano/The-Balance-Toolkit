@@ -26,7 +26,7 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
         "left-1/2 z-20 mb-2 -translate-x-1/2 ",
         "transform rounded-md bg-gray-900",
         "text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100")}>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {tooltipData.name && (
             <div className="font-semibold text-gray-100 border-b border-gray-700 pb-1">
               {tooltipData.name}
@@ -42,6 +42,19 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
           <div className="text-gray-300 leading-relaxed">
             {tooltipData.tooltip}
           </div>
+
+          {tooltipData.description && tooltipData.description.length > 0 && (
+            <div className="border-t border-gray-700 pt-2">
+              <ul className="space-y-1 text-xs text-gray-400">
+                {tooltipData.description.map((item, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="inline-block w-1 h-1 bg-gray-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="absolute top-full left-1/2 -translate-x-1/2 transform border-4 border-transparent border-t-gray-900"></div>

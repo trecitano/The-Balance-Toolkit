@@ -6,6 +6,7 @@ type TooltipData = {
   name: string;
   equation: string;
   tooltip: string;
+  description?: string[];
 };
 
 export const useTooltipText = (tooltipId: string): TooltipData | undefined => {
