@@ -65,7 +65,7 @@ export function SessionPanel({
           <SelectPrimitive<number>
             disabled={disabled}
             value={value?.selectedUser ?? 0}
-            onChange={(v) => update("selectedUser", v ?? 0)}
+            onChange={(v) => update("selectedUser", v)}
             options={userOptions}
           />
         </SingleColumn>

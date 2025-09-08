@@ -788,7 +788,7 @@ export default function Users() {
               <ToolkitButton
                 disabled={!selectedWeightMeasureDeviceMac || isMeasuringWeight}
                 color="blue"
-                onClick={() => handleEditUpdate("weight", Number(liveWeight?.toFixed(2)) ?? 0)}
+                onClick={() => handleEditUpdate("weight", Number(liveWeight?.toFixed(2)))}
               >
                 Save
               </ToolkitButton>

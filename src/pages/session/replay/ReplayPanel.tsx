@@ -55,11 +55,11 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="User" className="col-span-3" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="User" className="col-span-3" tooltipId={"session_user"}>
           <InputPrimitive disabled={true} value={config?.core.selectedUser ?? "No User"} />
         </SingleColumn>
 
-        <SingleColumn label="Window Size (ms)" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="Window Size (ms)" className="col-span-2" tooltipId={"session_window_size"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -68,7 +68,7 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Slide (ms)" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="Window Slide (ms)" className="col-span-2" tooltipId={"session_window_slide"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -76,7 +76,7 @@ export function ReplayPanel({
             onChange={(e) => update("windowSlideMs", Number(e.target.value))}
           />
         </SingleColumn>
-        <SingleColumn label="Sampling Rate" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="Sampling Rate" className="col-span-2" tooltipId={"session_sampling_rate"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -85,8 +85,8 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Interpolation" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
-          <SelectPrimitive
+        <SingleColumn label="Interpolation" className="col-span-2" tooltipId={"session_interpolation"}>
+          <SelectPrimitive<string>
             disabled={disabled}
             value={config?.core.interpolation ?? "Linear"}
             onChange={(v) => update("interpolation", v as InterpolationOption)}
@@ -98,7 +98,7 @@ export function ReplayPanel({
           <InputPrimitive disabled={true} value={config?.activity?.title ?? "No Activity"} />
         </SingleColumn>
 
-        <SingleColumn label="LSL" direction="row" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="LSL" direction="row" tooltipId={"session_lsl_toggle"}>
           <Checkbox
             disabled={disabled}
             className={"ml-2"}
@@ -110,7 +110,7 @@ export function ReplayPanel({
           </span>
         </SingleColumn>
 
-        <SingleColumn label="TCP" direction="row" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="TCP" direction="row" tooltipId={"session_tcp_toggle"}>
           <Checkbox
             disabled={disabled}
             className={"ml-2"}
@@ -127,7 +127,7 @@ export function ReplayPanel({
           backgroundType="transparent"
           className="col-start-7 col-end-15"
           actionText="Clear"
-          tooltipText={"TODO!!!!!!!"}
+          tooltipId={"replay_load_session"}
           onActionClick={onResetFile}
         >
           <div className="flex h-8 items-center gap-2">
