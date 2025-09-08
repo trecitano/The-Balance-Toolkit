@@ -13,6 +13,7 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   children: React.ReactNode;
   direction?: "col" | "row";
   backgroundType?: BackgroundType;
+  disabled?: boolean;
   actionText?: string;
   onActionClick?: () => void;
   tooltipId?: string;
@@ -27,6 +28,7 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
   children,
   direction = "col",
   backgroundType = "transparent",
+  disabled,
   actionText,
   onActionClick,
   tooltipId,
@@ -57,8 +59,12 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
           {actionText && onActionClick && (
             <button
               type="button"
+              disabled={disabled}
               onClick={onActionClick}
-              className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+              className={clsx(
+                "text-xs text-blue-600 enabled:hover:text-blue-800 enabled:hover:underline",
+                  "disabled:cursor-not-allowed disabled:bg-gray-100/80 disabled:text-gray-600"
+                )}
             >
               {actionText}
             </button>

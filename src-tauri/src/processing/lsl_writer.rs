@@ -76,8 +76,8 @@ fn lsl_stream_loop_raw(
 
     let mut stream_info = StreamInfo::new(
         &stream_name,
-        "BalanceBoard_Raw",
-        5, // timestamp + 4 sensors
+        "BalanceBoard_Basic",
+        7, // timestamp + 4 sensors + 2 cop
         100.0,
         ChannelFormat::Double64,
         &source_id,
@@ -130,7 +130,7 @@ fn lsl_stream_loop_processed(
 
     let mut stream_info = StreamInfo::new(
         &stream_name,
-        "BalanceBoard_Processed",
+        "BalanceBoard_Complex",
         8,
         100.0, // TODO: USE REAL SAMPLING RATE!
         ChannelFormat::Double64,

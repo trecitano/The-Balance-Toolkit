@@ -126,6 +126,7 @@ export function ReplayPanel({
           label="Load Session"
           backgroundType="transparent"
           className="col-start-7 col-end-15"
+          disabled={disabled}
           actionText="Clear"
           tooltipId={"replay_load_session"}
           onActionClick={onResetFile}
