@@ -5,6 +5,7 @@ import { InterpolationOption, interpolationOptions, ReplayConfiguration, Session
 import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import {Checkbox} from "@/components/Checkbox.tsx";
+import tareIcon from "@/assets/tare.svg";
 
 export function ReplayPanel({
   config,
@@ -43,8 +44,8 @@ export function ReplayPanel({
         <PageTitle>Replay</PageTitle>
       </header>
 
-      <ToolkitContainer className="grid grid-cols-14 grid-rows-2">
-        <SingleColumn label="Board to Display" className="col-span-3">
+      <ToolkitContainer className="grid grid-cols-34 grid-rows-2">
+        <SingleColumn label="Board to Display" className="col-span-8">
           <SelectPrimitive
             mode={"multi"}
             options={boardDisplayOptions}
@@ -55,11 +56,15 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="User" className="col-span-3" tooltipId={"session_user"}>
+        <SingleColumn label="Tare" labelMargin={false}>
+          <img src={tareIcon} className="h-8 object-contain opacity-60 cursor-not-allowed"/>
+        </SingleColumn>
+
+        <SingleColumn label="User" className="col-span-8" tooltipId={"session_user"}>
           <InputPrimitive disabled={true} value={config?.core.selectedUser ?? "No User"} />
         </SingleColumn>
 
-        <SingleColumn label="Window Size (ms)" className="col-span-2" tooltipId={"session_window_size"}>
+        <SingleColumn label="Window Size (ms)" className="col-span-4" tooltipId={"session_window_size"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -68,7 +73,7 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Slide (ms)" className="col-span-2" tooltipId={"session_window_slide"}>
+        <SingleColumn label="Window Slide (ms)" className="col-span-4" tooltipId={"session_window_slide"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -76,7 +81,7 @@ export function ReplayPanel({
             onChange={(e) => update("windowSlideMs", Number(e.target.value))}
           />
         </SingleColumn>
-        <SingleColumn label="Sampling Rate" className="col-span-2" tooltipId={"session_sampling_rate"}>
+        <SingleColumn label="Sampling Rate" className="col-span-4" tooltipId={"session_sampling_rate"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -85,7 +90,7 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Interpolation" className="col-span-2" tooltipId={"session_interpolation"}>
+        <SingleColumn label="Interpolation" className="col-span-5" tooltipId={"session_interpolation"}>
           <SelectPrimitive<string>
             disabled={disabled}
             value={config?.core.interpolation ?? "Linear"}
@@ -94,11 +99,11 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Activity" className="col-span-3">
+        <SingleColumn label="Activity" className="col-span-8">
           <InputPrimitive disabled={true} value={config?.activity?.title ?? "No Activity"} />
         </SingleColumn>
 
-        <SingleColumn label="LSL" direction="row" tooltipId={"session_lsl_toggle"}>
+        <SingleColumn label="LSL" direction="row" tooltipId={"session_lsl_toggle"} className={"col-span-2"}>
           <Checkbox
             disabled={disabled}
             className={"ml-2"}
@@ -110,7 +115,7 @@ export function ReplayPanel({
           </span>
         </SingleColumn>
 
-        <SingleColumn label="TCP" direction="row" tooltipId={"session_tcp_toggle"}>
+        <SingleColumn label="TCP" direction="row" tooltipId={"session_tcp_toggle"} className={"col-span-2"}>
           <Checkbox
             disabled={disabled}
             className={"ml-2"}
@@ -125,7 +130,7 @@ export function ReplayPanel({
         <SingleColumn
           label="Load Session"
           backgroundType="transparent"
-          className="col-start-7 col-end-15"
+          className="col-start-18 col-end-34"
           disabled={disabled}
           actionText="Clear"
           tooltipId={"replay_load_session"}

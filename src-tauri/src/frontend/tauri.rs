@@ -81,6 +81,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             session_information,
             session_update_session_configuration,
             session_activity_state,
+            session_tare_devices,
             replay_start_replay,
             replay_stop_replay,
             replay_information,
@@ -447,6 +448,19 @@ async fn session_activity_state(state: State<'_, AppState>) -> Result<Option<Ses
 
     println!("<< session_activity_state. {:#?}\n", result);
     Ok(result)
+}
+
+#[tauri::command(async)]
+async fn session_tare_devices(state: State<'_, AppState>) -> Result<(), String> {
+    println!(">> session_tare_devices");
+
+    let (tx, rx) = oneshot::channel();
+    let command = ToolkitCommand::SessionTareDevices { response: tx };
+    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< session_tare_devices.\n");
+    Ok(())
 }
 
 #[derive(Serialize, Debug, Clone)]
