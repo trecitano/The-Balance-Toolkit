@@ -16,7 +16,7 @@ export function SelectPrimitive<T extends React.Key = string>(props: {
   className?: string;
   disabled?: boolean;
   maxHeight?: number;
-}): JSX.Element;
+}): React.ReactElement;
 
 export function SelectPrimitive<T extends React.Key = string>(props: {
   mode?: "single";
@@ -28,7 +28,7 @@ export function SelectPrimitive<T extends React.Key = string>(props: {
   className?: string;
   disabled?: boolean;
   maxHeight?: number;
-}): JSX.Element;
+}): React.ReactElement;
 
 export function SelectPrimitive<T extends React.Key = string>(props: {
   mode: "multi";
@@ -40,7 +40,7 @@ export function SelectPrimitive<T extends React.Key = string>(props: {
   className?: string;
   disabled?: boolean;
   maxHeight?: number;
-}): JSX.Element;
+}): React.ReactElement;
 
 // Implementation
 export function SelectPrimitive<T extends React.Key = string>(props: any) {
