@@ -169,10 +169,10 @@ impl ActivityState {
                 ],
                 loops: 2,
             },
-            // Squat on Two Boards
+            // Squat
             Activity {
                 id: "squat-two-boards".into(),
-                title: "Squat on two boards".into(),
+                title: "Squat".into(),
                 static_image: "dual-board-squat-on-the-boards".into(),
                 boards_required: 2,
                 description: "Assess controlled weight shifting ability".into(),

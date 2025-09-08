@@ -108,6 +108,7 @@ export function SessionPanel({
         <SingleColumn
           label="Activity"
           className="col-span-3"
+          disabled={disabled}
           actionText="Clear"
           onActionClick={() => update("activityId", "")}
         >
