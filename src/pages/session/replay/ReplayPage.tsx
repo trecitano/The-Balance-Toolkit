@@ -76,9 +76,10 @@ export default function ReplayPage() {
     });
   }
 
-  const pickSessionFile = async () => {
+  const pickSessionFile = async (defaultPath?: string | null) => {
     const selected = await open({
       directory: false,
+      defaultPath: defaultPath ?? "",
       multiple: false,
       filters: [
         {
@@ -109,7 +110,7 @@ export default function ReplayPage() {
         <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
           <p className="text-3xl font-medium">No session file selected</p>
           <p className="mb-4 text-xl text-gray-400">Select a session file to replay it!</p>
-          <ToolkitButton color="grey" onClick={pickSessionFile}>
+          <ToolkitButton color="grey" onClick={() => pickSessionFile(replayInformation?.core?.outputDirectory)}>
             Select Replay
           </ToolkitButton>
         </div>
