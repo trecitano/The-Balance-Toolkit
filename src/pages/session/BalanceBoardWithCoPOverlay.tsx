@@ -3,6 +3,7 @@ import { BoardBuffer, SessionStore } from "@/store/sessionDataStore.tsx";
 import { ProcessedSingleFrameSessionData, RawBalanceBoardEvent } from "@/types.ts";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { StabilityBarGauge } from "@/pages/session/StabilityBarGauge.tsx";
+import {Tooltip} from "@/components/Tooltip.tsx";
 
 const COP_X_MIN = -1;
 const COP_X_MAX = 1;
@@ -133,7 +134,7 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
   }, []);
 
   return (
-    <div className="relative flex h-full items-center justify-evenly">
+    <div className="relative flex h-full items-center justify-evenly gap-3">
       <div className="relative w-5/10">
         <img
           ref={imgRef}
@@ -148,14 +149,15 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
       {/* Controls + Stability Index */}
       <div className="flex w-22/100 flex-col gap-8">
         <div className={"flex flex-col gap-4"}>
-          <label className="flex items-center gap-2">
+          <label className="flex flex-row items-center gap-2">
             <input
               type="checkbox"
               className="h-4 w-4"
               checked={showConfidenceEllipse}
               onChange={(e) => setShowConfidenceEllipse(e.target.checked)}
             />
-            <span className={"text-sm font-medium text-(--primary)"}>Confidence ellipse</span>
+            <span className={"text-sm font-medium text-(--primary) whitespace-nowrap"}>Confidence ellipse</span>
+            <Tooltip tooltipId={"session_confidence_ellipse"}/>
           </label>
 
           <label className="flex items-center gap-2">
@@ -166,6 +168,7 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
               onChange={(e) => setShowConvexHull(e.target.checked)}
             />
             <span className={"text-sm font-medium text-(--red)"}>Convex hull</span>
+            <Tooltip tooltipId={"session_convex_hull"}/>
           </label>
         </div>
 

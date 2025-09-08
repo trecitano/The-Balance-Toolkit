@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useTooltipText } from "@/hooks/useTooltipText";
 import clsx from "clsx";
 
@@ -15,17 +15,46 @@ const InfoIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 export function Tooltip({ tooltipId }: { tooltipId: string }) {
   const tooltipData = useTooltipText(tooltipId);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [showBelow, setShowBelow] = useState(false);
+
+  useEffect(() => {
+    const handleMouseEnter = () => {
+      if (!containerRef.current || !tooltipRef.current) return;
+
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
+
+      // Calculate space above the trigger element
+      const spaceAbove = containerRect.top;
+      // Add some buffer (e.g., 20px) to ensure tooltip doesn't get cut off
+      const tooltipHeight = tooltipRect.height || 200; // Fallback height estimate
+      const buffer = 20;
+
+      // If there's not enough space above, show below
+      setShowBelow(spaceAbove < tooltipHeight + buffer);
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('mouseenter', handleMouseEnter);
+      return () => container.removeEventListener('mouseenter', handleMouseEnter);
+    }
+  }, []);
 
   if (!tooltipData) return null;
 
   return (
-    <div className="group relative">
+    <div className="group relative" ref={containerRef}>
       <InfoIcon className="size-3 cursor-help text-gray-400 hover:text-gray-600" />
-      <div className={clsx("min-w-60 max-w-100 px-3 py-2 text-sm ",
-        "pointer-events-none absolute bottom-full ",
-        "left-1/2 z-20 mb-2 -translate-x-1/2 ",
-        "transform rounded-md bg-gray-900",
-        "text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100")}>
+      <div
+        ref={tooltipRef}
+        className={clsx(
+          "min-w-60 px-3 py-2 text-sm pointer-events-none absolute left-1/2 z-30 -translate-x-1/2 transform rounded-md bg-gray-900 text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100",
+          showBelow ? "top-full mt-2" : "bottom-full mb-2"
+        )}
+      >
         <div className="space-y-2">
           {tooltipData.name && (
             <div className="font-semibold text-gray-100 border-b border-gray-700 pb-1">
@@ -34,9 +63,10 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
           )}
 
           {tooltipData.equation && (
-            <div className="font-mono text-sm bg-gray-800 px-2 py-1 rounded border text-blue-200">
-              {tooltipData.equation}
-            </div>
+            <div
+              className="font-mono text-sm bg-gray-800 px-2 py-1 rounded border text-blue-200"
+              dangerouslySetInnerHTML={{ __html: tooltipData.equation }}
+            />
           )}
 
           <div className="text-gray-300 leading-relaxed">
@@ -57,7 +87,12 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
           )}
         </div>
 
-        <div className="absolute top-full left-1/2 -translate-x-1/2 transform border-4 border-transparent border-t-gray-900"></div>
+        <div className={clsx(
+          "absolute left-1/2 -translate-x-1/2 transform border-4 border-transparent",
+          showBelow
+            ? "bottom-full border-b-gray-900"
+            : "top-full border-t-gray-900"
+        )}></div>
       </div>
     </div>
   );

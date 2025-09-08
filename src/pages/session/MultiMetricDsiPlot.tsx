@@ -11,6 +11,7 @@ interface MetricConfig {
   label: string;
   color: string;
   enabled: boolean;
+  tooltipId: string;
 }
 
 const WINDOW_SEC = 10;
@@ -32,10 +33,10 @@ export function MultiMetricPlot({
 
   // State for which metrics to show
   const [metrics, setMetrics] = useState<MetricConfig[]>([
-    { key: "mlsi", label: "MLSI", color: BLUE_COLOUR, enabled: true },
-    { key: "apsi", label: "APSI", color: RED_COLOUR, enabled: true },
-    { key: "vsi", label: "VSI", color: YELLOW_COLOUR, enabled: true },
-    { key: "dpsi", label: "DPSI", color: GREEN_COLOUR, enabled: true },
+    { key: "mlsi", label: "MLSI", color: BLUE_COLOUR, enabled: true, tooltipId: "session_mlsi" },
+    { key: "apsi", label: "APSI", color: RED_COLOUR, enabled: true, tooltipId: "session_apsi" },
+    { key: "vsi", label: "VSI", color: YELLOW_COLOUR, enabled: true, tooltipId: "session_vsi" },
+    { key: "dpsi", label: "DPSI", color: GREEN_COLOUR, enabled: true, tooltipId: "session_dpsi" },
   ]);
 
   // Toggle metric visibility
@@ -236,6 +237,7 @@ export function MultiMetricPlot({
               <span className="text-sm font-medium" style={{ color: metric.enabled ? metric.color : "#9ca3af" }}>
                 {metric.label}
               </span>
+              <Tooltip tooltipId={metric.tooltipId} />
             </label>
           ))}
         </div>

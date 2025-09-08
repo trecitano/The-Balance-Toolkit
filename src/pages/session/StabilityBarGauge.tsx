@@ -62,11 +62,6 @@ export function StabilityBarGauge({
     const barX = (width - barWidth) / 2;
     const barY = height * 0.05;
 
-    // Draw background border (empty bar)
-    ctx.strokeStyle = "#1f2937"; // dark gray border
-    ctx.lineWidth = 2;
-    ctx.strokeRect(barX, barY, barWidth, barHeight);
-
     // Draw the filled portion if we have a value
     if (stabilityIndex !== null && stabilityIndex >= 0 && stabilityIndex <= 1) {
       // Invert the value since lower is better for stability
@@ -77,8 +72,8 @@ export function StabilityBarGauge({
 
       // Create gradient
       const gradient = ctx.createLinearGradient(0, barY + barHeight, 0, barY);
-      gradient.addColorStop(0, "#e50012");
-      gradient.addColorStop(1, "#e50012");
+      gradient.addColorStop(0, "#397aac");
+      gradient.addColorStop(1, "#397aac");
 
       ctx.fillStyle = gradient;
       ctx.fillRect(barX, fillY, barWidth, fillHeight);
@@ -91,6 +86,11 @@ export function StabilityBarGauge({
       ctx.lineTo(barX + barWidth + 5, fillY);
       ctx.stroke();
     }
+
+    // Draw background border (empty bar)
+    ctx.strokeStyle = "#1f2937"; // dark gray border
+    ctx.lineWidth = 2;
+    ctx.strokeRect(barX, barY, barWidth, barHeight);
   }, [stabilityIndex, width, height]);
 
   return (
