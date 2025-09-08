@@ -97,16 +97,21 @@ fn lsl_stream_loop_raw(
     add_channel("bottom_right", "kg", "force", "Bottom right sensor reading");
     add_channel("top_left", "kg", "force", "Top left sensor reading");
     add_channel("bottom_left", "kg", "force", "Bottom left sensor reading");
+    add_channel("cop_x", "unitless", "index", "Center of Pressure X Axis. (-1 to 1)");
+    add_channel("cop_y", "unitless", "index", "Center of Pressure Y Axis. (-1 to 1)");
 
     let outlet = StreamOutlet::new(&stream_info, 0, 360)?;
 
     while let Some(data) = rx.blocking_recv() {
+        let cop = data.calculate_cop();
         let sample = vec![
             data.timestamp.timestamp_micros() as f64,
             data.top_right as f64,
             data.bottom_right as f64,
             data.top_left as f64,
             data.bottom_left as f64,
+            cop.x as f64,
+            cop.y as f64,
         ];
         outlet.push_sample(&sample)?;
     }

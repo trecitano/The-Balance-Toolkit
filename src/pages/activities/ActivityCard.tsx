@@ -101,7 +101,7 @@ export default function ActivityCard({
       }
     }
 
-    setCurrentImageSrc(activity.timelineBlocks[0].id);
+    setCurrentImageSrc(activity.timelineBlocks[0]?.id ?? "");
   }, [activity.staticImage, activity.title, activity.id, currentActionLabel]);
 
   /**
@@ -399,6 +399,11 @@ export default function ActivityCard({
                 Close
               </ToolkitButton>
             </div>
+          </div>
+          <div className={"mt-auto flex justify-end"}>
+            <ToolkitButton to="/session" color="blue" >
+              Go to Session →
+            </ToolkitButton>
           </div>
         </ToolkitContainer>
       )}

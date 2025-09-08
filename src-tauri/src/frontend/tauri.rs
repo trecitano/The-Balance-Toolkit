@@ -655,7 +655,7 @@ async fn activity_get_available_time_blocks(state: State<'_, AppState>) -> Resul
     state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    //println!("<< activity_get_available_time_blocks. {:?}", result);
+    println!("<< activity_get_available_time_blocks. {:#?}", result);
     Ok(result)
 }
 
