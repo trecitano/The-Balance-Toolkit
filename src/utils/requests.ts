@@ -22,10 +22,10 @@ export const commands = {
 
   users: {
     userPageInformation: async () => invoke<UserPageInformation>("user_page_information"),
-    selectUser: async (userName: string) => invoke<void>("user_select_user", { userName: userName }),
-    addUser: async (user: UserType) => invoke<void>("user_add", { user: user }),
+    selectUser: async (userId: number) => invoke<void>("user_select_user", { userId: userId }),
+    createUser: async () => invoke<UserType>("user_create"),
     updateUser: async (user: UserType) => invoke<void>("user_update", { user: user }),
-    deleteUser: async (userName: string) => invoke<void>("user_delete", { userName: userName }),
+    deleteUser: async (userId: number) => invoke<void>("user_delete", { userId: userId }),
     startMeasureWeight: async (channel: Channel<number>, macAddress: number) =>
       invoke<void>("user_measure_weight", { channel: channel, macAddress: macAddress }),
   },

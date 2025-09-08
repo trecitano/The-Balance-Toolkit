@@ -35,7 +35,7 @@ const SettingField: React.FC<SettingFieldProps> = ({ label, tooltipId, children 
   return (
     <div className="setting-item">
       <label>
-        <div className={"flex gap-2"}>
+        <div className={"flex gap-2 items-center"}>
           <span className={"text-sm"}>{label}</span>
           <Tooltip tooltipId={tooltipId} />
         </div>
@@ -105,7 +105,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
           <div className="settings-section">
             <h3>TCP Settings</h3>
 
-            <SettingField label={"TCP Connection String"} tooltipId={'settings_tcp_host'}>
+            <SettingField label={"TCP Connection String"} tooltipId={'settings_tcp'}>
               <InputPrimitive
                 type="text"
                 value={tempSettings.tcpConnectionString}

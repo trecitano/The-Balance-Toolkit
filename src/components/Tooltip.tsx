@@ -34,7 +34,7 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
           )}
 
           {tooltipData.equation && (
-            <div className="font-mono text-xs bg-gray-800 px-2 py-1 rounded border text-blue-200">
+            <div className="font-mono text-sm bg-gray-800 px-2 py-1 rounded border text-blue-200">
               {tooltipData.equation}
             </div>
           )}

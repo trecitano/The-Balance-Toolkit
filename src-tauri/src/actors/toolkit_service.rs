@@ -6,7 +6,7 @@ use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem, SettingsFi
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::lsl_writer::LslConnectionSettings;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
-use crate::types::{FrontendCoreSession, FrontendSessionInformation, FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, SelectedBoard, FrontendLastSessionInformation, User, OngoingSessionActivityState, SessionActivityState};
+use crate::types::{FrontendCoreSession, FrontendSessionInformation, FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, SelectedBoard, FrontendLastSessionInformation, User, OngoingSessionActivityState, SessionActivityState, SelectOption};
 use crate::{file_system, utils};
 use anyhow::{anyhow, Result};
 use file_system::UserFileSystem;
@@ -36,21 +36,20 @@ pub enum ToolkitCommand {
 
     // Users
     SelectUser {
-        user_name: String,
+        user_id: usize,
     },
     GetSelectedUser {
-        response: oneshot::Sender<String>
+        response: oneshot::Sender<usize>
     },
     CreateUser {
-        user: User,
-        response: oneshot::Sender<()>
+        response: oneshot::Sender<Arc<User>>
     },
     UpdateUser {
         user: User,
         response: oneshot::Sender<()>
     },
     DeleteUser {
-        user_name: String,
+        user_id: usize,
         response: oneshot::Sender<()>
     },
     MeasureWeight {
@@ -315,23 +314,23 @@ impl ConnectionManager {
                 }
 
                 // Users
-                ToolkitCommand::SelectUser { user_name } => {
-                    let user = self.user_state.get_user(&user_name);
+                ToolkitCommand::SelectUser { user_id } => {
+                    let user = self.user_state.get_user(user_id);
                     self.session_settings.core.user = user;
                 }
                 ToolkitCommand::GetSelectedUser { response } => {
-                    response.send(self.session_settings.core.user.name.clone()).unwrap();
+                    response.send(self.session_settings.core.user.id).unwrap();
                 }
-                ToolkitCommand::CreateUser { user, response } => {
-                    self.user_state.create_user(user)?;
-                    response.send(()).unwrap();
+                ToolkitCommand::CreateUser { response } => {
+                    let new_user = self.user_state.create_user()?;
+                    response.send(new_user).unwrap();
                 }
                 ToolkitCommand::UpdateUser { user, response } => {
                     self.user_state.update_user(user)?;
                     response.send(()).unwrap();
                 }
-                ToolkitCommand::DeleteUser { user_name, response } => {
-                    self.user_state.delete_user(&user_name)?;
+                ToolkitCommand::DeleteUser { user_id, response } => {
+                    self.user_state.delete_user(user_id)?;
                     response.send(()).unwrap();
                 }
 
@@ -403,7 +402,7 @@ impl ConnectionManager {
                             .collect();
 
                     let session_information = FrontendSessionInformation {
-                        available_users: UserFileSystem::get_users()?.into_iter().map(|user| user.name).collect(),
+                        available_users: UserFileSystem::get_users()?.into_iter().map(|user| SelectOption { label: user.name, value: user.id }).collect(),
                         selected_boards,
                         core: (&self.session_settings.core).into(),
                         activity: self.session_settings.core.activity.clone(),
@@ -412,7 +411,7 @@ impl ConnectionManager {
                     response.send(session_information).unwrap();
                 }
                 ToolkitCommand::UpdateSessionInformation { configuration, response } => {
-                    self.session_settings.core.user = self.user_state.get_user(&configuration.selected_user);
+                    self.session_settings.core.user = self.user_state.get_user(configuration.selected_user);
                     self.session_settings.core.lsl_enabled = configuration.lsl_enabled;
                     self.session_settings.core.tcp_enabled = configuration.tcp_enabled;
                     self.session_settings.core.output_directory = configuration.output_directory;
