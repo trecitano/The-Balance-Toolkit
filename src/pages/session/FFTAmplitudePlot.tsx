@@ -10,7 +10,7 @@ type InitialAxes = "x" | "y" | "xy" | "all";
 
 interface Props {
   title: string;
-  tooltipText?: string;
+  tooltipId?: string;
   macAddress: number;
   store: SessionStore; // Replace with your StoreApi<SessionState> if desired
   initialAxes?: InitialAxes; // default visibility preset
@@ -25,7 +25,7 @@ interface MetricConfig {
 
 const MAX_FREQ = 2.0;
 
-export function FFTAmplitudePlot({ title, tooltipText, macAddress, store }: Props) {
+export function FFTAmplitudePlot({ title, tooltipId, macAddress, store }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const plotRef = useRef<uPlot | null>(null);
 
@@ -191,9 +191,9 @@ export function FFTAmplitudePlot({ title, tooltipText, macAddress, store }: Prop
       <div className={"relative flex h-1/10 items-center justify-center"}>
         <div className={"relative font-semibold"}>
           {title}
-          {tooltipText && (
+          {tooltipId && (
             <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
-              <Tooltip tooltipText={tooltipText} />
+              <Tooltip tooltipId={tooltipId} />
             </div>
           )}
         </div>

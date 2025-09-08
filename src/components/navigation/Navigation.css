@@ -60,6 +60,10 @@
     color var(--transition);
 }
 
+.menu-item.disabled {
+  cursor: not-allowed;
+}
+
 .menu-item-text {
   margin-right: 0;
   display: block;
@@ -79,7 +83,7 @@
   padding: 4px 8px;
 }
 
-.menu-item:hover:not(.active) .menu-item-icon {
+.menu-item:hover:not(.active):not(.disabled) .menu-item-icon {
   background: var(--red-dark);
   border-radius: 20px;
   width: calc(var(--icon-size-md) * 2.5);
@@ -115,7 +119,6 @@
 }
 
 .menu-item.home .menu-item-icon img,
-.menu-item.devices .menu-item-icon img,
 .menu-item.users .menu-item-icon img,
 .menu-item.session .menu-item-icon img,
 .menu-item.activities .menu-item-icon img {

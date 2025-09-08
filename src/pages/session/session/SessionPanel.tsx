@@ -61,7 +61,7 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="User" className="col-span-3" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="User" className="col-span-3" tooltipId={"session_user"}>
           <SelectPrimitive
             disabled={disabled}
             value={value?.selectedUser ?? ""}
@@ -70,7 +70,7 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Size (ms)" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="Window Size (ms)" className="col-span-2" tooltipId={"session_window_size"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -79,7 +79,7 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Slide (ms)" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="Window Slide (ms)" className="col-span-2" tooltipId={"session_window_slide"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -87,7 +87,7 @@ export function SessionPanel({
             onChange={(e) => update("windowSlideMs", Number(e.target.value))}
           />
         </SingleColumn>
-        <SingleColumn label="Sampling Rate" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="Sampling Rate" className="col-span-2" tooltipId={"session_sampling_rate"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -96,7 +96,7 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Interpolation" className="col-span-2" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="Interpolation" className="col-span-2" tooltipId={"session_interpolation"}>
           <SelectPrimitive
             disabled={disabled}
             value={value?.interpolation ?? "Linear"}
@@ -120,7 +120,7 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="LSL" direction="row" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="LSL" direction="row" tooltipId={"session_lsl_toggle"}>
           <Checkbox
             disabled={disabled}
             className={"ml-2"}
@@ -130,7 +130,7 @@ export function SessionPanel({
           <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{value?.lslEnabled ? "ON" : "OFF"}</span>
         </SingleColumn>
 
-        <SingleColumn label="TCP" direction="row" tooltipText={"TODO!!!!!!!"}>
+        <SingleColumn label="TCP" direction="row" tooltipId={"session_tcp_toggle"}>
           <Checkbox
             disabled={disabled}
             className={"ml-2"}
@@ -145,7 +145,7 @@ export function SessionPanel({
           backgroundType="transparent"
           className="col-start-7 col-end-15"
           actionText="Clear"
-          tooltipText={"TODO!!!!!!!"}
+          tooltipId={"session_save_location"}
           onActionClick={() => update("outputDirectory", "")}
         >
           <div className={"flex h-8 items-center gap-2"}>

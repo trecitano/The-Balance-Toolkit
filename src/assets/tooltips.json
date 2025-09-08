@@ -1,0 +1,230 @@
+[
+  {
+    "id": "session_user",
+    "name": "",
+    "equation": "",
+    "tooltip": "This session will use the weight value you entered for this user at the Users menu."
+  },
+  {
+    "id": "session_lsl_toggle",
+    "name": "Enable LSL Output",
+    "equation": "",
+    "tooltip": "Toggle to stream data over LabStreamingLayer (LSL). Stream name and source ID are configured in Settings."
+  },
+  {
+    "id": "session_tcp_toggle",
+    "name": "Enable TCP Output",
+    "equation": "",
+    "tooltip": "Toggle to send data over a TCP connection. Host and port are configured in Settings."
+  },
+  {
+    "id": "session_window_size",
+    "name": "Window Size",
+    "equation": "T_window = window_size_ms / 1000",
+    "tooltip": "Duration of data used per computation window. Larger windows smooth metrics; smaller windows react faster. Units: milliseconds (ms)."
+  },
+  {
+    "id": "session_window_slide",
+    "name": "Window Slide (Hop)",
+    "equation": "T_hop = window_slide_ms / 1000",
+    "tooltip": "Time step between consecutive windows. Smaller hops update graphs more often with more overlap. Units: milliseconds (ms)."
+  },
+  {
+    "id": "session_sampling_rate",
+    "name": "Sampling Rate",
+    "equation": "f_s = sampling_rate; dt = 1 / f_s",
+    "tooltip": "Uniform resampling rate used after interpolation. Higher f_s captures faster sway but increases compute. Units: Hertz (Hz); dt in seconds (s)."
+  },
+  {
+    "id": "session_interpolation",
+    "name": "Interpolation Method",
+    "equation": "",
+    "tooltip": "How irregular COP samples are resampled to uniform time: Linear (fast), Cubic (smooth), Polynomial/Lagrange (local, higher-order). Affects spectra and velocity estimates."
+  },
+  {
+    "id": "session_save_location",
+    "name": "Save Location",
+    "equation": "",
+    "tooltip": "Folder where session outputs are stored. Provide an absolute or app-accessible path."
+  },
+  {
+    "id": "session_cop_x",
+    "name": "Center of Pressure (X)",
+    "equation": "COP_x = ((TR + BR) − (TL + BL)) / (TR + BR + TL + BL)",
+    "tooltip": "Lateral COP position (unitless ratio, ~−1 left to +1 right). TR, BR, TL, BL = corner forces (Newtons)."
+  },
+  {
+    "id": "session_cop_y",
+    "name": "Center of Pressure (Y)",
+    "equation": "COP_y = ((TR + TL) − (BR + BL)) / (TR + BR + TL + BL)",
+    "tooltip": "Anterior–posterior COP position (unitless ratio, ~−1 back to +1 front). TR, BR, TL, BL = corner forces (Newtons)."
+  },
+  {
+    "id": "session_cop_z",
+    "name": "Total Force",
+    "equation": "COP_z = TR + BR + TL + BL",
+    "tooltip": "Total load on the board (Newtons)."
+  },
+  {
+    "id": "session_stability_index",
+    "name": "Stability Index",
+    "equation": "SI = sqrt( (1/N) * Σ_i [ (x_i − x̄)^2 + (y_i − ȳ)^2 ] )",
+    "tooltip": "RMS distance of COP from its mean (unitless). N = number of samples, x̄ = mean COP X, ȳ = mean COP Y."
+  },
+  {
+    "id": "session_mean_velocity_x",
+    "name": "Mean Velocity (X)",
+    "equation": "v_cop_x = mean( |Δx_i| / Δt_i )",
+    "tooltip": "Average absolute COP velocity along X (units: ratio/s). Δx_i = COP X change, Δt_i = time step (s)."
+  },
+  {
+    "id": "session_mean_velocity_y",
+    "name": "Mean Velocity (Y)",
+    "equation": "v_cop_y = mean( |Δy_i| / Δt_i )",
+    "tooltip": "Average absolute COP velocity along Y (units: ratio/s). Δy_i = COP Y change, Δt_i = time step (s)."
+  },
+  {
+    "id": "session_mean_velocity",
+    "name": "Mean Velocity",
+    "equation": "mean_velocity = mean( sqrt( (Δx_i)^2 + (Δy_i)^2 ) / Δt_i )",
+    "tooltip": "Average resultant COP speed (units: ratio/s). Δx_i, Δy_i = COP changes, Δt_i = time step (s)."
+  },
+  {
+    "id": "session_total_path_length",
+    "name": "Total Path Length",
+    "equation": "L = Σ_i sqrt( (Δx_i)^2 + (Δy_i)^2 )",
+    "tooltip": "Total distance traveled by COP (unitless path length in ratio units)."
+  },
+  {
+    "id": "session_velocity_moment",
+    "name": "Velocity Moment",
+    "equation": "velocity_moment = total_path_length / total_time",
+    "tooltip": "Average speed of COP over time (units: ratio/s)."
+  },
+  {
+    "id": "session_mlsi",
+    "name": "Medio-Lateral Stability Index",
+    "equation": "MLSI = sqrt( (1/N) * Σ_i x_i^2 )",
+    "tooltip": "RMS COP excursion along X (unitless ratio)."
+  },
+  {
+    "id": "session_apsi",
+    "name": "Anterior–Posterior Stability Index",
+    "equation": "APSI = sqrt( (1/N) * Σ_i y_i^2 )",
+    "tooltip": "RMS COP excursion along Y (unitless ratio)."
+  },
+  {
+    "id": "session_vsi",
+    "name": "Vertical Stability Index",
+    "equation": "VSI = sqrt( (1/N) * Σ_i (baseline − z_i)^2 )",
+    "tooltip": "RMS deviation of force from baseline load (Newtons). z_i = total force, baseline = given or mean(z)."
+  },
+  {
+    "id": "session_dpsi",
+    "name": "Dynamic Postural Stability Index",
+    "equation": "DPSI = sqrt( (1/N) * Σ_i [ x_i^2 + y_i^2 + (baseline − z_i)^2 ] )",
+    "tooltip": "Combined RMS of medio-lateral, anterior–posterior, and vertical components (mixed units: ratio + Newtons)."
+  },
+  {
+    "id": "session_confidence_ellipse",
+    "name": "Confidence Ellipse (95%)",
+    "equation": "r1 = sqrt(χ²₂(0.95)·λ1), r2 = sqrt(χ²₂(0.95)·λ2), θ = eigenvector angle",
+    "tooltip": "Ellipse enclosing ~95% of COP points (unitless). r1, r2 = semi-axes, θ = rotation angle (rad)."
+  },
+  {
+    "id": "session_convex_hull",
+    "name": "Convex Hull",
+    "equation": "Polygon enclosing all {(x_i, y_i)} with minimal convex boundary",
+    "tooltip": "Smallest convex polygon containing all COP points (unitless)."
+  },
+  {
+    "id": "session_amplitude_spectrum",
+    "name": "Amplitude Spectrum",
+    "equation": "A_x(f_k) = scale·|FFT_x[k]|, A_y(f_k) = scale·|FFT_y[k]|, A_xy = sqrt(A_x^2 + A_y^2)",
+    "tooltip": "Frequency amplitudes of COP (unitless ratios vs Hz). f_k = frequency bin (Hz), scale = 2/N or 1/N ÷ Hann coherent gain."
+  },
+  {
+    "id": "settings_tcp_host",
+    "name": "TCP Address",
+    "equation": "",
+    "tooltip": "Enter the server address in IPv4 format (e.g., 127.0.0.1) or hostname (e.g., myserver.local). IPv6 is not supported. Must be reachable from this device."
+  },
+  {
+    "id": "settings_tcp_port",
+    "name": "TCP Port",
+    "equation": "",
+    "tooltip": "Enter a valid TCP port number. Recommended range: 1024–49151. Port must not already be in use and must match the listening server."
+  },
+  {
+    "id": "settings_raw_data",
+    "name": "Raw Data",
+    "equation": "",
+    "tooltip": "Toggle to send raw sensor readings from the Wii Balance Board: TR (top-right), TL (top-left), BR (bottom-right), BL (bottom-left). Units: sensor force in Newtons."
+  },
+  {
+    "id": "settings_processed_data",
+    "name": "Processed Data",
+    "equation": "",
+    "tooltip": "Toggle to send computed metrics (e.g., COP, stability, sway, spectra). This includes derived values rather than raw forces."
+  },
+  {
+    "id": "settings_lsl_stream_name",
+    "name": "LSL Stream Name",
+    "equation": "",
+    "tooltip": "Name for the LabStreamingLayer stream (string, no spaces recommended). Used by LSL clients to subscribe to this stream."
+  },
+  {
+    "id": "settings_lsl_source_id",
+    "name": "LSL Source ID",
+    "equation": "",
+    "tooltip": "Unique identifier for the LSL source (string). Must remain stable across sessions so receivers can recognize the same device."
+  },
+  {
+    "id": "settings_default_save_location",
+    "name": "Default Save Location",
+    "equation": "",
+    "tooltip": "Path to the directory where output files will be saved by default."
+  },
+  {
+    "id": "settings_store_raw_data",
+    "name": "Store Raw Data",
+    "equation": "",
+    "tooltip": "Toggle to store raw sensor data: TR (top-right), TL (top-left), BR (bottom-right), BL (bottom-left)."
+  },
+  {
+    "id": "settings_store_processed_data",
+    "name": "Store Processed Data",
+    "equation": "",
+    "tooltip": "Toggle to store processed data: COP (center of pressure), stability metrics, and spectral features."
+  },
+  {
+    "id": "settings_window_size",
+    "name": "Window Size",
+    "equation": "",
+    "tooltip": "Set the size of the analysis window (in samples)."
+  },
+  {
+    "id": "settings_slide_size",
+    "name": "Slide Size",
+    "equation": "",
+    "tooltip": "Set the size of the sliding window (in samples)."
+  },
+  {
+    "id": "settings_sampling_rate",
+    "name": "Sampling Rate",
+    "equation": "",
+    "tooltip": "Set the sampling rate (in Hz) for data acquisition."
+  },
+  {
+    "id": "settings_interpolation_method",
+    "name": "Interpolation Method",
+    "equation": "",
+    "tooltip": "Select the interpolation method for resampling data: Linear (fast), Cubic (smooth), Polynomial/Lagrange (local, higher-order). Affects spectra and velocity estimates."
+  },
+  {
+    "id": "settings_demo_mode",
+    "name": "Demo Mode",
+    "equation": "",
+    "tooltip": "Toggle demo mode to simulate sensor input."
+  }
+]
