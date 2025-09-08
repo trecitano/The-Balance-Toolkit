@@ -15,7 +15,7 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   backgroundType?: BackgroundType;
   actionText?: string;
   onActionClick?: () => void;
-  tooltipText?: string;
+  tooltipId?: string;
 }
 
 export const SingleColumn: React.FC<InputFieldProps> = ({
@@ -29,7 +29,7 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
   backgroundType = "transparent",
   actionText,
   onActionClick,
-  tooltipText,
+  tooltipId,
 }) => {
   return (
     <div
@@ -50,7 +50,7 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
               {icon && <span className="h-5 w-5 flex-shrink-0">{icon}</span>}
               {label}
               {requiredField && <span className="font-bold text-red-500">*</span>}
-              {tooltipText && <Tooltip tooltipText={tooltipText} />}
+              {tooltipId && <Tooltip tooltipId={tooltipId} />}
             </div>
           </label>
 

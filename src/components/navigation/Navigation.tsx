@@ -1,7 +1,7 @@
 import { useState } from "react";
 import logo from "@/assets/logo/logo-flamingo-white.svg";
 import homeIcon from "@/assets/home-icon.svg";
-import devicesIcon from "@/assets/wbb-top-white.svg";
+import devicesIcon from "@/assets/wbb-top-bold.svg";
 import usersIcon from "@/assets/users-icon.svg";
 import sessionIcon from "@/assets/session-icon.svg";
 import replayIcon from "@/assets/replay-icon.svg";
@@ -69,7 +69,7 @@ function Navigation({ activeView, onViewChange, className }: NavigationProps) {
             {menuItems.map((item) => (
               <li
                 key={item.id}
-                className={clsx("menu-item", item.id, activeView === item.id && "active", hasOngoingSession && "opacity-65")}
+                className={clsx("menu-item", item.id, activeView === item.id && "active", hasOngoingSession && "opacity-65 disabled cursor-not-allowed")}
                 onClick={() => {
                   if (!hasOngoingSession) {
                     onViewChange(item.id);
@@ -87,7 +87,8 @@ function Navigation({ activeView, onViewChange, className }: NavigationProps) {
       </div>
       <div className="menu-bottom">
         {/* Settings */}
-        <button className="menu-item settings unstyled-button" title="Settings" onClick={handleSettingsClick}>
+        <button className={clsx("menu-item settings unstyled-button", hasOngoingSession && "opacity-65 disabled cursor-not-allowed")}
+          title="Settings" onClick={handleSettingsClick}>
           <span className="menu-item-icon">
             <img src={settingsIcon} alt="Settings" className="nav-icon-sm" />
           </span>

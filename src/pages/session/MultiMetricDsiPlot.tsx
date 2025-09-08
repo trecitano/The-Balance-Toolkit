@@ -222,7 +222,7 @@ export function MultiMetricPlot({
           {title}
           {tooltipText && (
             <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
-              <Tooltip tooltipText={tooltipText} />
+              <Tooltip tooltipId={'session_user'} />
             </div>
           )}
         </div>

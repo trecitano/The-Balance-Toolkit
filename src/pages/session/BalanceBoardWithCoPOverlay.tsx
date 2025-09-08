@@ -175,7 +175,7 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
         </div>
       </div>
 
-      <StabilityBarGauge macAddress={macAddress} store={store} width={50} height={150} tooltipText={"TODO"} />
+      <StabilityBarGauge macAddress={macAddress} store={store} width={50} height={150} tooltipId={"session_stability_index"} />
     </div>
   );
 }

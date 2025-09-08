@@ -6,7 +6,7 @@ interface StabilityBarGaugeProps {
   macAddress: number;
   store: SessionStore;
   title?: string;
-  tooltipText?: string;
+  tooltipId?: string;
   width?: number;
   height?: number;
 }
@@ -15,7 +15,7 @@ export function StabilityBarGauge({
   macAddress,
   store,
   title = "Stability",
-  tooltipText,
+  tooltipId,
   width = 60,
   height = 200,
 }: StabilityBarGaugeProps) {
@@ -97,9 +97,9 @@ export function StabilityBarGauge({
     <div className="flex flex-col items-center">
       <div className={"relative font-semibold"}>
         {title}
-        {tooltipText && (
+        {tooltipId && (
           <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
-            <Tooltip tooltipText={tooltipText} />
+            <Tooltip tooltipId={tooltipId} />
           </div>
         )}
       </div>

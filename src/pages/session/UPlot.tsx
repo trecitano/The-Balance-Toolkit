@@ -16,14 +16,14 @@ export const GREEN_COLOUR = "#10b981";
 
 export function UPlot<T>({
   title,
-  tooltipText,
+  tooltipId,
   uPlotOptions,
   dataSelector,
   dataMapper,
   store,
 }: {
   title: string;
-  tooltipText?: string;
+  tooltipId?: string;
   uPlotOptions: uPlot.Options;
   dataSelector: DataSelector<T>;
   dataMapper: DataMapper<T>;
@@ -83,9 +83,9 @@ export function UPlot<T>({
       <div className={"relative flex h-1/10 items-center justify-center"}>
         <div className={"relative font-semibold"}>
           {title}
-          {tooltipText && (
+          {tooltipId && (
             <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
-              <Tooltip tooltipText={tooltipText} />
+              <Tooltip tooltipId={tooltipId} />
             </div>
           )}
         </div>

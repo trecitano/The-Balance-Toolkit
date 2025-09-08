@@ -9,6 +9,7 @@ import { DEVICES_QUERY_KEY } from "@/pages/devices/Devices.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import {Checkbox} from "@/components/Checkbox.tsx";
 import {Modal} from "@/components/Modal.tsx";
+import {Tooltip} from "@/components/Tooltip.tsx";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -26,14 +27,18 @@ export const SettingsQuery = {
 
 interface SettingFieldProps {
   label: string;
+  tooltipId: string;
   children: ReactNode;
 }
 
-const SettingField: React.FC<SettingFieldProps> = ({ label, children }) => {
+const SettingField: React.FC<SettingFieldProps> = ({ label, tooltipId, children }) => {
   return (
     <div className="setting-item">
       <label>
-        <span className={"text-sm"}>{label}</span>
+        <div className={"flex gap-2"}>
+          <span className={"text-sm"}>{label}</span>
+          <Tooltip tooltipId={tooltipId} />
+        </div>
         {children}
       </label>
     </div>
@@ -100,20 +105,20 @@ function Settings({ isOpen, onClose }: SettingsProps) {
           <div className="settings-section">
             <h3>TCP Settings</h3>
 
-            <SettingField label={"TCP Connection String"}>
+            <SettingField label={"TCP Connection String"} tooltipId={'settings_tcp_host'}>
               <InputPrimitive
                 type="text"
                 value={tempSettings.tcpConnectionString}
                 onChange={(e) => handleGeneralSettingsUpdate("tcpConnectionString", e.target.value)}
               />
             </SettingField>
-            <SettingField label={"Send Raw Data?"}>
+            <SettingField label={"Send Raw Data?"} tooltipId={'settings_raw_data'}>
               <Checkbox
                 checked={tempSettings.tcpSendRawData}
                 onChange={(e) => handleGeneralSettingsUpdate("tcpSendRawData", e.target.checked)}
               />
             </SettingField>
-            <SettingField label={"Send Processed Data?"}>
+            <SettingField label={"Send Processed Data?"} tooltipId={'settings_processed_data'}>
               <Checkbox
                 checked={tempSettings.tcpSendProcessedData}
                 onChange={(e) => handleGeneralSettingsUpdate("tcpSendProcessedData", e.target.checked)}
@@ -124,26 +129,26 @@ function Settings({ isOpen, onClose }: SettingsProps) {
           <div className="settings-section">
             <h3>LSL Settings</h3>
 
-            <SettingField label={"LSL Stream Name"}>
+            <SettingField label={"LSL Stream Name"} tooltipId={'settings_lsl_stream_name'}>
               <InputPrimitive
                 value={tempSettings.lslStreamName}
                 onChange={(e) => handleGeneralSettingsUpdate("lslStreamName", e.target.value)}
               />
             </SettingField>
-            <SettingField label={"LSL Source ID"}>
+            <SettingField label={"LSL Source ID"} tooltipId={'settings_lsl_source_id'}>
               <InputPrimitive
                 type="text"
                 value={tempSettings.lslSourceId}
                 onChange={(e) => handleGeneralSettingsUpdate("lslSourceId", e.target.value)}
               />
             </SettingField>
-            <SettingField label={"Send Raw Data?"}>
+            <SettingField label={"Send Raw Data?"} tooltipId={'settings_raw_data'}>
               <Checkbox
                 checked={tempSettings.lslSendRawData}
                 onChange={(e) => handleGeneralSettingsUpdate("lslSendRawData", e.target.checked)}
               />
             </SettingField>
-            <SettingField label={"Send Processed Data?"}>
+            <SettingField label={"Send Processed Data?"} tooltipId={'settings_processed_data'}>
               <Checkbox
                 checked={tempSettings.lslSendProcessedData}
                 onChange={(e) => handleGeneralSettingsUpdate("lslSendProcessedData", e.target.checked)}
@@ -154,7 +159,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
           <div className="settings-section">
             <h3>Save Session Data</h3>
 
-            <SettingField label={"Default save location"}>
+            <SettingField label={"Default save location"} tooltipId={'settings_default_save_location'}>
               <button
                 className="browse-btn"
                 onClick={async () => {
@@ -171,13 +176,13 @@ function Settings({ isOpen, onClose }: SettingsProps) {
                 Browse
               </button>
             </SettingField>
-            <SettingField label={"Store Raw Data"}>
+            <SettingField label={"Store Raw Data"} tooltipId={'settings_store_raw_data'}>
               <Checkbox
                 checked={tempSettings.storeRawSession}
                 onChange={(e) => handleGeneralSettingsUpdate("storeRawSession", e.target.checked)}
               />
             </SettingField>
-            <SettingField label={"Store Processed Data"}>
+            <SettingField label={"Store Processed Data"} tooltipId={'settings_store_processed_data'}>
               <Checkbox
                 checked={tempSettings.storeProcessedData}
                 onChange={(e) => handleGeneralSettingsUpdate("storeProcessedData", e.target.checked)}
@@ -188,28 +193,28 @@ function Settings({ isOpen, onClose }: SettingsProps) {
           <div className="settings-section">
             <h3>Session Processing Configuration</h3>
 
-            <SettingField label={"Window size (ms)"}>
+            <SettingField label={"Window size (ms)"} tooltipId={'settings_window_size'}>
               <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.windowSizeMs}
                 onChange={(e) => handleProcessedSettingsUpdate("windowSizeMs", Number(e.target.value))}
               />
             </SettingField>
-            <SettingField label={"Window Slide size (ms)"}>
+            <SettingField label={"Window Slide size (ms)"} tooltipId={'settings_slide_size'}>
               <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.windowSlideMs}
                 onChange={(e) => handleProcessedSettingsUpdate("windowSlideMs", Number(e.target.value))}
               />
             </SettingField>
-            <SettingField label={"Sampling Rate"}>
+            <SettingField label={"Sampling Rate"} tooltipId={'settings_sampling_rate'}>
               <InputPrimitive
                 type="number"
                 value={tempSettings.processingSettings.samplingRate}
                 onChange={(e) => handleProcessedSettingsUpdate("samplingRate", Number(e.target.value))}
               />
             </SettingField>
-            <SettingField label={"Interpolation Method"}>
+            <SettingField label={"Interpolation Method"} tooltipId={'settings_interpolation_method'}>
               <SelectPrimitive
                 className={"min-w-35"}
                 value={tempSettings.processingSettings.interpolation}
@@ -222,7 +227,7 @@ function Settings({ isOpen, onClose }: SettingsProps) {
           <div className="settings-section">
             <h3>Demo Mode</h3>
 
-            <SettingField label={"Enable Demo Mode"}>
+            <SettingField label={"Enable Demo Mode"} tooltipId={'settings_demo_mode'}>
               <Checkbox
                 checked={tempSettings.isDemoMode}
                 onChange={(e) => handleGeneralSettingsUpdate("isDemoMode", e.target.checked)}

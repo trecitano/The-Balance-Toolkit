@@ -43,16 +43,16 @@ export function ComplexBoardPanel({
         </div>
 
         <div className="col-span-3 rounded bg-gray-100 p-2">
-          <UPlot title="copX" tooltipText={"TODO"} {...copXPlotSettings(macAddress)} store={store} />
+          <UPlot title="copX" tooltipId={"session_cop_x"} {...copXPlotSettings(macAddress)} store={store} />
         </div>
         <div className="col-span-3 rounded bg-gray-100 p-2">
-          <UPlot title="copY" tooltipText={"TODO"} {...copYPlotSettings(macAddress)} store={store} />
+          <UPlot title="copY" tooltipId={"session_cop_y"} {...copYPlotSettings(macAddress)} store={store} />
         </div>
 
         <div className="col-span-3 rounded bg-gray-100 p-2">
           <FFTAmplitudePlot
             title="FFT Amplitude Spectrum (Normalized)"
-            tooltipText={"TODO"}
+            tooltipId={"session_amplitude_spectrum"}
             macAddress={macAddress}
             store={store}
           />
@@ -66,7 +66,7 @@ export function ComplexBoardPanel({
         <div className="col-span-3 rounded bg-gray-100 p-2">
           <UPlot
             title="vCopX"
-            tooltipText={"TODO"}
+            tooltipId={"session_mean_velocity_x"}
             uPlotOptions={standardPlot(BLUE_COLOUR)}
             dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
             dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopX)}
@@ -77,7 +77,7 @@ export function ComplexBoardPanel({
         <div className="col-span-3 rounded bg-gray-100 p-2">
           <UPlot
             title="vCopY"
-            tooltipText={"TODO"}
+            tooltipId={"session_mean_velocity_y"}
             uPlotOptions={standardPlot(RED_COLOUR)}
             dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
             dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopY)}
