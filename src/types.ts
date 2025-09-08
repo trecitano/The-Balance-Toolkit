@@ -82,6 +82,7 @@ export type SessionPanelConfiguration = {
 };
 
 export type ReplayConfiguration = {
+  user: UserType;
   core: SessionPanelConfiguration;
   devices: SelectedBoard[];
   activity?: Activity;

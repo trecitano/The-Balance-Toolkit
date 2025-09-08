@@ -21,7 +21,7 @@ export function ReplayPanel({
   onBoardDisplayChange: (ids: number[]) => void;
   boardDisplayOptions: BaseOption<number>[];
   onChange: (v: ReplayConfiguration) => void;
-  onPickSessionFile: () => void;
+  onPickSessionFile: (defaultPath?: string | null) => void;
   onResetFile: () => void;
 }) {
   const update = <K extends keyof SessionPanelConfiguration>(key: K, val: SessionPanelConfiguration[K]) => {
@@ -61,7 +61,7 @@ export function ReplayPanel({
         </SingleColumn>
 
         <SingleColumn label="User" className="col-span-8" tooltipId={"session_user"}>
-          <InputPrimitive disabled={true} value={config?.core.selectedUser ?? "No User"} />
+          <InputPrimitive disabled={true} value={config?.user.name ?? "No User"} />
         </SingleColumn>
 
         <SingleColumn label="Window Size (ms)" className="col-span-4" tooltipId={"session_window_size"}>
@@ -139,9 +139,9 @@ export function ReplayPanel({
           <div className="flex h-8 items-center gap-2">
             <button
               type="button"
-              disabled={disabled}
+              disabled={config?.hasOngoingSession ?? false}
               className="h-8 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200"
-              onClick={onPickSessionFile}
+              onClick={() => onPickSessionFile(config?.core?.outputDirectory)}
             >
               Choose…
             </button>

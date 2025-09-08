@@ -175,6 +175,7 @@ impl From<&CoreSessionConfiguration> for FrontendCoreSession {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FrontendReplayConfiguration {
+    pub user: User,
     pub core: FrontendCoreSession,
     pub devices: Vec<SelectedBoard>,
     pub activity: Option<Activity>,
@@ -185,6 +186,7 @@ pub struct FrontendReplayConfiguration {
 impl From<&ReplayConfiguration> for FrontendReplayConfiguration {
     fn from(cfg: &ReplayConfiguration) -> Self {
         FrontendReplayConfiguration {
+            user: cfg.core.user.as_ref().clone(),
             devices: cfg.device_names.iter().map(|(mac_address, name)| {
                 SelectedBoard {
                     name: name.clone(),
