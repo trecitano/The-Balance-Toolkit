@@ -3,7 +3,13 @@ import { useTooltipText } from "@/hooks/useTooltipText";
 import clsx from "clsx";
 
 const InfoIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <svg
+    className={className}
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+    xmlns="http://www.w3.org/2000/svg"
+  >
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -12,6 +18,23 @@ const InfoIcon: React.FC<{ className?: string }> = ({ className }) => (
     />
   </svg>
 );
+
+function isClippingOverflow(value: string) {
+  // Treat auto | scroll | hidden | clip as clipping contexts
+  return /(auto|scroll|hidden|clip)/.test(value);
+}
+
+function nearestOverflowAncestor(el: HTMLElement | null): HTMLElement | null {
+  let node = el?.parentElement || null;
+  while (node && node !== document.body) {
+    const cs = window.getComputedStyle(node);
+    if (isClippingOverflow(cs.overflowY) || isClippingOverflow(cs.overflow)) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
 
 export function Tooltip({ tooltipId }: { tooltipId: string }) {
   const tooltipData = useTooltipText(tooltipId);
@@ -23,23 +46,38 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
     const handleMouseEnter = () => {
       if (!containerRef.current || !tooltipRef.current) return;
 
-      const containerRect = containerRef.current.getBoundingClientRect();
+      const triggerRect =
+        containerRef.current.getBoundingClientRect();
       const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
-      // Calculate space above the trigger element
-      const spaceAbove = containerRect.top;
-      // Add some buffer (e.g., 20px) to ensure tooltip doesn't get cut off
-      const tooltipHeight = tooltipRect.height || 200; // Fallback height estimate
-      const buffer = 20;
+      const overflowParent = nearestOverflowAncestor(
+        containerRef.current
+      );
 
-      // If there's not enough space above, show below
-      setShowBelow(spaceAbove < tooltipHeight + buffer);
+      // The top boundary that can clip the tooltip is the intersection
+      // of the viewport top (0) and the nearest overflow ancestor top.
+      const boundaryTop = Math.max(
+        0,
+        overflowParent
+          ? overflowParent.getBoundingClientRect().top
+          : 0
+      );
+
+      const spaceAboveWithin = triggerRect.top - boundaryTop;
+
+      const tooltipHeight = tooltipRect.height || 200;
+      const buffer = 20; // spacing + safety
+
+      // If placing above would be clipped by the overflow boundary (or viewport),
+      // then place it below instead.
+      setShowBelow(spaceAboveWithin < tooltipHeight + buffer);
     };
 
     const container = containerRef.current;
     if (container) {
-      container.addEventListener('mouseenter', handleMouseEnter);
-      return () => container.removeEventListener('mouseenter', handleMouseEnter);
+      container.addEventListener("mouseenter", handleMouseEnter);
+      return () =>
+        container.removeEventListener("mouseenter", handleMouseEnter);
     }
   }, []);
 
@@ -51,7 +89,10 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
       <div
         ref={tooltipRef}
         className={clsx(
-          "min-w-60 px-3 py-2 text-sm pointer-events-none absolute left-1/2 z-30 -translate-x-1/2 transform rounded-md bg-gray-900 text-white opacity-0 shadow-lg transition-opacity duration-200 group-hover:opacity-100",
+          "min-w-60 px-3 py-2 text-sm pointer-events-none absolute left-1/2 z-30",
+          "-translate-x-1/2 transform rounded-md bg-gray-900 text-white",
+          "opacity-0 shadow-lg transition-opacity duration-200",
+          "group-hover:opacity-100",
           showBelow ? "top-full mt-2" : "bottom-full mb-2"
         )}
       >
@@ -73,26 +114,31 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
             {tooltipData.tooltip}
           </div>
 
-          {tooltipData.description && tooltipData.description.length > 0 && (
-            <div className="border-t border-gray-700 pt-2">
-              <ul className="space-y-1 text-xs text-gray-400">
-                {tooltipData.description.map((item, index) => (
-                  <li key={index} className="flex items-start">
-                    <span className="inline-block w-1 h-1 bg-gray-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {tooltipData.description &&
+            tooltipData.description.length > 0 && (
+              <div className="border-t border-gray-700 pt-2">
+                <ul className="space-y-1 text-xs text-gray-400">
+                  {tooltipData.description.map((item, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="inline-block w-1 h-1 bg-gray-500 rounded-full mt-1.5 mr-2 flex-shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
         </div>
 
-        <div className={clsx(
-          "absolute left-1/2 -translate-x-1/2 transform border-4 border-transparent",
-          showBelow
-            ? "bottom-full border-b-gray-900"
-            : "top-full border-t-gray-900"
-        )}></div>
+        {/* Arrow */}
+        <div
+          className={clsx(
+            "absolute left-1/2 -translate-x-1/2 transform",
+            "border-4 border-transparent",
+            showBelow
+              ? "bottom-full border-b-gray-900"
+              : "top-full border-t-gray-900"
+          )}
+        />
       </div>
     </div>
   );
