@@ -20,7 +20,7 @@ export default function IdentifyDeviceModal({ device, onClose }: IdentifyDeviceM
       return;
     }
 
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout>;
     let currentCycle = 0;
     const totalCycles = 10;
 
