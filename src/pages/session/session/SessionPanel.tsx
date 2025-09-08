@@ -145,6 +145,7 @@ export function SessionPanel({
           label="Save Location"
           backgroundType="transparent"
           className="col-start-7 col-end-15"
+          disabled={disabled}
           actionText="Clear"
           tooltipId={"session_save_location"}
           onActionClick={() => update("outputDirectory", "")}

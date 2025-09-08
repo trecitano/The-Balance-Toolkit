@@ -68,7 +68,7 @@ export function TimelinePanel({
 
   return (
     <div className="relative mt-auto flex min-h-38 w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
-      <img src={popout} onClick={openPopup} className="absolute top-3 right-3 size-4 object-contain" />
+      <img src={popout} onClick={openPopup} className="absolute top-3 right-3 size-4 object-contain transition-all hover:-translate-y-[1px]" />
       {activity ? (
         <div className="mx-10 mt-2 mb-1 w-9/10">
           <div className="mb-3 flex justify-end text-sm font-medium text-gray-700">
