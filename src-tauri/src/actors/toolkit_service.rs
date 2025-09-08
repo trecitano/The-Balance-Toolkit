@@ -768,7 +768,23 @@ impl ConnectionManager {
             BoardConnectionMode::Real
         };
 
-        let board_connection = balance_board_actor::initialize(mac_address, connection_mode)?;
+        let board_connection = match balance_board_actor::initialize(mac_address, connection_mode) {
+            Ok(connection) => connection,
+            Err(e) => {
+                let manager_tx = self.get_sender_channel();
+                tokio::spawn(async move {
+                    println!("Failed to connect to device {:?}: {}. Trying again in 3 seconds.", mac_address, e);
+                    tokio::time::sleep(Duration::from_secs(3)).await;
+                    // We use the BoardSystemView because it only tries to connect if the device actually exists in the bluetooth view.
+                    let (tx, rx) = oneshot::channel();
+                    let command = ToolkitCommand::GetBoardsSystemView { response: tx };
+                    manager_tx.send(command).await.unwrap();
+                    rx.await.unwrap();
+                });
+
+                return Ok(());
+            }
+        };
         self.all_connections.insert(mac_address, board_connection);
         self.response_tx.send(ToolkitResponse::NewDeviceFound(mac_address)).await?;
 

@@ -4,7 +4,6 @@ use crate::file_system::UserFileSystem;
 use crate::types::{FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, FrontendSessionInformation, User, UserPageInformation, FrontendCoreSession, FrontendLastSessionInformation, SessionActivityState};
 use serde::Serialize;
 use std::time::Duration;
-
 use crate::actors::balance_board_actor::{BalanceBoardOutput, BoardAction};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
 use crate::actors::state::activities::{Activity, TimelineBlock};
@@ -257,7 +256,6 @@ async fn devices_scan_without_timeout(state: State<'_, AppState>) -> Result<(), 
     // Flow: First we connect via bluetooth, then we connect via HID.
     tokio::spawn(async move {
         while let Some(device) = new_bluetooth_rx.recv().await {
-            tokio::time::sleep(Duration::from_millis(4000)).await; // TODO Improve
             manager_tx_clone.send(ToolkitCommand::Connect { mac_address: device.mac_address}).await.unwrap();
         }
     });
