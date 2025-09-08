@@ -118,6 +118,9 @@ pub enum ToolkitCommand {
     SessionActivityState {
         response: oneshot::Sender<Option<SessionActivityState>>
     },
+    SessionTareDevices {
+        response: oneshot::Sender<()>,
+    },
 
     // Replay session
     ReplayInformation {
@@ -545,6 +548,12 @@ impl ConnectionManager {
                             response.send(state).unwrap();
                         }
                     }
+                },
+                ToolkitCommand::SessionTareDevices { response } => {
+                    for tx in self.session_settings.connections.values() {
+                        tx.send(BoardAction::Tare).await?
+                    }
+                    response.send(()).unwrap();
                 }
 
 

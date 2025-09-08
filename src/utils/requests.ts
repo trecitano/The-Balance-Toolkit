@@ -60,7 +60,7 @@ export const commands = {
       return invoke<void>("session_start_session", { sessionChannel: sessionChannel });
     },
 
-    tareDevices: async () => invoke<void>("session_taring_devices"),
+    tareDevices: async () => invoke<void>("session_tare_devices"),
     stopSession: async () => invoke<void>("session_stop_session"),
     getActivityState: async () => invoke<SessionActivityState | null>("session_activity_state"),
   },

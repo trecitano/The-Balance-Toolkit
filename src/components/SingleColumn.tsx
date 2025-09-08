@@ -17,6 +17,7 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   actionText?: string;
   onActionClick?: () => void;
   tooltipId?: string;
+  labelMargin?: boolean
 }
 
 export const SingleColumn: React.FC<InputFieldProps> = ({
@@ -32,6 +33,7 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
   actionText,
   onActionClick,
   tooltipId,
+  labelMargin = true,
 }) => {
   return (
     <div
@@ -47,7 +49,7 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
     >
       {label && (
         <div className="flex items-center gap-3">
-          <label className="ml-2 flex gap-2 text-xs font-medium text-gray-600">
+          <label className={clsx(labelMargin && "ml-2", "flex gap-2 text-xs font-medium text-gray-600")}>
             <div className="flex items-center gap-2">
               {icon && <span className="h-5 w-5 flex-shrink-0">{icon}</span>}
               {label}
