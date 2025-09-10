@@ -8,6 +8,7 @@ import { Activity, Device, LastSessionInformation } from "@/types.ts";
 import { getBlockImage } from "@/utils/activityImages.ts";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
+import githubIcon from "@/assets/github-icon.svg";
 import wbbIcon from "@/assets/wbb-top-white.svg";
 import wbbIconBlue from "@/assets/wbb-top-blue.svg";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
@@ -78,7 +79,7 @@ const Home: React.FC = () => {
 
 const Header: React.FC = () => {
   return (
-    <div className="bg-(--red) px-6 py-6 text-white">
+    <div className="bg-(--primary) px-6 py-6 text-white">
       <div className="flex gap-6 items-center grid grid-cols-3">
         {/* Left: Greeting */}
         <img className={"w-34"} src={logoLettering} draggable={false}  />
@@ -92,7 +93,8 @@ const Header: React.FC = () => {
             <span className="text-base">Cite</span>
           </button>
 
-          <button className="inline-flex items-center gap-2 text-white/95 hover:text-white" type="button">
+          <button className="inline-flex items-center gap-2 text-white/95 hover:text-white h-5" type="button">
+            <img src={githubIcon} className={"object-contain h-full"}/>
             <span className="text-base">Source Code</span>
           </button>
         </div>
@@ -247,7 +249,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
       </div>
 
       <div className="flex justify-end">
-        <ToolkitButton to="/activities" color={"grey"}>
+        <ToolkitButton to={`/activities${activities[selected] ? `/${activities[selected].id}` : ''}`}  color={"grey"}>
           {" "}
           Go to Activities →
         </ToolkitButton>

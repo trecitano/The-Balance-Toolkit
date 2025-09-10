@@ -62,7 +62,7 @@ export function App() {
             <Route path="/devices" element={<DevicesPage />} />
             <Route path="/session" element={<SessionPage />} />
             <Route path="/replay" element={<ReplayPage />} />
-            <Route path="/activities" element={<Activities />} />
+            <Route path="/activities/:activityId?" element={<Activities />} />
           </Route>
 
           {/* Routes without Navigation */}

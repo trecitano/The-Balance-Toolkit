@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import {useRef, useState} from "react";
 import { SessionPanel } from "./SessionPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
@@ -68,9 +68,17 @@ export default function SessionPage() {
   const sessionConfiguration: SessionPanelConfiguration | null = sessionInformation ? sessionInformation.core : null;
   const selectedBoards = sessionInformation?.selectedBoards ?? [];
 
-  const [boardDisplaySelected, setBoardDisplaySelected] = useState<number[]>(
-    selectedBoards.map((b) => b.macAddress) ?? [],
-  );
+  const [boardDisplaySelected, setBoardDisplaySelected] = useState<number[]>([]);
+  const lastAvailableBoardsRef = useRef<string>('');
+
+  // Check if available boards changed and update display selection accordingly
+  const availableBoardMacs = selectedBoards.map(b => b.macAddress);
+  const availableBoardsKey = availableBoardMacs.join(',');
+
+  if (availableBoardsKey !== lastAvailableBoardsRef.current) {
+    lastAvailableBoardsRef.current = availableBoardsKey;
+    setBoardDisplaySelected(availableBoardMacs);
+  }
 
   const boardDisplayOptions: BaseOption<number>[] = selectedBoards.map((board) => ({
     value: board.macAddress,
@@ -105,18 +113,6 @@ export default function SessionPage() {
         onChange={(newState) => updateSession.mutate(newState)}
       />
 
-      {selectedBoards.length === 0 ? (
-        <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
-          <p className="text-3xl font-medium">No boards in session</p>
-          <p className="mb-4 text-xl text-gray-400">Connect to a board in the Devices page!</p>
-          <ToolkitButton to="/devices" color="blue">
-            Go to Devices →
-          </ToolkitButton>
-        </div>
-      ) : (
-        <BoardGrid boards={selectedDisplayBoards} store={useSessionDataStore} />
-      )}
-
       <TimelinePanel
         activity={chosenActivity}
         placeholderMessage="No activity selected"
@@ -131,6 +127,18 @@ export default function SessionPage() {
           await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
         }}
       />
+
+      {selectedBoards.length === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
+          <p className="text-3xl font-medium">No boards in session</p>
+          <p className="mb-4 text-xl text-gray-400">Connect to a board in the Devices page!</p>
+          <ToolkitButton to="/devices" color="blue">
+            Go to Devices →
+          </ToolkitButton>
+        </div>
+      ) : (
+        <BoardGrid boards={selectedDisplayBoards} store={useSessionDataStore} />
+      )}
     </div>
   );
 }

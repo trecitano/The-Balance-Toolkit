@@ -50,7 +50,7 @@ impl UserState {
             height_metric: Some("cm".to_string()),
             weight: None,
             weight_metric: Some("kg".to_string()),
-            handedness: None,
+            dominant_hand: None,
             color: Some(format!("#{:06x}", rand::rng().gen_range(0..=0xFFFFFF))),
             notes: None,
             created_at: now,
