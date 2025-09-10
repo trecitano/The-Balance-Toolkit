@@ -83,7 +83,7 @@ fn blocking_file_reading_loop(
                         }
 
                         let reading = BalanceBoardCalibratedReading {
-                            timestamp: record.timestamp,
+                            timestamp: Utc::now(),
                             mac_address,
                             top_right: record.top_right,
                             bottom_right: record.bottom_right,

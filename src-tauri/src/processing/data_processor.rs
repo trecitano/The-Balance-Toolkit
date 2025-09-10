@@ -124,7 +124,7 @@ fn data_process_loop(
     mac_address: MacAddress,
     settings: ProcessingSettings,
 ) -> Result<()> {
-    println!("Data processing execution start.");
+    println!("Data processing execution start. Settings: {:#?}", settings);
     let mut buffer: Vec<CenterOfPressurePoint> = Vec::with_capacity(200);
 
     let window_size = std::time::Duration::from_millis(settings.window_size_ms);
@@ -192,7 +192,7 @@ fn data_process_loop(
             sway_metrics: sway_calculation,
             stability_index,
             area_metrics: area_calculation,
-            amplitude_spectrum: amplitude_spectrum,
+            amplitude_spectrum,
             dpsi_metrics,
         };
 
