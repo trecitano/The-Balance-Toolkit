@@ -52,6 +52,9 @@ pub fn initialize(settings: LslConnectionSettings) -> Sender<BalanceBoardOutput>
             }
         }
 
+        drop(raw_tx);
+        drop(processed_tx);
+
         for handle in join_handles {
             match handle.join() {
                 Ok(Ok(())) => {}
@@ -77,7 +80,7 @@ fn lsl_stream_loop_raw(
     let mut stream_info = StreamInfo::new(
         &stream_name,
         "BalanceBoard_Basic",
-        8, // timestamp + 4 sensors + 2 cop
+        8, // timestamp + mac + 4 sensors + 2 cop
         100.0,
         ChannelFormat::Double64,
         &source_id,
