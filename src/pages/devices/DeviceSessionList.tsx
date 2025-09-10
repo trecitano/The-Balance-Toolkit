@@ -5,6 +5,7 @@ import wbbIconBlue from "@/assets/wbb-top-blue.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
+import {sessionIcon} from "@/components/navigation/Navigation.tsx";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
@@ -53,7 +54,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                   <ToolkitButton type={"button"} color="red" onClick={() => handleUnselectDevice(device.macAddress)}>
                     Disconnect
                   </ToolkitButton>
-                  <ToolkitButton to="/session" color="blue">
+                  <ToolkitButton to="/session" color="blue" iconUrl={sessionIcon}>
                     Go to Session →
                   </ToolkitButton>
                 </div>

@@ -105,17 +105,23 @@ impl BalanceBoardOutput {
 
 impl BalanceBoardCalibratedReading {
     pub fn to_byte_array(&self) -> Vec<u8> {
-        let mut buf = Vec::with_capacity(24);
+        // 8 bytes: timestamp
+        // 8 bytes: mac_address (just need 48 bits)
+        // 16 bytes: 4 bytes per sensor
+        // 8 bytes: 4 bytes per cop
+        let mut buf = Vec::with_capacity(40);
 
-        // 1. Serialize the timestamp (8 bytes)
-        let timestamp_nanos = self.timestamp.timestamp_nanos_opt().unwrap_or(0);
-        buf.extend_from_slice(&timestamp_nanos.to_be_bytes());
+        let timestamp_micros = self.timestamp.timestamp_micros();
+        buf.extend_from_slice(&timestamp_micros.to_be_bytes());
+        buf.extend_from_slice(&self.mac_address.to_be_bytes());
 
-        // 2. Serialize the f32 readings (16 bytes)
         let readings = [self.top_right, self.bottom_right, self.top_left, self.bottom_left];
         for value in readings.iter() {
             buf.extend_from_slice(&value.to_be_bytes());
         }
+        let cop = self.calculate_cop();
+        buf.extend_from_slice(&cop.x.to_be_bytes());
+        buf.extend_from_slice(&cop.y.to_be_bytes());
 
         buf
     }

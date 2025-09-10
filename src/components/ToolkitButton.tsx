@@ -13,6 +13,7 @@ type BaseProps = {
   fullWidth?: boolean;
   className?: string;
   children: React.ReactNode;
+  iconUrl?: string;
 };
 
 type ButtonAsButton = BaseProps &
@@ -61,15 +62,31 @@ export function ToolkitButton({
   shape = "default",
   className = "",
   children,
+  iconUrl,
   ...props
 }: ButtonProps) {
   const classes = clsx(byShape[shape], bySize[size], byColor[color], base, className);
+
+  const content = ( iconUrl ?
+    (
+      <span className="flex items-center gap-2">
+        <img
+          src={iconUrl}
+          alt=""
+          className="size-5 invert brightness-0 object-contain"
+        />
+        <span>{children}</span>
+      </span>
+    ) :
+      (<span>{children}</span>
+      )
+  );
 
   if ("to" in props && props.to) {
     const { to, ...rest } = props as ButtonAsLink;
     return (
       <Link to={to} className={classes} {...rest}>
-        <span>{children}</span>
+        {content}
       </Link>
     );
   }
@@ -77,7 +94,7 @@ export function ToolkitButton({
   const buttonProps = props as ButtonAsButton;
   return (
     <button className={classes} {...buttonProps}>
-      <span>{children}</span>
+      {content}
     </button>
   );
 }

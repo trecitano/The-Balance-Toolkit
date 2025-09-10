@@ -10,7 +10,6 @@ import "./App.css";
 import { QueryClient, QueryClientProvider, usePrefetchQuery } from "@tanstack/react-query";
 import { SettingsQuery } from "@/components/settings/Settings.tsx";
 import ActivityPopup from "./pages/session-activity-pop-up/activityPopup.tsx";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 function DefaultLayout() {
   const navigate = useNavigate();
@@ -52,7 +51,6 @@ const queryClient = new QueryClient();
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ReactQueryDevtools initialIsOpen={false} />
       <BrowserRouter>
         <Routes>
           {/* Routes with Navigation */}

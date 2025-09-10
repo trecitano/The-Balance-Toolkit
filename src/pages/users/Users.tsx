@@ -23,6 +23,7 @@ import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import {useAlert} from "@/hooks/useAlert.tsx";
 import {useConfirm} from "@/hooks/useConfirm.tsx";
+import {devicesIcon} from "@/components/navigation/Navigation.tsx";
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -752,7 +753,7 @@ export default function Users() {
         {sessionDevices.length === 0 ? (
           <div>
             <p className="mb-7 text-lg text-gray-400">Connect to a board in the Devices page!</p>
-            <ToolkitButton to="/devices" color="blue">
+            <ToolkitButton to="/devices" color="blue" iconUrl={devicesIcon}>
               Go to Devices →
             </ToolkitButton>
           </div>

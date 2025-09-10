@@ -66,38 +66,33 @@ pub struct ProcessedBoardData {
 
 impl ProcessedBoardData {
     pub fn to_byte_array(&self) -> Vec<u8> {
-        let mut buf = Vec::new();
+        // 8 bytes: timestamp
+        // 8 bytes: mac_address (just need 48 bits)
+        // 8 bytes: 4 bytes per vcop (x and y)
+        // 4 bytes: stability index
+        // 16 bytes: DPSI metrics
+        let mut buf = Vec::with_capacity(44);
 
-        // 1. Serialize timestamp (8 bytes)
-        let timestamp_nanos = self.timestamp.timestamp_nanos_opt().unwrap_or(0);
-        buf.extend_from_slice(&timestamp_nanos.to_be_bytes());
-
-        // 2. Create flags byte indicating which fields are present
-        let mut flags = 0u8;
-        if self.sway_metrics.is_some() {
-            flags |= 0b0001;
-        }
-        if self.stability_index.is_some() {
-            flags |= 0b0010;
-        }
-        if self.dpsi_metrics.is_some() {
-            flags |= 0b0100;
-        }
-
-        buf.push(flags);
+        let timestamp_micros = self.timestamp.timestamp_micros();
+        buf.extend_from_slice(&timestamp_micros.to_be_bytes());
+        buf.extend_from_slice(&self.mac_address.to_be_bytes());
 
         if let Some(ref sway) = self.sway_metrics {
             buf.extend_from_slice(&sway.v_cop_x.to_be_bytes());
             buf.extend_from_slice(&sway.v_cop_y.to_be_bytes());
+        } else {
+            buf.extend_from_slice(&[0u8; 8]);
         }
-        if let Some(ref index) = self.stability_index {
-            buf.extend_from_slice(&index.to_be_bytes());
-        }
+
+        buf.extend_from_slice(&self.stability_index.unwrap_or(0.0).to_be_bytes());
+
         if let Some(ref dpsi) = self.dpsi_metrics {
             buf.extend_from_slice(&dpsi.mlsi.to_be_bytes());
             buf.extend_from_slice(&dpsi.apsi.to_be_bytes());
             buf.extend_from_slice(&dpsi.vsi.to_be_bytes());
             buf.extend_from_slice(&dpsi.dpsi.to_be_bytes());
+        } else {
+            buf.extend_from_slice(&[0u8; 16]);
         }
 
         buf

@@ -10,6 +10,7 @@ import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
 import { listen } from "@tauri-apps/api/event";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 import { BaseOption } from "@/components/SelectPrimitive.tsx";
+import {devicesIcon} from "@/components/navigation/Navigation.tsx";
 
 export const SESSION_QUERY_KEY = ["session_key"];
 export type SessionQueryData = {
@@ -132,7 +133,7 @@ export default function SessionPage() {
         <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
           <p className="text-3xl font-medium">No boards in session</p>
           <p className="mb-4 text-xl text-gray-400">Connect to a board in the Devices page!</p>
-          <ToolkitButton to="/devices" color="blue">
+          <ToolkitButton to="/devices" color="blue" iconUrl={devicesIcon}>
             Go to Devices →
           </ToolkitButton>
         </div>

@@ -67,10 +67,43 @@ export function TimelinePanel({
   const displayTotalSeconds = hasOngoingSession ? progressInfo.totalSeconds : singleLoopDuration * totalLoops;
 
   return (
-    <div className="relative mt-auto flex min-h-38 w-full items-center justify-between rounded-lg bg-gray-100 shadow-sm">
+    <div className="relative mt-auto flex min-h-38 w-full items-center rounded-lg bg-gray-100 shadow-sm">
       <img src={popout} onClick={openPopup} className="absolute top-3 right-3 size-5 object-contain transition-all hover:-translate-y-[1px] cursor-pointer" />
+      <div>
+        <button
+          className={clsx(
+            "ml-3 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full transition-all duration-100",
+            hasOngoingSession
+              ? "border-2 border-[#e50012] bg-[#e50012] text-white"
+              : "border-2 border-[#e50012] bg-white text-black",
+            "disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-50",
+          )}
+          onClick={async () => {
+            if (!hasOngoingSession) {
+              await onStart();
+              if (singleLoopDuration) {
+                await timer.startTimeline(singleLoopDuration * 1000, totalLoops);
+              }
+            } else {
+              await timer.stopTimeline();
+              await onStop();
+            }
+          }}
+          disabled={!canStart}
+        >
+          {hasOngoingSession ? (
+            // Stop icon (square)
+            <span className="block size-5 rounded-[2px] bg-white" />
+          ) : (
+            // Play icon (triangle). Using border trick for a crisp triangle.
+            <span
+              className="ml-1 border-l-15 border-r-0 border-t-10 border-b-10 border-l-[#e50012] border-t-transparent border-b-transparent"
+            />
+          )}
+        </button>
+      </div>
       {activity ? (
-        <div className="mx-10 mt-2 mb-1 w-9/10">
+        <div className="mx-5 mt-2 mb-1 w-9/10">
           <div className="mb-3 flex justify-end text-sm font-medium text-gray-700">
             Loop {displayLoop}/{displayTotalLoops}, {formatTime(displayCurrentSeconds)}/
             {formatTime(displayTotalSeconds)}
@@ -93,32 +126,6 @@ export function TimelinePanel({
           <p className="text-xl text-gray-500/80">{placeholderMessage}</p>
         </div>
       )}
-
-      <div>
-        <button
-          className={clsx(
-            "mr-2 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full transition-all duration-300",
-            hasOngoingSession
-              ? "border-2 border-[#e50012] bg-[#e50012] text-white"
-              : "border-2 border-[#e50012] bg-white text-black",
-            "disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-50",
-          )}
-          onClick={async () => {
-            if (!hasOngoingSession) {
-              await onStart();
-              if (singleLoopDuration) {
-                await timer.startTimeline(singleLoopDuration * 1000, totalLoops);
-              }
-            } else {
-              await timer.stopTimeline();
-              await onStop();
-            }
-          }}
-          disabled={!canStart}
-        >
-          <span className={`h-6 w-6 ${hasOngoingSession ? "rounded-sm bg-white" : "rounded-full bg-[#e50012]"}`} />
-        </button>
-      </div>
     </div>
   );
 }

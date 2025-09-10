@@ -10,7 +10,8 @@ use crate::processing::file_writer::SessionStats;
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct GeneralSettings {
-    pub tcp_connection_string: String,
+    pub tcp_connection_string_raw: String,
+    pub tcp_connection_string_processed: String,
     pub tcp_send_raw_data: bool,
     pub tcp_send_processed_data: bool,
     pub lsl_stream_name: String,
@@ -27,7 +28,8 @@ pub struct GeneralSettings {
 impl Default for GeneralSettings {
     fn default() -> GeneralSettings {
         GeneralSettings {
-            tcp_connection_string: "localhost:11223".to_string(),
+            tcp_connection_string_raw: "localhost:11223".to_string(),
+            tcp_connection_string_processed: "localhost:11224".to_string(),
             tcp_send_raw_data: true,
             tcp_send_processed_data: true,
 

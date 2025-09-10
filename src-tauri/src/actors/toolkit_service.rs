@@ -962,7 +962,8 @@ async fn start_session(frontend_channel: Sender<BalanceBoardOutput>,
     let should_use_tcp = session_settings.tcp_enabled &&
         (general_settings.tcp_send_raw_data || general_settings.tcp_send_processed_data);
     if should_use_tcp {
-        let tx = tcp_writer::initialize(general_settings.tcp_connection_string.clone());
+        let tx = tcp_writer::initialize(general_settings.tcp_connection_string_raw.clone(),
+                                        general_settings.tcp_connection_string_processed.clone());
         for session_mapping in observer_list.iter_mut() {
             add_observer_to_device_list(session_mapping,
                                         tx.clone(),

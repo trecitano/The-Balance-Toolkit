@@ -77,7 +77,7 @@ fn lsl_stream_loop_raw(
     let mut stream_info = StreamInfo::new(
         &stream_name,
         "BalanceBoard_Basic",
-        7, // timestamp + 4 sensors + 2 cop
+        8, // timestamp + 4 sensors + 2 cop
         100.0,
         ChannelFormat::Double64,
         &source_id,
@@ -93,6 +93,7 @@ fn lsl_stream_loop_raw(
         ch.append_child_value("description", desc_text);
     };
     add_channel("timestamp", "microseconds", "timestamp", "Sample timestamp");
+    add_channel("mac_address", "unitless", "identifier", "Device MAC address");
     add_channel("top_right", "kg", "force", "Top right sensor reading");
     add_channel("bottom_right", "kg", "force", "Bottom right sensor reading");
     add_channel("top_left", "kg", "force", "Top left sensor reading");
@@ -106,6 +107,7 @@ fn lsl_stream_loop_raw(
         let cop = data.calculate_cop();
         let sample = vec![
             data.timestamp.timestamp_micros() as f64,
+            data.mac_address as f64,
             data.top_right as f64,
             data.bottom_right as f64,
             data.top_left as f64,
@@ -131,7 +133,7 @@ fn lsl_stream_loop_processed(
     let mut stream_info = StreamInfo::new(
         &stream_name,
         "BalanceBoard_Complex",
-        8,
+        9,
         100.0, // TODO: USE REAL SAMPLING RATE!
         ChannelFormat::Double64,
         &source_id,
@@ -147,6 +149,7 @@ fn lsl_stream_loop_processed(
         ch.append_child_value("description", desc_text);
     };
     add_channel("timestamp", "microseconds", "timestamp", "Sample timestamp");
+    add_channel("mac_address", "unitless", "identifier", "Device MAC address");
     add_channel("v_cop_x", "1/s", "velocity", "Normalized CoP velocity X");
     add_channel("v_cop_y", "1/s", "velocity", "Normalized CoP velocity Y");
     add_channel("stability_index", "unitless", "index", "Overall stability index");
@@ -163,21 +166,22 @@ fn lsl_stream_loop_processed(
     let outlet = StreamOutlet::new(&stream_info, 0, 360)?;
 
     while let Some(data) = rx.blocking_recv() {
-        let mut sample = [f64::NAN; 8];
+        let mut sample = [f64::NAN; 9];
         sample[0] = data.timestamp.timestamp_micros() as f64;
+        sample[1] = data.mac_address as f64;
 
         if let Some(ref sway) = data.sway_metrics {
-            sample[1] = sway.v_cop_x as f64;
-            sample[2] = sway.v_cop_y as f64;
+            sample[2] = sway.v_cop_x as f64;
+            sample[3] = sway.v_cop_y as f64;
         }
 
-        sample[3] = data.stability_index.map(|v| v as f64).unwrap_or(f64::NAN);
+        sample[4] = data.stability_index.map(|v| v as f64).unwrap_or(f64::NAN);
 
         if let Some(ref dpsi) = data.dpsi_metrics {
-            sample[4] = dpsi.mlsi as f64;
-            sample[5] = dpsi.apsi as f64;
-            sample[6] = dpsi.vsi as f64;
-            sample[7] = dpsi.dpsi as f64;
+            sample[5] = dpsi.mlsi as f64;
+            sample[6] = dpsi.apsi as f64;
+            sample[7] = dpsi.vsi as f64;
+            sample[8] = dpsi.dpsi as f64;
         }
 
         outlet.push_sample(&sample.to_vec())?;

@@ -16,6 +16,7 @@ import rippleIcon from "@/assets/ripple-icon.svg";
 import underConstructionHelp from "@/assets/under-construction-1-grey.svg";
 import underConstructionDoc from "@/assets/under-construction-2-grey.svg";
 import underConstructionResources from "@/assets/under-construction-3-grey.svg";
+import {activitiesIcon, devicesIcon, replayIcon} from "@/components/navigation/Navigation.tsx";
 
 const HOME_QUERY_KEY = ["home"];
 
@@ -79,7 +80,7 @@ const Home: React.FC = () => {
 
 const Header: React.FC = () => {
   return (
-    <div className="bg-(--primary) px-6 py-6 text-white">
+    <div className="bg-(--red) px-6 py-6 text-white">
       <div className="flex gap-6 items-center grid grid-cols-3">
         {/* Left: Greeting */}
         <img className={"w-34"} src={logoLettering} draggable={false}  />
@@ -180,7 +181,7 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = (
       </div>
 
       <div className="mt-4 flex justify-end">
-        <ToolkitButton to="/replay" color={"grey"}>
+        <ToolkitButton to="/replay" color={"grey"} iconUrl={replayIcon}>
           {" "}
           Go to Replay →
         </ToolkitButton>
@@ -249,7 +250,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
       </div>
 
       <div className="flex justify-end">
-        <ToolkitButton to={`/activities${activities[selected] ? `/${activities[selected].id}` : ''}`}  color={"grey"}>
+        <ToolkitButton to={`/activities${activities[selected] ? `/${activities[selected].id}` : ''}`}  color={"grey"} iconUrl={activitiesIcon}>
           {" "}
           Go to Activities →
         </ToolkitButton>
@@ -308,7 +309,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
       )}
 
       <div className="mt-auto flex justify-end">
-        <ToolkitButton to="/devices" color={"grey"}>
+        <ToolkitButton to="/devices" color={"grey"} iconUrl={devicesIcon}>
           {" "}
           Go to Devices →
         </ToolkitButton>

@@ -1,7 +1,8 @@
 import {BaseOption} from "@/components/SelectPrimitive.tsx";
 
 export interface GeneralSettings {
-  tcpConnectionString: string;
+  tcpConnectionStringRaw: string;
+  tcpConnectionStringProcessed: string;
   tcpSendRawData: boolean;
   tcpSendProcessedData: boolean;
   lslStreamName: string;
