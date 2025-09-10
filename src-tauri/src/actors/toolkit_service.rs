@@ -198,6 +198,7 @@ pub struct ReplayConfiguration {
     pub file_path: PathBuf,
     pub device_names: HashMap<MacAddress, String>,
     pub connections: HashMap<MacAddress, Sender<BoardAction>>,
+    pub replay_duration: Duration,
     pub replay_start_time: Option<chrono::DateTime<Utc>>,
     pub cancel_token: Option<CancellationToken>
 }
@@ -600,6 +601,7 @@ impl ConnectionManager {
                         file_path,
                         device_names: file_session.device_names,
                         connections,
+                        replay_duration: file_session.session_stats.duration,
                         replay_start_time: None,
                         cancel_token: None,
                     });
@@ -625,10 +627,6 @@ impl ConnectionManager {
                 },
                 ToolkitCommand::StartReplay { frontend_channel } => {
                     if let Some(settings) = self.replay_settings.as_mut() {
-                        let cancellation_token = CancellationToken::new();
-                        settings.cancel_token = Some(cancellation_token.clone());
-                        settings.replay_start_time = Some(Utc::now());
-
                         start_session(frontend_channel,
                                       &self.general_settings,
                                       &settings.core,
@@ -637,27 +635,27 @@ impl ConnectionManager {
                             .await;
 
                         // Cancel the replay when the activity ends
-                        if let Some(activity) = &settings.core.activity {
-                            let duration = activity.get_total_duration_ms() as u64;
-
-                            let manager_tx = self.get_sender_channel();
-                            let response_tx = self.response_tx.clone();
-                            tokio::spawn(async move {
-                                tokio::select! {
-                                _ = tokio::time::sleep(Duration::from_millis(duration)) => {
-                                    println!("Activity duration ended, stopping replay...");
-                                    let (stop_tx, stop_rx) = oneshot::channel();
-                                    let _ = manager_tx.send(ToolkitCommand::StopReplay { response: stop_tx }).await;
-                                    stop_rx.await.unwrap();
-                                    response_tx.send(ToolkitResponse::ReplayCompleted).await.unwrap();
-                                }
-                                _ = cancellation_token.cancelled() => {
-                                    println!("Replay cancelled manually, auto-stop task exiting.");
-                                    response_tx.send(ToolkitResponse::ReplayCompleted).await.unwrap();
-                                }
+                        let cancellation_token = CancellationToken::new();
+                        settings.replay_start_time = Some(Utc::now());
+                        settings.cancel_token = Some(cancellation_token.clone());
+                        let duration = settings.replay_duration;
+                        let manager_tx = self.get_sender_channel();
+                        let response_tx = self.response_tx.clone();
+                        tokio::spawn(async move {
+                            tokio::select! {
+                            _ = tokio::time::sleep(duration) => {
+                                println!("Activity duration ended, stopping replay...");
+                                let (stop_tx, stop_rx) = oneshot::channel();
+                                let _ = manager_tx.send(ToolkitCommand::StopReplay { response: stop_tx }).await;
+                                stop_rx.await.unwrap();
+                                response_tx.send(ToolkitResponse::ReplayCompleted).await.unwrap();
                             }
-                            });
+                            _ = cancellation_token.cancelled() => {
+                                println!("Replay cancelled manually, auto-stop task exiting.");
+                                response_tx.send(ToolkitResponse::ReplayCompleted).await.unwrap();
+                            }
                         }
+                        });
                     }
                 },
                 ToolkitCommand::StopReplay { response } => {
@@ -666,7 +664,6 @@ impl ConnectionManager {
                             let command = { BoardAction::StopRecording };
                             board.send(command).await?
                         }
-
                         settings.replay_start_time = None;
                     }
 
