@@ -1,15 +1,21 @@
 import clsx from "clsx";
-import React, {useEffect} from "react";
+import React, {useEffect, useRef} from "react";
 
 interface ModalProps extends React.PropsWithChildren {
   open: boolean;
+  onOpen?: () => void;
   onClose: () => void;
   className?: string;
   defaultLayout?: boolean;
 }
 
-export function Modal({ open, onClose, children, className, defaultLayout = true }: ModalProps) {
-  if (!open) return null;
+export function Modal({ open, onOpen, onClose, children, className, defaultLayout = true }: ModalProps) {
+  const previousOpenRef = useRef(open);
+
+  if (open && !previousOpenRef.current && onOpen) {
+    onOpen();
+  }
+  previousOpenRef.current = open;
 
   // Keyboard support
   useEffect(() => {
@@ -26,6 +32,8 @@ export function Modal({ open, onClose, children, className, defaultLayout = true
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [open, onClose]);
+
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/35" onClick={onClose}>

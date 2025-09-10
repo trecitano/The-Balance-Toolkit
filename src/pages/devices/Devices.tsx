@@ -222,7 +222,7 @@ export default function Devices() {
           <p className="text-lg font-medium">{`Found ${foundDevicesCount} devices so far...`}</p>
 
           <ToolkitButton type="button" color="blue" onClick={handleCancelScan}>
-            Stop
+            OK
           </ToolkitButton>
         </div>
       </Modal>

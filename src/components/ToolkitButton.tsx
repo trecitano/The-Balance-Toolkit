@@ -34,7 +34,7 @@ const base =
   "enabled:hover:-translate-y-[1px] " +
   "enabled:active:translate-y-[1px] enabled:active:shadow-inner " +
   "disabled:opacity-60 disabled:cursor-not-allowed " +
-  "enabled:focus:outline-none enabled:focus:shadow-[var(--shadow-focus)]";
+  "enabled:focus:outline-none";
 
 const byColor: Record<Color, string> = {
   grey: "bg-(--secondary) text-[var(--white)] enabled:hover:bg-[var(--secondary-dark)]",

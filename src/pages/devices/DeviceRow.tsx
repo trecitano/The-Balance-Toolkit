@@ -68,11 +68,15 @@ export default function DeviceRow({
             alt="Device"
             className={`device-image ${device.isConnected ? "device-image-blue" : ""}`}
           />
-          <div
-            className={`device-status ${device.isConnected ? "device-status-connected" : "device-status-disconnected"}`}
-          >
-            {device.isConnected ? "Connected" : "Disconnected"}
-          </div>
+          {isSelected ? (
+            <div className={"device-status device-status-connected"}>
+              Connected
+            </div>
+          ) : !device.isConnected && (
+            <div className={"device-status device-status-disconnected"}>
+              Disconnected
+            </div>
+          )}
         </div>
 
         <div className="device-info">

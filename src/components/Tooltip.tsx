@@ -85,7 +85,7 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
 
   return (
     <div className="group relative" ref={containerRef}>
-      <InfoIcon className="size-3 cursor-help text-gray-400 hover:text-gray-600" />
+      <InfoIcon className="size-4 cursor-help text-gray-400 hover:text-gray-600" />
       <div
         ref={tooltipRef}
         className={clsx(

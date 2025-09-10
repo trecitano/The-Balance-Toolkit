@@ -35,7 +35,7 @@ export default function Users() {
   // Weight Measuring
   const [liveWeight, setLiveWeight] = useState<number | null>(null);
   const [showWeightMeasure, setShowWeightMeasure] = useState<boolean>(false);
-  const [selectedWeightMeasureDeviceMac, setSelectedWeightMeasureDeviceMac] = useState<string>("");
+  const [selectedWeightMeasureDeviceMac, setSelectedWeightMeasureDeviceMac] = useState<number | null>(null);
   const weightChannelRef = useRef<Channel<number> | null>(null);
   const [isMeasuringWeight, setIsMeasuringWeight] = useState<boolean>(false);
 
@@ -58,7 +58,6 @@ export default function Users() {
 
   const users = data?.users ?? [];
   const selectedUserId = data?.selectedUserId ?? 0;
-  console.log("selected user id:", selectedUserId);
   const sessionDevices = data?.sessionDevices ?? [];
   const selectedUserData = users.find((user) => user.id === selectedUserId)!;
   const isSearching = searchTerm.trim().length > 0;
@@ -260,8 +259,8 @@ export default function Users() {
     const newUser = await commands.users.createUser();
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
 
-    setEditingUserData({ ...newUser });
     await handleSelectUser(newUser.id);
+    setEditingUserData({ ...newUser });
   };
 
   const handleDeleteUser = async (userIdToDelete: number) => {
@@ -321,9 +320,9 @@ export default function Users() {
     setEditingUserData((prev) => prev && { ...prev, [field]: value });
   };
 
-  const startWeightMeasurement = async () => {
+  const startWeightMeasurement = async (deviceMac: number | null) => {
     if (weightChannelRef.current) return;
-    if (!selectedWeightMeasureDeviceMac) return;
+    if (!deviceMac) return;
 
     const ch = new Channel<number>();
     ch.onmessage = (value) => {
@@ -331,7 +330,7 @@ export default function Users() {
       setLiveWeight(value);
     };
     weightChannelRef.current = ch;
-    await commands.users.startMeasureWeight(ch, Number(selectedWeightMeasureDeviceMac));
+    await commands.users.startMeasureWeight(ch, Number(deviceMac));
     setIsMeasuringWeight(true);
   };
 
@@ -438,7 +437,7 @@ export default function Users() {
               <div className="user-display-header">
                 {renderUserIcon(selectedUserData, "w-[3.5vw] h-[3.5vw]")}
                 <div className="user-header-info">
-                  <h2>{selectedUserData.id}</h2>
+                  <h2>{selectedUserData.name}</h2>
                   <div className="user-metadata">
                     <span className="metadata-item">
                       <span className="metadata-label">Created:</span>
@@ -577,11 +576,11 @@ export default function Users() {
                   </div>
                 </SingleColumn>
 
-                {/* Handedness */}
-                <SingleColumn label="Handedness:" icon={<img src={handIcon} />}>
+                {/* Dominant hand: */}
+                <SingleColumn label="Dominant hand:" icon={<img src={handIcon} />}>
                   <SelectPrimitive
-                    value={editingUserData.handedness ?? ""}
-                    onChange={(v) => handleEditUpdate("handedness", v as UserType["handedness"])}
+                    value={editingUserData.dominantHand ?? ""}
+                    onChange={(v) => handleEditUpdate("dominantHand", v as UserType["dominantHand"])}
                     options={[
                       { label: "Right", value: "Right" },
                       { label: "Left", value: "Left" },
@@ -691,9 +690,9 @@ export default function Users() {
                 />
               </SingleColumn>
 
-              {/* Handedness */}
-              <SingleColumn label="Handedness:" icon={<img src={handIcon} />}>
-                <InputPrimitive disabled={true} value={selectedUserData.handedness ?? "N/A"} />
+              {/* Dominant hand: */}
+              <SingleColumn label="Dominant hand::" icon={<img src={handIcon} />}>
+                <InputPrimitive disabled={true} value={selectedUserData.dominantHand ?? "N/A"} />
               </SingleColumn>
 
               {/* Color */}
@@ -731,6 +730,9 @@ export default function Users() {
 
       <Modal
         open={showWeightMeasure}
+        onOpen={async () => {
+          await startWeightMeasurement(selectedWeightMeasureDeviceMac);
+        }}
         onClose={async () => {
           await stopWeightMeasurement();
           setShowWeightMeasure(false);
@@ -757,12 +759,15 @@ export default function Users() {
         ) : (
           <>
             <SingleColumn className="mb-10 items-center" label="Select a Device" backgroundType={"transparent"}>
-              <SelectPrimitive
-                value={selectedWeightMeasureDeviceMac}
-                onChange={(v) => setSelectedWeightMeasureDeviceMac(v)}
+              <SelectPrimitive<number>
+                value={selectedWeightMeasureDeviceMac ?? 0}
+                onChange={async (macAddress) => {
+                  setSelectedWeightMeasureDeviceMac(macAddress);
+                  await startWeightMeasurement(macAddress);
+                }}
                 options={sessionDevices.map((device) => ({
                   label: device.name,
-                  value: String(device.macAddress),
+                  value: device.macAddress,
                 }))}
                 disabled={isMeasuringWeight}
               />
@@ -777,18 +782,22 @@ export default function Users() {
                 Tare
               </ToolkitButton>
               {!isMeasuringWeight ? (
-                <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} color="grey" onClick={startWeightMeasurement}>
+                <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} color="grey" onClick={async () => startWeightMeasurement(selectedWeightMeasureDeviceMac)}>
                   Start
                 </ToolkitButton>
               ) : (
                 <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} color="grey" onClick={stopWeightMeasurement}>
-                  Stop Measurement
+                  Stop
                 </ToolkitButton>
               )}
               <ToolkitButton
                 disabled={!selectedWeightMeasureDeviceMac || isMeasuringWeight}
                 color="blue"
-                onClick={() => handleEditUpdate("weight", Number(liveWeight?.toFixed(2)))}
+                onClick={async () => {
+                  handleEditUpdate("weight", Number(liveWeight?.toFixed(2)));
+                  setShowWeightMeasure(false);
+                  await stopWeightMeasurement();
+                }}
               >
                 Save
               </ToolkitButton>

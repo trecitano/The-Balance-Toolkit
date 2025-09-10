@@ -6,12 +6,15 @@ import ActivityCard from "./ActivityCard";
 import PageTitle from "@/components/PageTitle.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
+import {useParams} from "react-router-dom";
 
 export const ACTIVITIES_QUERY_KEY = ["activities"];
 const AVAILABLE_BLOCKS_QUERY_KEY = ["available-blocks"];
 
 export default function Activities() {
-  const [maximizedId, setMaximizedId] = useState<string | null>(null);
+  const { activityId } = useParams<{ activityId?: string }>();
+
+  const [maximizedId, setMaximizedId] = useState<string | null>(activityId || null);
 
   const {
     data: activitiesData,

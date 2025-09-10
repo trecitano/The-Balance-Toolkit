@@ -5,7 +5,6 @@ import { InterpolationOption, interpolationOptions, ReplayConfiguration, Session
 import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import {Checkbox} from "@/components/Checkbox.tsx";
-import tareIcon from "@/assets/tare.svg";
 
 export function ReplayPanel({
   config,
@@ -56,11 +55,7 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Tare" labelMargin={false}>
-          <img src={tareIcon} className="h-8 object-contain opacity-60 cursor-not-allowed"/>
-        </SingleColumn>
-
-        <SingleColumn label="User" className="col-span-8" tooltipId={"session_user"}>
+        <SingleColumn label="User" className="col-span-9" tooltipId={"session_user"}>
           <InputPrimitive disabled={true} value={config?.user.name ?? "No User"} />
         </SingleColumn>
 

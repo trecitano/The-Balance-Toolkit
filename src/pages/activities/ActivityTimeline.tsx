@@ -219,6 +219,9 @@ export default function ActivityTimeline({
               data-block-id={idx}
               onMouseDown={(e) => handleBlockMouseDown(idx, e)}
               onClick={() => onBlockSelect?.(block)}
+              onDoubleClick={(_) => {
+                handleDurationEdit(idx);
+              }}
               style={{
                 flex: block.duration,
                 minWidth: 1,

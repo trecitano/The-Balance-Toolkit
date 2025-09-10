@@ -291,7 +291,7 @@ export default function ActivityCard({
           </div>
           <div className="mt-auto flex justify-end">
             <ToolkitButton type="button" color={"blue"} onClick={handleStartClick}>
-              Start
+              Open
             </ToolkitButton>
           </div>
         </>
@@ -362,7 +362,7 @@ export default function ActivityCard({
           />
 
           <div className={"flex flex-col items-end gap-3"}>
-            <SingleColumn label={"Loops"}>
+            <SingleColumn label={"Repeat"}>
               <InputPrimitive
                 type="number"
                 min={1}
@@ -374,23 +374,6 @@ export default function ActivityCard({
             </SingleColumn>
 
             <div className="flex gap-2">
-              <ToolkitButton
-                type="button"
-                color={"blue"}
-                onClick={() => {
-                  const updated: Activity = {
-                    ...activity,
-                    loops: loopCount,
-                    timelineBlocks: timelineBlocks,
-                  };
-                  saveMutation(updated, {
-                    onSuccess: () => onMinimize?.(),
-                  });
-                }}
-              >
-                Save
-              </ToolkitButton>
-
               <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} color={"grey"}>
                 Reset to Default
               </ToolkitButton>
@@ -401,8 +384,18 @@ export default function ActivityCard({
             </div>
           </div>
           <div className={"mt-auto flex justify-end"}>
-            <ToolkitButton to="/session" color="blue" >
-              Go to Session →
+            <ToolkitButton
+              onClick={async () => {
+                const updated: Activity = {
+                  ...activity,
+                  loops: loopCount,
+                  timelineBlocks: timelineBlocks,
+                }
+                saveMutation(updated);
+              }}
+              to="/session" color="blue"
+            >
+              Save and go to Session →
             </ToolkitButton>
           </div>
         </ToolkitContainer>

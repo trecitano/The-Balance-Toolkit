@@ -37,7 +37,7 @@ export interface UserType {
   heightMetric?: string; // New field for height unit (cm/in)
   weight?: number;
   weightMetric?: string; // Weight unit (kg/lb)
-  handedness?: "Right" | "Left" | "Ambidextrous";
+  dominantHand?: "Right" | "Left" | "Ambidextrous";
   color?: string;
   notes?: string;
   createdAt: string;
