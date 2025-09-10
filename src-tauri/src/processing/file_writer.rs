@@ -147,7 +147,7 @@ pub struct SessionConfigurationFileFormat {
 #[serde(rename_all = "camelCase")]
 pub struct SessionStats {
     board_sampling_rate: f64,
-    duration: Duration,
+    pub duration: Duration,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
