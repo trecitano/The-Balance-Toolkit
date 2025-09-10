@@ -40,6 +40,9 @@ pub fn initialize(tcp_connection_string_raw: String, tcp_connection_string_proce
             }
         }
 
+        drop(raw_tx);
+        drop(processed_tx);
+
         for handle in join_handles {
             match handle.await {
                 Ok(Ok(())) => {}
