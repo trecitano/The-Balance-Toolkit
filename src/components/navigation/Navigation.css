@@ -111,10 +111,7 @@
 .menu-item-icon svg {
   width: clamp(2vw, 2vw, 2.3vw);
   height: clamp(2vw, 2vw, 2.3vw);
-  display: block;
-  margin: 0 auto;
-  padding: 0;
-  filter: brightness(0) invert(1);
+  filter: invert(1);
   object-fit: contain;
 }
 

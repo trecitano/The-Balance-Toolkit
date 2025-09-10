@@ -13,6 +13,7 @@ import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
+import {sessionIcon} from "@/components/navigation/Navigation.tsx";
 
 /**
  * ActivityCard component displays an activity with its details
@@ -393,7 +394,7 @@ export default function ActivityCard({
                 }
                 saveMutation(updated);
               }}
-              to="/session" color="blue"
+              to="/session" color="blue" iconUrl={sessionIcon}
             >
               Save and go to Session →
             </ToolkitButton>

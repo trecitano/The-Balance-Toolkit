@@ -58,7 +58,7 @@ function Navigation({ activeView, onViewChange, className }: NavigationProps) {
   return (
     <nav
       className={clsx(
-        "menu-bar menu-bar--active box-border flex h-screen min-w-[50px] flex-col justify-between border-r border-r-[var(--border-primary)] bg-[var(--red)] p-0 shadow-[2px_0_10px_rgba(0,0,0,0.04)]",
+        "menu-bar menu-bar--active box-border flex h-screen min-w-[50px] flex-col justify-between border-r border-r-[var(--border-primary)] bg-(--red) p-0 shadow-[2px_0_10px_rgba(0,0,0,0.04)]",
         className,
       )}
     >
@@ -77,7 +77,7 @@ function Navigation({ activeView, onViewChange, className }: NavigationProps) {
                 }}
               >
                 <span className="menu-item-icon">
-                  <img src={item.icon} alt={item.label} className="nav-icon" />
+                  <img src={item.icon} alt={item.label} />
                 </span>
                 <span className="menu-item-text">{item.label}</span>
               </li>
@@ -90,7 +90,7 @@ function Navigation({ activeView, onViewChange, className }: NavigationProps) {
         <button className={clsx("menu-item settings unstyled-button", hasOngoingSession && "opacity-65 disabled cursor-not-allowed")}
           title="Settings" onClick={handleSettingsClick}>
           <span className="menu-item-icon">
-            <img src={settingsIcon} alt="Settings" className="nav-icon-sm" />
+            <img src={settingsIcon} alt="Settings" />
           </span>
           <span className="menu-item-text">Settings</span>
         </button>
@@ -103,3 +103,4 @@ function Navigation({ activeView, onViewChange, className }: NavigationProps) {
 }
 
 export default Navigation;
+export { sessionIcon, replayIcon, devicesIcon, activitiesIcon }

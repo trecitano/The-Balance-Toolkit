@@ -105,17 +105,24 @@ function Settings({ isOpen, onClose }: SettingsProps) {
           <div className="settings-section">
             <h3>TCP Settings</h3>
 
-            <SettingField label={"TCP Connection String"} tooltipId={'settings_tcp'}>
+            <SettingField label={"TCP Connection String (Raw data)"} tooltipId={'settings_tcp'}>
               <InputPrimitive
                 type="text"
-                value={tempSettings.tcpConnectionString}
-                onChange={(e) => handleGeneralSettingsUpdate("tcpConnectionString", e.target.value)}
+                value={tempSettings.tcpConnectionStringRaw}
+                onChange={(e) => handleGeneralSettingsUpdate("tcpConnectionStringRaw", e.target.value)}
               />
             </SettingField>
             <SettingField label={"Send Raw Data?"} tooltipId={'settings_raw_data'}>
               <Checkbox
                 checked={tempSettings.tcpSendRawData}
                 onChange={(e) => handleGeneralSettingsUpdate("tcpSendRawData", e.target.checked)}
+              />
+            </SettingField>
+            <SettingField label={"TCP Connection String (Processed data)"} tooltipId={'settings_tcp'}>
+              <InputPrimitive
+                type="text"
+                value={tempSettings.tcpConnectionStringProcessed}
+                onChange={(e) => handleGeneralSettingsUpdate("tcpConnectionStringProcessed", e.target.value)}
               />
             </SettingField>
             <SettingField label={"Send Processed Data?"} tooltipId={'settings_processed_data'}>

@@ -51,9 +51,17 @@ export default function ReplayPage() {
   });
 
   const selectedBoards = replayInformation?.devices ?? [];
-  const [boardDisplaySelected, setBoardDisplaySelected] = useState<number[]>(
-    selectedBoards.map((b) => b.macAddress) ?? [],
-  );
+  const [boardDisplaySelected, setBoardDisplaySelected] = useState<number[]>([]);
+  const lastAvailableBoardsRef = useRef<string>('');
+
+  // Check if available boards changed and update display selection accordingly
+  const availableBoardMacs = selectedBoards.map(b => b.macAddress);
+  const availableBoardsKey = availableBoardMacs.join(',');
+
+  if (availableBoardsKey !== lastAvailableBoardsRef.current) {
+    lastAvailableBoardsRef.current = availableBoardsKey;
+    setBoardDisplaySelected(availableBoardMacs);
+  }
 
   const boardDisplayOptions: BaseOption<number>[] = selectedBoards.map((board) => ({
     value: board.macAddress,
@@ -66,6 +74,7 @@ export default function ReplayPage() {
   const canStartSession = (replayInformation?.devices?.length ?? 0) > 0;
   const hasOngoingSession = replayInformation?.hasOngoingSession ?? false;
   const devices = replayInformation?.devices ?? [];
+  const replayIsSelected = !!replayInformation?.filePath;
 
   if (replayOverListener.current == null) {
     listen<void>("replay_completed", (_) => {
@@ -106,6 +115,21 @@ export default function ReplayPage() {
         onResetFile={resetReplay}
       />
 
+      <TimelinePanel
+        activity={chosenActivity}
+        hasOngoingSession={hasOngoingSession}
+        placeholderMessage={replayIsSelected ? "No Activity" : ""}
+        canStart={canStartSession}
+        onStart={async () => {
+          await replayChannelManager.start();
+          await queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
+        }}
+        onStop={async () => {
+          await replayChannelManager.stop();
+          await queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
+        }}
+      />
+
       {devices.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
           <p className="text-3xl font-medium">No session file selected</p>
@@ -117,20 +141,6 @@ export default function ReplayPage() {
       ) : (
         <BoardGrid boards={selectedDisplayBoards} store={useReplayDataStore} />
       )}
-
-      <TimelinePanel
-        activity={chosenActivity}
-        hasOngoingSession={hasOngoingSession}
-        canStart={canStartSession}
-        onStart={async () => {
-          await replayChannelManager.start();
-          await queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
-        }}
-        onStop={async () => {
-          await replayChannelManager.stop();
-          await queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
-        }}
-      />
     </div>
   );
 }
