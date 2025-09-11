@@ -1,3 +1,3 @@
 export function getBlockImage(id: string) {
-  return `/src/assets/activities/${id}.svg`;
+  return `/activities/${id}.svg`;
 }
