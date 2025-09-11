@@ -8,19 +8,21 @@ interface StabilityBarGaugeProps {
   title?: string;
   tooltipId?: string;
   width?: number;
-  height?: number;
+  height?: number; // This will be ignored in favor of parent height
 }
 
 export function StabilityBarGauge({
-  macAddress,
-  store,
-  title = "Stability",
-  tooltipId,
-  width = 60,
-  height = 200,
-}: StabilityBarGaugeProps) {
+                                    macAddress,
+                                    store,
+                                    title = "Stability",
+                                    tooltipId,
+                                    width = 60,
+                                    height = 200, // fallback height
+                                  }: StabilityBarGaugeProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [stabilityIndex, setStabilityIndex] = useState<number | null>(null);
+  const [canvasHeight, setCanvasHeight] = useState<number>(height);
 
   // Subscribe to stability index updates
   useEffect(() => {
@@ -35,6 +37,38 @@ export function StabilityBarGauge({
     return () => unsub();
   }, [macAddress, store]);
 
+  // Calculate canvas height based on parent container
+  useEffect(() => {
+    const updateCanvasHeight = () => {
+      if (containerRef.current) {
+        const containerHeight = containerRef.current.clientHeight;
+
+        // Account for title and value text heights
+        // Approximate: title ~20px, value text ~16px, margins ~8px
+        const reservedHeight = 44;
+        const availableHeight = Math.max(containerHeight - reservedHeight, 50); // minimum 50px
+
+        setCanvasHeight(availableHeight);
+      }
+    };
+
+    // Initial calculation
+    updateCanvasHeight();
+
+    // Set up ResizeObserver to watch for parent size changes
+    const resizeObserver = new ResizeObserver(() => {
+      updateCanvasHeight();
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   // Draw the gauge
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -47,20 +81,20 @@ export function StabilityBarGauge({
 
     // Set canvas size with device pixel ratio
     canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    canvas.height = canvasHeight * dpr;
     canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    canvas.style.height = `${canvasHeight}px`;
 
     ctx.scale(dpr, dpr);
 
     // Clear canvas
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, width, canvasHeight);
 
     // Define bar dimensions (use more of the canvas now that title is external)
     const barWidth = width * 0.5;
-    const barHeight = height * 0.9;
+    const barHeight = canvasHeight * 0.9;
     const barX = (width - barWidth) / 2;
-    const barY = height * 0.05;
+    const barY = canvasHeight * 0.05;
 
     // Draw the filled portion if we have a value
     if (stabilityIndex !== null && stabilityIndex >= 0 && stabilityIndex <= 1) {
@@ -91,10 +125,10 @@ export function StabilityBarGauge({
     ctx.strokeStyle = "#1f2937"; // dark gray border
     ctx.lineWidth = 2;
     ctx.strokeRect(barX, barY, barWidth, barHeight);
-  }, [stabilityIndex, width, height]);
+  }, [stabilityIndex, width, canvasHeight]);
 
   return (
-    <div className="flex flex-col items-center">
+    <div ref={containerRef} className="flex flex-col items-center h-full">
       <div className={"relative font-semibold"}>
         {title}
         {tooltipId && (
@@ -103,7 +137,7 @@ export function StabilityBarGauge({
           </div>
         )}
       </div>
-      <div>
+      <div className="flex-1 flex items-center">
         <canvas ref={canvasRef} />
       </div>
       <div className="mt-1 text-xs">{stabilityIndex !== null ? stabilityIndex.toFixed(2) : "--"}</div>

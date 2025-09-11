@@ -135,11 +135,11 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
 
   return (
     <div className="relative flex h-full items-center justify-evenly gap-3">
-      <div className="relative w-5/10">
+      <div className="relative w-4/10 h-full">
         <img
           ref={imgRef}
           src={wbbTopdown}
-          className="pointer-events-none block object-contain select-none"
+          className="h-full pointer-events-none block object-contain select-none"
           draggable={false}
           onLoad={scheduleDraw}
         />

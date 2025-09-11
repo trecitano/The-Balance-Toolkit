@@ -12,12 +12,7 @@ export function BoardGrid({ boards, store }: { boards: SelectedBoard[]; store: S
   ) : boards.length === 1 ? (
     <ComplexBoardPanel boardName={boards[0].name} macAddress={boards[0].macAddress} store={store} />
   ) : (
-    <div
-      className="grid gap-4"
-      style={{
-        gridTemplateColumns: `repeat(${boards.length}, minmax(0, 1fr))`,
-      }}
-    >
+    <div className="flex flex-1 grid-cols-2 gap-4">
       {boards.map((board) => (
         <SimpleBoardPanel key={board.macAddress} boardName={board.name} macAddress={board.macAddress} store={store} />
       ))}
