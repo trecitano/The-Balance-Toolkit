@@ -771,7 +771,7 @@ impl ConnectionManager {
             Err(e) => {
                 let manager_tx = self.get_sender_channel();
                 tokio::spawn(async move {
-                    println!("Failed to connect to device {:?}: {}. Trying again in 1 second.", mac_address, e);
+                    println!("Failed to connect to device {:?}: {}. Trying again in 1 second..  {:#?}", mac_address, e, Utc::now());
                     tokio::time::sleep(Duration::from_secs(1)).await;
                     // We use the BoardSystemView because it only tries to connect if the device actually exists in the bluetooth view.
                     let (tx, rx) = oneshot::channel();

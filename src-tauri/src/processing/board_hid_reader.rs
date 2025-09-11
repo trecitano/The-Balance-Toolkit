@@ -1,4 +1,5 @@
 use std::thread;
+use std::time::{Duration, Instant};
 use anyhow::{anyhow, Result};
 use chrono::Utc;
 use hidapi::{HidApi, HidDevice, HidResult};
@@ -56,7 +57,7 @@ fn connect_via_hid(mac_address: MacAddress) -> HidResult<HidDevice> {
     let serial_number = format!("{:012x}", mac_address);
     let balance_board_info = api
         .device_list()
-        .find(|device| device.serial_number().is_some_and(|s| s == serial_number))
+        .find(|device| device.serial_number().is_some_and(|s| s.replace(":", "") == serial_number))
         .ok_or(HidApiError { message: format!("Device with the specified device_id was not found. {}", serial_number) })?;
     balance_board_info.open_device(&api)
 }
@@ -126,7 +127,11 @@ fn blocking_hid_loop(
                         tx.blocking_send(tared_reading)?;
                     }
                 }
-                Ok(_) => { /* Timeout, continue */ }
+                Ok(_) => {
+                    println!("Timeout?!?!");
+                    write_to_device(&device, &BOARD_START_READING);
+                    /* Timeout, continue */
+                }
                 Err(e) => {
                     eprintln!("Error reading from HID device: {}", e);
                     break;
@@ -202,7 +207,7 @@ pub fn write_to_device(device: &HidDevice, data: &[u8]) -> HidResult<usize> {
 }
 
 pub fn read_from_device(device: &HidDevice, buf: &mut [u8]) -> HidResult<usize> {
-    let result = device.read_timeout(buf, 1000);
+    let result = device.read_timeout(buf, 500);
 
     match &result {
         Ok(len) => {
