@@ -266,6 +266,7 @@ impl ConnectionManager {
                             if let Some(connection) = self.all_connections.remove(&mac_address) {
                                 connection.send(BoardAction::StopRecording).await?;
                             }
+                            self.session_settings.connections.remove(&mac_address);
                             DeviceFileSystem::remove_device(mac_address)?;
                             self.bluetooth_manager_tx.send(action).await?
                         }
