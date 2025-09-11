@@ -57,7 +57,7 @@ fn connect_via_hid(mac_address: MacAddress) -> HidResult<HidDevice> {
     let serial_number = format!("{:012x}", mac_address);
     let balance_board_info = api
         .device_list()
-        .find(|device| device.serial_number().is_some_and(|s| s.replace(":", "") == serial_number))
+        .find(|device| device.serial_number().is_some_and(|s| s.replace(":", "").to_lowercase() == serial_number))
         .ok_or(HidApiError { message: format!("Device with the specified device_id was not found. {}", serial_number) })?;
     balance_board_info.open_device(&api)
 }

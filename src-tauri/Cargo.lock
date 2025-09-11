@@ -2524,18 +2524,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "objc2-io-bluetooth"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbecd5ee857b34ee347aeef409f548e36a5b4853013bf53a2c7feaece9d3287f"
-dependencies = [
- "libc",
- "objc2 0.6.1",
- "objc2-core-foundation",
- "objc2-foundation 0.3.1",
-]
-
-[[package]]
 name = "objc2-io-surface"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4270,9 +4258,6 @@ dependencies = [
  "futures",
  "hidapi",
  "lsl",
- "objc2 0.6.1",
- "objc2-foundation 0.3.1",
- "objc2-io-bluetooth",
  "once_cell",
  "rand 0.9.2",
  "rustfft",
