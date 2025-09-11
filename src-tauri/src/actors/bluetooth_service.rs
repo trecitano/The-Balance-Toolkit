@@ -24,16 +24,10 @@ pub enum BluetoothCommand {
     RemoveDevice { mac_address: MacAddress },
 }
 
-// The bluetooth implementations should contain the following functions:
-//
-// get_all_bluetooth_adapters_info
-// scan_and_pair_nintendo
-// remove_device
-
 #[async_trait]
 pub trait BluetoothHandler: Send + Sync {
     async fn get_all_bluetooth_adapters_info(&self) -> Result<Vec<Result<BluetoothAdapterInfo>>>;
-    async fn scan_and_pair_nintendo(&self) -> Result<BluetoothPeripheral>;
+    async fn scan_and_pair_nintendo(&self, response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()>;
     async fn remove_device(&self, mac_address: MacAddress) -> Result<()>;
 }
 
@@ -119,11 +113,9 @@ impl BluetoothService {
                         break;
                     }
 
-                    _ = Self::connect_new_balance_board(&bluetooth_handler, response_stream.clone()) => {
-                        // If the current state failed, wait one second before trying again
-                        // TODO update this value
-                        tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
-                    },
+                    _ = bluetooth_handler.scan_and_pair_nintendo(response_stream.clone()) => {
+                        tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
+                    }
                 }
             }
 
@@ -133,8 +125,15 @@ impl BluetoothService {
         Ok(())
     }
 
-    async fn get_nintendo_devices(bluetooth_handler: &Arc<dyn BluetoothHandler>) -> Result<Vec<BluetoothPeripheral>> {
-        let adapters: Vec<BluetoothAdapterInfo> = bluetooth_handler.get_all_bluetooth_adapters_info().await?
+    pub async fn get_nintendo_devices(bluetooth_handler: &Arc<dyn BluetoothHandler>) -> Result<Vec<BluetoothPeripheral>> {
+        let adapter_info = bluetooth_handler.get_all_bluetooth_adapters_info().await?;
+        Ok(BluetoothService::filter_nintendo_devices(
+            Ok(adapter_info)).await?
+        )
+    }
+
+    pub async fn filter_nintendo_devices(bluetooth_adapter_info: Result<Vec<Result<BluetoothAdapterInfo>>>) -> Result<Vec<BluetoothPeripheral>> {
+        let adapters: Vec<BluetoothAdapterInfo> = bluetooth_adapter_info?
             .into_iter()
             .filter_map(|result| result.ok())
             .collect();
@@ -149,25 +148,6 @@ impl BluetoothService {
             .filter(|device| device.name == NINTENDO_BOARD_ID).collect();
 
         Ok(nintendo_devices)
-    }
-
-    async fn connect_new_balance_board(bluetooth_handler: &Arc<dyn BluetoothHandler>,
-                                       response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()> {
-        let connected_nintendo_devices = Self::get_nintendo_devices(bluetooth_handler).await?;
-
-        let bluetooth_device = match bluetooth_handler.scan_and_pair_nintendo().await {
-            Ok(bluetooth_device) => bluetooth_device,
-            Err(e) => {
-                println!("Failed to scan and pair nintendo balance board: {:?}", e);
-                return Err(e);
-            }
-        };
-
-        if !connected_nintendo_devices.iter().any(|device| device.mac_address == bluetooth_device.mac_address) {
-            response_stream.send(bluetooth_device).await?
-        }
-
-        Ok(())
     }
 }
 

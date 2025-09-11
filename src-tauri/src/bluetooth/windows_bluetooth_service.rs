@@ -1,5 +1,6 @@
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
+use tokio::sync::mpsc;
 use windows::{
     Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothDevice},
     Devices::Enumeration::{
@@ -81,7 +82,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
     // that does not have the name. This name is later added via an "Updated" event, that updates the
     // "System.ItemNameDisplay" device property.
     // As such, we need to pay attention to both "Added" and "Updated" events.
-    async fn scan_and_pair_nintendo(&self) -> Result<BluetoothPeripheral> {
+    async fn scan_and_pair_nintendo(&self, response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()> {
         tokio::task::spawn_blocking(move || {
             futures::executor::block_on(async {
                 let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
@@ -152,7 +153,9 @@ impl BluetoothHandler for NativeBluetoothHandler {
                 if let Some(device_id) = rx.recv().await {
                     try_pair_with_board(device_id.clone(), pin).await?;
                     let bluetooth_device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
-                    return convert_to_bluetooth_peripheral(bluetooth_device).await;
+                    let peripheral = convert_to_bluetooth_peripheral(bluetooth_device).await?;
+                    response_stream.send(peripheral).await.unwrap();
+                    return Ok(())
                 }
 
                 Err(anyhow!("Failed to find a device to pair with."))

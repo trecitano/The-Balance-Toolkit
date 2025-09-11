@@ -5,6 +5,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use rand::Rng;
+use tokio::sync::mpsc;
 use crate::actors::bluetooth_service::{BluetoothAdapterInfo, BluetoothHandler, BluetoothPeripheral};
 use crate::{utils, NINTENDO_BOARD_ID};
 use crate::types::MacAddress;
@@ -88,12 +89,11 @@ impl BluetoothHandler for MockBluetoothHandler {
         )
     }
 
-    async fn scan_and_pair_nintendo(&self) -> Result<BluetoothPeripheral> {
+    async fn scan_and_pair_nintendo(&self, response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()> {
         tokio::time::sleep(Duration::from_millis(800)).await;
 
         // Every X time, we assume that a new device was found.
         // We add this device to our global state, and return it.
-        let mut mocked_data = MOCK_DATA.lock().unwrap();
         let mac_address = create_random_mac_address();
         let human_readable_mac_address = utils::mac_address_human_name(mac_address);
 
@@ -107,9 +107,14 @@ impl BluetoothHandler for MockBluetoothHandler {
             is_connected: true,
         };
 
-        mocked_data.bluetooth_adapter_info.devices.push(Ok(new_device.clone()));
+        {
+            let mut mocked_data = MOCK_DATA.lock().unwrap();
+            mocked_data.bluetooth_adapter_info.devices.push(Ok(new_device.clone()));
+        }
 
-        Ok(new_device)
+        response_stream.send(new_device.clone()).await?;
+
+        Ok(())
     }
 
 
