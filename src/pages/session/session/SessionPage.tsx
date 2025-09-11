@@ -116,6 +116,7 @@ export default function SessionPage() {
 
       <TimelinePanel
         activity={chosenActivity}
+        playButtonClass={"size-6 rounded-full bg-[#e50012]"}
         placeholderMessage="No activity selected"
         hasOngoingSession={hasOngoingSession}
         canStart={canStartSession}

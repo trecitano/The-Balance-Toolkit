@@ -25,6 +25,7 @@ const formatTime = (seconds: number): string => {
 
 type TimelinePanelProps = {
   activity?: Activity;
+  playButtonClass: string;
   placeholderMessage?: string;
   hasOngoingSession: boolean;
   canStart: boolean;
@@ -34,6 +35,7 @@ type TimelinePanelProps = {
 
 export function TimelinePanel({
   activity,
+  playButtonClass,
   placeholderMessage,
   hasOngoingSession,
   canStart,
@@ -103,9 +105,7 @@ export function TimelinePanel({
             <span className="block size-5 rounded-[2px] bg-white" />
           ) : (
             // Play icon (triangle). Using border trick for a crisp triangle.
-            <span
-              className="ml-1 border-l-15 border-r-0 border-t-10 border-b-10 border-l-[#e50012] border-t-transparent border-b-transparent"
-            />
+            <span className={playButtonClass}/>
           )}
         </button>
       </div>
