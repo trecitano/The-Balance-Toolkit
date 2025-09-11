@@ -117,6 +117,7 @@ export default function ReplayPage() {
 
       <TimelinePanel
         activity={chosenActivity}
+        playButtonClass={"ml-1 border-l-15 border-r-0 border-t-10 border-b-10 border-l-[#e50012] border-t-transparent border-b-transparent"}
         hasOngoingSession={hasOngoingSession}
         placeholderMessage={replayIsSelected ? "No Activity" : ""}
         canStart={canStartSession}
