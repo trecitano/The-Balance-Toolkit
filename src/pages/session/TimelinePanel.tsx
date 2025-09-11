@@ -68,7 +68,14 @@ export function TimelinePanel({
 
   return (
     <div className="relative mt-auto flex min-h-38 w-full items-center rounded-lg bg-gray-100 shadow-sm">
-      <img src={popout} onClick={openPopup} className="absolute top-3 right-3 size-5 object-contain transition-all hover:-translate-y-[1px] cursor-pointer" />
+      <img src={popout}
+           onClick={activity ? openPopup : undefined}
+           className={clsx(
+             "absolute top-3 right-3 size-5 object-contain transition-all",
+             activity
+               ? "hover:-translate-y-[1px] cursor-pointer"
+               : "opacity-40 pointer-events-none cursor-not-allowed"
+           )}/>
       <div>
         <button
           className={clsx(
