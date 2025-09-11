@@ -4,7 +4,7 @@ use crate::bluetooth::linux_bluetooth_service::NativeBluetoothHandler;
 #[cfg(target_os = "windows")]
 use crate::bluetooth::windows_bluetooth_service::NativeBluetoothHandler;
 #[cfg(target_os = "macos")]
-use crate::bluetooth::macos_bluetooth_service as NativeHandler;
+use crate::bluetooth::macos_bluetooth_service::NativeBluetoothHandler;
 use crate::bluetooth::bluetooth_service_mock::MockBluetoothHandler;
 
 use anyhow::{Result};
