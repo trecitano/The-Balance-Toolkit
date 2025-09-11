@@ -1,6 +1,6 @@
 use std::sync::Arc;
 #[cfg(target_os = "linux")]
-use crate::bluetooth::linux_bluetooth_service::Handler;
+use crate::bluetooth::linux_bluetooth_service::NativeBluetoothHandler;
 #[cfg(target_os = "windows")]
 use crate::bluetooth::windows_bluetooth_service::NativeBluetoothHandler;
 #[cfg(target_os = "macos")]
