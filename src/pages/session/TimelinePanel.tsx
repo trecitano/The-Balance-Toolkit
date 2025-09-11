@@ -69,7 +69,7 @@ export function TimelinePanel({
   const displayTotalSeconds = hasOngoingSession ? progressInfo.totalSeconds : singleLoopDuration * totalLoops;
 
   return (
-    <div className="relative mt-auto flex min-h-38 w-full items-center rounded-lg bg-gray-100 shadow-sm">
+    <div className="relative flex min-h-38 w-full items-center rounded-lg bg-gray-100 shadow-sm">
       <img src={popout}
            onClick={activity ? openPopup : undefined}
            className={clsx(
