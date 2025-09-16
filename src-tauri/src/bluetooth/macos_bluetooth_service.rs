@@ -19,7 +19,8 @@ struct PeripheralOut {
 }
 
 
-
+// Temporary gigantic hack
+pub static BINARY_PATH: &str = "../target/debug/macos-wii-balance-pair";
 pub struct NativeBluetoothHandler;
 #[async_trait]
 impl BluetoothHandler for NativeBluetoothHandler {
@@ -74,7 +75,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
         // scan-and-pair prints a single PeripheralOut as JSON on success
         let mut cmd = TokioCommand::new(&BINARY_PATH);
         cmd.arg("scan-and-pair");
-        let output = timeout(Duration::from_secs(120), cmd.output())
+        let output = timeout(Duration::from_secs(30), cmd.output())
             .await
             .map_err(|_| anyhow!("scan-and-pair timed out"))??;
 
@@ -87,8 +88,14 @@ impl BluetoothHandler for NativeBluetoothHandler {
 
         let stdout = String::from_utf8(output.stdout)
             .context("scan-and-pair stdout not UTF-8")?;
-        let dev: PeripheralOut =
-            serde_json::from_str(&stdout).context("failed to parse device JSON")?;
+        println!("Stdout!: #{}", stdout);
+        let dev: PeripheralOut = match serde_json::from_str(&stdout) {
+            Ok(d) => d,
+            Err(e) => {
+                println!("Boom {}", e);
+                return Err(anyhow!("Failed to parse device JSON. {}", e));
+            }
+        };
 
         let peripheral = BluetoothPeripheral {
             id: dev.id,
