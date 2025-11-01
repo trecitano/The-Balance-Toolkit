@@ -22,7 +22,7 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
           <ToolkitContainer className="flex w-full flex-1 flex-col justify-between p-8" key={`side-panel-${index}`}>
             {device ? (
               <>
-                <div className="mb-5 flex items-center gap-[var(--space-sm)]">
+                <div className="mb-5 flex items-center">
                   <img
                     src={bluetoothIcon}
                     alt="Bluetooth"

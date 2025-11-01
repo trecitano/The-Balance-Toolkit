@@ -24,6 +24,7 @@ import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import {useAlert} from "@/hooks/useAlert.tsx";
 import {useConfirm} from "@/hooks/useConfirm.tsx";
 import {devicesIcon} from "@/components/navigation/Navigation.tsx";
+import clsx from "clsx";
 
 const USERS_QUERY_KEY = ["users"];
 
@@ -345,116 +346,115 @@ export default function Users() {
 
   return (
     <>
-      <header className="z-1 mb-5 grid grid-cols-8">
+      <header className="grid grid-cols-8">
         <PageTitle>Users</PageTitle>
 
-        <ToolkitButton className="" type="button" color="blue" onClick={handleAddUser}>
-          Add new user
+        <ToolkitButton color="blue" onClick={handleAddUser}>
+          Create user
         </ToolkitButton>
 
-        <div className="absolute left-1/2 mx-auto flex w-[25vw] shrink-0 grow-0 -translate-x-1/2 items-center">
-          <span className="search-icon">
+        <div className="col-start-4 col-span-2 items-center relative">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 size-4 opacity-70">
             <img src={searchIcon} alt="Search" />
-          </span>
+          </div>
           <input
             type="text"
-            className="search-input"
+            className="search-input w-full px-10 py-2 rounded-lg text-sm bg-white outline-0"
             placeholder="Search by name or ID..."
             value={searchTerm}
             onChange={handleSearch}
           />
-          {isSearching && searchResults.length > 0 && (
-            <div className="search-results">
-              {searchResults.map((user) => (
-                <div key={user.id} className="search-result-item" onClick={() => handleSelectSearchResult(user.id)}>
-                  <img
-                    src={personIcon}
-                    alt=""
-                    className="search-result-icon"
-                    style={{ border: `2px solid ${user.color || "#ccc"}` }}
-                  />
-                  <span className="search-result-name">{user.name}</span>
-                  <span className="search-result-id">{user.name.substring(0, 8)}...</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {isSearching && searchResults.length === 0 && (
-            <div className="search-results">
-              <div className="search-no-results">No users found</div>
+
+          {isSearching && (
+            <div className="absolute left-0 top-12 w-full rounded-lg overflow-auto max-h-50 bg-white">
+              { searchResults.length === 0 ? (
+                <div className="italic text-gray-500 p-2 text-center">No users found</div>
+              ) : (
+                <>
+                {searchResults.map((user) => (
+                  <div key={user.id} className="flex items-center px-3 py-2 border-b border-gray-300 z-10 gap-2 cursor-pointer hover:bg-[#f0f7ff]" onClick={() => handleSelectSearchResult(user.id)}>
+                    {renderUserIcon(user, "size-6")}
+                    <span className="font-semibold">{user.name}</span>
+                  </div>
+                ))}
+                </>
+              )}
             </div>
           )}
         </div>
       </header>
 
-      <ul
-        className="carousel-list mt-12 flex min-h-80 gap-8 overflow-hidden px-[calc(50%-125px)] py-[3.5vh]"
-        ref={userListRef}
-      >
-        {sortedUsers.map((user) => (
-          <li
-            key={user.id}
-            data-userid={user.id}
-            ref={(el) => {
-              if (el && user.id === selectedUserId && !hasInitialScroll.current) {
-                hasInitialScroll.current = true;
-                el.scrollIntoView({
-                  behavior: "instant",
-                  inline: "center",
-                  block: "center",
-                });
-              }
-            }}
-            className={`user-carousel-item ${selectedUserId === user.id ? "selected" : ""} ${editingUserData?.id === user.id ? "editing" : ""} ${user.isDefault ? "default-user" : ""}`}
-            onClick={() => handleSelectUser(user.id)}
-          >
-            <div className="user-selection-status">
-              {selectedUserId === user.id && (user.isDefault ? "Default" : "Selected")}
-            </div>
-            {renderUserIcon(user, "w-[5vw] h-[5vw]")}
-            <span className="user-carousel-name">{user.name}</span>
-            <span className="user-carousel-date">
-              <span className="user-carousel-date-label">Updated</span>
-              <span className="user-carousel-date-value">{new Date(user.updatedAt).toLocaleDateString()}</span>
-            </span>
-          </li>
-        ))}
-      </ul>
+      <div>
+        <ul
+          className="carousel-list mt-12 flex min-h-55 gap-8 overflow-hidden p-10"
+          ref={userListRef}
+        >
+          {sortedUsers.map((user) => (
+            <li
+              key={user.id}
+              data-userid={user.id}
+              ref={(el) => {
+                if (el && user.id === selectedUserId && !hasInitialScroll.current) {
+                  hasInitialScroll.current = true;
+                  el.scrollIntoView({
+                    behavior: "instant",
+                    inline: "center",
+                    block: "center",
+                  });
+                }
+              }}
+              className={clsx("user-carousel-item flex flex-col items-center px-10 py-3",
+                selectedUserId === user.id && "selected"
+              )}
+              onClick={() => handleSelectUser(user.id)}
+            >
+              {selectedUserId === user.id && (
+                <div className={clsx("user-selection-status mb-3 text-xs text-white px-2 py-1 rounded-lg bg-(--primary)", user.isDefault && " default-user")}>
+                  {(user.isDefault ? "Default" : "Selected")}
+                </div>
+              )}
+              {renderUserIcon(user, "size-13")}
+              <span className="grow whitespace-nowrap">{user.name}</span>
+              <div className={"text-xs text-center text-gray-500"}>
+                <div>Updated</div>
+                <div>{new Date(user.updatedAt).toLocaleDateString()}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
 
-      <CarouselIndicators
-        className={"mt-5"}
-        entries={sortedUsers.map((user) => user.name)}
-        selectedIndex={currentIndex}
-        onSelect={async (index) => {
-          const user = sortedUsers[index];
-          await handleSelectUser(user.id);
-        }}
-      />
+        <CarouselIndicators
+          className={"mt-5"}
+          entries={sortedUsers.map((user) => user.name)}
+          selectedIndex={currentIndex}
+          onSelect={async (index) => {
+            const user = sortedUsers[index];
+            await handleSelectUser(user.id);
+          }}
+        />
+      </div>
 
       <ToolkitContainer className="mt-auto p-12">
-        {editingUserData ? (
-          <form className="" onSubmit={handleSubmit}>
-            <div className="user-display">
-              <div className="user-display-header">
-                {renderUserIcon(selectedUserData, "w-[3.5vw] h-[3.5vw]")}
-                <div className="user-header-info">
-                  <h2>{selectedUserData.name}</h2>
-                  <div className="user-metadata">
-                    <span className="metadata-item">
-                      <span className="metadata-label">Created:</span>
-                      <span className="metadata-value">
-                        {new Date(selectedUserData.createdAt).toLocaleDateString()}
-                      </span>
-                    </span>
-                    <span className="metadata-item">
-                      <span className="metadata-label">Updated:</span>
-                      <span className="metadata-value">
-                        {new Date(selectedUserData.updatedAt).toLocaleDateString()}
-                      </span>
-                    </span>
-                  </div>
+        <form onSubmit={handleSubmit}>
+          <div className="flex items-center gap-4 py-2 border-b border-gray-300">
+            {renderUserIcon(selectedUserData, "size-10")}
+            <div className="flex flex-col">
+              <h2 className={"font-bold"}> {selectedUserData.name} </h2>
+              <div className="flex gap-4 text-sm">
+                <div>
+                  <span>Created:</span>
+                  <span className={"font-semibold ml-1"}> {new Date(selectedUserData.createdAt).toLocaleDateString()} </span>
                 </div>
-                <div className="user-display-actions">
+                <div>
+                  <span>Updated: </span>
+                  <span className={"font-semibold ml-1"}> {new Date(selectedUserData.updatedAt).toLocaleDateString()} </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex ml-auto gap-2">
+              {editingUserData ? (
+                <>
                   <ToolkitButton type="submit" color="blue">
                     Save
                   </ToolkitButton>
@@ -472,246 +472,179 @@ export default function Users() {
                   <ToolkitButton type="button" color="grey" onClick={() => setEditingUserData(null)}>
                     Cancel
                   </ToolkitButton>
-                </div>
-              </div>
-
-              {/* Editable fields */}
-              <div className="mt-5 grid grid-cols-4 grid-rows-3 gap-2 text-base">
-                {/* Name */}
-                <SingleColumn requiredField label="Name:" icon={<img src={personIcon} />}>
-                  <InputPrimitive
-                    required
-                    value={editingUserData.name}
-                    onChange={(e) => handleEditUpdate("name", e.target.value)}
-                  />
-                </SingleColumn>
-
-                {/* Age */}
-                <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
-                  <InputPrimitive
-                    type="number"
-                    value={editingUserData.age}
-                    onChange={(e) => handleEditUpdate("age", Number(e.target.value))}
-                  />
-                </SingleColumn>
-
-                {/* Gender */}
-                <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
-                  <SelectPrimitive
-                    value={
-                      ["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "")
-                        ? (editingUserData.gender ?? "")
-                        : "N/A"
-                    }
-                    onChange={(v) => handleEditUpdate("gender", v === "Other" ? "" : v)}
-                    options={[
-                      { label: "Male", value: "Male" },
-                      { label: "Female", value: "Female" },
-                      { label: "Non-binary", value: "Non-binary" },
-                      { label: "Other", value: "Other" },
-                      { label: "Prefer not to say", value: "Prefer not to say" },
-                    ]}
-                  />
-                </SingleColumn>
-
-                {/* Custom gender input if "Other" */}
-                {!["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData.gender ?? "Male") && (
-                  <SingleColumn label="Specify Gender:" icon={<img src={sexIcon} alt="" />}>
-                    <InputPrimitive
-                      value={editingUserData.gender ?? ""}
-                      onChange={(e) => handleEditUpdate("gender", e.target.value)}
-                    />
-                  </SingleColumn>
-                )}
-
-                {/* Height */}
-                <SingleColumn label="Height:" icon={<img src={heightIcon} />}>
-                  <div className="flex gap-3">
-                    <InputPrimitive
-                      type="number"
-                      value={editingUserData.height ?? ""}
-                      onChange={(e) => {
-                        handleEditUpdate("height", Number(e.target.value));
-                        if (!editingUserData?.heightMetric) {
-                          handleEditUpdate("heightMetric", "cm");
-                        }
-                      }}
-                    />
-                    <SelectPrimitive
-                      value={editingUserData.heightMetric ?? "cm"}
-                      onChange={(v) => handleEditUpdate("heightMetric", v)}
-                      options={[
-                        { label: "cm", value: "cm" },
-                        { label: "in", value: "in" },
-                      ]}
-                    />
-                  </div>
-                </SingleColumn>
-
-                {/* Weight */}
-                <SingleColumn requiredField label="Weight:" icon={<img src={weightIcon} />}>
-                  <div className="flex justify-between gap-1">
-                    <InputPrimitive
-                      required
-                      type="number"
-                      className={"w-30"}
-                      value={editingUserData.weight ?? ""}
-                      onChange={(e) => {
-                        handleEditUpdate("weight", Number(e.target.value));
-                        if (!editingUserData?.weightMetric) {
-                          handleEditUpdate("weightMetric", "kg");
-                        }
-                      }}
-                    />
-                    <SelectPrimitive
-                      value={editingUserData.weightMetric ?? "kg"}
-                      onChange={(v) => handleEditUpdate("weightMetric", v)}
-                      options={[
-                        { label: "kg", value: "kg" },
-                        { label: "lb", value: "lb" },
-                      ]}
-                    />
-                    <ToolkitButton size={"sm"} type="button" color={"blue"} onClick={() => setShowWeightMeasure(true)}>
-                      Weight
+                </>
+              ) : (
+                <>
+                  {!selectedUserData.isDefault && (
+                    <ToolkitButton type="button" color="red" onClick={() => setShowDeleteConfirm(selectedUserData.id)}>
+                      Delete
                     </ToolkitButton>
-                  </div>
-                </SingleColumn>
-
-                {/* Dominant hand: */}
-                <SingleColumn label="Dominant hand:" icon={<img src={handIcon} />}>
-                  <SelectPrimitive
-                    value={editingUserData.dominantHand ?? ""}
-                    onChange={(v) => handleEditUpdate("dominantHand", v as UserType["dominantHand"])}
-                    options={[
-                      { label: "Right", value: "Right" },
-                      { label: "Left", value: "Left" },
-                      { label: "Ambidextrous", value: "Ambidextrous" },
-                    ]}
-                  />
-                </SingleColumn>
-
-                {/* Color */}
-                <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
-                  <div className="relative">
-                    <div
-                      className="w-full h-8 rounded-lg border border-gray-300 cursor-pointer"
-                      style={{ backgroundColor: editingUserData.color || "#ccc" }}
-                      onClick={handleColorClick}
-                    />
-                    {showColorDropdown && (
-                      <div className="recent-colors-dropdown">
-                        <div className="recent-colors">
-                          {fixedColors.map((color, index) => (
-                            <div
-                              key={index}
-                              className="recent-color-swatch"
-                              style={{ backgroundColor: color }}
-                              onClick={() => selectFixedColor(color)}
-                              title={color}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </SingleColumn>
-
-                {/* Notes */}
-                <SingleColumn className={"col-span-4 row-start-3"} label="Notes:">
-                  <InputPrimitive
-                    value={editingUserData.notes}
-                    onChange={(e) => handleEditUpdate("notes", e.target.value)}
-                  />
-                </SingleColumn>
-              </div>
-            </div>
-          </form>
-        ) : (
-          <div className="user-display">
-            <div className="user-display-header">
-              {renderUserIcon(selectedUserData, "w-[3.5vw] h-[3.5vw]")}
-              <div className="user-header-info">
-                <h2>{selectedUserData.name}</h2>
-                <div className="user-metadata">
-                  <span className="metadata-item">
-                    <span className="metadata-label">Created:</span>
-                    <span className="metadata-value">{new Date(selectedUserData.createdAt).toLocaleDateString()}</span>
-                  </span>
-                  <span className="metadata-item">
-                    <span className="metadata-label">Updated:</span>
-                    <span className="metadata-value">{new Date(selectedUserData.updatedAt).toLocaleDateString()}</span>
-                  </span>
-                </div>
-              </div>
-              <div className="user-display-actions">
-                {!selectedUserData.isDefault && (
-                  <ToolkitButton type="button" color="red" onClick={() => setShowDeleteConfirm(selectedUserData.id)}>
-                    Delete
+                  )}
+                  <ToolkitButton type="button" color="blue" onClick={() => setEditingUserData(selectedUserData)}>
+                    Edit
                   </ToolkitButton>
-                )}
-                <ToolkitButton type="button" color="blue" onClick={() => setEditingUserData(selectedUserData)}>
-                  Edit
-                </ToolkitButton>
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-4 grid-rows-3 gap-2 text-base">
-              {/* Name */}
-              <SingleColumn label="Name:" icon={<img src={personIcon} />}>
-                <InputPrimitive disabled={true} value={selectedUserData.name ?? "N/A"} />
-              </SingleColumn>
-
-              {/* Age */}
-              <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
-                <InputPrimitive disabled={true} value={selectedUserData.age ?? "N/A"} />
-              </SingleColumn>
-
-              {/* Gender */}
-              <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
-                <InputPrimitive disabled={true} value={selectedUserData.gender ?? "N/A"} />
-              </SingleColumn>
-
-              {/* Height */}
-              <SingleColumn label="Height:" icon={<img src={heightIcon} />}>
-                <InputPrimitive
-                  disabled={true}
-                  value={
-                    selectedUserData.height ? `${selectedUserData.height} ${selectedUserData.heightMetric}` : "N/A"
-                  }
-                />
-              </SingleColumn>
-
-              {/* Weight */}
-              <SingleColumn label="Weight:" icon={<img src={weightIcon} />}>
-                <InputPrimitive
-                  disabled={true}
-                  value={
-                    selectedUserData.weight ? `${selectedUserData.weight} ${selectedUserData.weightMetric}` : "N/A"
-                  }
-                />
-              </SingleColumn>
-
-              {/* Dominant hand: */}
-              <SingleColumn label="Dominant hand::" icon={<img src={handIcon} />}>
-                <InputPrimitive disabled={true} value={selectedUserData.dominantHand ?? "N/A"} />
-              </SingleColumn>
-
-              {/* Color */}
-              <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
-                <InputPrimitive
-                  disabled={true}
-                  style={{ backgroundColor: selectedUserData.color ?? "#ccc" }}
-                  title={selectedUserData.color ?? "No color selected"}
-                ></InputPrimitive>
-              </SingleColumn>
-
-              {/* Notes */}
-              <SingleColumn className={"col-span-4 row-start-3"} label="Notes:">
-                <InputPrimitive disabled={true} value={selectedUserData.notes ?? ""} />
-              </SingleColumn>
+                </>
+              )}
             </div>
           </div>
-        )}
+
+          <div className="mt-5 grid grid-cols-4 grid-rows-3 gap-2">
+            {/* Name */}
+            <SingleColumn requiredField label="Name:" icon={<img src={personIcon} />}>
+              <InputPrimitive
+                required
+                value={editingUserData?.name}
+                onChange={(e) => handleEditUpdate("name", e.target.value)}
+                disabled={!editingUserData}
+              />
+            </SingleColumn>
+
+            {/* Age */}
+            <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
+              <InputPrimitive
+                type="number"
+                value={editingUserData?.age}
+                onChange={(e) => handleEditUpdate("age", Number(e.target.value))}
+                disabled={!editingUserData}
+              />
+            </SingleColumn>
+
+            {/* Gender */}
+            <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
+              <SelectPrimitive
+                value={
+                  ["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData?.gender ?? "")
+                    ? (editingUserData?.gender ?? "")
+                    : "N/A"
+                }
+                onChange={(v) => handleEditUpdate("gender", v === "Other" ? "" : v)}
+                options={[
+                  { label: "Male", value: "Male" },
+                  { label: "Female", value: "Female" },
+                  { label: "Non-binary", value: "Non-binary" },
+                  { label: "Other", value: "Other" },
+                  { label: "Prefer not to say", value: "Prefer not to say" },
+                ]}
+                disabled={!editingUserData}
+              />
+            </SingleColumn>
+
+            {/* Custom gender input if "Other" */}
+            {!["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData?.gender ?? "Male") && (
+              <SingleColumn label="Specify Gender:" icon={<img src={sexIcon} alt="" />}>
+                <InputPrimitive
+                  value={editingUserData?.gender ?? ""}
+                  onChange={(e) => handleEditUpdate("gender", e.target.value)}
+                  disabled={!editingUserData}
+                />
+              </SingleColumn>
+            )}
+
+            {/* Height */}
+            <SingleColumn label="Height:" icon={<img src={heightIcon} />}>
+              <div className="flex gap-3">
+                <InputPrimitive
+                  type="number"
+                  value={editingUserData?.height ?? ""}
+                  onChange={(e) => {
+                    handleEditUpdate("height", Number(e.target.value));
+                    if (!editingUserData?.heightMetric) {
+                      handleEditUpdate("heightMetric", "cm");
+                    }
+                  }}
+                  disabled={!editingUserData}
+                />
+                <SelectPrimitive
+                  value={editingUserData?.heightMetric ?? "cm"}
+                  onChange={(v) => handleEditUpdate("heightMetric", v)}
+                  options={[
+                    { label: "cm", value: "cm" },
+                    { label: "in", value: "in" },
+                  ]}
+                />
+              </div>
+            </SingleColumn>
+
+            {/* Weight */}
+            <SingleColumn requiredField label="Weight:" icon={<img src={weightIcon} />}>
+              <div className="flex justify-between gap-1">
+                <InputPrimitive
+                  required
+                  type="number"
+                  className={"w-30"}
+                  value={editingUserData?.weight ?? ""}
+                  onChange={(e) => {
+                    handleEditUpdate("weight", Number(e.target.value));
+                    if (!editingUserData?.weightMetric) {
+                      handleEditUpdate("weightMetric", "kg");
+                    }
+                  }}
+                  disabled={!editingUserData}
+                />
+                <SelectPrimitive
+                  value={editingUserData?.weightMetric ?? "kg"}
+                  onChange={(v) => handleEditUpdate("weightMetric", v)}
+                  options={[
+                    { label: "kg", value: "kg" },
+                    { label: "lb", value: "lb" },
+                  ]}
+                />
+                <ToolkitButton size={"sm"} type="button" color={"blue"} onClick={() => setShowWeightMeasure(true)}>
+                  Weight
+                </ToolkitButton>
+              </div>
+            </SingleColumn>
+
+            {/* Dominant hand: */}
+            <SingleColumn label="Dominant hand:" icon={<img src={handIcon} />}>
+              <SelectPrimitive
+                value={editingUserData?.dominantHand ?? ""}
+                onChange={(v) => handleEditUpdate("dominantHand", v as UserType["dominantHand"])}
+                options={[
+                  { label: "Right", value: "Right" },
+                  { label: "Left", value: "Left" },
+                  { label: "Ambidextrous", value: "Ambidextrous" },
+                ]}
+                disabled={!editingUserData}
+              />
+            </SingleColumn>
+
+            {/* Color */}
+            <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
+              <div className="relative" >
+                <div
+                  className="w-full h-8 rounded-lg border border-gray-300 cursor-pointer"
+                  style={{ backgroundColor: editingUserData?.color || "#ccc" }}
+                  onClick={handleColorClick}
+                />
+                {showColorDropdown && (
+                  <div className="recent-colors-dropdown">
+                    <div className="recent-colors">
+                      {fixedColors.map((color, index) => (
+                        <div
+                          key={index}
+                          className="recent-color-swatch"
+                          style={{ backgroundColor: color }}
+                          onClick={() => selectFixedColor(color)}
+                          title={color}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </SingleColumn>
+
+            {/* Notes */}
+            <SingleColumn className={"col-span-4 row-start-3"} label="Notes:">
+              <InputPrimitive
+                value={editingUserData?.notes}
+                onChange={(e) => handleEditUpdate("notes", e.target.value)}
+                disabled={!editingUserData}
+              />
+            </SingleColumn>
+          </div>
+        </form>
       </ToolkitContainer>
 
       <Modal open={!!showDeleteConfirm} onClose={() => setShowDeleteConfirm(null)}>

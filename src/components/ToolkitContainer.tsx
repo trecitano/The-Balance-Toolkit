@@ -14,7 +14,7 @@ const ToolkitContainer = React.forwardRef<HTMLDivElement, ContainerProps>(functi
       ref={ref}
       className={clsx(
         className,
-        "rounded-lg border-[0.1rem] border-(--border-primary) p-3 shadow-(--shadow-light)",
+        "rounded-lg border-(--border-primary) p-3 shadow-(--shadow-light)",
         background,
       )}
       {...rest}

@@ -49,28 +49,28 @@ const Home: React.FC = () => {
       <Header />
 
       {/* Main Content */}
-      <div className="mt-6 grid h-full grid-flow-col grid-cols-3 grid-rows-3 gap-8">
-        <div className="col-span-2 row-span-3 grid grid-cols-2 grid-rows-10 gap-8">
-          <ToolkitContainer className="col-span-1 row-span-6">
-            <LastSessionCard sessionDetails={lastSessionDetails} />
-          </ToolkitContainer>
+      <div className="mt-6 grid grid-cols-3 grid-rows-6 gap-8">
+        <ToolkitContainer className="row-span-3">
+          <LastSessionCard sessionDetails={lastSessionDetails} />
+        </ToolkitContainer>
 
-          <ToolkitContainer className="col-span-1 row-span-6">
-            <ConnectionCard devices={devices} />{" "}
-          </ToolkitContainer>
+        <ToolkitContainer className="row-span-6">
+          <ConnectionCard devices={devices} />{" "}
+        </ToolkitContainer>
 
-          <ToolkitContainer className="col-span-2 row-span-4">
-            <ActivitiesCard activities={activities} />
-          </ToolkitContainer>
-        </div>
-
-        <ToolkitContainer className="row-span-1" background={"bg-gray-100"}>
+        <ToolkitContainer className="row-span-2" background={"bg-gray-100"}>
           <HelpSupportCard />{" "}
         </ToolkitContainer>
-        <ToolkitContainer className="row-span-1" background={"bg-gray-100"}>
+
+        <ToolkitContainer className="row-span-2" background={"bg-gray-100"}>
           <DocumentationCard />{" "}
         </ToolkitContainer>
-        <ToolkitContainer className="row-span-1" background={"bg-gray-100"}>
+
+        <ToolkitContainer className="row-span-3">
+          <ActivitiesCard activities={activities} />
+        </ToolkitContainer>
+
+        <ToolkitContainer className="row-span-2" background={"bg-gray-100"}>
           <OtherResourcesCard />{" "}
         </ToolkitContainer>
       </div>
@@ -82,7 +82,7 @@ const Header: React.FC = () => {
   return (
     <div className="bg-(--red) px-6 py-6 text-white">
       <div className="flex gap-6 items-center grid grid-cols-3">
-        {/* Left: Greeting */}
+
         <img className={"w-34"} src={logoLettering} draggable={false}  />
 
         {/* Center: Circle logo */}
@@ -270,7 +270,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
 
       {hasAnyDevices ? (
         <>
-          <div className="text-base">
+          <div className="text-sm">
             <p className="font-semibold">There are no connected devices!</p>
             <p> Go to the devices page to scan for boards.</p>
           </div>
@@ -281,7 +281,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
         </>
       ) : numberConnectedDevices === 0 ? (
         <>
-          <div className="text-base">
+          <div className="text-sm">
             <p className="font-semibold">A Board has been previously connected.</p>
             <p> Please turn on the board!</p>
           </div>
@@ -292,7 +292,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
         </>
       ) : (
         <>
-          <div className="text-base">
+          <div className="text-sm">
             {numberConnectedDevices === 1 ? (
               <p className="font-semibold">There is one connected board!</p>
             ) : (
@@ -303,7 +303,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
 
           <div className="relative flex flex-1 items-center justify-center">
             <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
-            <img src={wbbIconBlue} className="z-10 h-4/5 w-4/5 object-contain" />
+            <img src={wbbIconBlue} className="z-10 w-20 object-contain" />
           </div>
         </>
       )}

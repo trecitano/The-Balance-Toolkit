@@ -9,7 +9,8 @@ use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
 use crate::actors::state::activities::{Activity, TimelineBlock};
 use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
 use tauri::ipc::Channel;
-use tauri::{Emitter, Manager, State};
+use tauri::{Emitter, Manager, PhysicalSize, State};
+use tauri::utils::config::WindowConfig;
 use tauri_plugin_fs::FsExt;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, oneshot};
@@ -52,6 +53,21 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
                     }
                 }
             });
+
+            if let Some(monitor) = app.primary_monitor().unwrap() {
+                let size = monitor.size();
+                let min_width = (size.width as f64 * 0.55) as u32;
+                let min_height = (size.height as f64 * 0.6) as u32;
+
+                tauri::WebviewWindowBuilder::new(app.handle(), "main", tauri::WebviewUrl::default())
+                    .title("The Balance Toolkit")
+                    .resizable(true)
+                    .maximizable(true)
+                    .inner_size(min_width as f64, min_height as f64)
+              //      .min_inner_size(min_width as f64, min_height as f64)
+                    .build()
+                    .unwrap();
+            }
 
             Ok(())
         })

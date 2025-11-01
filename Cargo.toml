@@ -1,7 +1,6 @@
 [workspace]
 members = [
   "src-tauri",
-  "macos-wii-balance-pair",
 ]
 resolver = "2"
 

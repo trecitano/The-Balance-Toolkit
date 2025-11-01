@@ -11,15 +11,6 @@
     "removeUnusedCommands": true
   },
   "app": {
-    "windows": [
-      {
-        "title": "The Balance Toolkit",
-        "width": 1400,
-        "height": 920,
-        "resizable": true,
-        "maximizable": true
-      }
-    ],
     "security": {
       "csp": null
     }

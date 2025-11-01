@@ -16,7 +16,6 @@ import {SESSION_QUERY_KEY, SessionQueryData} from "@/pages/session/session/Sessi
 interface NavigationProps {
   activeView: string;
   onViewChange: (view: string) => void;
-  className?: string;
 }
 
 type MenuItemType = {
@@ -34,7 +33,7 @@ const menuItems: MenuItemType[] = [
   { id: "activities", label: "Activities", icon: activitiesIcon },
 ];
 
-function Navigation({ activeView, onViewChange, className }: NavigationProps) {
+function Navigation({ activeView, onViewChange }: NavigationProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -56,43 +55,34 @@ function Navigation({ activeView, onViewChange, className }: NavigationProps) {
   };
 
   return (
-    <nav
-      className={clsx(
-        "menu-bar menu-bar--active box-border flex h-screen min-w-[50px] flex-col justify-between border-r border-r-[var(--border-primary)] bg-(--red) p-0 shadow-[2px_0_10px_rgba(0,0,0,0.04)]",
-        className,
-      )}
-    >
-      <div>
-        <img src={logo} alt="Logo" className="mt-3 mx-auto size-13 object-contain" />
-        <div className="menu-container">
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {menuItems.map((item) => (
-              <li
-                key={item.id}
-                className={clsx("menu-item", item.id, activeView === item.id && "active", hasOngoingSession && "opacity-65 disabled cursor-not-allowed")}
-                onClick={() => {
-                  if (!hasOngoingSession) {
-                    onViewChange(item.id);
-                  }
-                }}
-              >
-                <span className="menu-item-icon">
-                  <img src={item.icon} alt={item.label} />
-                </span>
-                <span className="menu-item-text">{item.label}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-      <div className="menu-bottom">
+    <nav className={"flex flex-col w-22 shrink-0 justify-between bg-(--red) gap-10"}>
+      <img src={logo} className="mt-5 mx-auto size-15 object-contain" />
+      <ul className={"grow flex flex-col gap-3"}>
+        {menuItems.map((item) => (
+          <li
+            key={item.id}
+            className={clsx("menu-item", item.id, activeView === item.id && "active", hasOngoingSession && "opacity-65 disabled cursor-not-allowed")}
+            onClick={() => {
+              if (!hasOngoingSession) {
+                onViewChange(item.id);
+              }
+            }}
+          >
+            <span className="menu-item-icon">
+              <img src={item.icon} alt={item.label} />
+            </span>
+            <span className="text-white">{item.label}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="mb-10">
         {/* Settings */}
-        <button className={clsx("menu-item settings unstyled-button", hasOngoingSession && "opacity-65 disabled cursor-not-allowed")}
+        <button className={clsx("menu-item", hasOngoingSession && "opacity-65 disabled cursor-not-allowed")}
           title="Settings" onClick={handleSettingsClick}>
           <span className="menu-item-icon">
             <img src={settingsIcon} alt="Settings" />
           </span>
-          <span className="menu-item-text">Settings</span>
+          <span className="text-white">Settings</span>
         </button>
       </div>
 

@@ -30,7 +30,7 @@ type ButtonProps = ButtonAsButton | ButtonAsLink;
 
 const base =
   "leading-none " +
-  "text-lg cursor-pointer font-semibold " +
+  "text-sm cursor-pointer font-semibold " +
   "transition-all shadow-md " +
   "enabled:hover:-translate-y-[1px] " +
   "enabled:active:translate-y-[1px] enabled:active:shadow-inner " +
