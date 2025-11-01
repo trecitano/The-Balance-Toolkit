@@ -6,5 +6,5 @@ interface HeadingProps {
 }
 
 export default function PageSubtitle({ children, className = "" }: HeadingProps) {
-  return <h2 className={`text-[1.6vh] font-semibold ${className}`}>{children}</h2>;
+  return <h2 className={`text-base font-semibold ${className}`}>{children}</h2>;
 }

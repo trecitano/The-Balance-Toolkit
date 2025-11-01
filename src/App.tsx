@@ -26,13 +26,12 @@ function DefaultLayout() {
   usePrefetchQuery(DevicesQuery);
 
   return (
-    <div className="box-border flex h-screen flex-row overflow-hidden bg-(--bg-primary) text-[0.85em]">
+    <div className="flex flex-row">
       <Navigation
-        className="w-5/100"
         activeView={location.pathname.substring(1) || "home"}
         onViewChange={handleViewChange}
       />
-      <main className="flex h-screen w-95/100 flex-col bg-(--bg-primary) px-20 py-8">
+      <main className="flex flex-col h-screen min-w-250 min-h-120 grow bg-(--bg-primary) px-20 py-8">
         <Outlet />
       </main>
     </div>
