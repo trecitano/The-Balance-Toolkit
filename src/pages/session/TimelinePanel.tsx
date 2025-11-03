@@ -69,7 +69,7 @@ export function TimelinePanel({
   const displayTotalSeconds = hasOngoingSession ? progressInfo.totalSeconds : singleLoopDuration * totalLoops;
 
   return (
-    <div className="relative flex min-h-38 w-full items-center rounded-lg bg-gray-100 shadow-sm">
+    <div className="relative flex min-h-36 w-full items-center rounded-lg bg-gray-100 shadow-sm">
       <img src={popout}
            onClick={activity ? openPopup : undefined}
            className={clsx(
@@ -81,7 +81,7 @@ export function TimelinePanel({
       <div>
         <button
           className={clsx(
-            "ml-3 flex h-12 min-h-[48px] w-12 min-w-[48px] cursor-pointer items-center justify-center rounded-full transition-all duration-100",
+            "ml-3 flex size-12 cursor-pointer items-center justify-center rounded-full transition-all duration-100",
             hasOngoingSession
               ? "border-2 border-[#e50012] bg-[#e50012] text-white"
               : "border-2 border-[#e50012] bg-white text-black",
@@ -102,7 +102,7 @@ export function TimelinePanel({
         >
           {hasOngoingSession ? (
             // Stop icon (square)
-            <span className="block size-5 rounded-[2px] bg-white" />
+            <span className="size-5 rounded bg-white" />
           ) : (
             // Play icon (triangle). Using border trick for a crisp triangle.
             <span className={playButtonClass}/>
@@ -111,7 +111,7 @@ export function TimelinePanel({
       </div>
       {activity ? (
         <div className="mx-5 mt-2 mb-1 w-9/10">
-          <div className="mb-3 flex justify-end text-sm font-medium text-gray-700">
+          <div className="mb-3 flex justify-end text-xs font-medium text-gray-700">
             Loop {displayLoop}/{displayTotalLoops}, {formatTime(displayCurrentSeconds)}/
             {formatTime(displayTotalSeconds)}
           </div>

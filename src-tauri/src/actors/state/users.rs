@@ -52,7 +52,6 @@ impl UserState {
             weight_metric: Some("kg".to_string()),
             dominant_hand: None,
             color: Some(format!("#{:06x}", rand::rng().gen_range(0..=0xFFFFFF))),
-            notes: None,
             created_at: now,
             updated_at: now,
             is_default: false,

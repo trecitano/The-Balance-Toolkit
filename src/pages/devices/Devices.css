@@ -1,27 +1,47 @@
+@property --top-opacity {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+
+@property --bottom-opacity {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+
 .devices-list {
   scrollbar-width: none;
+
   mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black calc(150px * var(--top-opacity, 0)),
-    black calc(100% - 150px * var(--bottom-opacity, 1)),
-    transparent 100%
+          to bottom,
+          transparent 0%,
+          black calc(6rem * var(--top-opacity)),
+          black calc(100% - 6rem * var(--bottom-opacity)),
+          transparent 100%
   );
+
+  animation: scroll-fade linear forwards;
+  animation-timeline: scroll(self);
+  animation-range: 0% 100%;
 }
 
-.spinner {
-  display: inline-block;
-  border: 0.8vw solid #e3e8ef;
-  border-top: 0.8vw solid var(--primary);
-  border-radius: var(--radius-round);
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
+@keyframes scroll-fade {
   0% {
-    transform: rotate(0deg);
+    --top-opacity: 0;
+    --bottom-opacity: 1;
   }
+
+  15% {
+    --top-opacity: 1;
+  }
+
+  85% {
+    --bottom-opacity: 1;
+  }
+
   100% {
-    transform: rotate(360deg);
+    --top-opacity: 1;
+    --bottom-opacity: 0;
   }
 }

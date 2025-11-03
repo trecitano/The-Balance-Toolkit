@@ -5,6 +5,7 @@ import wbbIconBlue from "@/assets/wbb-top-blue.svg";
 import "./DeviceRow.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
+import clsx from "clsx";
 
 interface DeviceRowProps {
   device: Device;
@@ -56,93 +57,93 @@ export default function DeviceRow({
   };
 
   return (
-    <div className="device-row">
-      <div className={`device-container ${device.isConnected ? "" : "disconnected"}`}>
-        <button onClick={() => handleRemoveDevice(device.macAddress)} className="remove-device-btn">
-          ✕
-        </button>
+    <div className={clsx("px-4 py-2 min-h-23 items-center flex  bg-(--light-accent) rounded-lg relative", !device.isConnected && "opacity-70")}>
+      <button onClick={() => handleRemoveDevice(device.macAddress)} className="absolute top-2 right-3 remove-device-btn">
+        ✕
+      </button>
 
-        <div className="device-image-status">
-          <img
-            src={device.isConnected ? wbbIconBlue : wbbIcon}
-            alt="Device"
-            className={`device-image ${device.isConnected ? "device-image-blue" : ""}`}
-          />
-          {isSelected ? (
-            <div className={"device-status device-status-connected"}>
-              Connected
-            </div>
-          ) : !device.isConnected && (
-            <div className={"device-status device-status-disconnected"}>
-              Disconnected
-            </div>
-          )}
-        </div>
+      <div>
+        <img
+          src={device.isConnected ? wbbIconBlue : wbbIcon}
+          alt="Device"
+          className={"size-10 object-contain"}
+        />
 
-        <div className="device-info">
-          {isEditing ? (
-            <div className="device-name-edit-container">
-              <input
-                ref={inputRef}
-                type="text"
-                defaultValue={device.name}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSaveDeviceName(device.macAddress, inputRef.current?.value || "");
-                  }
-                  if (e.key === "Escape") {
-                    // Cancel edit
-                    handleSaveDeviceName(device.macAddress, device.name);
-                  }
-                }}
-                onBlur={() => handleSaveDeviceName(device.macAddress, inputRef.current?.value || "")}
-                className="device-name-edit-input"
-              />
-            </div>
-          ) : (
-            <div className="device-name-container">
-              <span className="device-name-text" title={device.name}>
-                {device.name}
-              </span>
-              <button onClick={() => handleStartEditName(device.id)} className="device-edit-name-btn" title="Edit name">
-                ✎
-              </button>
-            </div>
-          )}
-          <div className="device-last-connected">
-            {device.isConnected
-              ? `MAC: ${convertNumberToMacAddress(device.macAddress)}`
-              : `Last seen: ${formatLastConnected(device.lastConnected)}`}
+        {isSelected ? (
+          <div className={"px-2 py-1 rounded-lg text-sm bg-(--secondary) text-white"}>
+            Connected
           </div>
-        </div>
+        ) : !device.isConnected && (
+          <div className={"text-sm text-(--text-lighter)"}>
+            Disconnected
+          </div>
+        )}
+      </div>
 
-        <div className="flex gap-5">
-          <ToolkitButton
-            disabled={!device.isConnected}
-            type="button"
-            className={"text-sm"}
-            shape="circle"
-            color="white"
-            onClick={() => handleIdentifyClick(device)}
-          >
-            ID
-          </ToolkitButton>
-          {!isSelected ? (
-            <ToolkitButton
-              type="button"
-              color="blue"
-              onClick={() => handleSelectDeviceForSession(device.macAddress)}
-              disabled={cannotConnect}
-            >
-              Connect
-            </ToolkitButton>
-          ) : (
-            <ToolkitButton type="button" color="red" onClick={() => handleUnselectDevice(device.macAddress)}>
-              Disconnect
-            </ToolkitButton>
-          )}
+      <div className="flex flex-col justify-center ml-8">
+        {isEditing ? (
+          <div className="flex">
+            <input
+              ref={inputRef}
+              type="text"
+              defaultValue={device.name}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSaveDeviceName(device.macAddress, inputRef.current?.value || "");
+                }
+                if (e.key === "Escape") {
+                  // Cancel edit
+                  handleSaveDeviceName(device.macAddress, device.name);
+                }
+              }}
+              onBlur={() => handleSaveDeviceName(device.macAddress, inputRef.current?.value || "")}
+              className="px-2 py-1"
+            />
+          </div>
+        ) : (
+          <div className="">
+            <span className="font-semibold" title={device.name}>
+              {device.name}
+            </span>
+            <button className="cursor-pointer text-(--text-light)"
+                    onClick={() => handleStartEditName(device.id)} title="Edit name">
+              ✎
+            </button>
+          </div>
+        )}
+        <div className="text-(--text-lighter)">
+          {device.isConnected
+            ? `MAC: ${convertNumberToMacAddress(device.macAddress)}`
+            : `Last seen: ${formatLastConnected(device.lastConnected)}`}
         </div>
+      </div>
+
+      <div className="ml-auto mr-5 flex flex-row gap-5 h-10 ">
+        <ToolkitButton
+          disabled={!device.isConnected}
+          type="button"
+          className={"text-sm"}
+          shape="circle"
+          color="white"
+          onClick={() => handleIdentifyClick(device)}
+        >
+          ID
+        </ToolkitButton>
+        {!isSelected ? (
+          <ToolkitButton
+            type="button"
+            color="blue"
+            onClick={() => handleSelectDeviceForSession(device.macAddress)}
+            disabled={cannotConnect}
+          >
+            Connect
+          </ToolkitButton>
+        ) : (
+          <ToolkitButton type="button" color="red" onClick={() => handleUnselectDevice(device.macAddress)}>
+            Disconnect
+          </ToolkitButton>
+        )}
       </div>
     </div>
   );

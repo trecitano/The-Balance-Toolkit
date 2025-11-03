@@ -31,7 +31,7 @@ function DefaultLayout() {
         activeView={location.pathname.substring(1) || "home"}
         onViewChange={handleViewChange}
       />
-      <main className="flex flex-col h-screen min-w-250 min-h-120 grow bg-(--bg-primary) px-20 py-8">
+      <main className="h-screen min-w-330 min-h-120 grow bg-(--bg-primary) px-20 py-8">
         <Outlet />
       </main>
     </div>

@@ -27,15 +27,14 @@ export function ComplexBoardPanel({
 }) {
   return (
     <ToolkitContainer className={"flex flex-auto flex-col gap-3"}>
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold">{boardName}</h3>
+      <div className="flex gap-2 text-sm">
+        <p className="font-semibold">{boardName}</p>
         <p>{convertNumberToMacAddress(macAddress)}</p>
       </div>
 
       <div className="grid h-full grid-cols-12 grid-rows-2 gap-3">
         <div className="col-span-6 flex gap-3 rounded bg-gray-100 p-2">
           <BalanceBoardWithCoPOverlay
-            className="h-[100px] w-full p-3"
             macAddress={macAddress}
             src={wbbTopdown}
             store={store}
