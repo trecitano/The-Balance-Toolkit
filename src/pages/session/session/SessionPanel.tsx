@@ -50,8 +50,8 @@ export function SessionPanel({
         <PageTitle>Session</PageTitle>
       </header>
 
-      <ToolkitContainer className="grid grid-cols-34 grid-rows-2">
-        <SingleColumn label="Board to Display" className="col-span-8">
+      <ToolkitContainer className="grid grid-cols-40 grid-rows-2 text-xs">
+        <SingleColumn label="Board to Display" className="col-span-9">
           <SelectPrimitive
             mode={"multi"}
             disabled={disabled}
@@ -63,11 +63,11 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Tare" labelMargin={false}>
-          <img src={tareIcon} className="h-8 object-contain hover:-translate-y-[1px] cursor-pointer" onClick={async () => commands.session.tareDevices()}/>
+        <SingleColumn label="Tare" className="col-span-2 items-center" labelMargin={false}>
+          <img src={tareIcon} className="size-7 object-contain hover:-translate-y-[1px] cursor-pointer opacity-75 hover:opacity-100" onClick={async () => commands.session.tareDevices()}/>
         </SingleColumn>
 
-        <SingleColumn label="User" className="col-span-8" tooltipId={"session_user"}>
+        <SingleColumn label="User" className="col-span-7" tooltipId={"session_user"}>
           <SelectPrimitive<number>
             disabled={disabled}
             value={value?.selectedUser ?? 0}
@@ -76,7 +76,7 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Size (ms)" className="col-span-4" tooltipId={"session_window_size"}>
+        <SingleColumn label="Window Size (ms)" className="col-span-6" tooltipId={"session_window_size"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -85,7 +85,7 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Slide (ms)" className="col-span-4" tooltipId={"session_window_slide"}>
+        <SingleColumn label="Window Slide (ms)" className="col-span-6" tooltipId={"session_window_slide"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -93,7 +93,7 @@ export function SessionPanel({
             onChange={(e) => update("windowSlideMs", Number(e.target.value))}
           />
         </SingleColumn>
-        <SingleColumn label="Sampling Rate" className="col-span-4" tooltipId={"session_sampling_rate"}>
+        <SingleColumn label="Sampling Rate" className="col-span-5" tooltipId={"session_sampling_rate"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -113,7 +113,7 @@ export function SessionPanel({
 
         <SingleColumn
           label="Activity"
-          className="col-span-8"
+          className="col-span-9"
           disabled={disabled}
           actionText="Clear"
           onActionClick={() => update("activityId", "")}
@@ -150,7 +150,7 @@ export function SessionPanel({
         <SingleColumn
           label="Save Location"
           backgroundType="transparent"
-          className="col-start-18 col-end-34"
+          className="col-start-19 col-end-34"
           actionText="Clear"
           tooltipId={"session_save_location"}
           onActionClick={() => update("outputDirectory", "")}

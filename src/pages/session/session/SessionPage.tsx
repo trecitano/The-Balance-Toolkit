@@ -102,7 +102,7 @@ export default function SessionPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-5">
+    <div className="flex h-full flex-col gap-3">
       <SessionPanel
         boardDisplaySelected={boardDisplaySelected}
         onBoardDisplayChange={setBoardDisplaySelected}
@@ -135,7 +135,7 @@ export default function SessionPage() {
           <p className="text-3xl font-medium">No boards in session</p>
           <p className="mb-4 text-xl text-gray-400">Connect to a board in the Devices page!</p>
           <ToolkitButton to="/devices" color="blue" iconUrl={devicesIcon}>
-            Go to Devices →
+            Devices →
           </ToolkitButton>
         </div>
       ) : (

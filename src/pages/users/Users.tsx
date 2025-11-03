@@ -345,7 +345,7 @@ export default function Users() {
   };
 
   return (
-    <>
+    <div className={"h-full flex flex-col justify-between gap-5"}>
       <header className="grid grid-cols-8">
         <PageTitle>Users</PageTitle>
 
@@ -353,7 +353,7 @@ export default function Users() {
           Create user
         </ToolkitButton>
 
-        <div className="col-start-4 col-span-2 items-center relative">
+        <div className="col-start-4 col-span-2 items-center relative z-10">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 size-4 opacity-70">
             <img src={searchIcon} alt="Search" />
           </div>
@@ -372,7 +372,7 @@ export default function Users() {
               ) : (
                 <>
                 {searchResults.map((user) => (
-                  <div key={user.id} className="flex items-center px-3 py-2 border-b border-gray-300 z-10 gap-2 cursor-pointer hover:bg-[#f0f7ff]" onClick={() => handleSelectSearchResult(user.id)}>
+                  <div key={user.id} className="flex items-center px-3 py-2 border-b border-gray-300 gap-2 cursor-pointer hover:bg-[#f0f7ff]" onClick={() => handleSelectSearchResult(user.id)}>
                     {renderUserIcon(user, "size-6")}
                     <span className="font-semibold">{user.name}</span>
                   </div>
@@ -386,7 +386,7 @@ export default function Users() {
 
       <div>
         <ul
-          className="carousel-list mt-12 flex min-h-55 gap-8 overflow-hidden p-10"
+          className="carousel-list flex min-h-55 gap-8 overflow-hidden p-10"
           ref={userListRef}
         >
           {sortedUsers.map((user) => (
@@ -434,7 +434,7 @@ export default function Users() {
         />
       </div>
 
-      <ToolkitContainer className="mt-auto p-12">
+      <ToolkitContainer className="p-12">
         <form onSubmit={handleSubmit}>
           <div className="flex items-center gap-4 py-2 border-b border-gray-300">
             {renderUserIcon(selectedUserData, "size-10")}
@@ -488,7 +488,7 @@ export default function Users() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-4 grid-rows-3 gap-2">
+          <div className="mt-5 grid grid-cols-4 grid-rows-2 gap-2">
             {/* Name */}
             <SingleColumn requiredField label="Name:" icon={<img src={personIcon} />}>
               <InputPrimitive
@@ -571,7 +571,7 @@ export default function Users() {
                 <InputPrimitive
                   required
                   type="number"
-                  className={"w-30"}
+                  className={"min-w-20"}
                   value={editingUserData?.weight ?? ""}
                   onChange={(e) => {
                     handleEditUpdate("weight", Number(e.target.value));
@@ -634,15 +634,6 @@ export default function Users() {
                 )}
               </div>
             </SingleColumn>
-
-            {/* Notes */}
-            <SingleColumn className={"col-span-4 row-start-3"} label="Notes:">
-              <InputPrimitive
-                value={editingUserData?.notes}
-                onChange={(e) => handleEditUpdate("notes", e.target.value)}
-                disabled={!editingUserData}
-              />
-            </SingleColumn>
           </div>
         </form>
       </ToolkitContainer>
@@ -687,7 +678,7 @@ export default function Users() {
           <div>
             <p className="mb-7 text-lg text-gray-400">Connect to a board in the Devices page!</p>
             <ToolkitButton to="/devices" color="blue" iconUrl={devicesIcon}>
-              Go to Devices →
+              Devices →
             </ToolkitButton>
           </div>
         ) : (
@@ -744,6 +735,6 @@ export default function Users() {
 
       <AlertDialog />
       <ConfirmDialog />
-    </>
+    </div>
   );
 }

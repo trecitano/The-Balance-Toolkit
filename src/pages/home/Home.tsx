@@ -183,7 +183,7 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = (
       <div className="mt-4 flex justify-end">
         <ToolkitButton to="/replay" color={"grey"} iconUrl={replayIcon}>
           {" "}
-          Go to Replay →
+          Replay →
         </ToolkitButton>
       </div>
     </div>
@@ -252,7 +252,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
       <div className="flex justify-end">
         <ToolkitButton to={`/activities${activities[selected] ? `/${activities[selected].id}` : ''}`}  color={"grey"} iconUrl={activitiesIcon}>
           {" "}
-          Go to Activities →
+          Activities →
         </ToolkitButton>
       </div>
     </div>
@@ -311,7 +311,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
       <div className="mt-auto flex justify-end">
         <ToolkitButton to="/devices" color={"grey"} iconUrl={devicesIcon}>
           {" "}
-          Go to Devices →
+          Devices →
         </ToolkitButton>
       </div>
     </div>

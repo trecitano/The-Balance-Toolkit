@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
 import bluetoothDisconnectedIcon from "@/assets/bluetooth-disconnected-icon.svg";
@@ -9,9 +9,9 @@ import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
 import "./Devices.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import PageTitle from "@/components/PageTitle.tsx";
-import { Modal } from "@/components/Modal.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import IdentifyDeviceModal from "@/pages/devices/IdentifyDeviceModal.tsx";
+import ScanningModal from "@/pages/devices/ScanningModal.tsx";
 
 export const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
@@ -114,18 +114,6 @@ export default function Devices() {
     cancelScanMutation.mutate();
   };
 
-  const handleGradientDevicesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    const maxFade = 100;
-
-    const topOpacity = Math.min(scrollTop / maxFade, 1);
-    const scrollBottom = scrollHeight - clientHeight - scrollTop;
-    const bottomOpacity = Math.min(scrollBottom / maxFade, 1);
-
-    e.currentTarget.style.setProperty("--top-opacity", String(topOpacity));
-    e.currentTarget.style.setProperty("--bottom-opacity", String(bottomOpacity));
-  }, []);
-
   const sortDevices = (devices: Device[]): Device[] => {
     if (!Array.isArray(devices)) return [];
     const connected = devices.filter((d) => d.isConnected);
@@ -148,7 +136,7 @@ export default function Devices() {
   const selectedDevices = devices!.filter((d) => selectedDevicesMacAddress!.includes(d.macAddress));
 
   return (
-    <>
+    <div className={"flex flex-col h-full"}>
       <header className="mb-5 grid grid-cols-8">
         <PageTitle className={"flex-shrink-0"}>Devices</PageTitle>
 
@@ -162,11 +150,10 @@ export default function Devices() {
         </ToolkitButton>
       </header>
 
-      <div className="flex h-[75dvh] flex-1 gap-5">
-        <ToolkitContainer className="flex flex-1 flex-col p-10">
+      <div className="flex h-full gap-5 min-h-0">
+        <ToolkitContainer className="p-10 h-full grow">
           <div
             className={"devices-list flex h-full flex-col gap-4 overflow-y-auto"}
-            onScroll={handleGradientDevicesScroll}
           >
             {noDevices && (
               <div className="flex h-full flex-col items-center justify-center p-8 text-center">
@@ -212,25 +199,16 @@ export default function Devices() {
         />
       </div>
 
-      <Modal className={"min-w-sm"} open={isScanning} onClose={handleCancelScan}>
-        <div className="flex flex-col gap-6">
-          <div>
-            <span className="spinner" />
-          </div>
-          <span className="text-2xl font-semibold text-(--primary)">Scanning...</span>
-
-          <p className="text-lg font-medium">{`Found ${foundDevicesCount} devices so far...`}</p>
-
-          <ToolkitButton type="button" color="blue" onClick={handleCancelScan}>
-            OK
-          </ToolkitButton>
-        </div>
-      </Modal>
+      <ScanningModal
+        open={isScanning}
+        onClose={handleCancelScan}
+        foundDevicesCount={foundDevicesCount}
+      />
 
       <IdentifyDeviceModal
         device={showIdentifyModal}
         onClose={() => setShowIdentifyModal(null)}
       />
-    </>
+    </div>
   );
 }
