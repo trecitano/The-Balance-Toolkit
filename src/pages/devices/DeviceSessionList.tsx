@@ -14,7 +14,7 @@ interface DeviceSessionListProps {
 
 export default function DeviceSessionList({ connectedDevices, handleUnselectDevice }: DeviceSessionListProps) {
   return (
-    <div className="flex w-100 flex-col gap-6">
+    <div className="flex w-90 flex-col gap-6">
       {[0, 1].map((index) => {
         const device = connectedDevices[index];
 

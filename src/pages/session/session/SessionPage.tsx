@@ -114,6 +114,8 @@ export default function SessionPage() {
         onChange={(newState) => updateSession.mutate(newState)}
       />
 
+      <BoardGrid selectedBoards={selectedBoards} displayBoards={selectedDisplayBoards} store={useSessionDataStore} />
+
       <TimelinePanel
         activity={chosenActivity}
         playButtonClass={"size-6 rounded-full bg-[#e50012]"}
@@ -129,18 +131,6 @@ export default function SessionPage() {
           await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
         }}
       />
-
-      {selectedBoards.length === 0 ? (
-        <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
-          <p className="text-3xl font-medium">No boards in session</p>
-          <p className="mb-4 text-xl text-gray-400">Connect to a board in the Devices page!</p>
-          <ToolkitButton to="/devices" color="blue" iconUrl={devicesIcon}>
-            Devices →
-          </ToolkitButton>
-        </div>
-      ) : (
-        <BoardGrid boards={selectedDisplayBoards} store={useSessionDataStore} />
-      )}
     </div>
   );
 }

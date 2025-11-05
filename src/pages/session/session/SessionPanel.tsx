@@ -63,10 +63,6 @@ export function SessionPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Tare" className="col-span-2 items-center" labelMargin={false}>
-          <img src={tareIcon} className="size-7 object-contain hover:-translate-y-[1px] cursor-pointer opacity-75 hover:opacity-100" onClick={async () => commands.session.tareDevices()}/>
-        </SingleColumn>
-
         <SingleColumn label="User" className="col-span-7" tooltipId={"session_user"}>
           <SelectPrimitive<number>
             disabled={disabled}
@@ -164,10 +160,20 @@ export function SessionPanel({
             >
               Choose…
             </button>
-            <div className={`min-w-0 flex-1 truncate text-sm ${disabled ? "text-gray-600" : "text-gray-800"}`}>
+            <div title={value?.outputDirectory || "No folder selected"} className={`min-w-0 flex-1 truncate text-sm ${disabled ? "text-gray-600" : "text-gray-800"}`}>
               {value?.outputDirectory || "No folder selected"}
             </div>
           </div>
+        </SingleColumn>
+
+        <SingleColumn label="Tare" className="col-span-2 items-center" labelMargin={false}>
+          <img src={tareIcon} className="size-7 object-contain hover:-translate-y-[1px] cursor-pointer opacity-75 hover:opacity-100" onClick={async () => commands.session.tareDevices()}/>
+        </SingleColumn>
+        <SingleColumn label="Tare" className="col-span-2 items-center" labelMargin={false}>
+          <img src={tareIcon} className="size-7 object-contain hover:-translate-y-[1px] cursor-pointer opacity-75 hover:opacity-100" onClick={async () => commands.session.tareDevices()}/>
+        </SingleColumn>
+        <SingleColumn label="Tare" className="col-span-2 items-center" labelMargin={false}>
+          <img src={tareIcon} className="size-7 object-contain hover:-translate-y-[1px] cursor-pointer opacity-75 hover:opacity-100" onClick={async () => commands.session.tareDevices()}/>
         </SingleColumn>
       </ToolkitContainer>
     </>

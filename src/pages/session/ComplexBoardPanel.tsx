@@ -26,13 +26,13 @@ export function ComplexBoardPanel({
   store: SessionStore;
 }) {
   return (
-    <ToolkitContainer className={"flex flex-auto flex-col gap-3"}>
+    <ToolkitContainer className={"flex grow min-h-0 flex-col gap-3"}>
       <div className="flex gap-2 text-sm">
         <p className="font-semibold">{boardName}</p>
         <p>{convertNumberToMacAddress(macAddress)}</p>
       </div>
 
-      <div className="grid h-full grid-cols-12 grid-rows-2 gap-3">
+      <div className="grid min-h-0 flex-1 grid-cols-12 grid-rows-2 gap-3 text-xs">
         <div className="col-span-6 flex gap-3 rounded bg-gray-100 p-2">
           <BalanceBoardWithCoPOverlay
             macAddress={macAddress}

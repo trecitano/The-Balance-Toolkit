@@ -2,20 +2,34 @@ import { SelectedBoard } from "@/types.ts";
 import ComplexBoardPanel from "@/pages/session/ComplexBoardPanel.tsx";
 import { SessionStore } from "@/store/sessionDataStore.tsx";
 import SimpleBoardPanel from "@/pages/session/SimpleBoardPanel.tsx";
+import {ToolkitButton} from "@/components/ToolkitButton.tsx";
+import {devicesIcon} from "@/components/navigation/Navigation.tsx";
 
-export function BoardGrid({ boards, store }: { boards: SelectedBoard[]; store: SessionStore }) {
-  return boards.length === 0 ? (
-    <div className="flex h-full flex-1 flex-col items-center justify-center py-12 text-center text-gray-500">
-      <p className="text-3xl font-medium">No boards selected</p>
-      <p className="text-xl text-gray-400">Choose a board from the panel above to get started.</p>
-    </div>
-  ) : boards.length === 1 ? (
-    <ComplexBoardPanel boardName={boards[0].name} macAddress={boards[0].macAddress} store={store} />
-  ) : (
-    <div className="flex flex-1 grid-cols-2 gap-4">
-      {boards.map((board) => (
-        <SimpleBoardPanel key={board.macAddress} boardName={board.name} macAddress={board.macAddress} store={store} />
-      ))}
+export function BoardGrid({ selectedBoards, displayBoards, store }: { selectedBoards: SelectedBoard[]; displayBoards: SelectedBoard[]; store: SessionStore }) {
+  return (
+    <div className={"min-h-111 grow"}>
+      { selectedBoards.length === 0 ? (
+        <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
+          <p className="text-3xl font-medium">No boards in session</p>
+          <p className="mb-4 text-xl text-gray-400">Connect to a board in the Devices page!</p>
+          <ToolkitButton to="/devices" color="blue" iconUrl={devicesIcon}>
+            Devices →
+          </ToolkitButton>
+        </div>
+      ) : displayBoards.length === 0 ? (
+        <div className="flex h-full flex-1 flex-col items-center justify-center py-12 text-center text-gray-500">
+          <p className="text-3xl font-medium">No boards selected</p>
+          <p className="text-xl text-gray-400">Choose a board from the panel above to get started.</p>
+        </div>
+      ) : displayBoards.length === 1 ? (
+        <ComplexBoardPanel boardName={displayBoards[0].name} macAddress={displayBoards[0].macAddress} store={store} />
+      ) : (
+        <div className="flex flex-1 grid-cols-2 gap-4">
+          {displayBoards.map((board) => (
+            <SimpleBoardPanel key={board.macAddress} boardName={board.name} macAddress={board.macAddress} store={store} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
