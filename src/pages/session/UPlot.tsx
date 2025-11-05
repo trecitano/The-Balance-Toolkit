@@ -43,6 +43,7 @@ export function UPlot<T>({
     const resizeObserver = new ResizeObserver(() => {
       if (!hostRef.current || !plotRef.current) return;
       const r = hostRef.current.getBoundingClientRect();
+      console.log(r);
       plotRef.current.setSize({ width: r.width, height: r.height });
     });
 
@@ -79,8 +80,8 @@ export function UPlot<T>({
   }, [store]);
 
   return (
-    <div className="h-full w-full">
-      <div className={"relative flex h-1/10 items-center justify-center"}>
+    <div className={"flex flex-col min-h-0 h-full"}>
+      <div className={"flex h-5 items-center justify-center"}>
         <div className={"relative font-semibold"}>
           {title}
           {tooltipId && (
@@ -90,7 +91,7 @@ export function UPlot<T>({
           )}
         </div>
       </div>
-      <div ref={hostRef} className="h-9/10 w-full" />
+      <div ref={hostRef} className={"min-h-0 flex-1"}/>
     </div>
   );
 }

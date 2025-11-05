@@ -69,67 +69,34 @@ export function TimelinePanel({
   const displayTotalSeconds = hasOngoingSession ? progressInfo.totalSeconds : singleLoopDuration * totalLoops;
 
   return (
-    <div className="relative flex min-h-36 w-full items-center rounded-lg bg-gray-100 shadow-sm">
-      <img src={popout}
-           onClick={activity ? openPopup : undefined}
-           className={clsx(
-             "absolute top-3 right-3 size-5 object-contain transition-all",
-             activity
-               ? "hover:-translate-y-[1px] cursor-pointer"
-               : "opacity-40 pointer-events-none cursor-not-allowed"
-           )}/>
-      <div>
-        <button
-          className={clsx(
-            "ml-3 flex size-12 cursor-pointer items-center justify-center rounded-full transition-all duration-100",
-            hasOngoingSession
-              ? "border-2 border-[#e50012] bg-[#e50012] text-white"
-              : "border-2 border-[#e50012] bg-white text-black",
-            "disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-50",
-          )}
-          onClick={async () => {
-            if (!hasOngoingSession) {
-              await onStart();
-              if (singleLoopDuration) {
-                await timer.startTimeline(singleLoopDuration * 1000, totalLoops);
-              }
-            } else {
-              await timer.stopTimeline();
-              await onStop();
-            }
-          }}
-          disabled={!canStart}
-        >
-          {hasOngoingSession ? (
-            // Stop icon (square)
-            <span className="size-5 rounded bg-white" />
-          ) : (
-            // Play icon (triangle). Using border trick for a crisp triangle.
-            <span className={playButtonClass}/>
-          )}
-        </button>
-      </div>
+    <div className="min-h-29 w-full items-center rounded-lg bg-gray-100 shadow-sm">
       {activity ? (
-        <div className="mx-5 mt-2 mb-1 w-9/10">
-          <div className="mb-3 flex justify-end text-xs font-medium text-gray-700">
-            Loop {displayLoop}/{displayTotalLoops}, {formatTime(displayCurrentSeconds)}/
-            {formatTime(displayTotalSeconds)}
-          </div>
-          <div className={"relative"}>
+        <div className="flex mx-3 mt-3 mb-1 text-xs gap-2 ">
+          <div className={"grow"}>
             <ActivityTimeline blocks={activity.timelineBlocks} height={"h-20"} />
-            <div
-              ref={playheadRef}
-              className={clsx(
-                "absolute top-[-14px] z-10 h-[110%] w-[2px] bg-[var(--red)]",
-                !hasOngoingSession && "hidden",
-              )}
-            >
-              <div className="absolute left-1/2 h-4 w-5 -translate-x-1/2 bg-[var(--red)] shadow-[var(--shadow-light)] [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]" />
-            </div>
+          </div>
+          <div
+            ref={playheadRef}
+            className={clsx(
+              "absolute top-[-14px] z-10 h-[110%] w-[2px] bg-[var(--red)]",
+              !hasOngoingSession && "hidden",
+            )}
+          >
+            <div className="absolute left-1/2 h-4 w-5 -translate-x-1/2 bg-[var(--red)] shadow-[var(--shadow-light)] [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]" />
+          </div>
+          <div className={"font-medium text-gray-700"}>
+            <img src={popout}
+                 onClick={activity ? openPopup : undefined}
+                 className={clsx(
+                   "size-5 object-contain transition-all ml-auto mb-3",
+                   activity ? "hover:-translate-y-[1px] cursor-pointer" : "opacity-40 pointer-events-none cursor-not-allowed"
+                 )}/>
+            <p> Loop {displayLoop}/{displayTotalLoops} </p>
+            <p> {formatTime(displayCurrentSeconds)}/{formatTime(displayTotalSeconds)} </p>
           </div>
         </div>
       ) : (
-        <div className="flex h-20 w-9/10 flex-1 items-center justify-center">
+        <div className="flex h-full items-center justify-center">
           <p className="text-xl text-gray-500/80">{placeholderMessage}</p>
         </div>
       )}
