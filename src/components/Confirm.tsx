@@ -14,16 +14,16 @@ interface ConfirmModalProps {
 }
 
 export function ConfirmModal({
-                               open,
-                               onClose,
-                               title,
-                               message,
-                               onConfirm,
-                               onCancel,
-                               confirmText = "OK",
-                               cancelText = "Cancel",
-                               confirmColor = "blue"
-                             }: ConfirmModalProps) {
+  open,
+  onClose,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText = "OK",
+  cancelText = "Cancel",
+  confirmColor = "blue",
+}: ConfirmModalProps) {
   const handleConfirm = () => {
     onConfirm();
     onClose();

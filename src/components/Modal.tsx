@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import React, {useEffect, useRef} from "react";
+import React, { useEffect, useRef } from "react";
 
 interface ModalProps extends React.PropsWithChildren {
   open: boolean;

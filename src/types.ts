@@ -1,4 +1,4 @@
-import {BaseOption} from "@/components/SelectPrimitive.tsx";
+import { BaseOption } from "@/components/SelectPrimitive.tsx";
 
 export interface GeneralSettings {
   tcpConnectionStringRaw: string;

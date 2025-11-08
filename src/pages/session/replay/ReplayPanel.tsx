@@ -4,7 +4,7 @@ import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, ReplayConfiguration, SessionPanelConfiguration } from "@/types.ts";
 import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
-import {Checkbox} from "@/components/Checkbox.tsx";
+import { Checkbox } from "@/components/Checkbox.tsx";
 
 export function ReplayPanel({
   config,
@@ -43,8 +43,8 @@ export function ReplayPanel({
         <PageTitle>Replay</PageTitle>
       </header>
 
-      <ToolkitContainer className="grid grid-cols-34 grid-rows-2">
-        <SingleColumn label="Board to Display" className="col-span-8">
+      <ToolkitContainer className="grid grid-cols-40 grid-rows-2 text-xs">
+        <SingleColumn label="Board to Display" className="col-span-9">
           <SelectPrimitive
             mode={"multi"}
             options={boardDisplayOptions}
@@ -59,7 +59,7 @@ export function ReplayPanel({
           <InputPrimitive disabled={true} value={config?.user.name ?? "No User"} />
         </SingleColumn>
 
-        <SingleColumn label="Window Size (ms)" className="col-span-4" tooltipId={"session_window_size"}>
+        <SingleColumn label="Window Size (ms)" className="col-span-6" tooltipId={"session_window_size"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -68,7 +68,7 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Slide (ms)" className="col-span-4" tooltipId={"session_window_slide"}>
+        <SingleColumn label="Window Slide (ms)" className="col-span-6" tooltipId={"session_window_slide"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -76,7 +76,7 @@ export function ReplayPanel({
             onChange={(e) => update("windowSlideMs", Number(e.target.value))}
           />
         </SingleColumn>
-        <SingleColumn label="Sampling Rate" className="col-span-4" tooltipId={"session_sampling_rate"}>
+        <SingleColumn label="Sampling Rate" className="col-span-5" tooltipId={"session_sampling_rate"}>
           <InputPrimitive
             disabled={disabled}
             type="number"
@@ -94,7 +94,7 @@ export function ReplayPanel({
           />
         </SingleColumn>
 
-        <SingleColumn label="Activity" className="col-span-8">
+        <SingleColumn label="Activity" className="col-span-9">
           <InputPrimitive disabled={true} value={config?.activity?.title ?? "No Activity"} />
         </SingleColumn>
 
@@ -125,7 +125,7 @@ export function ReplayPanel({
         <SingleColumn
           label="Load Session"
           backgroundType="transparent"
-          className="col-start-18 col-end-34"
+          className="col-start-19 col-end-41"
           disabled={disabled}
           actionText="Clear"
           tooltipId={"replay_load_session"}

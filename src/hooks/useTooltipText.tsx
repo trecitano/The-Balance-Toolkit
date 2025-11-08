@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import tooltipsData from '@/assets/tooltips.json';
+import { useMemo } from "react";
+import tooltipsData from "@/assets/tooltips.json";
 
 type TooltipData = {
   id: string;

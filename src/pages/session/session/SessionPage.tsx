@@ -1,4 +1,4 @@
-import {useRef, useState} from "react";
+import { useRef, useState } from "react";
 import { SessionPanel } from "./SessionPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
@@ -10,7 +10,7 @@ import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
 import { listen } from "@tauri-apps/api/event";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 import { BaseOption } from "@/components/SelectPrimitive.tsx";
-import {devicesIcon} from "@/components/navigation/Navigation.tsx";
+import { devicesIcon } from "@/components/navigation/Navigation.tsx";
 
 export const SESSION_QUERY_KEY = ["session_key"];
 export type SessionQueryData = {
@@ -70,11 +70,11 @@ export default function SessionPage() {
   const selectedBoards = sessionInformation?.selectedBoards ?? [];
 
   const [boardDisplaySelected, setBoardDisplaySelected] = useState<number[]>([]);
-  const lastAvailableBoardsRef = useRef<string>('');
+  const lastAvailableBoardsRef = useRef<string>("");
 
   // Check if available boards changed and update display selection accordingly
-  const availableBoardMacs = selectedBoards.map(b => b.macAddress);
-  const availableBoardsKey = availableBoardMacs.join(',');
+  const availableBoardMacs = selectedBoards.map((b) => b.macAddress);
+  const availableBoardsKey = availableBoardMacs.join(",");
 
   if (availableBoardsKey !== lastAvailableBoardsRef.current) {
     lastAvailableBoardsRef.current = availableBoardsKey;
@@ -102,7 +102,7 @@ export default function SessionPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-3">
+    <div className="flex h-full flex-col gap-5">
       <SessionPanel
         boardDisplaySelected={boardDisplaySelected}
         onBoardDisplayChange={setBoardDisplaySelected}
@@ -113,8 +113,6 @@ export default function SessionPage() {
         value={sessionConfiguration}
         onChange={(newState) => updateSession.mutate(newState)}
       />
-
-      <BoardGrid selectedBoards={selectedBoards} displayBoards={selectedDisplayBoards} store={useSessionDataStore} />
 
       <TimelinePanel
         activity={chosenActivity}
@@ -131,6 +129,8 @@ export default function SessionPage() {
           await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
         }}
       />
+
+      <BoardGrid selectedBoards={selectedBoards} displayBoards={selectedDisplayBoards} store={useSessionDataStore} />
     </div>
   );
 }

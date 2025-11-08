@@ -21,9 +21,9 @@ import { Modal } from "@/components/Modal.tsx";
 import { Channel } from "@tauri-apps/api/core";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
-import {useAlert} from "@/hooks/useAlert.tsx";
-import {useConfirm} from "@/hooks/useConfirm.tsx";
-import {devicesIcon} from "@/components/navigation/Navigation.tsx";
+import { useAlert } from "@/hooks/useAlert.tsx";
+import { useConfirm } from "@/hooks/useConfirm.tsx";
+import { devicesIcon } from "@/components/navigation/Navigation.tsx";
 import clsx from "clsx";
 
 const USERS_QUERY_KEY = ["users"];
@@ -223,10 +223,10 @@ export default function Users() {
     if (editingUserData && editingUserData.id !== userId) {
       const shouldContinue = await customConfirm({
         title: "Unsaved Changes",
-        message: 'You have unsaved changes. Discard changes and select a different user?',
+        message: "You have unsaved changes. Discard changes and select a different user?",
         confirmText: "Discard Changes",
         cancelText: "Keep Editing",
-        confirmColor: "red"
+        confirmColor: "red",
       });
 
       if (!shouldContinue) {
@@ -253,7 +253,7 @@ export default function Users() {
     if (editingUserData !== null) {
       showAlert({
         title: "Cannot Add User",
-        message: "Please save or cancel current edits before adding a new user."
+        message: "Please save or cancel current edits before adding a new user.",
       });
       return;
     }
@@ -345,7 +345,7 @@ export default function Users() {
   };
 
   return (
-    <div className={"h-full flex flex-col justify-between gap-5"}>
+    <div className={"flex h-full flex-col justify-between gap-5"}>
       <header className="grid grid-cols-8">
         <PageTitle>Users</PageTitle>
 
@@ -353,30 +353,34 @@ export default function Users() {
           Create user
         </ToolkitButton>
 
-        <div className="col-start-4 col-span-2 items-center relative z-10">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 size-4 opacity-70">
+        <div className="relative z-10 col-span-2 col-start-4 items-center">
+          <div className="absolute top-1/2 left-4 size-4 -translate-y-1/2 opacity-70">
             <img src={searchIcon} alt="Search" />
           </div>
           <input
             type="text"
-            className="search-input w-full px-10 py-2 rounded-lg text-sm bg-white outline-0"
+            className="search-input w-full rounded-lg bg-white px-10 py-2 text-sm outline-0"
             placeholder="Search by name or ID..."
             value={searchTerm}
             onChange={handleSearch}
           />
 
           {isSearching && (
-            <div className="absolute left-0 top-12 w-full rounded-lg overflow-auto max-h-50 bg-white">
-              { searchResults.length === 0 ? (
-                <div className="italic text-gray-500 p-2 text-center">No users found</div>
+            <div className="absolute top-12 left-0 max-h-50 w-full overflow-auto rounded-lg bg-white">
+              {searchResults.length === 0 ? (
+                <div className="p-2 text-center text-gray-500 italic">No users found</div>
               ) : (
                 <>
-                {searchResults.map((user) => (
-                  <div key={user.id} className="flex items-center px-3 py-2 border-b border-gray-300 gap-2 cursor-pointer hover:bg-[#f0f7ff]" onClick={() => handleSelectSearchResult(user.id)}>
-                    {renderUserIcon(user, "size-6")}
-                    <span className="font-semibold">{user.name}</span>
-                  </div>
-                ))}
+                  {searchResults.map((user) => (
+                    <div
+                      key={user.id}
+                      className="flex cursor-pointer items-center gap-2 border-b border-gray-300 px-3 py-2 hover:bg-[#f0f7ff]"
+                      onClick={() => handleSelectSearchResult(user.id)}
+                    >
+                      {renderUserIcon(user, "size-6")}
+                      <span className="font-semibold">{user.name}</span>
+                    </div>
+                  ))}
                 </>
               )}
             </div>
@@ -385,10 +389,7 @@ export default function Users() {
       </header>
 
       <div>
-        <ul
-          className="carousel-list flex min-h-55 gap-8 overflow-hidden p-10"
-          ref={userListRef}
-        >
+        <ul className="carousel-list flex min-h-55 gap-8 overflow-hidden p-10" ref={userListRef}>
           {sortedUsers.map((user) => (
             <li
               key={user.id}
@@ -403,19 +404,25 @@ export default function Users() {
                   });
                 }
               }}
-              className={clsx("user-carousel-item flex flex-col items-center px-10 py-3",
-                selectedUserId === user.id && "selected"
+              className={clsx(
+                "user-carousel-item flex flex-col items-center px-10 py-3",
+                selectedUserId === user.id && "selected",
               )}
               onClick={() => handleSelectUser(user.id)}
             >
               {selectedUserId === user.id && (
-                <div className={clsx("user-selection-status mb-3 text-xs text-white px-2 py-1 rounded-lg bg-(--primary)", user.isDefault && " default-user")}>
-                  {(user.isDefault ? "Default" : "Selected")}
+                <div
+                  className={clsx(
+                    "user-selection-status mb-3 rounded-lg bg-(--primary) px-2 py-1 text-xs text-white",
+                    user.isDefault && "default-user",
+                  )}
+                >
+                  {user.isDefault ? "Default" : "Selected"}
                 </div>
               )}
               {renderUserIcon(user, "size-13")}
               <span className="grow whitespace-nowrap">{user.name}</span>
-              <div className={"text-xs text-center text-gray-500"}>
+              <div className={"text-center text-xs text-gray-500"}>
                 <div>Updated</div>
                 <div>{new Date(user.updatedAt).toLocaleDateString()}</div>
               </div>
@@ -436,23 +443,29 @@ export default function Users() {
 
       <ToolkitContainer className="p-12">
         <form onSubmit={handleSubmit}>
-          <div className="flex items-center gap-4 py-2 border-b border-gray-300">
+          <div className="flex items-center gap-4 border-b border-gray-300 py-2">
             {renderUserIcon(selectedUserData, "size-10")}
             <div className="flex flex-col">
               <h2 className={"font-bold"}> {selectedUserData.name} </h2>
               <div className="flex gap-4 text-sm">
                 <div>
                   <span>Created:</span>
-                  <span className={"font-semibold ml-1"}> {new Date(selectedUserData.createdAt).toLocaleDateString()} </span>
+                  <span className={"ml-1 font-semibold"}>
+                    {" "}
+                    {new Date(selectedUserData.createdAt).toLocaleDateString()}{" "}
+                  </span>
                 </div>
                 <div>
                   <span>Updated: </span>
-                  <span className={"font-semibold ml-1"}> {new Date(selectedUserData.updatedAt).toLocaleDateString()} </span>
+                  <span className={"ml-1 font-semibold"}>
+                    {" "}
+                    {new Date(selectedUserData.updatedAt).toLocaleDateString()}{" "}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex ml-auto gap-2">
+            <div className="ml-auto flex gap-2">
               {editingUserData ? (
                 <>
                   <ToolkitButton type="submit" color="blue">
@@ -460,11 +473,7 @@ export default function Users() {
                   </ToolkitButton>
 
                   {!selectedUserData.isDefault && (
-                    <ToolkitButton
-                      type="button"
-                      color="red"
-                      onClick={() => setShowDeleteConfirm(selectedUserData.id)}
-                    >
+                    <ToolkitButton type="button" color="red" onClick={() => setShowDeleteConfirm(selectedUserData.id)}>
                       Delete
                     </ToolkitButton>
                   )}
@@ -611,9 +620,9 @@ export default function Users() {
 
             {/* Color */}
             <SingleColumn label="Color:" icon={<img src={paletteIcon} />}>
-              <div className="relative" >
+              <div className="relative">
                 <div
-                  className="w-full h-8 rounded-lg border border-gray-300 cursor-pointer"
+                  className="h-8 w-full cursor-pointer rounded-lg border border-gray-300"
                   style={{ backgroundColor: editingUserData?.color || "#ccc" }}
                   onClick={handleColorClick}
                 />
@@ -707,7 +716,11 @@ export default function Users() {
                 Tare
               </ToolkitButton>
               {!isMeasuringWeight ? (
-                <ToolkitButton disabled={!selectedWeightMeasureDeviceMac} color="grey" onClick={async () => startWeightMeasurement(selectedWeightMeasureDeviceMac)}>
+                <ToolkitButton
+                  disabled={!selectedWeightMeasureDeviceMac}
+                  color="grey"
+                  onClick={async () => startWeightMeasurement(selectedWeightMeasureDeviceMac)}
+                >
                   Start
                 </ToolkitButton>
               ) : (

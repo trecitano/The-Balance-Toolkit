@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { AlertModal } from '@/components/Alert.tsx';
+import { useState, useCallback } from "react";
+import { AlertModal } from "@/components/Alert.tsx";
 
 interface AlertOptions {
   title?: string;
@@ -10,14 +10,14 @@ export function useAlert() {
   const [alertState, setAlertState] = useState<{
     isOpen: boolean;
     options: AlertOptions;
-  }>({ isOpen: false, options: { message: '' } });
+  }>({ isOpen: false, options: { message: "" } });
 
   const showAlert = useCallback((options: AlertOptions) => {
     setAlertState({ isOpen: true, options });
   }, []);
 
   const handleClose = useCallback(() => {
-    setAlertState({ isOpen: false, options: { message: '' } });
+    setAlertState({ isOpen: false, options: { message: "" } });
   }, []);
 
   const AlertDialog = useCallback(() => {

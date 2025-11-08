@@ -12,13 +12,13 @@ interface StabilityBarGaugeProps {
 }
 
 export function StabilityBarGauge({
-                                    macAddress,
-                                    store,
-                                    title = "Stability",
-                                    tooltipId,
-                                    width = 60,
-                                    height = 200, // fallback height
-                                  }: StabilityBarGaugeProps) {
+  macAddress,
+  store,
+  title = "Stability",
+  tooltipId,
+  width = 60,
+  height = 200, // fallback height
+}: StabilityBarGaugeProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [stabilityIndex, setStabilityIndex] = useState<number | null>(null);
@@ -128,7 +128,7 @@ export function StabilityBarGauge({
   }, [stabilityIndex, width, canvasHeight]);
 
   return (
-    <div ref={containerRef} className="flex flex-col items-center h-full">
+    <div ref={containerRef} className="flex h-full flex-col items-center">
       <div className={"relative font-semibold"}>
         {title}
         {tooltipId && (
@@ -137,7 +137,7 @@ export function StabilityBarGauge({
           </div>
         )}
       </div>
-      <div className="flex-1 flex items-center">
+      <div className="flex flex-1 items-center">
         <canvas ref={canvasRef} />
       </div>
       <div className="mt-1 text-xs">{stabilityIndex !== null ? stabilityIndex.toFixed(2) : "--"}</div>

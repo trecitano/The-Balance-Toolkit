@@ -27,11 +27,8 @@ function DefaultLayout() {
 
   return (
     <div className="flex flex-row">
-      <Navigation
-        activeView={location.pathname.substring(1) || "home"}
-        onViewChange={handleViewChange}
-      />
-      <main className="h-screen min-w-330 min-h-120 grow bg-(--bg-primary) px-20 py-8">
+      <Navigation activeView={location.pathname.substring(1) || "home"} onViewChange={handleViewChange} />
+      <main className="h-screen min-h-120 min-w-330 grow bg-(--bg-primary) px-20 py-8">
         <Outlet />
       </main>
     </div>

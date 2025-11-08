@@ -3,7 +3,7 @@ import { BoardBuffer, SessionStore } from "@/store/sessionDataStore.tsx";
 import { ProcessedSingleFrameSessionData, RawBalanceBoardEvent } from "@/types.ts";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { StabilityBarGauge } from "@/pages/session/StabilityBarGauge.tsx";
-import {Tooltip} from "@/components/Tooltip.tsx";
+import { Tooltip } from "@/components/Tooltip.tsx";
 
 const COP_X_MIN = -1;
 const COP_X_MAX = 1;
@@ -134,12 +134,12 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
   }, []);
 
   return (
-    <div className="relative flex h-full items-center justify-evenly gap-3">
-      <div className="relative w-4/10 h-full">
+    <div className="relative flex h-full w-full items-center justify-evenly gap-3">
+      <div className="relative h-full w-4/10">
         <img
           ref={imgRef}
           src={wbbTopdown}
-          className="h-full pointer-events-none block object-contain select-none"
+          className="pointer-events-none block h-full object-contain select-none"
           draggable={false}
           onLoad={scheduleDraw}
         />
@@ -147,38 +147,44 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
       </div>
 
       {/* Controls + Stability Index */}
-      <div className="flex w-22/100 flex-col gap-8">
+      <div className="flex w-22/100 flex-col gap-8 text-xs">
         <div className={"flex flex-col gap-4"}>
           <label className="flex flex-row items-center gap-2">
             <input
               type="checkbox"
-              className="h-4 w-4"
+              className="size-4"
               checked={showConfidenceEllipse}
               onChange={(e) => setShowConfidenceEllipse(e.target.checked)}
             />
-            <span className={"text-sm font-medium text-(--primary) whitespace-nowrap"}>Confidence ellipse</span>
-            <Tooltip tooltipId={"session_confidence_ellipse"}/>
+            <span className={"font-medium whitespace-nowrap text-(--primary)"}>Confidence ellipse</span>
+            <Tooltip tooltipId={"session_confidence_ellipse"} />
           </label>
 
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
-              className="h-4 w-4"
+              className="size-4"
               checked={showConvexHull}
               onChange={(e) => setShowConvexHull(e.target.checked)}
             />
-            <span className={"text-sm font-medium text-(--red)"}>Convex hull</span>
-            <Tooltip tooltipId={"session_convex_hull"}/>
+            <span className={"font-medium text-(--red)"}>Convex hull</span>
+            <Tooltip tooltipId={"session_convex_hull"} />
           </label>
         </div>
 
-        <div className="inset-(--secondary) bg-(--light-accent) rounded-lg py-2 text-center text-sm text-gray-700">
+        <div className="inset-(--secondary) rounded-lg bg-(--light-accent) py-2 text-center text-gray-700">
           <p>Force (Kg)</p>
           <p className="font-semibold">{forceKg !== null ? forceKg.toFixed(2) : "—"}</p>
         </div>
       </div>
 
-      <StabilityBarGauge macAddress={macAddress} store={store} width={50} height={150} tooltipId={"session_stability_index"} />
+      <StabilityBarGauge
+        macAddress={macAddress}
+        store={store}
+        width={50}
+        height={150}
+        tooltipId={"session_stability_index"}
+      />
     </div>
   );
 }

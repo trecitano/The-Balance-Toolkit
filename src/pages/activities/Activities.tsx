@@ -6,7 +6,7 @@ import ActivityCard from "./ActivityCard";
 import PageTitle from "@/components/PageTitle.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import {useParams} from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 export const ACTIVITIES_QUERY_KEY = ["activities"];
 const AVAILABLE_BLOCKS_QUERY_KEY = ["available-blocks"];
@@ -49,11 +49,11 @@ export default function Activities() {
   const existingTimeBlocks = timeBlocksData ?? [];
 
   return (
-    <>
+    <div className={"flex h-full flex-col"}>
       <header className="mb-5">
         <PageTitle>Activities</PageTitle>
       </header>
-      <div className="grid h-full grid-cols-3 gap-10">
+      <div className="grid min-h-0 grid-cols-3 grid-rows-2 gap-10">
         {activities.map((activity) => (
           <ActivityCard
             key={activity.id}
@@ -65,6 +65,6 @@ export default function Activities() {
           />
         ))}
       </div>
-    </>
+    </div>
   );
 }

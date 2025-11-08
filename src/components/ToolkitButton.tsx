@@ -67,19 +67,13 @@ export function ToolkitButton({
 }: ButtonProps) {
   const classes = clsx(byShape[shape], bySize[size], byColor[color], base, className);
 
-  const content = ( iconUrl ?
-    (
-      <span className="flex items-center gap-2">
-        <img
-          src={iconUrl}
-          alt=""
-          className="size-5 invert brightness-0 object-contain"
-        />
-        <span>{children}</span>
-      </span>
-    ) :
-      (<span>{children}</span>
-      )
+  const content = iconUrl ? (
+    <span className="flex items-center gap-2">
+      <img src={iconUrl} alt="" className="size-5 object-contain brightness-0 invert" />
+      <span>{children}</span>
+    </span>
+  ) : (
+    <span>{children}</span>
   );
 
   if ("to" in props && props.to) {

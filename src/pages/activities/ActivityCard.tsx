@@ -13,7 +13,7 @@ import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
-import {sessionIcon} from "@/components/navigation/Navigation.tsx";
+import { sessionIcon } from "@/components/navigation/Navigation.tsx";
 
 /**
  * ActivityCard component displays an activity with its details
@@ -259,38 +259,34 @@ export default function ActivityCard({
     <>
       <ToolkitContainer
         ref={cardRef}
-        className={`activity-card flex flex-col gap-3 pt-10 pr-5 pb-5 pl-5`}
+        className={"activity-card flex grow flex-col gap-3 p-5 pt-10"}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
         <>
-          <div className="mb-5 flex h-60 justify-center rounded-lg bg-[var(--bg-light)] shadow-(--shadow-light)">
-            <img
-              className={"object-contain"}
-              src={getBlockImage(currentImageSrc)}
-              alt={`${activity.title} illustration`}
-            />
-          </div>
+          <img
+            className={"min-h-0 rounded-lg bg-(--bg-light) object-contain shadow-(--shadow-light)"}
+            src={getBlockImage(currentImageSrc)}
+            alt={`${activity.title} illustration`}
+          />
           <div className="">
-            {activity.boardsRequired === 1 ? (
-              <div className="activity-board-tag">
-                <img src={wbbIcon} alt="Balance Board" className="board-icon" />
-                <span>
-                  1 board
-                </span>
-              </div>
-            ) : (
-              <div className="activity-board-tag">
-                <img src={wbbIcon} alt="Balance Board" className="board-icon" />
-                <img src={wbbIcon} alt="Balance Board" className="board-icon" />
-                <span>
-                  {activity.boardsRequired} boards
-                </span>
-              </div>
-            )}
+            <div className="activity-board-tag mb-1 flex w-fit items-center gap-2 rounded-lg px-1 py-0.5 text-xs font-semibold">
+              {activity.boardsRequired === 1 ? (
+                <>
+                  <img src={wbbIcon} alt="Balance Board" className="w-8 object-contain" />
+                  <span>1 board</span>
+                </>
+              ) : (
+                <>
+                  <img src={wbbIcon} alt="Balance Board" className="w-8 object-contain" />
+                  <img src={wbbIcon} alt="Balance Board" className="w-8 object-contain" />
+                  <span>{activity.boardsRequired} boards</span>
+                </>
+              )}
+            </div>
             <PageSubtitle>{activity.title}</PageSubtitle>
           </div>
-          <div className="mt-auto flex justify-end">
+          <div className="flex justify-end">
             <ToolkitButton type="button" color={"blue"} onClick={handleStartClick}>
               Open
             </ToolkitButton>
@@ -391,10 +387,12 @@ export default function ActivityCard({
                   ...activity,
                   loops: loopCount,
                   timelineBlocks: timelineBlocks,
-                }
+                };
                 saveMutation(updated);
               }}
-              to="/session" color="blue" iconUrl={sessionIcon}
+              to="/session"
+              color="blue"
+              iconUrl={sessionIcon}
             >
               Save and go to Session →
             </ToolkitButton>

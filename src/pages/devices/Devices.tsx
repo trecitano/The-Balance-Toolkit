@@ -136,7 +136,7 @@ export default function Devices() {
   const selectedDevices = devices!.filter((d) => selectedDevicesMacAddress!.includes(d.macAddress));
 
   return (
-    <div className={"flex flex-col h-full"}>
+    <div className={"flex h-full flex-col"}>
       <header className="mb-5 grid grid-cols-8">
         <PageTitle className={"flex-shrink-0"}>Devices</PageTitle>
 
@@ -150,11 +150,9 @@ export default function Devices() {
         </ToolkitButton>
       </header>
 
-      <div className="flex h-full gap-5 min-h-0">
-        <ToolkitContainer className="p-10 h-full grow">
-          <div
-            className={"devices-list flex h-full flex-col gap-4 overflow-y-auto"}
-          >
+      <div className="flex h-full min-h-0 gap-5">
+        <ToolkitContainer className="h-full grow p-10">
+          <div className={"devices-list flex h-full flex-col gap-4 overflow-y-auto"}>
             {noDevices && (
               <div className="flex h-full flex-col items-center justify-center p-8 text-center">
                 <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />
@@ -199,16 +197,9 @@ export default function Devices() {
         />
       </div>
 
-      <ScanningModal
-        open={isScanning}
-        onClose={handleCancelScan}
-        foundDevicesCount={foundDevicesCount}
-      />
+      <ScanningModal open={isScanning} onClose={handleCancelScan} foundDevicesCount={foundDevicesCount} />
 
-      <IdentifyDeviceModal
-        device={showIdentifyModal}
-        onClose={() => setShowIdentifyModal(null)}
-      />
+      <IdentifyDeviceModal device={showIdentifyModal} onClose={() => setShowIdentifyModal(null)} />
     </div>
   );
 }
