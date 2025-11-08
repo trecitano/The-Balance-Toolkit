@@ -3,13 +3,7 @@ import { useTooltipText } from "@/hooks/useTooltipText";
 import clsx from "clsx";
 
 const InfoIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-    xmlns="http://www.w3.org/2000/svg"
-  >
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -46,22 +40,14 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
     const handleMouseEnter = () => {
       if (!containerRef.current || !tooltipRef.current) return;
 
-      const triggerRect =
-        containerRef.current.getBoundingClientRect();
+      const triggerRect = containerRef.current.getBoundingClientRect();
       const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
-      const overflowParent = nearestOverflowAncestor(
-        containerRef.current
-      );
+      const overflowParent = nearestOverflowAncestor(containerRef.current);
 
       // The top boundary that can clip the tooltip is the intersection
       // of the viewport top (0) and the nearest overflow ancestor top.
-      const boundaryTop = Math.max(
-        0,
-        overflowParent
-          ? overflowParent.getBoundingClientRect().top
-          : 0
-      );
+      const boundaryTop = Math.max(0, overflowParent ? overflowParent.getBoundingClientRect().top : 0);
 
       const spaceAboveWithin = triggerRect.top - boundaryTop;
 
@@ -76,8 +62,7 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
     const container = containerRef.current;
     if (container) {
       container.addEventListener("mouseenter", handleMouseEnter);
-      return () =>
-        container.removeEventListener("mouseenter", handleMouseEnter);
+      return () => container.removeEventListener("mouseenter", handleMouseEnter);
     }
   }, []);
 
@@ -89,44 +74,39 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
       <div
         ref={tooltipRef}
         className={clsx(
-          "min-w-60 px-3 py-2 text-sm pointer-events-none absolute left-1/2 z-30",
+          "pointer-events-none absolute left-1/2 z-30 min-w-60 px-3 py-2 text-sm",
           "-translate-x-1/2 transform rounded-md bg-gray-900 text-white",
           "opacity-0 shadow-lg transition-opacity duration-200",
           "group-hover:opacity-100",
-          showBelow ? "top-full mt-2" : "bottom-full mb-2"
+          showBelow ? "top-full mt-2" : "bottom-full mb-2",
         )}
       >
         <div className="space-y-2">
           {tooltipData.name && (
-            <div className="font-semibold text-gray-100 border-b border-gray-700 pb-1">
-              {tooltipData.name}
-            </div>
+            <div className="border-b border-gray-700 pb-1 font-semibold text-gray-100">{tooltipData.name}</div>
           )}
 
           {tooltipData.equation && (
             <div
-              className="font-mono text-sm bg-gray-800 px-2 py-1 rounded border text-blue-200"
+              className="rounded border bg-gray-800 px-2 py-1 font-mono text-sm text-blue-200"
               dangerouslySetInnerHTML={{ __html: tooltipData.equation }}
             />
           )}
 
-          <div className="text-gray-300 leading-relaxed">
-            {tooltipData.tooltip}
-          </div>
+          <div className="leading-relaxed text-gray-300">{tooltipData.tooltip}</div>
 
-          {tooltipData.description &&
-            tooltipData.description.length > 0 && (
-              <div className="border-t border-gray-700 pt-2">
-                <ul className="space-y-1 text-xs text-gray-400">
-                  {tooltipData.description.map((item, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="inline-block w-1 h-1 bg-gray-500 rounded-full mt-1.5 mr-2 flex-shrink-0" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+          {tooltipData.description && tooltipData.description.length > 0 && (
+            <div className="border-t border-gray-700 pt-2">
+              <ul className="space-y-1 text-xs text-gray-400">
+                {tooltipData.description.map((item, index) => (
+                  <li key={index} className="flex items-start">
+                    <span className="mt-1.5 mr-2 inline-block h-1 w-1 flex-shrink-0 rounded-full bg-gray-500" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Arrow */}
@@ -134,9 +114,7 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
           className={clsx(
             "absolute left-1/2 -translate-x-1/2 transform",
             "border-4 border-transparent",
-            showBelow
-              ? "bottom-full border-b-gray-900"
-              : "top-full border-t-gray-900"
+            showBelow ? "bottom-full border-b-gray-900" : "top-full border-t-gray-900",
           )}
         />
       </div>

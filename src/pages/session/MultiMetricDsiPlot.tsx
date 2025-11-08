@@ -223,18 +223,18 @@ export function MultiMetricPlot({
           {title}
           {tooltipText && (
             <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
-              <Tooltip tooltipId={'session_user'} />
+              <Tooltip tooltipId={"session_user"} />
             </div>
           )}
         </div>
       </div>
       <div ref={hostRef} className="h-78/100 w-full" />
       <div className="mb-2 flex h-1/10 items-center justify-between">
-        <div className="ml-auto flex gap-3">
+        <div className="ml-auto flex gap-2">
           {metrics.map((metric, i) => (
             <label key={metric.key} className="flex cursor-pointer items-center gap-1">
-              <input type="checkbox" checked={metric.enabled} onChange={() => toggleMetric(i)} className="h-3 w-3" />
-              <span className="text-sm font-medium" style={{ color: metric.enabled ? metric.color : "#9ca3af" }}>
+              <input type="checkbox" checked={metric.enabled} onChange={() => toggleMetric(i)} className="size-3" />
+              <span className="text-xs font-medium" style={{ color: metric.enabled ? metric.color : "#9ca3af" }}>
                 {metric.label}
               </span>
               <Tooltip tooltipId={metric.tooltipId} />

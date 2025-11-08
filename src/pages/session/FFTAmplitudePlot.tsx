@@ -53,21 +53,21 @@ export function FFTAmplitudePlot({ title, tooltipId, macAddress, store }: Props)
       axes: [
         {
           scale: "x",
-          label: "Frequency (Hz)",
+          //label: "Frequency (Hz)",
+          //labelSize: 20,
           grid: { show: false },
           ticks: { show: false },
           border: { show: true, stroke: BLACK_COLOUR, width: 2 },
-          labelSize: 20,
-          size: 35,
+          size: 20,
         },
         {
           scale: "y",
-          label: "Amplitude",
+          //label: "Amplitude",
           grid: { show: false },
           ticks: { show: false },
           border: { show: true, stroke: BLACK_COLOUR, width: 2 },
-          labelSize: 20,
-          size: 60,
+          //labelSize: 20,
+          size: 40,
         },
       ],
       series: [
@@ -176,8 +176,8 @@ export function FFTAmplitudePlot({ title, tooltipId, macAddress, store }: Props)
       <div className="ml-auto flex gap-3">
         {metrics.map((metric, i) => (
           <label key={metric.key} className="flex cursor-pointer items-center gap-1">
-            <input type="checkbox" checked={metric.enabled} onChange={() => toggleMetric(i)} className="h-3 w-3" />
-            <span className="text-sm font-medium" style={{ color: metric.enabled ? metric.color : "#9ca3af" }}>
+            <input type="checkbox" checked={metric.enabled} onChange={() => toggleMetric(i)} className="size-3" />
+            <span className="text-xs font-medium" style={{ color: metric.enabled ? metric.color : "#9ca3af" }}>
               {metric.label}
             </span>
           </label>

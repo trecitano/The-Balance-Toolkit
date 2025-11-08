@@ -80,7 +80,7 @@ export function UPlot<T>({
   }, [store]);
 
   return (
-    <div className={"flex flex-col min-h-0 h-full"}>
+    <div className={"flex h-full min-h-0 flex-col"}>
       <div className={"flex h-5 items-center justify-center"}>
         <div className={"relative font-semibold"}>
           {title}
@@ -91,7 +91,7 @@ export function UPlot<T>({
           )}
         </div>
       </div>
-      <div ref={hostRef} className={"min-h-0 flex-1"}/>
+      <div ref={hostRef} className={"min-h-0 flex-1"} />
     </div>
   );
 }

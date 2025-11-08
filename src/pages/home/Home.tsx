@@ -16,7 +16,7 @@ import rippleIcon from "@/assets/ripple-icon.svg";
 import underConstructionHelp from "@/assets/under-construction-1-grey.svg";
 import underConstructionDoc from "@/assets/under-construction-2-grey.svg";
 import underConstructionResources from "@/assets/under-construction-3-grey.svg";
-import {activitiesIcon, devicesIcon, replayIcon} from "@/components/navigation/Navigation.tsx";
+import { activitiesIcon, devicesIcon, replayIcon } from "@/components/navigation/Navigation.tsx";
 
 const HOME_QUERY_KEY = ["home"];
 
@@ -81,12 +81,11 @@ const Home: React.FC = () => {
 const Header: React.FC = () => {
   return (
     <div className="bg-(--red) px-6 py-6 text-white">
-      <div className="flex gap-6 items-center grid grid-cols-3">
-
-        <img className={"w-34"} src={logoLettering} draggable={false}  />
+      <div className="flex grid grid-cols-3 items-center gap-6">
+        <img className={"w-34"} src={logoLettering} draggable={false} />
 
         {/* Center: Circle logo */}
-        <h1 className="text-6xl italic leading-tight font-semibold text-center">Welcome!</h1>
+        <h1 className="text-center text-6xl leading-tight font-semibold italic">Welcome!</h1>
 
         {/* Right: Links */}
         <div className="mt-auto flex flex-col items-end gap-3">
@@ -94,8 +93,8 @@ const Header: React.FC = () => {
             <span className="text-base">Cite</span>
           </button>
 
-          <button className="inline-flex items-center gap-2 text-white/95 hover:text-white h-5" type="button">
-            <img src={githubIcon} className={"object-contain h-full"}/>
+          <button className="inline-flex h-5 items-center gap-2 text-white/95 hover:text-white" type="button">
+            <img src={githubIcon} className={"h-full object-contain"} />
             <span className="text-base">Source Code</span>
           </button>
         </div>
@@ -250,7 +249,11 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
       </div>
 
       <div className="flex justify-end">
-        <ToolkitButton to={`/activities${activities[selected] ? `/${activities[selected].id}` : ''}`}  color={"grey"} iconUrl={activitiesIcon}>
+        <ToolkitButton
+          to={`/activities${activities[selected] ? `/${activities[selected].id}` : ""}`}
+          color={"grey"}
+          iconUrl={activitiesIcon}
+        >
           {" "}
           Activities →
         </ToolkitButton>
@@ -321,21 +324,15 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
 // Help Support Card
 const HelpSupportCard: React.FC = () => {
   return (
-    <div className="relative flex h-full flex-col p-(--space-sm) overflow-hidden z-1">
-      <img
-        src={underConstructionHelp}
-        className="absolute inset-0 m-auto w-1/2 opacity-60 -z-1"
-        draggable={false}
-      />
+    <div className="relative z-1 flex h-full flex-col overflow-hidden p-(--space-sm)">
+      <img src={underConstructionHelp} className="absolute inset-0 -z-1 m-auto w-1/2 opacity-60" draggable={false} />
 
       <div className="mb-4 flex items-center space-x-2">
         <PageSubtitle>Help and Support</PageSubtitle>
       </div>
 
       <div className="flex flex-1 items-center justify-center">
-        <span className="text-lg font-bold text-gray-500 italic">
-          🚧 This section is under construction 🚧
-        </span>
+        <span className="text-lg font-bold text-gray-500 italic">🚧 This section is under construction 🚧</span>
       </div>
     </div>
   );
@@ -344,12 +341,8 @@ const HelpSupportCard: React.FC = () => {
 // Documentation Card
 const DocumentationCard: React.FC = () => {
   return (
-    <div className="relative flex h-full flex-col p-(--space-sm) z-1">
-      <img
-        src={underConstructionDoc}
-        className="absolute inset-0 m-auto w-1/2 opacity-60 -z-1"
-        draggable={false}
-      />
+    <div className="relative z-1 flex h-full flex-col p-(--space-sm)">
+      <img src={underConstructionDoc} className="absolute inset-0 -z-1 m-auto w-1/2 opacity-60" draggable={false} />
 
       <div className="mb-4 flex items-center space-x-2">
         <PageSubtitle>Documentation</PageSubtitle>
@@ -365,10 +358,10 @@ const DocumentationCard: React.FC = () => {
 // Other Resources Card
 const OtherResourcesCard: React.FC = () => {
   return (
-    <div className="flex h-full flex-col p-(--space-sm) relative z-1">
+    <div className="relative z-1 flex h-full flex-col p-(--space-sm)">
       <img
         src={underConstructionResources}
-        className="absolute inset-0 m-auto w-1/2 opacity-60 -z-1"
+        className="absolute inset-0 -z-1 m-auto w-1/2 opacity-60"
         draggable={false}
       />
 

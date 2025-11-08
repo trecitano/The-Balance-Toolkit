@@ -57,30 +57,30 @@ export default function DeviceRow({
   };
 
   return (
-    <div className={clsx("px-4 py-2 min-h-23 items-center flex  bg-(--light-accent) rounded-lg relative", !device.isConnected && "opacity-70")}>
-      <button onClick={() => handleRemoveDevice(device.macAddress)} className="absolute top-2 right-3 remove-device-btn">
+    <div
+      className={clsx(
+        "relative flex min-h-23 items-center rounded-lg bg-(--light-accent) px-4 py-2",
+        !device.isConnected && "opacity-70",
+      )}
+    >
+      <button
+        onClick={() => handleRemoveDevice(device.macAddress)}
+        className="remove-device-btn absolute top-2 right-3"
+      >
         ✕
       </button>
 
       <div>
-        <img
-          src={device.isConnected ? wbbIconBlue : wbbIcon}
-          alt="Device"
-          className={"size-10 object-contain"}
-        />
+        <img src={device.isConnected ? wbbIconBlue : wbbIcon} alt="Device" className={"size-10 object-contain"} />
 
         {isSelected ? (
-          <div className={"px-2 py-1 rounded-lg text-sm bg-(--secondary) text-white"}>
-            Connected
-          </div>
-        ) : !device.isConnected && (
-          <div className={"text-sm text-(--text-lighter)"}>
-            Disconnected
-          </div>
+          <div className={"rounded-lg bg-(--secondary) px-2 py-1 text-sm text-white"}>Connected</div>
+        ) : (
+          !device.isConnected && <div className={"text-sm text-(--text-lighter)"}>Disconnected</div>
         )}
       </div>
 
-      <div className="flex flex-col justify-center ml-8">
+      <div className="ml-8 flex flex-col justify-center">
         {isEditing ? (
           <div className="flex">
             <input
@@ -106,8 +106,11 @@ export default function DeviceRow({
             <span className="font-semibold" title={device.name}>
               {device.name}
             </span>
-            <button className="cursor-pointer text-(--text-light)"
-                    onClick={() => handleStartEditName(device.id)} title="Edit name">
+            <button
+              className="cursor-pointer text-(--text-light)"
+              onClick={() => handleStartEditName(device.id)}
+              title="Edit name"
+            >
               ✎
             </button>
           </div>
@@ -119,7 +122,7 @@ export default function DeviceRow({
         </div>
       </div>
 
-      <div className="ml-auto mr-5 flex flex-row gap-5 h-10 ">
+      <div className="mr-5 ml-auto flex h-10 flex-row gap-5">
         <ToolkitButton
           disabled={!device.isConnected}
           type="button"

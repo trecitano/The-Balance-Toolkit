@@ -5,7 +5,7 @@ import { commands } from "@/utils/requests.ts";
 import { SelectedBoard, SessionPanelConfiguration } from "@/types.ts";
 import { replayChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
-import { useReplayDataStore } from "@/store/sessionDataStore.tsx";
+import { useReplayDataStore, useSessionDataStore } from "@/store/sessionDataStore.tsx";
 import { listen } from "@tauri-apps/api/event";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -52,11 +52,11 @@ export default function ReplayPage() {
 
   const selectedBoards = replayInformation?.devices ?? [];
   const [boardDisplaySelected, setBoardDisplaySelected] = useState<number[]>([]);
-  const lastAvailableBoardsRef = useRef<string>('');
+  const lastAvailableBoardsRef = useRef<string>("");
 
   // Check if available boards changed and update display selection accordingly
-  const availableBoardMacs = selectedBoards.map(b => b.macAddress);
-  const availableBoardsKey = availableBoardMacs.join(',');
+  const availableBoardMacs = selectedBoards.map((b) => b.macAddress);
+  const availableBoardsKey = availableBoardMacs.join(",");
 
   if (availableBoardsKey !== lastAvailableBoardsRef.current) {
     lastAvailableBoardsRef.current = availableBoardsKey;
@@ -117,7 +117,9 @@ export default function ReplayPage() {
 
       <TimelinePanel
         activity={chosenActivity}
-        playButtonClass={"ml-1 border-l-15 border-r-0 border-t-10 border-b-10 border-l-[#e50012] border-t-transparent border-b-transparent"}
+        playButtonClass={
+          "border-l-15 border-r-0 border-t-10 border-b-10 border-l-[#e50012] border-t-transparent border-b-transparent"
+        }
         hasOngoingSession={hasOngoingSession}
         placeholderMessage={replayIsSelected ? "No Activity" : ""}
         canStart={canStartSession}
@@ -140,7 +142,7 @@ export default function ReplayPage() {
           </ToolkitButton>
         </div>
       ) : (
-        <BoardGrid boards={selectedDisplayBoards} store={useReplayDataStore} />
+        <BoardGrid selectedBoards={selectedBoards} displayBoards={selectedDisplayBoards} store={useReplayDataStore} />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import {ConfirmModal} from "@/components/Confirm.tsx";
+import { useState, useCallback } from "react";
+import { ConfirmModal } from "@/components/Confirm.tsx";
 
 interface ConfirmOptions {
   title?: string;

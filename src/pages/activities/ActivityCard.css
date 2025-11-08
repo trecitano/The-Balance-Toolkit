@@ -1,0 +1,5 @@
+.activity-board-tag {
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+}

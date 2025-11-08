@@ -17,7 +17,7 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   actionText?: string;
   onActionClick?: () => void;
   tooltipId?: string;
-  labelMargin?: boolean
+  labelMargin?: boolean;
 }
 
 export const SingleColumn: React.FC<InputFieldProps> = ({
@@ -65,8 +65,8 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
               onClick={onActionClick}
               className={clsx(
                 "text-xs text-blue-600 enabled:hover:text-blue-800 enabled:hover:underline",
-                  "disabled:cursor-not-allowed disabled:bg-gray-100/80 disabled:text-gray-600"
-                )}
+                "disabled:cursor-not-allowed disabled:bg-gray-100/80 disabled:text-gray-600",
+              )}
             >
               {actionText}
             </button>
@@ -74,7 +74,12 @@ export const SingleColumn: React.FC<InputFieldProps> = ({
         </div>
       )}
 
-      <div className={clsx("flex", direction === "col" ? "flex-col gap-(--space-xs)" : "flex-row flex-1 items-center gap-2")}>
+      <div
+        className={clsx(
+          "flex",
+          direction === "col" ? "flex-col gap-(--space-xs)" : "flex-1 flex-row items-center gap-2",
+        )}
+      >
         {children}
       </div>
 

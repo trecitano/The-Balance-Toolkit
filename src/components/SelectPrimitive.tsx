@@ -55,7 +55,7 @@ export function SelectPrimitive<T extends React.Key = string>(props: any) {
 
   const hasOptions = options.length > 0;
   const isDisabled = disabled || !hasOptions;
-  const hasNoneOptionProp = 'noneOption' in props && props.noneOption !== false && typeof props.noneOption === 'string';
+  const hasNoneOptionProp = "noneOption" in props && props.noneOption !== false && typeof props.noneOption === "string";
 
   const selectedLabels = useMemo(() => {
     const map = new Map(options.map((o: BaseOption<T>) => [o.value, o.label]));

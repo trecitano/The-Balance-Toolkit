@@ -5,9 +5,9 @@ import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { InterpolationOption, interpolationOptions, SessionPanelConfiguration } from "@/types.ts";
 import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
-import {Checkbox} from "@/components/Checkbox.tsx";
-import tareIcon from "@/assets/tare.svg"
-import {commands} from "@/utils/requests.ts";
+import { Checkbox } from "@/components/Checkbox.tsx";
+import tareIcon from "@/assets/tare.svg";
+import { commands } from "@/utils/requests.ts";
 
 export function SessionPanel({
   boardDisplaySelected,
@@ -60,6 +60,14 @@ export function SessionPanel({
             value={boardDisplaySelected}
             onChange={onBoardDisplayChange}
             placeholder="Choose a Board to diplay"
+          />
+        </SingleColumn>
+
+        <SingleColumn label="Tare" className="col-span-2 items-center" labelMargin={false}>
+          <img
+            src={tareIcon}
+            className="size-7 cursor-pointer object-contain opacity-75 hover:-translate-y-[1px] hover:opacity-100"
+            onClick={async () => commands.session.tareDevices()}
           />
         </SingleColumn>
 
@@ -146,7 +154,7 @@ export function SessionPanel({
         <SingleColumn
           label="Save Location"
           backgroundType="transparent"
-          className="col-start-19 col-end-34"
+          className="col-start-19 col-end-41"
           actionText="Clear"
           tooltipId={"session_save_location"}
           onActionClick={() => update("outputDirectory", "")}
@@ -160,20 +168,13 @@ export function SessionPanel({
             >
               Choose…
             </button>
-            <div title={value?.outputDirectory || "No folder selected"} className={`min-w-0 flex-1 truncate text-sm ${disabled ? "text-gray-600" : "text-gray-800"}`}>
+            <div
+              title={value?.outputDirectory || "No folder selected"}
+              className={`min-w-0 flex-1 truncate text-sm ${disabled ? "text-gray-600" : "text-gray-800"}`}
+            >
               {value?.outputDirectory || "No folder selected"}
             </div>
           </div>
-        </SingleColumn>
-
-        <SingleColumn label="Tare" className="col-span-2 items-center" labelMargin={false}>
-          <img src={tareIcon} className="size-7 object-contain hover:-translate-y-[1px] cursor-pointer opacity-75 hover:opacity-100" onClick={async () => commands.session.tareDevices()}/>
-        </SingleColumn>
-        <SingleColumn label="Tare" className="col-span-2 items-center" labelMargin={false}>
-          <img src={tareIcon} className="size-7 object-contain hover:-translate-y-[1px] cursor-pointer opacity-75 hover:opacity-100" onClick={async () => commands.session.tareDevices()}/>
-        </SingleColumn>
-        <SingleColumn label="Tare" className="col-span-2 items-center" labelMargin={false}>
-          <img src={tareIcon} className="size-7 object-contain hover:-translate-y-[1px] cursor-pointer opacity-75 hover:opacity-100" onClick={async () => commands.session.tareDevices()}/>
         </SingleColumn>
       </ToolkitContainer>
     </>

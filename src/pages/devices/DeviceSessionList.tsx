@@ -5,7 +5,7 @@ import wbbIconBlue from "@/assets/wbb-top-blue.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
-import {sessionIcon} from "@/components/navigation/Navigation.tsx";
+import { sessionIcon } from "@/components/navigation/Navigation.tsx";
 
 interface DeviceSessionListProps {
   connectedDevices: Device[];
@@ -19,7 +19,10 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
         const device = connectedDevices[index];
 
         return (
-          <ToolkitContainer className="flex flex-1 flex-col justify-between p-8 gap-5" key={`side-panel-${index}`}>
+          <ToolkitContainer
+            className="flex min-h-89 flex-1 flex-col justify-between gap-5 p-8"
+            key={`side-panel-${index}`}
+          >
             {device ? (
               <>
                 <div className="flex items-center gap-2">
@@ -30,11 +33,9 @@ export default function DeviceSessionList({ connectedDevices, handleUnselectDevi
                   </div>
                 </div>
 
-                <div className="flex items-center justify-center">
-                  <div className="relative flex w-60 items-center justify-center">
-                    <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
-                    <img src={wbbIconBlue} className="z-10 h-4/5 w-4/5" />
-                  </div>
+                <div className="relative flex min-h-0 flex-1 items-center justify-center">
+                  <img src={wbbIconBlue} className="absolute z-10 w-4/5" />
+                  <img src={rippleIcon} className="absolute inset-0 h-full w-4/5 w-full opacity-10" />
                 </div>
 
                 <div className="flex justify-end gap-(--space-sm)">

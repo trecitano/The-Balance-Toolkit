@@ -10,8 +10,8 @@ import activitiesIcon from "@/assets/activities-icon.svg";
 import Settings from "@/components/settings/Settings.tsx";
 import "./Navigation.css";
 import clsx from "clsx";
-import {useQuery, useQueryClient} from "@tanstack/react-query";
-import {SESSION_QUERY_KEY, SessionQueryData} from "@/pages/session/session/SessionPage.tsx";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { SESSION_QUERY_KEY, SessionQueryData } from "@/pages/session/session/SessionPage.tsx";
 
 interface NavigationProps {
   activeView: string;
@@ -44,8 +44,7 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
     },
     enabled: false, // don’t fetch, just subscribe
     initialData: () => queryClient.getQueryData(SESSION_QUERY_KEY),
-    select: (d: SessionQueryData | undefined) =>
-      d?.sessionInformation?.hasOngoingSession ?? false,
+    select: (d: SessionQueryData | undefined) => d?.sessionInformation?.hasOngoingSession ?? false,
   });
 
   const handleSettingsClick = () => {
@@ -55,13 +54,18 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
   };
 
   return (
-    <nav className={"flex flex-col w-22 shrink-0 justify-between bg-(--red) gap-10"}>
-      <img src={logo} className="mt-5 mx-auto size-15 object-contain" />
-      <ul className={"grow flex flex-col gap-3"}>
+    <nav className={"flex w-22 shrink-0 flex-col justify-between gap-10 bg-(--red)"}>
+      <img src={logo} className="mx-auto mt-5 size-15 object-contain" />
+      <ul className={"flex grow flex-col gap-3"}>
         {menuItems.map((item) => (
           <li
             key={item.id}
-            className={clsx("menu-item", item.id, activeView === item.id && "active", hasOngoingSession && "opacity-65 disabled cursor-not-allowed")}
+            className={clsx(
+              "menu-item",
+              item.id,
+              activeView === item.id && "active",
+              hasOngoingSession && "disabled cursor-not-allowed opacity-65",
+            )}
             onClick={() => {
               if (!hasOngoingSession) {
                 onViewChange(item.id);
@@ -77,8 +81,11 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
       </ul>
       <div className="mb-10">
         {/* Settings */}
-        <button className={clsx("menu-item", hasOngoingSession && "opacity-65 disabled cursor-not-allowed")}
-          title="Settings" onClick={handleSettingsClick}>
+        <button
+          className={clsx("menu-item", hasOngoingSession && "disabled cursor-not-allowed opacity-65")}
+          title="Settings"
+          onClick={handleSettingsClick}
+        >
           <span className="menu-item-icon">
             <img src={settingsIcon} alt="Settings" />
           </span>
@@ -93,4 +100,4 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
 }
 
 export default Navigation;
-export { sessionIcon, replayIcon, devicesIcon, activitiesIcon }
+export { sessionIcon, replayIcon, devicesIcon, activitiesIcon };

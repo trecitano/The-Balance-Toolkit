@@ -25,38 +25,28 @@
     "name": "Window Size",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>T</mi><mi>window</mi></msub><mo>=</mo><mfrac><mi>window_size_ms</mi><mn>1000</mn></mfrac></mrow></math>",
     "tooltip": "Duration of data used per computation window. Larger windows smooth metrics; smaller windows react faster.",
-    "description": [
-      "Units: milliseconds (ms)."
-    ]
+    "description": ["Units: milliseconds (ms)."]
   },
   {
     "id": "session_window_slide",
     "name": "Window Slide (Hop)",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>T</mi><mi>hop</mi></msub><mo>=</mo><mfrac><mi>window_slide_ms</mi><mn>1000</mn></mfrac></mrow></math>",
     "tooltip": "Time step between consecutive windows. Smaller hops update graphs more often with more overlap.",
-    "description": [
-      "Units: milliseconds (ms)."
-    ]
+    "description": ["Units: milliseconds (ms)."]
   },
   {
     "id": "session_sampling_rate",
     "name": "Sampling Rate",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>f</mi><mi>s</mi></msub><mo>=</mo><mi>sampling_rate</mi><mo>;</mo><mi>dt</mi><mo>=</mo><mfrac><mn>1</mn><msub><mi>f</mi><mi>s</mi></msub></mfrac></mrow></math>",
     "tooltip": "Uniform resampling rate used after interpolation. Higher f_s captures faster sway but increases compute.",
-    "description": [
-      "Units: Hertz (Hz); dt in seconds (s)."
-    ]
+    "description": ["Units: Hertz (Hz); dt in seconds (s)."]
   },
   {
     "id": "session_interpolation",
     "name": "Interpolation Method",
     "equation": "",
     "tooltip": "How irregular COP samples are resampled to uniform time. Affects spectra and velocity estimates.",
-    "description": [
-      "Linear (fast)",
-      "Cubic (smooth)",
-      "Polynomial/Lagrange (local, higher-order)."
-    ]
+    "description": ["Linear (fast)", "Cubic (smooth)", "Polynomial/Lagrange (local, higher-order)."]
   },
   {
     "id": "session_save_location",
@@ -70,24 +60,14 @@
     "name": "Center of Pressure (X)",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>COP</mi><mi>x</mi></msub><mo>=</mo><mfrac><mrow><mfenced><mrow><mi>TR</mi><mo>+</mo><mi>BR</mi></mrow></mfenced><mo>−</mo><mfenced><mrow><mi>TL</mi><mo>+</mo><mi>BL</mi></mrow></mfenced></mrow><mrow><mi>TR</mi><mo>+</mo><mi>BR</mi><mo>+</mo><mi>TL</mi><mo>+</mo><mi>BL</mi></mrow></mfrac></mrow></math>",
     "tooltip": "Lateral COP position (unitless ratio, ~−1 left to +1 right).",
-    "description": [
-      "TR: Top right force",
-      "BR: Bottom right force",
-      "TL: Top left force",
-      "BL: Bottom left force"
-    ]
+    "description": ["TR: Top right force", "BR: Bottom right force", "TL: Top left force", "BL: Bottom left force"]
   },
   {
     "id": "session_cop_y",
     "name": "Center of Pressure (Y)",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>COP</mi><mi>y</mi></msub><mo>=</mo><mfrac><mrow><mfenced><mrow><mi>TR</mi><mo>+</mo><mi>TL</mi></mrow></mfenced><mo>−</mo><mfenced><mrow><mi>BR</mi><mo>+</mo><mi>BL</mi></mrow></mfenced></mrow><mrow><mi>TR</mi><mo>+</mo><mi>BR</mi><mo>+</mo><mi>TL</mi><mo>+</mo><mi>BL</mi></mrow></mfrac></mrow></math>",
     "tooltip": "Anterior–posterior COP position (unitless ratio, ~−1 back to +1 front).",
-    "description": [
-      "TR: Top right force",
-      "BR: Bottom right force",
-      "TL: Top left force",
-      "BL: Bottom left force"
-    ]
+    "description": ["TR: Top right force", "BR: Bottom right force", "TL: Top left force", "BL: Bottom left force"]
   },
   {
     "id": "session_cop_z",
@@ -101,41 +81,28 @@
     "name": "Stability Index",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>SI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><mo>[</mo><mrow><msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover accent=\"true\"><mi>x</mi><mo>¯</mo></mover><mo>)</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover accent=\"true\"><mi>y</mi><mo>¯</mo></mover><mo>)</mo></mrow><mn>2</mn></msup></mrow><mo>]</mo></mrow></msqrt></mrow></math>",
     "tooltip": "RMS distance of COP from its mean (unitless).",
-    "description": [
-      "N: number of samples",
-      "x̄: mean COP X",
-      "ȳ: mean COP Y."
-    ]
+    "description": ["N: number of samples", "x̄: mean COP X", "ȳ: mean COP Y."]
   },
   {
     "id": "session_mean_velocity_x",
     "name": "Mean Velocity (X)",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>v</mi><mrow><mi>cop</mi><mo>,</mo><mi>x</mi></mrow></msub><mo>=</mo><mi>mean</mi><mo>(</mo><mfrac><mrow><mo>|</mo><mo>Δ</mo><msub><mi>x</mi><mi>i</mi></msub><mo>|</mo></mrow><mrow><mo>Δ</mo><msub><mi>t</mi><mi>i</mi></msub></mrow></mfrac><mo>)</mo></mrow></math>",
     "tooltip": "Average absolute COP velocity along X (units: ratio/s).",
-    "description": [
-      "Δx_i: COP X change",
-      "Δt_i: time step (s)."
-    ]
+    "description": ["Δx_i: COP X change", "Δt_i: time step (s)."]
   },
   {
     "id": "session_mean_velocity_y",
     "name": "Mean Velocity (Y)",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>v</mi><mrow><mi>cop</mi><mo>,</mo><mi>y</mi></mrow></msub><mo>=</mo><mi>mean</mi><mo>(</mo><mfrac><mrow><mo>|</mo><mo>Δ</mo><msub><mi>y</mi><mi>i</mi></msub><mo>|</mo></mrow><mrow><mo>Δ</mo><msub><mi>t</mi><mi>i</mi></msub></mrow></mfrac><mo>)</mo></mrow></math>",
     "tooltip": "Average absolute COP velocity along Y (units: ratio/s).",
-    "description": [
-      "Δy_i: COP Y change",
-      "Δt_i: time step (s)."
-    ]
+    "description": ["Δy_i: COP Y change", "Δt_i: time step (s)."]
   },
   {
     "id": "session_mean_velocity",
     "name": "Mean Velocity",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>mean_velocity</mi><mo>=</mo><mi>mean</mi><mo>(</mo><mfrac><mrow><msqrt><mrow><msup><mrow><mo>Δ</mo><msub><mi>x</mi><mi>i</mi></msub></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>Δ</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mn>2</mn></msup></mrow></msqrt></mrow><mrow><mo>Δ</mo><msub><mi>t</mi><mi>i</mi></msub></mrow></mfrac><mo>)</mo></mrow></math>",
     "tooltip": "Average resultant COP speed (units: ratio/s).",
-    "description": [
-      "Δx_i, Δy_i: COP changes",
-      "Δt_i: time step (s)."
-    ]
+    "description": ["Δx_i, Δy_i: COP changes", "Δt_i: time step (s)."]
   },
   {
     "id": "session_total_path_length",
@@ -170,29 +137,21 @@
     "name": "Vertical Stability Index",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>VSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><msup><mrow><mo>(</mo><mi>baseline</mi><mo>−</mo><msub><mi>z</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup></mrow></msqrt></mrow></math>",
     "tooltip": "RMS deviation of force from baseline load (Newtons).",
-    "description": [
-      "zᵢ: total force",
-      "baseline: User weight (Kg)"
-    ]
+    "description": ["zᵢ: total force", "baseline: User weight (Kg)"]
   },
   {
     "id": "session_dpsi",
     "name": "Dynamic Postural Stability Index",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>DPSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><mo>[</mo><mrow><msup><msub><mi>x</mi><mi>i</mi></msub><mn>2</mn></msup><mo>+</mo><msup><msub><mi>y</mi><mi>i</mi></msub><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>(</mo><mi>baseline</mi><mo>−</mo><msub><mi>z</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup></mrow><mo>]</mo></mrow></msqrt></mrow></math>",
     "tooltip": "Combined RMS of medio-lateral, anterior–posterior, and vertical components.",
-    "description": [
-      "Mixed units: ratio + Newtons."
-    ]
+    "description": ["Mixed units: ratio + Newtons."]
   },
   {
     "id": "session_confidence_ellipse",
     "name": "Confidence Ellipse (95%)",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>r</mi><mn>1</mn></msub><mo>=</mo><msqrt><mrow><msubsup><mi>χ</mi><mn>2</mn><mn>2</mn></msubsup><mo>(</mo><mn>0.95</mn><mo>)</mo><mo>·</mo><msub><mi>λ</mi><mn>1</mn></msub></mrow></msqrt><mo>,</mo><msub><mi>r</mi><mn>2</mn></msub><mo>=</mo><msqrt><mrow><msubsup><mi>χ</mi><mn>2</mn><mn>2</mn></msubsup><mo>(</mo><mn>0.95</mn><mo>)</mo><mo>·</mo><msub><mi>λ</mi><mn>2</mn></msub></mrow></msqrt></mrow></math>",
     "tooltip": "Ellipse enclosing ~95% of COP points (unitless).",
-    "description": [
-      "r1, r2: semi-axes",
-      "θ: rotation angle (rad)."
-    ]
+    "description": ["r1, r2: semi-axes", "θ: rotation angle (rad)."]
   },
   {
     "id": "session_convex_hull",
@@ -213,20 +172,14 @@
     "name": "Amplitude Spectrum",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>A</mi><mi>x</mi></msub><mo>(</mo><msub><mi>f</mi><mi>k</mi></msub><mo>)</mo><mo>=</mo><mi>scale</mi><mo>·</mo><mo>|</mo><mrow><msub><mi>FFT</mi><mi>x</mi></msub><mo>[</mo><mi>k</mi><mo>]</mo></mrow><mo>|</mo><mo>,</mo><msub><mi>A</mi><mi>y</mi></msub><mo>(</mo><msub><mi>f</mi><mi>k</mi></msub><mo>)</mo><mo>=</mo><mi>scale</mi><mo>·</mo><mo>|</mo><mrow><msub><mi>FFT</mi><mi>y</mi></msub><mo>[</mo><mi>k</mi><mo>]</mo></mrow><mo>|</mo><mo>,</mo><msub><mi>A</mi><mrow><mi>x</mi><mi>y</mi></mrow></msub><mo>=</mo><msqrt><mrow><msup><msub><mi>A</mi><mi>x</mi></msub><mn>2</mn></msup><mo>+</mo><msup><msub><mi>A</mi><mi>y</mi></msub><mn>2</mn></msup></mrow></msqrt></mrow></math>",
     "tooltip": "Frequency amplitudes of COP (unitless ratios vs Hz).",
-    "description": [
-      "f_k: frequency bin (Hz)",
-      "scale: 2/N or 1/N ÷ Hann coherent gain."
-    ]
+    "description": ["f_k: frequency bin (Hz)", "scale: 2/N or 1/N ÷ Hann coherent gain."]
   },
   {
     "id": "settings_tcp",
     "name": "TCP Address",
     "equation": "",
     "tooltip": "Enter the server address in IPv4 format or hostname.",
-    "description": [
-      "Example: localhost:5599 or www.website.com:<port>",
-      "Must be reachable from this device."
-    ]
+    "description": ["Example: localhost:5599 or www.website.com:<port>", "Must be reachable from this device."]
   },
   {
     "id": "settings_raw_data",
@@ -247,30 +200,21 @@
     "name": "Processed Data",
     "equation": "",
     "tooltip": "Toggle to send computed metrics.",
-    "description": [
-      "Includes COP, stability, sway, spectra.",
-      "This includes derived values rather than raw forces."
-    ]
+    "description": ["Includes COP, stability, sway, spectra.", "This includes derived values rather than raw forces."]
   },
   {
     "id": "settings_lsl_stream_name",
     "name": "LSL Stream Name",
     "equation": "",
     "tooltip": "Name for the LabStreamingLayer stream.",
-    "description": [
-      "String, no spaces recommended.",
-      "Used by LSL clients to subscribe to this stream."
-    ]
+    "description": ["String, no spaces recommended.", "Used by LSL clients to subscribe to this stream."]
   },
   {
     "id": "settings_lsl_source_id",
     "name": "LSL Source ID",
     "equation": "",
     "tooltip": "Unique identifier for the LSL source.",
-    "description": [
-      "String.",
-      "Must remain stable across sessions so receivers can recognize the same device."
-    ]
+    "description": ["String.", "Must remain stable across sessions so receivers can recognize the same device."]
   },
   {
     "id": "settings_default_save_location",
@@ -284,48 +228,35 @@
     "name": "Store Raw Data",
     "equation": "",
     "tooltip": "Toggle to store raw sensor data.",
-    "description": [
-      "TR: Top right force",
-      "BR: Bottom right force",
-      "TL: Top left force",
-      "BL: Bottom left force"
-    ]
+    "description": ["TR: Top right force", "BR: Bottom right force", "TL: Top left force", "BL: Bottom left force"]
   },
   {
     "id": "settings_store_processed_data",
     "name": "Store Processed Data",
     "equation": "",
     "tooltip": "Toggle to store processed data.",
-    "description": [
-      "Includes COP (center of pressure), stability metrics, and spectral features."
-    ]
+    "description": ["Includes COP (center of pressure), stability metrics, and spectral features."]
   },
   {
     "id": "settings_window_size",
     "name": "Window Size",
     "equation": "",
     "tooltip": "Set the size of the analysis window.",
-    "description": [
-      "Units: samples."
-    ]
+    "description": ["Units: samples."]
   },
   {
     "id": "settings_slide_size",
     "name": "Slide Size",
     "equation": "",
     "tooltip": "Set the size of the sliding window.",
-    "description": [
-      "Units: samples."
-    ]
+    "description": ["Units: samples."]
   },
   {
     "id": "settings_sampling_rate",
     "name": "Sampling Rate",
     "equation": "",
     "tooltip": "Set the sampling rate for data acquisition.",
-    "description": [
-      "Units: Hz."
-    ]
+    "description": ["Units: Hz."]
   },
   {
     "id": "settings_interpolation_method",

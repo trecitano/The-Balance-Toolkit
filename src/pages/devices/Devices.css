@@ -1,11 +1,11 @@
 @property --top-opacity {
-  syntax: '<number>';
+  syntax: "<number>";
   inherits: false;
   initial-value: 0;
 }
 
 @property --bottom-opacity {
-  syntax: '<number>';
+  syntax: "<number>";
   inherits: false;
   initial-value: 1;
 }
@@ -14,11 +14,11 @@
   scrollbar-width: none;
 
   mask-image: linear-gradient(
-          to bottom,
-          transparent 0%,
-          black calc(6rem * var(--top-opacity)),
-          black calc(100% - 6rem * var(--bottom-opacity)),
-          transparent 100%
+    to bottom,
+    transparent 0%,
+    black calc(6rem * var(--top-opacity)),
+    black calc(100% - 6rem * var(--bottom-opacity)),
+    transparent 100%
   );
 
   animation: scroll-fade linear forwards;
