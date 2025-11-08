@@ -1,8 +1,6 @@
 import { useState } from "react";
-
-import "./Activities.css";
 import ActivityCard from "./ActivityCard";
-
+import ActivityEdit from "./ActivityEdit";
 import PageTitle from "@/components/PageTitle.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
@@ -13,7 +11,6 @@ const AVAILABLE_BLOCKS_QUERY_KEY = ["available-blocks"];
 
 export default function Activities() {
   const { activityId } = useParams<{ activityId?: string }>();
-
   const [maximizedId, setMaximizedId] = useState<string | null>(activityId || null);
 
   const {
@@ -28,7 +25,6 @@ export default function Activities() {
     },
   });
 
-  // Fetch available time blocks (only once, cached forever)
   const { data: timeBlocksData } = useQuery({
     queryKey: AVAILABLE_BLOCKS_QUERY_KEY,
     queryFn: async () => {
@@ -37,34 +33,38 @@ export default function Activities() {
     staleTime: Infinity,
   });
 
-  if (isLoading) {
-    return <div></div>;
-  }
-
-  if (error) {
+  if (isLoading || error) {
     return <div></div>;
   }
 
   const activities = activitiesData?.activities ?? [];
   const existingTimeBlocks = timeBlocksData ?? [];
+  const maximizedActivity = activities.find((a) => a.id === maximizedId);
 
   return (
-    <div className={"flex h-full flex-col"}>
+    <div className="flex h-full flex-col">
       <header className="mb-5">
         <PageTitle>Activities</PageTitle>
       </header>
-      <div className="grid min-h-0 grid-cols-3 grid-rows-2 gap-10">
-        {activities.map((activity) => (
-          <ActivityCard
-            key={activity.id}
-            activity={activity}
-            maximized={maximizedId === activity.id}
-            onMaximize={() => setMaximizedId(activity.id)}
-            onMinimize={() => setMaximizedId(null)}
-            existingActionImages={existingTimeBlocks}
-          />
-        ))}
-      </div>
+
+      {maximizedActivity ? (
+        <ActivityEdit
+          activity={maximizedActivity}
+          open={!!maximizedId}
+          onClose={() => setMaximizedId(null)}
+          existingActionImages={existingTimeBlocks}
+        />
+      ) : (
+        <div className="grid min-h-0 grid-cols-3 grid-rows-2 gap-10">
+          {activities.map((activity) => (
+            <ActivityCard
+              key={activity.id}
+              activity={activity}
+              onOpen={() => setMaximizedId(activity.id)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

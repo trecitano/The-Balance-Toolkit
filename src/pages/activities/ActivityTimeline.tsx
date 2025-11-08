@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import "./ActivityTimeline.css";
 import { TimelineBlock } from "@/types.ts";
 import { getBlockImage } from "@/utils/activityImages.ts";
+import clsx from "clsx";
 
 interface ActivityTimelineProps {
   blocks: TimelineBlock[];
@@ -43,12 +44,11 @@ type ResizeState = {
 type InteractionState = DragState | ResizeState | null;
 
 export default function ActivityTimeline({
-  blocks,
-  editable = false,
-  onChange,
-  onBlockSelect,
-  height = "h-100",
-}: ActivityTimelineProps) {
+                                           blocks,
+                                           editable = false,
+                                           onChange,
+                                           onBlockSelect,
+                                         }: ActivityTimelineProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [interaction, setInteraction] = useState<InteractionState>(null);
   const [editingDurationIdx, setEditingDurationIdx] = useState<number | null>(null);
@@ -204,10 +204,9 @@ export default function ActivityTimeline({
   return (
     <div
       ref={containerRef}
-      className={`flex flex-col ${!editable ? "opacity-75" : ""}`}
-      style={{ cursor: isDragging && editable ? "grabbing" : "default" }}
+      className={clsx("flex flex-col flex-1 min-h-0", !editable && "opacity-75", isDragging && editable && "cursor-grabbing")}
     >
-      <div className={`flex h-full flex-1 ${editable ? "gap-1" : ""}`}>
+      <div className={clsx("flex flex-1 min-h-0", editable && "gap-1")}>
         {blocks.map((block, idx) => (
           <React.Fragment key={idx}>
             {editable && dragOverIdx === idx && (
@@ -215,7 +214,10 @@ export default function ActivityTimeline({
             )}
 
             <div
-              className={`timeline-block relative select-none ${height} ${!editable ? "pointer-events-none" : "pointer-events-auto"} ${draggedIdx === idx ? "z-20 opacity-20" : "z-10"} ${editable ? "transition-colors hover:bg-gray-50" : ""} `}
+              className={clsx("timeline-block relative select-none flex-1 ",
+                !editable ? "pointer-events-none" : "pointer-events-auto",
+                draggedIdx === idx ? "z-20 opacity-20" : "z-10",
+                editable && "transition-colors hover:bg-gray-50")}
               data-block-id={idx}
               onMouseDown={(e) => handleBlockMouseDown(idx, e)}
               onClick={() => onBlockSelect?.(block)}
@@ -224,7 +226,6 @@ export default function ActivityTimeline({
               }}
               style={{
                 flex: block.duration,
-                minWidth: 1,
                 cursor: getBlockCursor(idx),
               }}
             >
@@ -246,11 +247,11 @@ export default function ActivityTimeline({
               {editable && (
                 <>
                   <div
-                    className="resize-handle left absolute top-0 left-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 hover:opacity-50"
+                    className="resize-handle left absolute top-0 left-0 h-full w-1 hover:bg-blue-400 hover:opacity-50"
                     onMouseDown={(e) => handleResizeStart(idx, "left", e)}
                   />
                   <div
-                    className="resize-handle right absolute top-0 right-0 h-full w-1 cursor-ew-resize hover:bg-blue-400 hover:opacity-50"
+                    className="resize-handle right absolute top-0 right-0 h-full w-1 hover:bg-blue-400 hover:opacity-50"
                     onMouseDown={(e) => handleResizeStart(idx, "right", e)}
                   />
                 </>
@@ -274,21 +275,19 @@ export default function ActivityTimeline({
         )}
 
         {/* Drag preview */}
-        {editable &&
-          isDragging &&
-          interaction &&
+        {editable && isDragging && interaction &&
           (() => {
             const block = blocks[interaction.blockIdx];
             if (!block) return null;
             return (
               <div
-                className="timeline-block pointer-events-none fixed z-50 flex h-12 w-30 min-w-10 items-center rounded-lg border-2 border-blue-500 bg-blue-100 opacity-85 shadow-lg"
+                className="timeline-block pointer-events-none fixed z-50 flex h-12 w-50 min-w-10 items-center rounded-lg border-2 border-blue-500 bg-blue-100 opacity-85 shadow-lg"
                 style={{
                   left: interaction.currentX + 8,
                   top: interaction.currentY + 8,
                 }}
               >
-                <span className="block-label flex-1 text-center font-medium text-blue-800">{block.title}</span>
+                <span className="flex-1 text-center font-medium text-blue-800">{block.title}</span>
               </div>
             );
           })()}
