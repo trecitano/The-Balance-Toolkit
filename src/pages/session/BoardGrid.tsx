@@ -32,7 +32,7 @@ export function BoardGrid({
       ) : displayBoards.length === 1 ? (
         <ComplexBoardPanel boardName={displayBoards[0].name} macAddress={displayBoards[0].macAddress} store={store} />
       ) : (
-        <div className="flex flex-1 grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 h-full gap-4">
           {displayBoards.map((board) => (
             <SimpleBoardPanel
               key={board.macAddress}

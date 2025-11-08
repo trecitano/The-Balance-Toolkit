@@ -33,18 +33,18 @@ export function ComplexBoardPanel({
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 grid-rows-2 gap-3 text-xs">
-        <div className="col-span-6 flex gap-3 rounded bg-gray-100 p-2">
+        <div className="col-span-6 bg-gray-100 p-2">
           <BalanceBoardWithCoPOverlay macAddress={macAddress} src={wbbTopdown} store={store} />
         </div>
 
-        <div className="col-span-3 rounded bg-gray-100 p-2">
+        <div className="col-span-3 bg-gray-100 p-2">
           <UPlot title="copX" tooltipId={"session_cop_x"} {...copXPlotSettings(macAddress)} store={store} />
         </div>
-        <div className="col-span-3 rounded bg-gray-100 p-2">
+        <div className="col-span-3 bg-gray-100 p-2">
           <UPlot title="copY" tooltipId={"session_cop_y"} {...copYPlotSettings(macAddress)} store={store} />
         </div>
 
-        <div className="col-span-3 rounded bg-gray-100 p-2">
+        <div className="col-span-3 bg-gray-100 p-2">
           <FFTAmplitudePlot
             title="FFT Amplitude Spectrum (Normalized)"
             tooltipId={"session_amplitude_spectrum"}
@@ -54,11 +54,11 @@ export function ComplexBoardPanel({
         </div>
 
         {/* Combined DPSI metrics plot - spans 4 columns */}
-        <div className="col-span-3 rounded bg-gray-100 p-2">
+        <div className="col-span-3 bg-gray-100 p-2">
           <MultiMetricPlot title="DPSI Metrics" tooltipText={"TODO"} macAddress={macAddress} store={store} />
         </div>
 
-        <div className="col-span-3 rounded bg-gray-100 p-2">
+        <div className="col-span-3 bg-gray-100 p-2">
           <UPlot
             title="vCopX"
             tooltipId={"session_mean_velocity_x"}
@@ -69,7 +69,7 @@ export function ComplexBoardPanel({
           />
         </div>
 
-        <div className="col-span-3 rounded bg-gray-100 p-2">
+        <div className="col-span-3 bg-gray-100 p-2">
           <UPlot
             title="vCopY"
             tooltipId={"session_mean_velocity_y"}
