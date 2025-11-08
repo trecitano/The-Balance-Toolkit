@@ -73,32 +73,6 @@ export default function Users() {
     : [];
   const currentIndex = sortedUsers.findIndex((user) => user.id === selectedUserId);
 
-  // Resize user cards
-  useEffect(() => {
-    if (!userListRef.current) return;
-
-    const adjustCardWidths = () => {
-      const list = userListRef.current;
-      if (!list) return;
-      const items = list.querySelectorAll(".user-carousel-item");
-      if (!items.length) return;
-
-      const containerWidth = list.clientWidth;
-      const gap = 16;
-      const desiredCardCount = 5;
-      const idealCardWidth = (containerWidth - gap * (desiredCardCount - 1)) / desiredCardCount;
-
-      items.forEach((item) => {
-        (item as HTMLElement).style.width = `${idealCardWidth}px`;
-      });
-    };
-
-    const observer = new ResizeObserver(adjustCardWidths);
-    observer.observe(userListRef.current);
-
-    return () => observer.disconnect();
-  }, []);
-
   // Keyboard navigation setup
   useEffect(() => {
     const handleGlobalKeyDown = async (e: KeyboardEvent) => {
@@ -205,7 +179,7 @@ export default function Users() {
       selectedUserElement.scrollIntoView({
         behavior: "smooth",
         inline: "center",
-        block: "center",
+        block: "nearest",
       });
     }
   };
@@ -299,7 +273,7 @@ export default function Users() {
           className={`${extraClasses} mb-2 flex items-center justify-center rounded-full`}
           style={{ backgroundColor: user.color || "#ccc" }}
         >
-          <PersonIcon className="h-[60%] w-[60%] text-white" />
+          <PersonIcon className="h-6/10 w-6/10 text-white" />
         </div>
       </>
     );
@@ -388,57 +362,58 @@ export default function Users() {
         </div>
       </header>
 
-      <div>
-        <ul className="carousel-list flex min-h-55 gap-8 overflow-hidden p-10" ref={userListRef}>
-          {sortedUsers.map((user) => (
-            <li
-              key={user.id}
-              data-userid={user.id}
-              ref={(el) => {
-                if (el && user.id === selectedUserId && !hasInitialScroll.current) {
-                  hasInitialScroll.current = true;
-                  el.scrollIntoView({
-                    behavior: "instant",
-                    inline: "center",
-                    block: "center",
-                  });
-                }
-              }}
-              className={clsx(
-                "user-carousel-item flex flex-col items-center px-10 py-3",
-                selectedUserId === user.id && "selected",
-              )}
-              onClick={() => handleSelectUser(user.id)}
-            >
-              {selectedUserId === user.id && (
-                <div
-                  className={clsx(
-                    "user-selection-status mb-3 rounded-lg bg-(--primary) px-2 py-1 text-xs text-white",
-                    user.isDefault && "default-user",
-                  )}
-                >
-                  {user.isDefault ? "Default" : "Selected"}
+      <div className={"flex-1 flex flex-col"}>
+        <div className={"flex-1 min-h-0"}>
+          <ul className="carousel-list px-[calc(50vw-10rem)] h-7/10 pt-10 flex-1 flex gap-8 overflow-hidden" ref={userListRef}>
+            {sortedUsers.map((user) => (
+              <li
+                key={user.id}
+                data-userid={user.id}
+                ref={(el) => {
+                  if (el && user.id === selectedUserId && !hasInitialScroll.current) {
+                    hasInitialScroll.current = true;
+                    el.scrollIntoView({
+                      behavior: "instant",
+                      inline: "center",
+                      block: "center",
+                    });
+                  }
+                }}
+                className={clsx(
+                  "user-carousel-item min-h-55 aspect-[0.95] flex-1 flex flex-col items-center px-10 py-3 ",
+                  selectedUserId === user.id && "selected",
+                )}
+                onClick={() => handleSelectUser(user.id)}
+              >
+                {selectedUserId === user.id && (
+                  <div
+                    className={clsx(
+                      "user-selection-status mb-3 rounded-lg bg-(--primary) px-2 py-1 text-xs text-white",
+                      user.isDefault && "default-user",
+                    )}
+                  >
+                    {user.isDefault ? "Default" : "Selected"}
+                  </div>
+                )}
+                {renderUserIcon(user, "h-3/10 aspect-[0.95]")}
+                <span className="whitespace-nowrap">{user.name}</span>
+                <div className={"mt-auto text-center text-xs text-gray-500"}>
+                  <div>Updated</div>
+                  <div>{new Date(user.updatedAt).toLocaleDateString()}</div>
                 </div>
-              )}
-              {renderUserIcon(user, "size-13")}
-              <span className="grow whitespace-nowrap">{user.name}</span>
-              <div className={"text-center text-xs text-gray-500"}>
-                <div>Updated</div>
-                <div>{new Date(user.updatedAt).toLocaleDateString()}</div>
-              </div>
-            </li>
-          ))}
-        </ul>
-
-        <CarouselIndicators
-          className={"mt-5"}
-          entries={sortedUsers.map((user) => user.name)}
-          selectedIndex={currentIndex}
-          onSelect={async (index) => {
-            const user = sortedUsers[index];
-            await handleSelectUser(user.id);
-          }}
-        />
+              </li>
+            ))}
+          </ul>
+          <CarouselIndicators
+            className={"mt-5"}
+            entries={sortedUsers.map((user) => user.name)}
+            selectedIndex={currentIndex}
+            onSelect={async (index) => {
+              const user = sortedUsers[index];
+              await handleSelectUser(user.id);
+            }}
+          />
+        </div>
       </div>
 
       <ToolkitContainer className="p-12">

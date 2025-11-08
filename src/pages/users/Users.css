@@ -1,19 +1,11 @@
-.user-display-actions button img {
-  width: clamp(12px, 0.9vw, 16px);
-  height: auto;
-  display: block;
-  flex-shrink: 0;
-  margin: 0;
-  background: transparent;
-}
-
 .user-carousel-item {
   cursor: pointer;
-  transition: var(--transition);
   background: var(--light-accent);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-light);
   opacity: 0.45;
+  transform: scale(0.85);
+  transition: var(--transition);
 }
 
 .user-carousel-item:hover {
@@ -28,11 +20,7 @@
     0 2px 4px rgba(0, 0, 0, 0.1),
     0 0 0 0.5px var(--primary);
   opacity: 1;
-  transform: scale(1.15);
-  transition:
-    transform 0.3s ease,
-    background-color 0.3s ease,
-    box-shadow 0.3s ease;
+  transform: scale(0.98);
 }
 
 .default-user {
@@ -46,19 +34,6 @@
   border-radius: var(--radius-sm);
   border: none;
   position: relative;
-  display: block;
-}
-
-.color-swatch-trigger {
-  width: 100%;
-  cursor: pointer;
-  border: var(--border-primary);
-  transition:
-    transform 0.1s ease,
-    box-shadow 0.1s ease,
-    border-color var(--transition);
-  background-color: var(--white);
-  padding: 0;
   display: block;
 }
 
