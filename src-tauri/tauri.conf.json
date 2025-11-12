@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.the-balance-toolkit",
   "build": {
-    "beforeDevCommand": "bun run src-tauri/scripts/tauri_before_dev.ts",
+    "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "bun run build",
     "frontendDist": "../dist",

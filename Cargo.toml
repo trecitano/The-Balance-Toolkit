@@ -4,6 +4,7 @@ members = [
 ]
 resolver = "2"
 
+exclude = ["macos-wii-balance-pair"]
 
 [profile.release]
 codegen-units = 1 # Allows LLVM to perform better optimization.
