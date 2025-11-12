@@ -20,7 +20,7 @@ struct PeripheralOut {
 
 
 // Temporary gigantic hack
-pub static BINARY_PATH: &str = "../target/debug/macos-wii-balance-pair";
+pub static BINARY_PATH: &str = "../macos-wii-balance-pair/target/debug/macos-wii-balance-pair";
 pub struct NativeBluetoothHandler;
 #[async_trait]
 impl BluetoothHandler for NativeBluetoothHandler {
