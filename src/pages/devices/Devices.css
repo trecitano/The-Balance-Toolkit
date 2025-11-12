@@ -1,47 +1,10 @@
-@property --top-opacity {
-  syntax: "<number>";
-  inherits: false;
-  initial-value: 0;
-}
-
-@property --bottom-opacity {
-  syntax: "<number>";
-  inherits: false;
-  initial-value: 1;
-}
-
 .devices-list {
-  scrollbar-width: none;
-
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0%,
-    black calc(6rem * var(--top-opacity)),
-    black calc(100% - 6rem * var(--bottom-opacity)),
-    transparent 100%
-  );
-
-  animation: scroll-fade linear forwards;
-  animation-timeline: scroll(self);
-  animation-range: 0% 100%;
-}
-
-@keyframes scroll-fade {
-  0% {
-    --top-opacity: 0;
-    --bottom-opacity: 1;
-  }
-
-  15% {
-    --top-opacity: 1;
-  }
-
-  85% {
-    --bottom-opacity: 1;
-  }
-
-  100% {
-    --top-opacity: 1;
-    --bottom-opacity: 0;
-  }
+    scrollbar-width: none;
+    mask-image: linear-gradient(
+            to bottom,
+            transparent 0%,
+            black calc(10rem * var(--top-opacity, 0)),
+            black calc(100% - 10rem * var(--bottom-opacity, 1)),
+            transparent 100%
+    );
 }

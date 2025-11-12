@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
 import bluetoothDisconnectedIcon from "@/assets/bluetooth-disconnected-icon.svg";
@@ -114,6 +114,18 @@ export default function Devices() {
     cancelScanMutation.mutate();
   };
 
+  const handleGradientDevicesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    const maxFade = 100;
+
+    const topOpacity = Math.min(scrollTop / maxFade, 1);
+    const scrollBottom = scrollHeight - clientHeight - scrollTop;
+    const bottomOpacity = Math.min(scrollBottom / maxFade, 1);
+
+    e.currentTarget.style.setProperty("--top-opacity", String(topOpacity));
+    e.currentTarget.style.setProperty("--bottom-opacity", String(bottomOpacity));
+  }, []);
+
   const sortDevices = (devices: Device[]): Device[] => {
     if (!Array.isArray(devices)) return [];
     const connected = devices.filter((d) => d.isConnected);
@@ -152,7 +164,7 @@ export default function Devices() {
 
       <div className="flex h-full min-h-0 gap-5">
         <ToolkitContainer className="h-full grow p-10">
-          <div className={"devices-list flex h-full flex-col gap-4 overflow-y-auto"}>
+          <div className={"devices-list flex h-full flex-col gap-4 overflow-y-auto"} onScroll={handleGradientDevicesScroll}>
             {noDevices && (
               <div className="flex h-full flex-col items-center justify-center p-8 text-center">
                 <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />
