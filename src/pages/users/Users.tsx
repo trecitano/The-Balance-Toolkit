@@ -380,7 +380,7 @@ export default function Users() {
                   }
                 }}
                 className={clsx(
-                  "user-carousel-item min-h-55 aspect-[0.95] flex-1 flex flex-col items-center px-10 py-3 ",
+                  "user-carousel-item min-h-40 aspect-[0.95] flex-1 flex flex-col items-center px-10 py-3 ",
                   selectedUserId === user.id && "selected",
                 )}
                 onClick={() => handleSelectUser(user.id)}

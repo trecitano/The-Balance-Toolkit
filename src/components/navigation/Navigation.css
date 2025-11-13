@@ -1,48 +1,10 @@
-.menu-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  padding-top: 12px;
-}
-
 .menu-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  cursor: pointer;
   transition:
     background var(--transition),
     color var(--transition);
 }
 
-.menu-item.disabled {
-  cursor: not-allowed;
-}
-
-.menu-item.active .menu-item-icon {
-  background: var(--red-dark);
-  border-radius: 20px;
-  width: calc(var(--icon-size-md) * 2.5);
-  padding: 4px 8px;
-}
-
-.menu-item:hover:not(.active):not(.disabled) .menu-item-icon {
-  background: var(--red-dark);
-  border-radius: 20px;
-  width: calc(var(--icon-size-md) * 2.5);
-  padding: 4px 8px;
-}
-
 .menu-item-icon {
-  width: var(--icon-size-md);
-  height: var(--icon-size-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  margin: 0;
-  margin-bottom: 1px;
   transition:
     background var(--transition),
     border-radius var(--transition),
@@ -50,14 +12,10 @@
     padding var(--transition);
 }
 
-.menu-item-icon img,
+
 .menu-item-icon svg {
   filter: invert(1);
 }
-
-.menu-item.home .menu-item-icon img,
-.menu-item.users .menu-item-icon img,
-.menu-item.session .menu-item-icon img,
-.menu-item.activities .menu-item-icon img {
+.menu-item-icon img {
   filter: brightness(0) invert(1) drop-shadow(0 0 0.2px white) drop-shadow(0 0 0.2px white);
 }

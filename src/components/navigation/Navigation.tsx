@@ -33,6 +33,53 @@ const menuItems: MenuItemType[] = [
   { id: "activities", label: "Activities", icon: activitiesIcon },
 ];
 
+interface MenuItemProps {
+  id: string;
+  label: string;
+  icon: string;
+  isActive?: boolean;
+  isDisabled?: boolean;
+  onClick: () => void;
+}
+
+function MenuItem({
+                    id,
+                    label,
+                    icon,
+                    isActive = false,
+                    isDisabled = false,
+                    onClick,
+                  }: MenuItemProps) {
+  return (
+    <button
+      className={clsx(
+        "menu-item flex flex-col items-center",
+        id,
+        isActive && "active",
+        isDisabled
+          ? "disabled cursor-not-allowed opacity-65"
+          : "cursor-pointer group"
+      )}
+      onClick={onClick}
+      disabled={isDisabled}
+      title={label}
+    >
+  <span
+    className={clsx(
+      "menu-item-icon flex size-7 items-center",
+      isActive && "bg-(--red-dark) rounded-xl w-15 p-2",
+      !isActive &&
+      !isDisabled &&
+      "group-hover:bg-(--red-dark) group-hover:rounded-xl group-hover:w-15 group-hover:p-2"
+    )}
+  >
+    <img src={icon} className={"object-contain"} />
+  </span>
+      <span className="text-white">{label}</span>
+    </button>
+  );
+}
+
 function Navigation({ activeView, onViewChange }: NavigationProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -56,41 +103,29 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
   return (
     <nav className={"flex w-22 shrink-0 flex-col justify-between gap-10 bg-(--red)"}>
       <img src={logo} className="mx-auto mt-5 size-15 object-contain" />
-      <ul className={"flex grow flex-col gap-3"}>
+      <div className={"flex grow flex-col gap-3"}>
         {menuItems.map((item) => (
-          <li
+          <MenuItem
             key={item.id}
-            className={clsx(
-              "menu-item",
-              item.id,
-              activeView === item.id && "active",
-              hasOngoingSession && "disabled cursor-not-allowed opacity-65",
-            )}
-            onClick={() => {
-              if (!hasOngoingSession) {
-                onViewChange(item.id);
-              }
-            }}
-          >
-            <span className="menu-item-icon">
-              <img src={item.icon} alt={item.label} />
-            </span>
-            <span className="text-white">{item.label}</span>
-          </li>
+            id={item.id}
+            label={item.label}
+            icon={item.icon}
+            isActive={activeView === item.id}
+            isDisabled={hasOngoingSession}
+            onClick={() => onViewChange(item.id)}
+          />
         ))}
-      </ul>
-      <div className="mb-10">
+      </div>
+      <div className="flex flex-col mb-8">
         {/* Settings */}
-        <button
-          className={clsx("menu-item", hasOngoingSession && "disabled cursor-not-allowed opacity-65")}
-          title="Settings"
+        <MenuItem
+          id="settings"
+          label="Settings"
+          icon={settingsIcon}
+          isActive={settingsOpen}
+          isDisabled={hasOngoingSession}
           onClick={handleSettingsClick}
-        >
-          <span className="menu-item-icon">
-            <img src={settingsIcon} alt="Settings" />
-          </span>
-          <span className="text-white">Settings</span>
-        </button>
+        />
       </div>
 
       {/* Settings Popup */}
