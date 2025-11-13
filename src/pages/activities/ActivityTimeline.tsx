@@ -9,7 +9,6 @@ interface ActivityTimelineProps {
   editable?: boolean;
   onChange?: (blocks: TimelineBlock[]) => void;
   onBlockSelect?: (block: TimelineBlock) => void;
-  height?: string;
 }
 
 const MIN_DURATION = 1;
