@@ -1,18 +1,3 @@
-.menu-item {
-  transition:
-    background var(--transition),
-    color var(--transition);
-}
-
-.menu-item-icon {
-  transition:
-    background var(--transition),
-    border-radius var(--transition),
-    width var(--transition),
-    padding var(--transition);
-}
-
-
 .menu-item-icon svg {
   filter: invert(1);
 }

@@ -64,18 +64,19 @@ function MenuItem({
       disabled={isDisabled}
       title={label}
     >
-  <span
-    className={clsx(
-      "menu-item-icon flex size-7 items-center",
-      isActive && "bg-(--red-dark) rounded-xl w-15 p-2",
-      !isActive &&
-      !isDisabled &&
-      "group-hover:bg-(--red-dark) group-hover:rounded-xl group-hover:w-15 group-hover:p-2"
-    )}
-  >
-    <img src={icon} className={"object-contain"} />
-  </span>
-      <span className="text-white">{label}</span>
+      <div
+        className={clsx(
+          "menu-item-icon flex size-12 items-center transition-all",
+          !isActive && "scale-50",
+          isActive && "bg-(--red-dark) rounded-xl p-2",
+          !isActive &&
+          !isDisabled &&
+          "group-hover:bg-(--red-dark) group-hover:rounded-xl group-hover:p-2 group-hover:scale-100"
+        )}
+      >
+        <img src={icon} className={"object-contain"} />
+      </div>
+      <div className="text-white">{label}</div>
     </button>
   );
 }
@@ -103,7 +104,7 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
   return (
     <nav className={"flex w-22 shrink-0 flex-col justify-between gap-10 bg-(--red)"}>
       <img src={logo} className="mx-auto mt-5 size-15 object-contain" />
-      <div className={"flex grow flex-col gap-3"}>
+      <div className={"flex grow flex-col gap-2"}>
         {menuItems.map((item) => (
           <MenuItem
             key={item.id}

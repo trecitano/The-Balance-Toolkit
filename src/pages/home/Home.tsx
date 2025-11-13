@@ -123,59 +123,31 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = (
   const activity = sessionDetails?.activity;
 
   return (
-    <div className="flex h-full flex-col gap-5 p-(--space-sm)">
+    <div className="flex h-full flex-col gap-5 p-(--space-sm) text-xs">
       <PageSubtitle>Last session</PageSubtitle>
 
-      <div className="flex grid flex-1 grid-cols-2 grid-rows-2">
-        <div>
-          <span className="mb-2 flex text-base font-semibold">Stats</span>
-          <div className="text-gray-700">
-            <div>Duration: {sessionDetails.sessionStats.duration.secs} seconds</div>
-            <div>Board Hz: {sessionDetails.sessionStats.boardSamplingRate.toFixed(2)}</div>
-          </div>
+      <div className={"flex flex-col gap-3"}>
+        <div className={"flex gap-3"}>
+          <p className="font-semibold">User</p>
+          <p>{ user.name }</p>
         </div>
 
-        <div>
-          <span className="mb-2 flex text-base font-semibold">User</span>
-          <div className="text-gray-700">
-            <div>Name: {user.name}</div>
-            {user.age && <div>Age: {user.age}</div>}
-            {user.weight && (
-              <div>
-                Weight: {user.weight} {user.weightMetric}
-              </div>
-            )}
-            {user.gender && <div>Gender: {user.gender}</div>}
-          </div>
+        <div className={"flex gap-3"}>
+          <p className="font-semibold">Activity</p>
+          {activity ? (
+            <div>{activity.title}</div>
+          ) : (
+            <div className="text-gray-700">No Activity chosen</div>
+          )}
         </div>
 
-        {activity ? (
-          <div>
-            <span className="mb-2 flex text-base font-semibold">Activity</span>
-            <div className="text-gray-700">
-              <div>{activity.title}</div>
-              <div>Activity steps: {activity.timelineBlocks.length}</div>
-              <div>Number of boards: {activity.boardsRequired} </div>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <span className="mb-2 flex text-base font-semibold">Activity</span>
-            <div className="text-gray-700">
-              <div>No Activity chosen</div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div>
-        <div className="mb-2 flex">
+        <div className="mb-2 flex gap-1">
           <img className="h-4 w-4" src={fileIcon} draggable={false} />
-          <span className="flex text-base font-semibold">File</span>
+          <span className="flex font-semibold">File</span>
         </div>
 
         <div>
-          <div className="text-base text-gray-700">{sessionDetails.fileLocation}</div>
+          <div className="text-gray-700">{sessionDetails.fileLocation}</div>
         </div>
       </div>
 
@@ -306,7 +278,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
 
           <div className="relative flex flex-1 items-center justify-center">
             <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
-            <img src={wbbIconBlue} className="z-10 w-20 object-contain" />
+            <img src={wbbIconBlue} className="z-10 w-50 object-contain" />
           </div>
         </>
       )}

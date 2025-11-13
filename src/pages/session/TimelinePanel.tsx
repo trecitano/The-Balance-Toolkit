@@ -115,8 +115,8 @@ export function TimelinePanel({
       </div>
       {activity ? (
         <div className="mt-3 flex w-full gap-2">
-          <div className={"grow"}>
-            <ActivityTimeline blocks={activity.timelineBlocks} height={"h-20"} />
+          <div className={"flex grow h-25"}>
+            <ActivityTimeline blocks={activity.timelineBlocks} />
           </div>
           <div
             ref={playheadRef}
