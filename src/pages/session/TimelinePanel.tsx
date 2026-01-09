@@ -139,7 +139,7 @@ export function TimelinePanel({
           />
         </div>
       ) : (
-        <div className="absolute w-full justify-center text-center">
+        <div className="pointer-events-none absolute w-full justify-center text-center">
           <p className="text-xl text-gray-500/80">{placeholderMessage}</p>
         </div>
       )}
