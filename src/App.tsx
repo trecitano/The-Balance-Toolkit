@@ -8,7 +8,7 @@ import ReplayPage from "@/pages/session/replay/ReplayPage.tsx";
 import Activities from "@/pages/activities/Activities";
 import "./App.css";
 import { QueryClient, QueryClientProvider, usePrefetchQuery } from "@tanstack/react-query";
-import { SettingsQuery } from "@/components/settings/Settings.tsx";
+import { SettingsQuery } from "@/components/modals/SettingsModal.tsx";
 import ActivityPopup from "./pages/session-activity-pop-up/activityPopup.tsx";
 
 function DefaultLayout() {

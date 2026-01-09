@@ -364,7 +364,7 @@ export default function Users() {
 
       <div className={"flex-1 flex flex-col"}>
         <div className={"flex-1 min-h-0"}>
-          <ul className="carousel-list px-[calc(50vw-10rem)] h-7/10 pt-10 flex-1 flex gap-8 overflow-hidden" ref={userListRef}>
+          <ul className="mask-horizontal-fade px-[calc(50vw-10rem)] h-7/10 pt-10 flex-1 flex gap-8 overflow-hidden" ref={userListRef}>
             {sortedUsers.map((user) => (
               <li
                 key={user.id}

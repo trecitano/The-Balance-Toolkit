@@ -1,5 +1,5 @@
-import React, { ReactNode, useState } from "react";
-import "./Settings.css";
+import React, { ReactNode, useState, useEffect } from "react";
+import "./SettingsModal.css";
 import { commands } from "@/utils/requests.ts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { GeneralSettings, InterpolationOption, interpolationOptions, ProcessingSettings } from "@/types.ts";
@@ -50,11 +50,21 @@ function Settings({ isOpen, onClose }: SettingsProps) {
   const { loadedSettings } = data ?? {};
   const queryClient = useQueryClient();
 
-  const [tempSettings, setTempSettings] = useState<GeneralSettings | null>(() => loadedSettings ?? null);
+  const [tempSettings, setTempSettings] = useState<GeneralSettings | null>(null);
 
-  if (!tempSettings && loadedSettings) {
-    setTempSettings(loadedSettings);
-  }
+  // Sync tempSettings with loaded data when modal opens or data changes
+  useEffect(() => {
+    if (isOpen && loadedSettings && !tempSettings) {
+      setTempSettings(loadedSettings);
+    }
+  }, [isOpen, loadedSettings, tempSettings]);
+
+  // Reset tempSettings when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setTempSettings(null);
+    }
+  }, [isOpen]);
 
   const handleGeneralSettingsUpdate = <K extends keyof GeneralSettings>(field: K, value: GeneralSettings[K]) => {
     setTempSettings((prev) => prev && { ...prev, [field]: value });

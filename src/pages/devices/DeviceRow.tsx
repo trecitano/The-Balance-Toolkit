@@ -2,7 +2,6 @@ import { useRef } from "react";
 import { Device } from "@/types";
 import wbbIcon from "@/assets/wbb-top-white.svg";
 import wbbIconBlue from "@/assets/wbb-top-blue.svg";
-import "./DeviceRow.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
 import clsx from "clsx";
@@ -67,7 +66,7 @@ export default function DeviceRow({
     >
       <button
         onClick={() => handleRemoveDevice(device.macAddress)}
-        className="remove-device-btn absolute top-2 right-3"
+        className="btn-danger absolute top-2 right-3 rounded px-1"
       >
         ✕
       </button>
