@@ -184,7 +184,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
       <PageSubtitle>Activities</PageSubtitle>
 
       <div className="flex-1">
-        <ul ref={listRef} className="activities-list flex gap-8 overflow-hidden px-[calc(50%-125px)] py-5">
+        <ul ref={listRef} className="mask-horizontal-fade flex gap-8 overflow-hidden px-[calc(50%-125px)] py-5">
           {activities.map((activity, i) => {
             const active = i === selected;
             return (

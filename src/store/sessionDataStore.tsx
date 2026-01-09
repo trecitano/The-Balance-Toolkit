@@ -32,14 +32,12 @@ function createEmptyBuffer<T>(): BoardBuffer<T> {
   return { frames: Array(MAX_FRAMES), head: -1, len: 0 };
 }
 
-// Helper to immutably update a buffer
 function updateBuffer<T>(oldBuffer: BoardBuffer<T>, frame: T): BoardBuffer<T> {
-  const newFrames = oldBuffer.frames.slice();
   const newHead = (oldBuffer.head + 1) % MAX_FRAMES;
-  newFrames[newHead] = frame;
+  oldBuffer.frames[newHead] = frame;
 
   return {
-    frames: newFrames,
+    frames: oldBuffer.frames,
     head: newHead,
     len: Math.min(oldBuffer.len + 1, MAX_FRAMES),
   };

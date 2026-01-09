@@ -43,7 +43,6 @@ export function UPlot<T>({
     const resizeObserver = new ResizeObserver(() => {
       if (!hostRef.current || !plotRef.current) return;
       const r = hostRef.current.getBoundingClientRect();
-      console.log(r);
       plotRef.current.setSize({ width: r.width, height: r.height });
     });
 

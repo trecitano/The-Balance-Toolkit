@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/shared.css";
 
 :root {
   --font-scale: 1;
@@ -68,10 +69,4 @@ body {
   font-size: var(--text-base);
   font-family: "Segoe UI", "Inter", "Roboto", Arial, sans-serif;
   -webkit-user-select: none;
-}
-
-.carousel-list {
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: 100% 100%;
 }

@@ -1,0 +1,64 @@
+/* Shared CSS utilities and patterns */
+
+/* Spinner animation - reusable loading indicator */
+.spinner {
+  display: inline-block;
+  border: 0.7rem solid #e3e8ef;
+  border-top: 0.7rem solid var(--primary);
+  border-radius: var(--radius-round);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Danger button - for delete/remove actions */
+.btn-danger {
+  color: #c7c7c7;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+
+.btn-danger:hover {
+  color: var(--white);
+  background: var(--red);
+}
+
+/* Horizontal fade mask - for carousels and horizontal scrolling lists */
+.mask-horizontal-fade {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+  mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+}
+
+/* Vertical scroll fade mask - uses CSS custom properties for dynamic opacity */
+.mask-vertical-scroll {
+  scrollbar-width: none;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black calc(10rem * var(--top-opacity, 0)),
+    black calc(100% - 10rem * var(--bottom-opacity, 1)),
+    transparent 100%
+  );
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}

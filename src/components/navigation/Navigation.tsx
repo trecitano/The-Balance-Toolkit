@@ -7,7 +7,7 @@ import sessionIcon from "@/assets/session-icon.svg";
 import replayIcon from "@/assets/replay-icon.svg";
 import settingsIcon from "@/assets/settings-icon.svg";
 import activitiesIcon from "@/assets/activities-icon.svg";
-import Settings from "@/components/settings/Settings.tsx";
+import Settings from "@/components/modals/SettingsModal.tsx";
 import "./Navigation.css";
 import clsx from "clsx";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

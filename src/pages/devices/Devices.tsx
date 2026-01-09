@@ -6,7 +6,6 @@ import DeviceRow from "./DeviceRow";
 import { Device } from "@/types";
 import { commands } from "@/utils/requests.ts";
 import DeviceSessionList from "@/pages/devices/DeviceSessionList.tsx";
-import "./Devices.css";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
@@ -166,7 +165,7 @@ export default function Devices() {
 
       <div className="flex h-full min-h-0 gap-5">
         <ToolkitContainer className="h-full grow p-10">
-          <div className={"devices-list flex h-full flex-col gap-4 overflow-y-auto"} onScroll={handleGradientDevicesScroll}>
+          <div className={"mask-vertical-scroll flex h-full flex-col gap-4 overflow-y-auto"} onScroll={handleGradientDevicesScroll}>
             {noDevices && (
               <div className="flex h-full flex-col items-center justify-center p-8 text-center">
                 <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />
