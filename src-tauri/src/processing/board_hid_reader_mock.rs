@@ -18,7 +18,10 @@ pub fn initialize(mac_address: MacAddress) -> anyhow::Result<Sender<BalanceBoard
     Ok(tx)
 }
 
-fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, mac_address: MacAddress) -> anyhow::Result<()> {
+fn mock_hid_loop(
+    mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>,
+    mac_address: MacAddress,
+) -> anyhow::Result<()> {
     let mut tx_channel: Option<mpsc::Sender<BalanceBoardCalibratedReading>> = None;
     let mut update_tare = false;
     let mut tare_value = BalanceBoardCalibratedReading {
@@ -27,7 +30,7 @@ fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, mac_a
         top_right: 0.0,
         top_left: 0.0,
         bottom_right: 0.0,
-        bottom_left: 0.0
+        bottom_left: 0.0,
     };
     let mut generator: Option<MockBoardGen> = None;
     let mut rng = rand::rng();
@@ -44,20 +47,22 @@ fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, mac_a
                 match command {
                     BalanceBoardCommands::TurnOnLed => { /* No Action */ }
                     BalanceBoardCommands::TurnOffLed => { /* No Action */ }
-                    BalanceBoardCommands::ApplyTare => { update_tare = true; }
+                    BalanceBoardCommands::ApplyTare => {
+                        update_tare = true;
+                    }
                     BalanceBoardCommands::StartRecording(tx) => {
                         println!("Mock Board {} is starting the session!", mac_address);
                         tx_channel = Some(tx);
                         generator = Some(MockBoardGen::new_random(mac_address));
-                    },
+                    }
                     BalanceBoardCommands::FinishRecording => {
                         println!("Mock Board {} has stopped the session.", mac_address);
                         tx_channel = None;
                         generator = None;
-                    },
+                    }
                 }
-            },
-            Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ },
+            }
+            Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ }
             Err(mpsc::error::TryRecvError::Disconnected) => {
                 // The async part has shut down. We must exit.
                 println!("HID Mock Reader disconnected. Shutting down.");
@@ -83,19 +88,17 @@ fn mock_hid_loop(mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>, mac_a
             };
 
             tx.blocking_send(tared_reading)?;
-            
+
             std::thread::sleep(std::time::Duration::from_millis(10));
         } else {
             // No session, sleep for a bit
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
-        
     }
-    
+
     println!("Mock HID loop terminated.");
     Ok(())
 }
-
 
 use std::f32::consts::PI;
 use std::time::Instant;
@@ -104,12 +107,12 @@ pub struct MockBoardGen {
     mac: MacAddress,
     start: Instant,
     // Randomized once per board/session
-    radius_x: f32,      // <= X_HALF_MM
-    radius_y: f32,      // <= Y_HALF_MM
-    omega: f32,         // rad/s (2π * revs_per_sec)
-    base_force: f32,    // total baseline force over 4 corners
-    vert_amp: f32,      // fraction (e.g., 0.05 = ±5%)
-    phase0: f32,        // initial phase
+    radius_x: f32,   // <= X_HALF_MM
+    radius_y: f32,   // <= Y_HALF_MM
+    omega: f32,      // rad/s (2π * revs_per_sec)
+    base_force: f32, // total baseline force over 4 corners
+    vert_amp: f32,   // fraction (e.g., 0.05 = ±5%)
+    phase0: f32,     // initial phase
 }
 
 impl MockBoardGen {
@@ -139,7 +142,7 @@ impl MockBoardGen {
             mac,
             start: Instant::now(),
             radius_x: rx_frac * 220.0, // TODO FIX
-            radius_y: ry_frac * 60.0, // TODO FIX
+            radius_y: ry_frac * 60.0,  // TODO FIX
             omega,
             base_force,
             vert_amp,
@@ -158,8 +161,7 @@ impl MockBoardGen {
         // Optional vertical oscillation (2x frequency)
         let total_force = self.base_force * (1.0 + self.vert_amp * (2.0 * phase).sin());
 
-        let (top_right, bottom_right, top_left, bottom_left) =
-            reading_from_cop(x, y, total_force);
+        let (top_right, bottom_right, top_left, bottom_left) = reading_from_cop(x, y, total_force);
 
         BalanceBoardCalibratedReading {
             timestamp: Utc::now(),
@@ -172,12 +174,7 @@ impl MockBoardGen {
     }
 }
 
-
-fn reading_from_cop(
-    x: f32,
-    y: f32,
-    total_force: f32,
-) -> (f32, f32, f32, f32) {
+fn reading_from_cop(x: f32, y: f32, total_force: f32) -> (f32, f32, f32, f32) {
     // Bilinear distribution keeps corners >= 0 for |x| <= X_HALF_MM, |y| <= Y_HALF_MM
     let xn = (x / 300.0).clamp(-1.0, 1.0);
     let yn = (y / 200.0).clamp(-1.0, 1.0);

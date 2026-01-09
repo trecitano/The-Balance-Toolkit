@@ -6,7 +6,7 @@ use anyhow::Result;
 use chrono::Utc;
 use processing::board_hid_reader;
 use processing::board_hid_reader_mock;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -18,7 +18,7 @@ pub enum BoardAction {
     TurnOnLed,
     TurnOffLed,
     StartRecording(Sender<BalanceBoardCalibratedReading>),
-    StopRecording
+    StopRecording,
 }
 
 #[derive(Debug)]
@@ -45,7 +45,7 @@ impl BalanceBoardOutput {
     }
 }
 
-#[derive(Serialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct BalanceBoardCalibratedReading {
     pub timestamp: chrono::DateTime<Utc>,
     pub mac_address: MacAddress,
@@ -70,17 +70,16 @@ impl BalanceBoardCalibratedReading {
     pub fn calculate_cop(&self) -> CenterOfPressure {
         let total_force = self.top_right + self.bottom_right + self.top_left + self.bottom_left;
         if total_force.abs() < 0.1 {
-            return CenterOfPressure {
-                x: 0.0,
-                y: 0.0
-            }
+            return CenterOfPressure { x: 0.0, y: 0.0 };
         }
 
-        let center_of_pressure_x =
-            ((self.top_right + self.bottom_right) - (self.top_left + self.bottom_left)) / total_force;
+        let center_of_pressure_x = ((self.top_right + self.bottom_right)
+            - (self.top_left + self.bottom_left))
+            / total_force;
 
-        let center_of_pressure_y =
-            ((self.top_right + self.top_left) - (self.bottom_right + self.bottom_left)) / total_force;
+        let center_of_pressure_y = ((self.top_right + self.top_left)
+            - (self.bottom_right + self.bottom_left))
+            / total_force;
 
         CenterOfPressure {
             x: center_of_pressure_x,
@@ -97,8 +96,8 @@ pub struct CenterOfPressure {
 impl BalanceBoardOutput {
     pub fn to_byte_array(&self) -> Vec<u8> {
         match self {
-            BalanceBoardOutput::Raw(data) => { data.to_byte_array() }
-            BalanceBoardOutput::Processed(data) => { data.to_byte_array() }
+            BalanceBoardOutput::Raw(data) => data.to_byte_array(),
+            BalanceBoardOutput::Processed(data) => data.to_byte_array(),
         }
     }
 }
@@ -115,7 +114,12 @@ impl BalanceBoardCalibratedReading {
         buf.extend_from_slice(&timestamp_micros.to_be_bytes());
         buf.extend_from_slice(&self.mac_address.to_be_bytes());
 
-        let readings = [self.top_right, self.bottom_right, self.top_left, self.bottom_left];
+        let readings = [
+            self.top_right,
+            self.bottom_right,
+            self.top_left,
+            self.bottom_left,
+        ];
         for value in readings.iter() {
             buf.extend_from_slice(&value.to_be_bytes());
         }
@@ -130,26 +134,32 @@ impl BalanceBoardCalibratedReading {
 pub enum BoardConnectionMode {
     Real,
     Demo,
-    ReadFromFile(PathBuf)
+    ReadFromFile(PathBuf),
 }
 
-pub fn initialize(mac_address: MacAddress, mode: BoardConnectionMode) -> Result<Sender<BoardAction>> {
+pub fn initialize(
+    mac_address: MacAddress,
+    mode: BoardConnectionMode,
+) -> Result<Sender<BoardAction>> {
     let (tx, rx) = mpsc::channel(100);
 
     let board_hid_tx = match mode {
         BoardConnectionMode::Real => board_hid_reader::initialize(mac_address)?,
         BoardConnectionMode::Demo => board_hid_reader_mock::initialize(mac_address)?,
-        BoardConnectionMode::ReadFromFile(file_path) => board_hid_file_reader::initialize(mac_address, file_path)?,
+        BoardConnectionMode::ReadFromFile(file_path) => {
+            board_hid_file_reader::initialize(mac_address, file_path)?
+        }
     };
-    
-    tokio::spawn(async move{
-        balance_board_actor_loop(rx, board_hid_tx).await
-    });
+
+    tokio::spawn(async move { balance_board_actor_loop(rx, board_hid_tx).await });
 
     Ok(tx)
 }
 
-async fn balance_board_actor_loop(mut rx: Receiver<BoardAction>, board_hid_tx: Sender<BalanceBoardCommands>) {
+async fn balance_board_actor_loop(
+    mut rx: Receiver<BoardAction>,
+    board_hid_tx: Sender<BalanceBoardCommands>,
+) {
     loop {
         tokio::select! {
             // Received an action from the manager

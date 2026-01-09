@@ -4,14 +4,14 @@
 mod actors;
 mod bluetooth;
 mod file_system;
-mod types;
 mod frontend;
 mod processing;
+mod types;
 mod utils;
 
-use tokio::sync::mpsc;
-use anyhow::Result;
 use crate::actors::toolkit_service::ConnectionManager;
+use anyhow::Result;
+use tokio::sync::mpsc;
 
 pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 
@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
             panic!();
         }
     });
-    
+
     frontend::tauri::initialize(manager_command_tx, manager_response_rx);
     Ok(())
 }

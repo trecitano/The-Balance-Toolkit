@@ -1,9 +1,7 @@
-use crate::actors::balance_board_actor::{
-    BalanceBoardCalibratedReading, BalanceBoardOutput,
-};
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput};
 use anyhow::Result;
 use chrono::{DateTime, TimeDelta, Utc};
-use rustfft::{num_complex::Complex, FftPlanner};
+use rustfft::{FftPlanner, num_complex::Complex};
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 use std::thread;
@@ -106,14 +104,14 @@ pub fn initialize(
 ) -> Sender<BalanceBoardOutput> {
     let (tx, rx) = mpsc::channel(3000);
 
-    thread::spawn(move || {
-        match data_process_loop(rx, observers, mac_address, settings) {
+    thread::spawn(
+        move || match data_process_loop(rx, observers, mac_address, settings) {
             Ok(_) => (),
             Err(e) => {
                 println!("Error in data processing loop: {:?}", e);
             }
-        }
-    });
+        },
+    );
 
     tx
 }
@@ -169,15 +167,24 @@ fn data_process_loop(
         let window_slice = &buffer[start_idx..end_idx];
 
         let points = match settings.interpolation {
-            InterpolationSetting::Linear => {
-                linear_interpolation(&window_slice, start_time, end_time, &sampling_size_time_delta)
-            }
-            InterpolationSetting::Cubic => {
-                cubic_interpolation(&window_slice, start_time, end_time, &sampling_size_time_delta)
-            }
-            InterpolationSetting::Polynomial => {
-                polynomial_interpolation(&window_slice, start_time, end_time, &sampling_size_time_delta)
-            }
+            InterpolationSetting::Linear => linear_interpolation(
+                &window_slice,
+                start_time,
+                end_time,
+                &sampling_size_time_delta,
+            ),
+            InterpolationSetting::Cubic => cubic_interpolation(
+                &window_slice,
+                start_time,
+                end_time,
+                &sampling_size_time_delta,
+            ),
+            InterpolationSetting::Polynomial => polynomial_interpolation(
+                &window_slice,
+                start_time,
+                end_time,
+                &sampling_size_time_delta,
+            ),
         };
 
         let sway_calculation = calculate_basic_sway_metrics(&points);
@@ -218,8 +225,7 @@ fn balance_board_reading_to_cop(
     x_value: f32,
     y_value: f32,
 ) -> CenterOfPressurePoint {
-    let total_force =
-        data.top_right + data.bottom_right + data.top_left + data.bottom_left;
+    let total_force = data.top_right + data.bottom_right + data.top_left + data.bottom_left;
 
     if total_force.abs() < 0.1 {
         return CenterOfPressurePoint {
@@ -231,14 +237,10 @@ fn balance_board_reading_to_cop(
     }
 
     let center_of_pressure_x =
-        ((data.top_right + data.bottom_right)
-        - (data.top_left + data.bottom_left))
-        / total_force;
+        ((data.top_right + data.bottom_right) - (data.top_left + data.bottom_left)) / total_force;
 
     let center_of_pressure_y =
-        ((data.top_right + data.top_left)
-        - (data.bottom_right + data.bottom_left))
-        / total_force;
+        ((data.top_right + data.top_left) - (data.bottom_right + data.bottom_left)) / total_force;
 
     CenterOfPressurePoint {
         timestamp: data.timestamp,
@@ -305,12 +307,9 @@ fn cubic_interpolation(
         .map(|p| (p.timestamp - start_time).num_microseconds().unwrap_or(0) as f32 / 1_000_000.0)
         .collect();
 
-    let x_spline =
-        create_cubic_spline(&times, &points.iter().map(|p| p.x).collect::<Vec<_>>());
-    let y_spline =
-        create_cubic_spline(&times, &points.iter().map(|p| p.y).collect::<Vec<_>>());
-    let z_spline =
-        create_cubic_spline(&times, &points.iter().map(|p| p.z).collect::<Vec<_>>());
+    let x_spline = create_cubic_spline(&times, &points.iter().map(|p| p.x).collect::<Vec<_>>());
+    let y_spline = create_cubic_spline(&times, &points.iter().map(|p| p.y).collect::<Vec<_>>());
+    let z_spline = create_cubic_spline(&times, &points.iter().map(|p| p.z).collect::<Vec<_>>());
 
     let mut current_time = start_time;
 
@@ -455,8 +454,7 @@ fn create_cubic_spline(x: &[f32], y: &[f32]) -> CubicSpline {
     }
 
     for i in 1..n {
-        alpha[i] = 3.0 * (y[i + 1] - y[i]) / h[i]
-            - 3.0 * (y[i] - y[i - 1]) / h[i - 1];
+        alpha[i] = 3.0 * (y[i + 1] - y[i]) / h[i] - 3.0 * (y[i] - y[i - 1]) / h[i - 1];
     }
 
     let mut l = vec![1.0; n + 1];
@@ -475,8 +473,7 @@ fn create_cubic_spline(x: &[f32], y: &[f32]) -> CubicSpline {
 
     for j in (0..n).rev() {
         c[j] = z[j] - mu[j] * c[j + 1];
-        b[j] = (y[j + 1] - y[j]) / h[j]
-            - h[j] * (c[j + 1] + 2.0 * c[j]) / 3.0;
+        b[j] = (y[j + 1] - y[j]) / h[j] - h[j] * (c[j + 1] + 2.0 * c[j]) / 3.0;
         d[j] = (c[j + 1] - c[j]) / (3.0 * h[j]);
     }
 
@@ -498,10 +495,7 @@ fn evaluate_cubic_spline(spline: &CubicSpline, x_points: &[f32], x: f32) -> f32 
     }
 
     let dx = x - x_points[i];
-    spline.a[i]
-        + spline.b[i] * dx
-        + spline.c[i] * dx * dx
-        + spline.d[i] * dx * dx * dx
+    spline.a[i] + spline.b[i] * dx + spline.c[i] * dx * dx + spline.d[i] * dx * dx * dx
 }
 
 fn lagrange_interpolate(x_points: &[f32], y_points: &[f32], x: f32) -> f32 {
@@ -559,9 +553,7 @@ pub struct SwayMetrics {
     pub velocity_moment: f32,
 }
 
-fn calculate_basic_sway_metrics(
-    points: &[CenterOfPressurePoint],
-) -> Option<SwayMetrics> {
+fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<SwayMetrics> {
     if points.len() < 2 {
         return None;
     }
@@ -573,9 +565,7 @@ fn calculate_basic_sway_metrics(
     let mut total_time = 0.0;
 
     for i in 1..points.len() {
-        let dt = (points[i].timestamp - points[i - 1].timestamp).num_milliseconds()
-            as f32
-            / 1000.0;
+        let dt = (points[i].timestamp - points[i - 1].timestamp).num_milliseconds() as f32 / 1000.0;
 
         if dt > 0.0 {
             let dx = points[i].x - points[i - 1].x;
@@ -600,8 +590,7 @@ fn calculate_basic_sway_metrics(
 
     let v_cop_x = velocities_x.iter().sum::<f32>() / velocities_x.len() as f32;
     let v_cop_y = velocities_y.iter().sum::<f32>() / velocities_y.len() as f32;
-    let mean_velocity =
-        velocities_total.iter().sum::<f32>() / velocities_total.len() as f32;
+    let mean_velocity = velocities_total.iter().sum::<f32>() / velocities_total.len() as f32;
 
     let velocity_moment = if total_time > 0.0 {
         total_path_length / total_time
@@ -700,8 +689,9 @@ fn convex_hull_graham_scan(points: &mut [(f32, f32)]) -> Vec<(f32, f32)> {
     // Find bottom-most point (or left most in case of tie)
     let mut bottom_idx = 0;
     for i in 1..points.len() {
-        if points[i].1 < points[bottom_idx].1 ||
-            (points[i].1 == points[bottom_idx].1 && points[i].0 < points[bottom_idx].0) {
+        if points[i].1 < points[bottom_idx].1
+            || (points[i].1 == points[bottom_idx].1 && points[i].0 < points[bottom_idx].0)
+        {
             bottom_idx = i;
         }
     }
@@ -728,7 +718,7 @@ fn convex_hull_graham_scan(points: &mut [(f32, f32)]) -> Vec<(f32, f32)> {
     for point in points {
         while hull.len() >= 2 {
             let len = hull.len();
-            if cross_product(hull[len-2], hull[len-1], *point) <= 0.0 {
+            if cross_product(hull[len - 2], hull[len - 1], *point) <= 0.0 {
                 hull.pop();
             } else {
                 break;
@@ -744,9 +734,7 @@ fn cross_product(o: (f32, f32), a: (f32, f32), b: (f32, f32)) -> f32 {
     (a.0 - o.0) * (b.1 - o.1) - (a.1 - o.1) * (b.0 - o.0)
 }
 
-fn calculate_convex_hull_polygon(
-    points: &[CenterOfPressurePoint],
-) -> Option<Vec<(f32, f32)>> {
+fn calculate_convex_hull_polygon(points: &[CenterOfPressurePoint]) -> Option<Vec<(f32, f32)>> {
     if points.len() < 3 {
         return None;
     }
@@ -870,36 +858,33 @@ fn compute_fft_amplitude_spectrum(
     // Assume uniform sampling after interpolation
     let dt = (points[1].timestamp - points[0].timestamp)
         .num_microseconds()
-        .unwrap_or(0) as f32 / 1_000_000.0;
+        .unwrap_or(0) as f32
+        / 1_000_000.0;
 
     if dt <= 0.0 {
         return None;
     }
 
-    let fs = 1.0 / dt;  // Sampling frequency in Hz
+    let fs = 1.0 / dt; // Sampling frequency in Hz
 
-       // Apply Hann window and correct amplitude by coherent gain
-       let mut window = Vec::with_capacity(n);
-       for i in 0..n {
-           let w = 0.5 - 0.5 * (2.0 * PI * i as f32 / (n as f32 - 1.0)).cos();
-           window.push(w);
-           x[i] *= w;
-           y[i] *= w;
-       }
-      let coherent_gain = window.iter().sum::<f32>() / n as f32; // = 0.5 for Hann
+    // Apply Hann window and correct amplitude by coherent gain
+    let mut window = Vec::with_capacity(n);
+    for i in 0..n {
+        let w = 0.5 - 0.5 * (2.0 * PI * i as f32 / (n as f32 - 1.0)).cos();
+        window.push(w);
+        x[i] *= w;
+        y[i] *= w;
+    }
+    let coherent_gain = window.iter().sum::<f32>() / n as f32; // = 0.5 for Hann
 
     // Prepare FFT
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(n);
 
     // Convert to complex and apply FFT
-    let mut x_complex: Vec<Complex<f32>> = x.iter()
-        .map(|&val| Complex::new(val, 0.0))
-        .collect();
+    let mut x_complex: Vec<Complex<f32>> = x.iter().map(|&val| Complex::new(val, 0.0)).collect();
 
-    let mut y_complex: Vec<Complex<f32>> = y.iter()
-        .map(|&val| Complex::new(val, 0.0))
-        .collect();
+    let mut y_complex: Vec<Complex<f32>> = y.iter().map(|&val| Complex::new(val, 0.0)).collect();
 
     fft.process(&mut x_complex);
     fft.process(&mut y_complex);
@@ -920,16 +905,16 @@ fn compute_fft_amplitude_spectrum(
             break;
         }
 
-           // One-sided amplitude scaling. For even N, Nyquist is k == N/2.
-           // For odd N there is no Nyquist bin, so only DC uses 1/N.
-           let is_nyquist = n % 2 == 0 && k == n / 2;
-           let scale = if k == 0 || is_nyquist {
-               1.0 / n as f32
-           } else {
-               2.0 / n as f32
-           };
-           // Correct for window coherent gain
-           let scale = scale / coherent_gain;
+        // One-sided amplitude scaling. For even N, Nyquist is k == N/2.
+        // For odd N there is no Nyquist bin, so only DC uses 1/N.
+        let is_nyquist = n % 2 == 0 && k == n / 2;
+        let scale = if k == 0 || is_nyquist {
+            1.0 / n as f32
+        } else {
+            2.0 / n as f32
+        };
+        // Correct for window coherent gain
+        let scale = scale / coherent_gain;
 
         let ax = x_complex[k].norm() * scale;
         let ay = y_complex[k].norm() * scale;

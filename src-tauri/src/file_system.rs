@@ -1,20 +1,21 @@
+use crate::actors::state::activities::{Activity, ActivityState};
+use crate::processing::file_writer::{
+    SessionConfigurationFileFormat, SessionConfigurationFileFormatRef,
+};
 use crate::types::{GeneralSettings, MacAddress, NintendoDevice, User};
+use anyhow::{Context, Result};
+use chrono::{DateTime, NaiveDateTime, Utc};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use anyhow::{Context, Result};
-use chrono::{DateTime, NaiveDateTime, Utc};
-use serde::de::DeserializeOwned;
-use crate::actors::state::activities::{Activity, ActivityState};
-use crate::processing::file_writer::{SessionConfigurationFileFormat, SessionConfigurationFileFormatRef};
 
 const USERS_FILE: &str = "users.json";
 pub struct UserFileSystem;
 impl UserFileSystem {
-
     pub fn get_users() -> Result<Vec<User>> {
         let users: Vec<User> = FileStore::load_with_default(Path::new(USERS_FILE))?;
         Ok(users)
@@ -49,7 +50,6 @@ impl UserFileSystem {
     }
 }
 
-
 const NINTENDO_DEVICES_FILE: &str = "nintendo_devices.json";
 pub struct DeviceFileSystem;
 #[derive(Serialize, Deserialize)]
@@ -65,7 +65,7 @@ impl From<&NintendoDevice> for FileSystemNintendoDevice {
             id: device.id.clone(),
             name: device.name.clone(),
             mac_address: device.mac_address,
-            last_connected: device.last_connected
+            last_connected: device.last_connected,
         }
     }
 }
@@ -77,16 +77,20 @@ impl From<FileSystemNintendoDevice> for NintendoDevice {
             name: val.name.clone(),
             mac_address: val.mac_address,
             is_connected: false,
-            last_connected: val.last_connected
+            last_connected: val.last_connected,
         }
     }
 }
 
 impl DeviceFileSystem {
     pub fn get_stored_devices() -> Result<Vec<NintendoDevice>> {
-        let file_system_devices: Vec<FileSystemNintendoDevice> = FileStore::load_with_default(Path::new(NINTENDO_DEVICES_FILE))?;
+        let file_system_devices: Vec<FileSystemNintendoDevice> =
+            FileStore::load_with_default(Path::new(NINTENDO_DEVICES_FILE))?;
 
-        let devices = file_system_devices.into_iter().map(|device| device.into()).collect();
+        let devices = file_system_devices
+            .into_iter()
+            .map(|device| device.into())
+            .collect();
 
         Ok(devices)
     }
@@ -94,7 +98,10 @@ impl DeviceFileSystem {
     pub fn update_board_name(mac_address: MacAddress, device_board_name: String) -> Result<()> {
         let mut devices = Self::get_stored_devices()?;
 
-        if let Some(device) = devices.iter_mut().find(|device| device.mac_address == mac_address) {
+        if let Some(device) = devices
+            .iter_mut()
+            .find(|device| device.mac_address == mac_address)
+        {
             device.name = device_board_name;
         }
 
@@ -122,7 +129,6 @@ impl DeviceFileSystem {
         if sorted_file_system == sorted_devices {
             return Ok(());
         }
-
 
         Self::save(devices)
     }
@@ -159,12 +165,16 @@ const ACTIVITIES_FILE: &str = "activities.json";
 pub struct ActivitiesFileSystem;
 impl ActivitiesFileSystem {
     pub fn get_or_create_default_activities() -> Result<Vec<Activity>> {
-        let activities: Vec<Activity> = FileStore::load_or_else(Path::new(ACTIVITIES_FILE), ActivityState::create_default_activities)?;
+        let activities: Vec<Activity> = FileStore::load_or_else(
+            Path::new(ACTIVITIES_FILE),
+            ActivityState::create_default_activities,
+        )?;
         Ok(activities)
     }
 
     pub fn save_activities(activities: &Vec<Activity>) -> Result<()> {
-        let old_activities: Vec<Activity> = FileStore::load_with_default(Path::new(ACTIVITIES_FILE))?;
+        let old_activities: Vec<Activity> =
+            FileStore::load_with_default(Path::new(ACTIVITIES_FILE))?;
 
         if old_activities == *activities {
             return Ok(());
@@ -176,29 +186,37 @@ impl ActivitiesFileSystem {
 
 pub struct ExistingSessionFileSystem;
 impl ExistingSessionFileSystem {
-    pub fn load_latest_session_file(directory: &Path) -> Option<(String, SessionConfigurationFileFormat)> {
+    pub fn load_latest_session_file(
+        directory: &Path,
+    ) -> Option<(String, SessionConfigurationFileFormat)> {
         let mut latest: Option<(NaiveDateTime, PathBuf)> = None;
 
-        let paths = fs::read_dir(directory).context("Failed to read directory").ok()?;
+        let paths = fs::read_dir(directory)
+            .context("Failed to read directory")
+            .ok()?;
 
         for entry in paths {
             let entry = entry.ok()?;
             let path = entry.path();
 
             if let Some(name) = path.file_name().and_then(|n| n.to_str())
-                && name.ends_with(".settings.json") && name.starts_with("tbt-") {
-                    // Extract the timestamp part: "2025-08-29T22-51-07"
-                    if let Some(ts_str) = name.strip_prefix("tbt-")
-                        .and_then(|s| s.strip_suffix(".settings.json")) {
-                        // Parse with chrono
-                        if let Ok(ts) = NaiveDateTime::parse_from_str(ts_str, "%Y-%m-%dT%H-%M-%S") {
-                            match &latest {
-                                Some((latest_ts, _)) if ts <= *latest_ts => {}
-                                _ => latest = Some((ts, path.clone())),
-                            }
+                && name.ends_with(".settings.json")
+                && name.starts_with("tbt-")
+            {
+                // Extract the timestamp part: "2025-08-29T22-51-07"
+                if let Some(ts_str) = name
+                    .strip_prefix("tbt-")
+                    .and_then(|s| s.strip_suffix(".settings.json"))
+                {
+                    // Parse with chrono
+                    if let Ok(ts) = NaiveDateTime::parse_from_str(ts_str, "%Y-%m-%dT%H-%M-%S") {
+                        match &latest {
+                            Some((latest_ts, _)) if ts <= *latest_ts => {}
+                            _ => latest = Some((ts, path.clone())),
                         }
                     }
                 }
+            }
         }
 
         println!("latest: #{:#?}", latest);
@@ -222,7 +240,6 @@ impl ExistingSessionFileSystem {
         FileStore::save(file_path, session)
     }
 }
-
 
 // PRIMITIVES
 

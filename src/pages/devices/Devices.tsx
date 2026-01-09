@@ -12,6 +12,7 @@ import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import IdentifyDeviceModal from "@/pages/devices/IdentifyDeviceModal.tsx";
 import ScanningModal from "@/pages/devices/ScanningModal.tsx";
+import CalibrationModal from "@/pages/devices/CalibrationModal.tsx";
 
 export const DEVICES_QUERY_KEY = ["devices"];
 export const DevicesQuery = {
@@ -41,6 +42,7 @@ export default function Devices() {
   const unlistenRef = useRef<(() => void) | null>(null);
   const queryClient = useQueryClient();
   const [showIdentifyModal, setShowIdentifyModal] = useState<Device | null>(null);
+  const [showCalibrationModal, setShowCalibrationModal] = useState<Device | null>(null);
 
   const { data } = useQuery(DevicesQuery);
 
@@ -195,6 +197,9 @@ export default function Devices() {
                   setShowIdentifyModal(device);
                   identifyDeviceMutation.mutate(device.macAddress);
                 }}
+                handleCalibrationClick={(device) => {
+                  setShowCalibrationModal(device);
+                }}
                 handleUnselectDevice={(macAddress) => unselectDeviceForSessionMutation.mutate(macAddress)}
                 handleRemoveDevice={(macAddress) => removeDeviceMutation.mutate(macAddress)}
                 handleSelectDeviceForSession={(macAddress) => selectDeviceForSessionMutation.mutate(macAddress)}
@@ -210,8 +215,8 @@ export default function Devices() {
       </div>
 
       <ScanningModal open={isScanning} onClose={handleCancelScan} foundDevicesCount={foundDevicesCount} />
-
       <IdentifyDeviceModal device={showIdentifyModal} onClose={() => setShowIdentifyModal(null)} />
+      <CalibrationModal device={showCalibrationModal} onClose={() => setShowCalibrationModal(null)} />
     </div>
   );
 }

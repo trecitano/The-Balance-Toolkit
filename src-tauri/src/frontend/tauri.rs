@@ -1,20 +1,24 @@
-use std::path::PathBuf;
-use crate::file_system;
-use crate::file_system::UserFileSystem;
-use crate::types::{FrontendReplayConfiguration, GeneralSettings, MacAddress, NintendoDevice, FrontendSessionInformation, User, UserPageInformation, FrontendCoreSession, FrontendLastSessionInformation, SessionActivityState};
-use serde::Serialize;
-use std::time::Duration;
-use crate::actors::balance_board_actor::{BalanceBoardOutput, BoardAction};
+use crate::actors::balance_board_actor::{
+    BalanceBoardCalibratedReading, BalanceBoardOutput, BoardAction,
+};
 use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothPeripheral};
 use crate::actors::state::activities::{Activity, TimelineBlock};
-use crate::actors::toolkit_service::{ToolkitCommand, ToolkitResponse};
+use crate::actors::toolkit_service::{DeviceCalibrationData, ToolkitCommand, ToolkitResponse};
+use crate::file_system;
+use crate::file_system::UserFileSystem;
+use crate::processing::data_processor::AmplitudeSpectrum;
+use crate::types::{
+    FrontendCapturedReading, FrontendCoreSession, FrontendLastSessionInformation,
+    FrontendReplayConfiguration, FrontendSessionInformation, GeneralSettings, MacAddress,
+    NintendoDevice, SessionActivityState, User, UserPageInformation,
+};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use tauri::ipc::Channel;
-use tauri::{Emitter, Manager, PhysicalSize, State};
-use tauri::utils::config::WindowConfig;
+use tauri::{Emitter, Manager, State};
 use tauri_plugin_fs::FsExt;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, oneshot};
-use crate::processing::data_processor::{AmplitudeSpectrum, FrequencySpectrum};
 
 pub struct AppState {
     pub manager_tx: Sender<ToolkitCommand>,
@@ -37,16 +41,16 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
                     match new_event {
                         ToolkitResponse::NewDeviceFound(device) => {
                             app_handle.emit("new_board", device).unwrap()
-                        },
+                        }
                         ToolkitResponse::SessionCompleted => {
                             app_handle.emit("session_completed", ()).unwrap()
-                        },
+                        }
                         ToolkitResponse::ReplayCompleted => {
                             app_handle.emit("replay_completed", ()).unwrap()
-                        },
+                        }
                         ToolkitResponse::SessionStarted => {
                             app_handle.emit("session_started", ()).unwrap()
-                        },
+                        }
                         ToolkitResponse::SessionActivityChanged => {
                             app_handle.emit("session_activity_changed", ()).unwrap()
                         }
@@ -59,14 +63,18 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
                 let min_width = (size.width as f64 * 0.55) as u32;
                 let min_height = (size.height as f64 * 0.6) as u32;
 
-                tauri::WebviewWindowBuilder::new(app.handle(), "main", tauri::WebviewUrl::default())
-                    .title("The Balance Toolkit")
-                    .resizable(true)
-                    .maximizable(true)
-                    .inner_size(min_width as f64, min_height as f64)
-              //      .min_inner_size(min_width as f64, min_height as f64)
-                    .build()
-                    .unwrap();
+                tauri::WebviewWindowBuilder::new(
+                    app.handle(),
+                    "main",
+                    tauri::WebviewUrl::default(),
+                )
+                .title("The Balance Toolkit")
+                .resizable(true)
+                .maximizable(true)
+                .inner_size(min_width as f64, min_height as f64)
+                //      .min_inner_size(min_width as f64, min_height as f64)
+                .build()
+                .unwrap();
             }
 
             Ok(())
@@ -91,6 +99,9 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
             devices_remove_device,
             devices_identify_device,
             devices_tare_device,
+            devices_start_calibration_stream,
+            devices_stop_calibration_stream,
+            devices_submit_calibration,
             session_start_session,
             session_stop_session,
             session_information,
@@ -115,7 +126,6 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
         .expect("error while running tauri application");
 }
 
-
 // --- USER COMMANDS ---
 #[tauri::command(async)]
 async fn settings_get_settings(state: State<'_, AppState>) -> Result<GeneralSettings, String> {
@@ -123,19 +133,33 @@ async fn settings_get_settings(state: State<'_, AppState>) -> Result<GeneralSett
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::GetSettings { response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
     Ok(result)
 }
 
 #[tauri::command(async)]
-async fn settings_set_settings(settings: GeneralSettings, state: State<'_, AppState>) -> Result<(), String> {
+async fn settings_set_settings(
+    settings: GeneralSettings,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     println!(">> settings_set_settings: {:?}", settings);
 
     let (tx, rx) = oneshot::channel();
-    let command = ToolkitCommand::SaveSettings { settings, response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::SaveSettings {
+        settings,
+        response: tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
 
     Ok(())
@@ -149,24 +173,36 @@ async fn user_page_information(state: State<'_, AppState>) -> Result<UserPageInf
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::GetSelectedUser { response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let selected_user_id = rx.await.map_err(|e| e.to_string())?;
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::SelectedBoardsForSession { response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let selected_boards = rx.await.map_err(|e| e.to_string())?;
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::GetBoardsSystemView { response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let mut devices = rx.await.map_err(|e| e.to_string())?;
     devices.retain(|device| selected_boards.contains(&device.mac_address));
 
     let response = UserPageInformation {
         users,
         selected_user_id,
-        session_devices: devices
+        session_devices: devices,
     };
 
     println!("<< user_page_information: {:#?}", response);
@@ -178,7 +214,11 @@ async fn user_select_user(state: State<'_, AppState>, user_id: usize) -> Result<
     println!(">> user_select_user: {}", user_id);
 
     let command = ToolkitCommand::SelectUser { user_id };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -188,8 +228,14 @@ async fn user_create(state: State<'_, AppState>) -> Result<User, String> {
     println!(">> user_create");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::CreateUser { response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::CreateUser {
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< user_create {:#?}\n", result);
@@ -201,8 +247,15 @@ async fn user_update(user: User, state: State<'_, AppState>) -> Result<(), Strin
     println!(">> user_update: {:?}", user);
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::UpdateUser { user, response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::UpdateUser {
+        user,
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< user_update:\n");
@@ -214,8 +267,15 @@ async fn user_delete(user_id: usize, state: State<'_, AppState>) -> Result<(), S
     println!(">> user_delete: {:?}", user_id);
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::DeleteUser { user_id, response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::DeleteUser {
+        user_id,
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< user_delete:\n");
@@ -223,7 +283,11 @@ async fn user_delete(user_id: usize, state: State<'_, AppState>) -> Result<(), S
 }
 
 #[tauri::command(async)]
-async fn user_measure_weight(state: State<'_, AppState>, channel: Channel<f64>, mac_address: MacAddress) -> Result<(), String> {
+async fn user_measure_weight(
+    state: State<'_, AppState>,
+    channel: Channel<f64>,
+    mac_address: MacAddress,
+) -> Result<(), String> {
     println!(">> user_measure_weight");
 
     // Forward inner tauri messages to outer Tauri channel
@@ -239,8 +303,15 @@ async fn user_measure_weight(state: State<'_, AppState>, channel: Channel<f64>, 
         }
         println!("Weight measuring over");
     });
-    let command = ToolkitCommand::MeasureWeight { frontend_channel: tx, mac_address };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::MeasureWeight {
+        frontend_channel: tx,
+        mac_address,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
 
     println!("<< user_measure_weight_return.\n");
     Ok(())
@@ -249,12 +320,20 @@ async fn user_measure_weight(state: State<'_, AppState>, channel: Channel<f64>, 
 // --- DEVICE COMMANDS ---
 
 #[tauri::command(async)]
-async fn devices_fetch_all_devices(state: State<'_, AppState>) -> Result<Vec<NintendoDevice>, String> {
+async fn devices_fetch_all_devices(
+    state: State<'_, AppState>,
+) -> Result<Vec<NintendoDevice>, String> {
     println!(">> devices_fetch_all_devices");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::GetBoardsSystemView { response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::GetBoardsSystemView {
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
@@ -272,18 +351,27 @@ async fn devices_scan_without_timeout(state: State<'_, AppState>) -> Result<(), 
     // Flow: First we connect via bluetooth, then we connect via HID.
     tokio::spawn(async move {
         while let Some(device) = new_bluetooth_rx.recv().await {
-            manager_tx_clone.send(ToolkitCommand::Connect { mac_address: device.mac_address}).await.unwrap();
+            manager_tx_clone
+                .send(ToolkitCommand::Connect {
+                    mac_address: device.mac_address,
+                })
+                .await
+                .unwrap();
         }
     });
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::BluetoothAction(BluetoothCommand::StartScanAndPair {
         response_stream: new_bluetooth_tx,
-        response: tx
+        response: tx,
     });
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
-    
+
     println!("<< devices_scan_without_timeout: Scan started in background.\n");
     Ok(())
 }
@@ -294,7 +382,11 @@ async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::BluetoothAction(BluetoothCommand::StopScan { response: tx });
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
 
     println!("<< cancel_scan\n");
@@ -306,34 +398,56 @@ async fn devices_is_scanning(state: State<'_, AppState>) -> Result<bool, String>
     println!(">> is_scanning");
 
     let (tx, rx) = oneshot::channel();
-    let command = ToolkitCommand::BluetoothAction(BluetoothCommand::IsScanning { response: tx});
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::BluetoothAction(BluetoothCommand::IsScanning { response: tx });
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let is_scanning = rx.await.map_err(|e| e.to_string())?;
-    
+
     println!("<< is_scanning: {}\n", is_scanning);
     Ok(is_scanning)
 }
 
 #[tauri::command(async)]
-async fn devices_remove_device(mac_address: MacAddress, state: State<'_, AppState>) -> Result<(), String> {
+async fn devices_remove_device(
+    mac_address: MacAddress,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     println!(">> devices_remove_device: {}", mac_address);
 
     let command = ToolkitCommand::BluetoothAction(BluetoothCommand::RemoveDevice { mac_address });
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
 
     println!("<< devices_remove_device\n");
     Ok(())
 }
 
 #[tauri::command(async)]
-async fn devices_update_device_name(mac_address: MacAddress,
-                                    device_name: String,
-                                    state: State<'_, AppState>)
-    -> Result<(), String> {
-    println!(">> devices_update_device_name: {} -> {}", mac_address, device_name);
+async fn devices_update_device_name(
+    mac_address: MacAddress,
+    device_name: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    println!(
+        ">> devices_update_device_name: {} -> {}",
+        mac_address, device_name
+    );
 
-    let command = ToolkitCommand::UpdateBoardName { mac_address, device_name };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::UpdateBoardName {
+        mac_address,
+        device_name,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
 
     println!("<< devices_update_device_name\n");
     Ok(())
@@ -360,11 +474,14 @@ async fn devices_identify_device(
 #[tauri::command(async)]
 async fn devices_tare_device(
     mac_address: MacAddress,
-    state: State<'_, AppState>
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
     println!(">> devices_tare_device: {}", mac_address);
 
-    let command = ToolkitCommand::BoardAction { mac_address, action: BoardAction::Tare };
+    let command = ToolkitCommand::BoardAction {
+        mac_address,
+        action: BoardAction::Tare,
+    };
     state
         .manager_tx
         .send(command)
@@ -375,16 +492,130 @@ async fn devices_tare_device(
     Ok(())
 }
 
+/// Frontend-friendly calibration sensor reading
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+struct FrontendCalibrationReading {
+    mac_address: MacAddress,
+    timestamp: i64,
+    top_left: f32,
+    top_right: f32,
+    bottom_left: f32,
+    bottom_right: f32,
+    total_weight: f32,
+}
+
+#[tauri::command(async)]
+async fn devices_start_calibration_stream(
+    mac_address: MacAddress,
+    calibration_channel: Channel<FrontendCalibrationReading>,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    println!(">> devices_start_calibration_stream: {}", mac_address);
+
+    // Create internal channel for calibration data
+    let (tx, mut rx) = mpsc::channel::<BalanceBoardCalibratedReading>(100);
+
+    // Spawn task to forward data to frontend channel
+    tokio::spawn(async move {
+        while let Some(reading) = rx.recv().await {
+            let frontend_reading = FrontendCalibrationReading {
+                mac_address: reading.mac_address,
+                timestamp: reading.timestamp.timestamp_millis(),
+                top_left: reading.top_left,
+                top_right: reading.top_right,
+                bottom_left: reading.bottom_left,
+                bottom_right: reading.bottom_right,
+                total_weight: reading.top_left
+                    + reading.top_right
+                    + reading.bottom_left
+                    + reading.bottom_right,
+            };
+            if calibration_channel.send(frontend_reading).is_err() {
+                println!("Calibration channel closed");
+                break;
+            }
+        }
+        println!("Calibration stream forwarding ended");
+    });
+
+    let command = ToolkitCommand::StartCalibrationStream {
+        mac_address,
+        frontend_channel: tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    println!("<< devices_start_calibration_stream: Stream started\n");
+    Ok(())
+}
+
+#[tauri::command(async)]
+async fn devices_stop_calibration_stream(
+    mac_address: MacAddress,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    println!(">> devices_stop_calibration_stream: {}", mac_address);
+
+    let command = ToolkitCommand::StopCalibrationStream { mac_address };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    println!("<< devices_stop_calibration_stream: Stream stopped\n");
+    Ok(())
+}
+
+#[tauri::command(async)]
+async fn devices_submit_calibration(
+    mac_address: MacAddress,
+    weight_kg: f64,
+    readings: Vec<FrontendCapturedReading>,
+    state: State<'_, AppState>,
+) -> Result<DeviceCalibrationData, String> {
+    println!(
+        ">> devices_submit_calibration: {} with {}kg and {} readings",
+        mac_address,
+        weight_kg,
+        readings.len()
+    );
+
+    let (response_tx, response_rx) = oneshot::channel();
+    let command = ToolkitCommand::SubmitCalibration {
+        mac_address,
+        weight_kg,
+        readings,
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
+    let result = response_rx.await.map_err(|e| e.to_string())?;
+
+    println!("<< devices_submit_calibration: {:?}\n", result);
+    result
+}
 
 #[tauri::command(async)]
 async fn devices_select_device(
     mac_address: MacAddress,
-    state: State<'_, AppState>
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
     println!(">> devices_select_device: {}", mac_address);
 
     let command = ToolkitCommand::SelectBoardForSession { mac_address };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
 
     println!("<< devices_select_device: \n");
     Ok(())
@@ -393,24 +624,34 @@ async fn devices_select_device(
 #[tauri::command(async)]
 async fn devices_unselect_device(
     mac_address: MacAddress,
-    state: State<'_, AppState>
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
     println!(">> devices_deselect_device: {}", mac_address);
 
     let command = ToolkitCommand::UnselectBoardForSession { mac_address };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
 
     println!("<< devices_deselect_device: Tare command sent.\n");
     Ok(())
 }
 
 #[tauri::command(async)]
-async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<Vec<MacAddress>, String> {
+async fn devices_get_selected_devices(
+    state: State<'_, AppState>,
+) -> Result<Vec<MacAddress>, String> {
     println!(">> devices_get_selected_devices");
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::SelectedBoardsForSession { response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
     println!("<< devices_get_selected_devices. {:?}\n", result);
@@ -422,13 +663,19 @@ async fn devices_get_selected_devices(state: State<'_, AppState>) -> Result<Vec<
 // ============================
 
 #[tauri::command(async)]
-async fn session_information(state: State<'_, AppState>) -> Result<FrontendSessionInformation, String> {
+async fn session_information(
+    state: State<'_, AppState>,
+) -> Result<FrontendSessionInformation, String> {
     println!(">> session_information");
 
     // When we receive a balance board reading, we send it to the frontend.
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::SessionInformation { response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
     // TODO UNCOMMENT BELOW
@@ -437,12 +684,25 @@ async fn session_information(state: State<'_, AppState>) -> Result<FrontendSessi
 }
 
 #[tauri::command(async)]
-async fn session_update_session_configuration(configuration: FrontendCoreSession, state: State<'_, AppState>) -> Result<(), String> {
-    println!(">> session_update_session_configuration: {:#?}", configuration);
+async fn session_update_session_configuration(
+    configuration: FrontendCoreSession,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    println!(
+        ">> session_update_session_configuration: {:#?}",
+        configuration
+    );
 
     let (tx, rx) = oneshot::channel();
-    let command = ToolkitCommand::UpdateSessionInformation { configuration, response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::UpdateSessionInformation {
+        configuration,
+        response: tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
 
     println!("<< session_update_session_configuration.\n");
@@ -452,12 +712,18 @@ async fn session_update_session_configuration(configuration: FrontendCoreSession
 // This returns all of the data needed for the Activity Popup.
 // Namely, it gives the data for the activity, the current timeblock and the time until the next block.
 #[tauri::command(async)]
-async fn session_activity_state(state: State<'_, AppState>) -> Result<Option<SessionActivityState>, String> {
+async fn session_activity_state(
+    state: State<'_, AppState>,
+) -> Result<Option<SessionActivityState>, String> {
     println!(">> session_activity_state");
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::SessionActivityState { response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
     println!("<< session_activity_state. {:#?}\n", result);
@@ -470,7 +736,11 @@ async fn session_tare_devices(state: State<'_, AppState>) -> Result<(), String> 
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::SessionTareDevices { response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
 
     println!("<< session_tare_devices.\n");
@@ -512,13 +782,22 @@ struct FrontendProcessedReadingData {
 }
 
 #[tauri::command(async)]
-async fn session_start_session(state: State<'_, AppState>, session_channel: Channel<FrontendBalanceBoardEvent>) -> Result<(), String> {
+async fn session_start_session(
+    state: State<'_, AppState>,
+    session_channel: Channel<FrontendBalanceBoardEvent>,
+) -> Result<(), String> {
     println!(">> session_start_session");
 
     // When we receive a balance board reading, we send it to the frontend.
     let balance_board_tx = initialize_frontend_handler(session_channel).await;
-    let command = ToolkitCommand::StartSession { frontend_channel: balance_board_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::StartSession {
+        frontend_channel: balance_board_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
 
     println!("<< session_start_session.\n");
     Ok(())
@@ -529,8 +808,14 @@ async fn session_stop_session(state: State<'_, AppState>) -> Result<(), String> 
     println!(">> session_stop_session");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::StopSession { response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::StopSession {
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< session_stop_session.\n");
@@ -541,7 +826,9 @@ async fn session_stop_session(state: State<'_, AppState>) -> Result<(), String> 
 // --- REPLAY SESSION COMMANDS ---
 // ===============================
 
-async fn initialize_frontend_handler(session_channel: Channel<FrontendBalanceBoardEvent>) -> Sender<BalanceBoardOutput> {
+async fn initialize_frontend_handler(
+    session_channel: Channel<FrontendBalanceBoardEvent>,
+) -> Sender<BalanceBoardOutput> {
     let (balance_board_tx, mut balance_board_rx) = mpsc::channel(100);
     tokio::spawn(async move {
         while let Some(data) = balance_board_rx.recv().await {
@@ -551,7 +838,10 @@ async fn initialize_frontend_handler(session_channel: Channel<FrontendBalanceBoa
                     let reading = FrontendRawReadingData {
                         mac_address: data.mac_address,
                         timestamp: data.timestamp.timestamp_millis(),
-                        weight: data.top_right + data.top_left + data.bottom_right + data.bottom_left,
+                        weight: data.top_right
+                            + data.top_left
+                            + data.bottom_right
+                            + data.bottom_left,
                         cop_x: cop.x,
                         cop_y: cop.y,
                     };
@@ -563,8 +853,14 @@ async fn initialize_frontend_handler(session_channel: Channel<FrontendBalanceBoa
                         timestamp: data.timestamp.timestamp_millis(),
                         v_cop_x: data.sway_metrics.as_ref().map(|m| m.v_cop_x),
                         v_cop_y: data.sway_metrics.as_ref().map(|m| m.v_cop_y),
-                        confidence_ellipse_polygon: data.area_metrics.as_ref().map(|m| m.confidence_ellipse_polygon.clone()),
-                        convex_hull_polygon: data.area_metrics.as_ref().map(|m| m.convex_hull_polygon.clone()),
+                        confidence_ellipse_polygon: data
+                            .area_metrics
+                            .as_ref()
+                            .map(|m| m.confidence_ellipse_polygon.clone()),
+                        convex_hull_polygon: data
+                            .area_metrics
+                            .as_ref()
+                            .map(|m| m.convex_hull_polygon.clone()),
                         amplitude_spectrum: data.amplitude_spectrum.clone(),
                         stability_index: data.stability_index.as_ref().map(|m| *m),
                         mlsi: data.dpsi_metrics.as_ref().map(|m| m.mlsi),
@@ -575,18 +871,27 @@ async fn initialize_frontend_handler(session_channel: Channel<FrontendBalanceBoa
                     session_channel.send(FrontendBalanceBoardEvent::Processed(reading));
                 }
             }
-        };
+        }
     });
     balance_board_tx
 }
 
 #[tauri::command(async)]
-async fn replay_start_replay(state: State<'_, AppState>, session_channel: Channel<FrontendBalanceBoardEvent>) -> Result<(), String> {
+async fn replay_start_replay(
+    state: State<'_, AppState>,
+    session_channel: Channel<FrontendBalanceBoardEvent>,
+) -> Result<(), String> {
     println!(">> replay_start_replay");
 
     let balance_board_tx = initialize_frontend_handler(session_channel).await;
-    let command = ToolkitCommand::StartReplay { frontend_channel: balance_board_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::StartReplay {
+        frontend_channel: balance_board_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
 
     println!("<< replay_start_replay.\n");
     Ok(())
@@ -597,8 +902,14 @@ async fn replay_stop_replay(state: State<'_, AppState>) -> Result<(), String> {
     println!(">> replay_stop_replay");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::StopReplay { response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::StopReplay {
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< replay_stop_replay.\n");
@@ -606,12 +917,20 @@ async fn replay_stop_replay(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command(async)]
-async fn replay_information(state: State<'_, AppState>) -> Result<Option<FrontendReplayConfiguration>, String> {
+async fn replay_information(
+    state: State<'_, AppState>,
+) -> Result<Option<FrontendReplayConfiguration>, String> {
     println!(">> replay_information");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::ReplayInformation { response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::ReplayInformation {
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< replay_information. {:#?}\n", result);
@@ -619,12 +938,22 @@ async fn replay_information(state: State<'_, AppState>) -> Result<Option<Fronten
 }
 
 #[tauri::command(async)]
-async fn replay_update(configuration: FrontendCoreSession, state: State<'_, AppState>) -> Result<(), String> {
+async fn replay_update(
+    configuration: FrontendCoreSession,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     println!(">> replay_update");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::UpdateReplayInformation { configuration, response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::UpdateReplayInformation {
+        configuration,
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< replay_update.\n");
@@ -636,8 +965,15 @@ async fn replay_load_file(file_path: PathBuf, state: State<'_, AppState>) -> Res
     println!(">> replay_load_file");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::LoadReplayFile { file_path, response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::LoadReplayFile {
+        file_path,
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< replay_load_file.\n");
@@ -649,8 +985,14 @@ async fn replay_clear_replay(state: State<'_, AppState>) -> Result<(), String> {
     println!(">> replay_clear_replay");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::ClearReplay { response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::ClearReplay {
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< replay_clear_replay.\n");
@@ -658,12 +1000,18 @@ async fn replay_clear_replay(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command(async)]
-async fn replay_load_last_session_info(state: State<'_, AppState>) -> Result<Option<FrontendLastSessionInformation>, String> {
+async fn replay_load_last_session_info(
+    state: State<'_, AppState>,
+) -> Result<Option<FrontendLastSessionInformation>, String> {
     println!(">> replay_load_last_session_info");
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::LastSessionInformation { response: tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
     println!("<< replay_load_last_session_info: {:#?}\n", result);
@@ -675,12 +1023,20 @@ async fn replay_load_last_session_info(state: State<'_, AppState>) -> Result<Opt
 // =========================
 
 #[tauri::command(async)]
-async fn activity_get_available_time_blocks(state: State<'_, AppState>) -> Result<Vec<TimelineBlock>, String> {
+async fn activity_get_available_time_blocks(
+    state: State<'_, AppState>,
+) -> Result<Vec<TimelineBlock>, String> {
     println!(">> activity_get_available_time_blocks");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::GetAvailableTimeBlocks { response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::GetAvailableTimeBlocks {
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< activity_get_available_time_blocks. {:#?}", result);
@@ -692,8 +1048,14 @@ async fn activity_get_activities(state: State<'_, AppState>) -> Result<Vec<Activ
     println!(">> activity_get_activities");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::GetActivities { response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::GetActivities {
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
     // TODO: uncomment
@@ -702,12 +1064,22 @@ async fn activity_get_activities(state: State<'_, AppState>) -> Result<Vec<Activ
 }
 
 #[tauri::command(async)]
-async fn activity_get_activity(activity_id: String, state: State<'_, AppState>) -> Result<Activity, String> {
+async fn activity_get_activity(
+    activity_id: String,
+    state: State<'_, AppState>,
+) -> Result<Activity, String> {
     println!(">> activity_get_activity");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::GetActivity { activity_id, response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::GetActivity {
+        activity_id,
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< activity_get_activity.\n");
@@ -715,12 +1087,22 @@ async fn activity_get_activity(activity_id: String, state: State<'_, AppState>) 
 }
 
 #[tauri::command(async)]
-async fn activity_update_activity(activity: Activity, state: State<'_, AppState>) -> Result<(), String> {
+async fn activity_update_activity(
+    activity: Activity,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     println!(">> activity_update_activity");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::UpdateActivity { activity, response: Some(response_tx) };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::UpdateActivity {
+        activity,
+        response: Some(response_tx),
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< activity_update_activity.\n");
@@ -728,12 +1110,22 @@ async fn activity_update_activity(activity: Activity, state: State<'_, AppState>
 }
 
 #[tauri::command(async)]
-async fn activity_reset_activity_to_default(activity_id: String, state: State<'_, AppState>) -> Result<Activity, String> {
+async fn activity_reset_activity_to_default(
+    activity_id: String,
+    state: State<'_, AppState>,
+) -> Result<Activity, String> {
     println!(">> activity_reset_activity_to_default");
 
     let (response_tx, response_rx) = oneshot::channel();
-    let command = ToolkitCommand::ResetActivityToDefault { activity_id, response: response_tx };
-    state.manager_tx.send(command).await.map_err(|e| e.to_string())?;
+    let command = ToolkitCommand::ResetActivityToDefault {
+        activity_id,
+        response: response_tx,
+    };
+    state
+        .manager_tx
+        .send(command)
+        .await
+        .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< activity_reset_activity_to_default.\n");

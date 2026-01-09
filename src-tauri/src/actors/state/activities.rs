@@ -1,7 +1,7 @@
-use std::string::ToString;
 use crate::file_system::ActivitiesFileSystem;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::string::ToString;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -27,21 +27,18 @@ impl Activity {
 pub struct TimelineBlock {
     title: String,
     pub id: String,
-    pub duration: i32
+    pub duration: i32,
 }
 
 pub struct ActivityState {
     activities: Vec<Activity>,
 }
 
-
 impl ActivityState {
     pub fn new() -> Result<Self> {
         let activities = ActivitiesFileSystem::get_or_create_default_activities()?;
 
-        Ok(Self {
-            activities
-        })
+        Ok(Self { activities })
     }
 
     pub fn get_copy_of_activities(&self) -> Vec<Activity> {
@@ -54,7 +51,11 @@ impl ActivityState {
 
     pub fn update_activity(&mut self, activity: Activity) -> Result<()> {
         println!("Updating activity: {:?}", activity);
-        let index = self.activities.iter().position(|a| a.id == activity.id).unwrap();
+        let index = self
+            .activities
+            .iter()
+            .position(|a| a.id == activity.id)
+            .unwrap();
         self.activities[index] = activity;
         ActivitiesFileSystem::save_activities(&self.activities)?;
         Ok(())
@@ -101,7 +102,7 @@ impl ActivityState {
             dual_step_on_the_boards(),
             dual_one_foot_on_each_board(),
             dual_squat_on_the_boards(),
-            dual_stand_on_the_boards()
+            dual_stand_on_the_boards(),
         ]
     }
 
@@ -113,10 +114,9 @@ impl ActivityState {
                 title: "Eyes open-close".into(),
                 static_image: "eyes-open".into(),
                 boards_required: 1,
-                description: "Assess balance during quiet standing with eyes open and closed".into(),
-                timeline_blocks: vec![
-                    step_onto_board(), eyes_open(), eyes_close()
-                ],
+                description: "Assess balance during quiet standing with eyes open and closed"
+                    .into(),
+                timeline_blocks: vec![step_onto_board(), eyes_open(), eyes_close()],
                 loops: 2,
             },
             // Functional Reach
@@ -127,8 +127,14 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Measure reaching capability while maintaining balance".into(),
                 timeline_blocks: vec![
-                    step_onto_board(), stand_on_board_reach(), left_arm_up(), left_arm_reach(),
-                    left_arm_down(), right_arm_up(), right_arm_reach(), right_arm_down()
+                    step_onto_board(),
+                    stand_on_board_reach(),
+                    left_arm_up(),
+                    left_arm_reach(),
+                    left_arm_down(),
+                    right_arm_up(),
+                    right_arm_reach(),
+                    right_arm_down(),
                 ],
                 loops: 2,
             },
@@ -140,7 +146,12 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Assess balance while standing on one leg".into(),
                 timeline_blocks: vec![
-                    step_onto_board(), stand_on_board(), left_leg_up(), stand_on_board(), right_leg_up(), stand_on_board()
+                    step_onto_board(),
+                    stand_on_board(),
+                    left_leg_up(),
+                    stand_on_board(),
+                    right_leg_up(),
+                    stand_on_board(),
                 ],
                 loops: 2,
             },
@@ -152,8 +163,12 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Assess balance with feet in tandem position".into(),
                 timeline_blocks: vec![
-                    step_onto_board(), stand_on_board(), left_foot_in_front(),
-                    stand_on_board(), right_foot_in_front(), stand_on_board()
+                    step_onto_board(),
+                    stand_on_board(),
+                    left_foot_in_front(),
+                    stand_on_board(),
+                    right_foot_in_front(),
+                    stand_on_board(),
                 ],
                 loops: 2,
             },
@@ -165,7 +180,12 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Evaluate mobility and fall risk".into(),
                 timeline_blocks: vec![
-                    sit(), stand(), walk_forward(), turn_around(), walk_back(), sit_again()
+                    sit(),
+                    stand(),
+                    walk_forward(),
+                    turn_around(),
+                    walk_back(),
+                    sit_again(),
                 ],
                 loops: 2,
             },
@@ -180,7 +200,7 @@ impl ActivityState {
                     dual_step_on_the_boards(),
                     dual_one_foot_on_each_board(),
                     dual_squat_on_the_boards(),
-                    dual_stand_on_the_boards()
+                    dual_stand_on_the_boards(),
                 ],
                 loops: 2,
             },

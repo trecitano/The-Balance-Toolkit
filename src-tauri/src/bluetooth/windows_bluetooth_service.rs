@@ -10,12 +10,16 @@ use windows::{
 };
 
 use crate::NINTENDO_BOARD_ID;
-use crate::actors::bluetooth_service::{BluetoothAdapterInfo, BluetoothPeripheral, mac_address_to_wii_pin, BluetoothHandler};
-use windows::Devices::Enumeration::{DeviceInformationUpdate, DevicePairingResultStatus, DeviceUnpairingResultStatus};
+use crate::actors::bluetooth_service::{
+    BluetoothAdapterInfo, BluetoothHandler, BluetoothPeripheral, mac_address_to_wii_pin,
+};
+use crate::types::MacAddress;
+use windows::Devices::Enumeration::{
+    DeviceInformationUpdate, DevicePairingResultStatus, DeviceUnpairingResultStatus,
+};
 use windows::Foundation::IPropertyValue;
 use windows::core::HSTRING;
 use windows_core::Interface;
-use crate::types::MacAddress;
 
 pub struct NativeBluetoothHandler;
 #[async_trait]
@@ -51,7 +55,8 @@ impl BluetoothHandler for NativeBluetoothHandler {
 
                 // Get list of all Bluetooth Devices
                 let devices_selector = BluetoothDevice::GetDeviceSelector()?;
-                let device_collection = DeviceInformation::FindAllAsyncAqsFilter(&devices_selector)?.await?;
+                let device_collection =
+                    DeviceInformation::FindAllAsyncAqsFilter(&devices_selector)?.await?;
                 let device_futures = device_collection.into_iter().map(|info| async move {
                     let device_id = info.Id()?;
                     let device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
@@ -66,27 +71,32 @@ impl BluetoothHandler for NativeBluetoothHandler {
                 let default_adapter_id = default_adapter.DeviceId()?;
                 for entry in adapter_list.iter_mut() {
                     if let Ok(adapter) = entry
-                        && adapter.id == default_adapter_id {
-                            adapter.devices = device_list;
-                            break;
-                        }
+                        && adapter.id == default_adapter_id
+                    {
+                        adapter.devices = device_list;
+                        break;
+                    }
                 }
 
                 Ok(adapter_list)
             })
         })
-            .await?
+        .await?
     }
 
     // In Windows, when we start pairing the board, we get an "Added" event containing a device
     // that does not have the name. This name is later added via an "Updated" event, that updates the
     // "System.ItemNameDisplay" device property.
     // As such, we need to pay attention to both "Added" and "Updated" events.
-    async fn scan_and_pair_nintendo(&self, response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()> {
+    async fn scan_and_pair_nintendo(
+        &self,
+        response_stream: mpsc::Sender<BluetoothPeripheral>,
+    ) -> Result<()> {
         tokio::task::spawn_blocking(move || {
             futures::executor::block_on(async {
                 let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
-                let adapter_mac_address = convert_u64_to_mac_address(default_adapter.BluetoothAddress()?);
+                let adapter_mac_address =
+                    convert_u64_to_mac_address(default_adapter.BluetoothAddress()?);
 
                 let selector = BluetoothDevice::GetDeviceSelectorFromPairingState(false)?;
                 let watcher = DeviceInformation::CreateWatcherAqsFilter(&selector)?;
@@ -155,13 +165,13 @@ impl BluetoothHandler for NativeBluetoothHandler {
                     let bluetooth_device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
                     let peripheral = convert_to_bluetooth_peripheral(bluetooth_device).await?;
                     response_stream.send(peripheral).await.unwrap();
-                    return Ok(())
+                    return Ok(());
                 }
 
                 Err(anyhow!("Failed to find a device to pair with."))
             })
         })
-            .await?
+        .await?
     }
 
     async fn remove_device(&self, mac_address: MacAddress) -> Result<()> {
@@ -169,8 +179,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
             futures::executor::block_on(async {
                 let devices_selector = BluetoothDevice::GetDeviceSelector()?;
 
-                let devices = DeviceInformation::FindAllAsyncAqsFilter(&devices_selector)?
-                    .await?;
+                let devices = DeviceInformation::FindAllAsyncAqsFilter(&devices_selector)?.await?;
 
                 let mut device_opt = None;
                 for info in devices {
@@ -195,13 +204,15 @@ impl BluetoothHandler for NativeBluetoothHandler {
                     DeviceUnpairingResultStatus::Unpaired => {
                         println!("Device successfully unpaired");
                         Ok(())
-                    },
-                    _ => {
-                        Err(anyhow!("Failed to unpair: Unknown status: {:?}", unpair_result.Status()))
                     }
-                }
+                    _ => Err(anyhow!(
+                        "Failed to unpair: Unknown status: {:?}",
+                        unpair_result.Status()
+                    )),
+                };
             })
-        }).await?
+        })
+        .await?
     }
 }
 
