@@ -129,7 +129,7 @@ export default function ActivityTimeline({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [interaction, blocks, onChange, computeDropIndex, editable]);
+  }, [interaction, blocks, onChange, computeDropIndex, editable, onBlockSelect]);
 
   const handleBlockMouseDown = (idx: number, e: React.MouseEvent) => {
     if (!editable || interaction || (e.target as HTMLElement).classList.contains("resize-handle")) {

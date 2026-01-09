@@ -1,20 +1,22 @@
+use crate::actors::balance_board_actor::BalanceBoardOutput;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{mpsc, Mutex};
 use tokio::sync::mpsc::{Receiver, Sender};
-use crate::actors::balance_board_actor::BalanceBoardOutput;
+use tokio::sync::{Mutex, mpsc};
 
-pub fn initialize(tcp_connection_string_raw: String, tcp_connection_string_processed: String) -> Sender<BalanceBoardOutput> {
+pub fn initialize(
+    tcp_connection_string_raw: String,
+    tcp_connection_string_processed: String,
+) -> Sender<BalanceBoardOutput> {
     let (tx, mut rx) = mpsc::channel(100);
 
     tokio::spawn(async move {
         let mut join_handles = Vec::new();
 
         let (raw_tx, raw_rx) = mpsc::channel(100);
-        let raw_task = tokio::spawn(async move {
-            tcp_server_loop(raw_rx, tcp_connection_string_raw).await
-        });
+        let raw_task =
+            tokio::spawn(async move { tcp_server_loop(raw_rx, tcp_connection_string_raw).await });
         join_handles.push(raw_task);
 
         let (processed_tx, processed_rx) = mpsc::channel(100);
@@ -57,8 +59,10 @@ pub fn initialize(tcp_connection_string_raw: String, tcp_connection_string_proce
     tx
 }
 
-async fn tcp_server_loop(mut rx: Receiver<BalanceBoardOutput>,
-                         tcp_bind_address: String) -> anyhow::Result<()> {
+async fn tcp_server_loop(
+    mut rx: Receiver<BalanceBoardOutput>,
+    tcp_bind_address: String,
+) -> anyhow::Result<()> {
     println!("TCP server starting. (Binding to: {})", tcp_bind_address);
 
     let listener = TcpListener::bind(&tcp_bind_address).await?;
@@ -94,9 +98,7 @@ async fn tcp_server_loop(mut rx: Receiver<BalanceBoardOutput>,
         // Remove disconnected clients and send data to connected ones
         clients_guard.retain_mut(|stream| {
             match stream.try_write(&byte_data) {
-                Ok(_) => {
-                    true
-                }, // Keep this client
+                Ok(_) => true, // Keep this client
                 Err(e) => {
                     eprintln!("Client disconnected: {}", e);
                     false // Remove this client
@@ -105,6 +107,9 @@ async fn tcp_server_loop(mut rx: Receiver<BalanceBoardOutput>,
         });
     }
 
-    println!("TCP server execution complete. (Was binding to: {})", tcp_bind_address);
+    println!(
+        "TCP server execution complete. (Was binding to: {})",
+        tcp_bind_address
+    );
     Ok(())
 }

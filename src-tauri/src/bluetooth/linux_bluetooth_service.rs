@@ -1,14 +1,16 @@
 use anyhow::Result;
 
-use crate::actors::bluetooth_service::{BluetoothAdapterInfo, BluetoothHandler, BluetoothPeripheral};
 use crate::NINTENDO_BOARD_ID;
+use crate::actors::bluetooth_service::{
+    BluetoothAdapterInfo, BluetoothHandler, BluetoothPeripheral,
+};
+use crate::types::MacAddress;
 use async_trait::async_trait;
 use bluer::{AdapterEvent, Device, DeviceEvent, DeviceProperty, Session};
 use futures::future::join_all;
 use futures::stream::StreamExt;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
-use crate::types::MacAddress;
 
 pub struct NativeBluetoothHandler;
 #[async_trait]
@@ -70,7 +72,10 @@ impl BluetoothHandler for NativeBluetoothHandler {
     //
     // Currently this is bugged https://github.com/bluez/bluez/issues/911 (versions 5.72 to 5.79)
     // but it has already been fixed in Master and should be fixed in 5.80.
-    async fn scan_and_pair_nintendo(&self, response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()> {
+    async fn scan_and_pair_nintendo(
+        &self,
+        response_stream: mpsc::Sender<BluetoothPeripheral>,
+    ) -> Result<()> {
         let session = Session::new().await?;
 
         let adapter = session.default_adapter().await?;
@@ -120,9 +125,9 @@ impl BluetoothHandler for NativeBluetoothHandler {
                                     println!("Lets potato time!");
                                     while let Some(event) = device_events.next().await {
                                         match event {
-                                            DeviceEvent::PropertyChanged(DeviceProperty::Paired(
-                                                                             paired,
-                                                                         )) => {
+                                            DeviceEvent::PropertyChanged(
+                                                DeviceProperty::Paired(paired),
+                                            ) => {
                                                 if paired {
                                                     println!("!!! Device successfully paired!");
                                                 }
@@ -160,7 +165,8 @@ impl BluetoothHandler for NativeBluetoothHandler {
                                     } else {
                                         let mac_1 = convert_address_to_u64(device.address().0);
                                         let mac_2 = to_u64_le(device.address().0);
-                                        let peripheral = convert_to_bluetooth_peripheral(device).await?;
+                                        let peripheral =
+                                            convert_to_bluetooth_peripheral(device).await?;
                                         response_stream.send(peripheral).await.unwrap();
                                         println!("Successfully connected to the device!");
                                     }
@@ -240,7 +246,8 @@ impl BluetoothHandler for NativeBluetoothHandler {
 async fn convert_to_bluetooth_peripheral(device: Device) -> Result<BluetoothPeripheral> {
     let device_name: String = device.name().await?.unwrap_or_default();
     let mac = device.address().0;
-    let id = format!("{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+    let id = format!(
+        "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
         mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
     );
     let device_address = device.address().0;
@@ -255,7 +262,6 @@ async fn convert_to_bluetooth_peripheral(device: Device) -> Result<BluetoothPeri
         is_connected,
     })
 }
-
 
 fn convert_address_to_u64(mac_address: [u8; 6]) -> MacAddress {
     let b = mac_address;

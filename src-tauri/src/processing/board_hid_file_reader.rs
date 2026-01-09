@@ -1,16 +1,19 @@
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
+use crate::types::MacAddress;
+use anyhow::Result;
+use chrono::{DateTime, Utc};
+use serde::Deserialize;
 use std::fs::File;
 use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
-use anyhow::Result;
-use chrono::{DateTime, Utc};
-use serde::Deserialize;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
-use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
-use crate::types::MacAddress;
 
-pub fn initialize(mac_address: MacAddress, file_path: PathBuf) -> Result<Sender<BalanceBoardCommands>> {
+pub fn initialize(
+    mac_address: MacAddress,
+    file_path: PathBuf,
+) -> Result<Sender<BalanceBoardCommands>> {
     let (tx, rx) = mpsc::channel(100);
 
     thread::spawn(move || {
@@ -18,7 +21,7 @@ pub fn initialize(mac_address: MacAddress, file_path: PathBuf) -> Result<Sender<
             eprintln!("Error in Board Hid File Reader: {:?}", e);
         }
     });
-    
+
     Ok(tx)
 }
 
@@ -43,27 +46,25 @@ fn blocking_file_reading_loop(
     println!("FILE!! HID Loop started.: #{:#?}", file_path);
     loop {
         match control_rx.try_recv() {
-            Ok(command) => {
-                match command {
-                    BalanceBoardCommands::TurnOnLed => { }
-                    BalanceBoardCommands::TurnOffLed => { }
-                    BalanceBoardCommands::ApplyTare => { }
-                    BalanceBoardCommands::StartRecording(sender) => {
-                        let reader = csv::ReaderBuilder::new()
-                            .has_headers(true)
-                            .from_path(file_path.clone())?;
-                        rdr = Some(reader.into_deserialize());
-                        prev_time = None;
-                        tx = Some(sender);
-                    }
-                    BalanceBoardCommands::FinishRecording => {
-                        rdr = None;
-                        tx = None;
-                        prev_time = None;
-                    }
+            Ok(command) => match command {
+                BalanceBoardCommands::TurnOnLed => {}
+                BalanceBoardCommands::TurnOffLed => {}
+                BalanceBoardCommands::ApplyTare => {}
+                BalanceBoardCommands::StartRecording(sender) => {
+                    let reader = csv::ReaderBuilder::new()
+                        .has_headers(true)
+                        .from_path(file_path.clone())?;
+                    rdr = Some(reader.into_deserialize());
+                    prev_time = None;
+                    tx = Some(sender);
                 }
-            }
-            Err(mpsc::error::TryRecvError::Empty) => { }
+                BalanceBoardCommands::FinishRecording => {
+                    rdr = None;
+                    tx = None;
+                    prev_time = None;
+                }
+            },
+            Err(mpsc::error::TryRecvError::Empty) => {}
             Err(mpsc::error::TryRecvError::Disconnected) => {
                 println!("HID File Reader disconnected. Shutting down.");
                 break;

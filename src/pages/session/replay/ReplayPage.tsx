@@ -5,7 +5,7 @@ import { commands } from "@/utils/requests.ts";
 import { SelectedBoard, SessionPanelConfiguration } from "@/types.ts";
 import { replayChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
-import { useReplayDataStore, useSessionDataStore } from "@/store/sessionDataStore.tsx";
+import { useReplayDataStore } from "@/store/sessionDataStore.tsx";
 import { listen } from "@tauri-apps/api/event";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 import { open } from "@tauri-apps/plugin-dialog";

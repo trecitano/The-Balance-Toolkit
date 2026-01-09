@@ -1,6 +1,8 @@
 use crate::actors::balance_board_actor::BalanceBoardOutput;
+use crate::actors::state::activities::Activity;
 use crate::actors::toolkit_service::CoreSessionConfiguration;
 use crate::file_system::ExistingSessionFileSystem;
+use crate::processing::data_processor::InterpolationSetting;
 use crate::types::{MacAddress, User};
 use crate::utils;
 use anyhow::Result;
@@ -10,28 +12,30 @@ use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
 use std::time::Duration;
-use tokio::time::Instant;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use crate::actors::state::activities::Activity;
-use crate::processing::data_processor::InterpolationSetting;
+use tokio::time::Instant;
 
-pub fn initialize(session_configuration: CoreSessionConfiguration,
-                  device_names: HashMap<MacAddress, String>,
-                  observe_raw_data: bool,
-                  observe_processed_data: bool) -> Sender<BalanceBoardOutput> {
-
+pub fn initialize(
+    session_configuration: CoreSessionConfiguration,
+    device_names: HashMap<MacAddress, String>,
+    observe_raw_data: bool,
+    observe_processed_data: bool,
+) -> Sender<BalanceBoardOutput> {
     let (tx, rx) = mpsc::channel(1000);
-    
+
     tokio::spawn(async move {
-        if let Err(e) = main_file_writer_loop(rx,
-                                              device_names,
-                                              session_configuration,
-                                              observe_raw_data,
-                                              observe_processed_data
-        ).await {
+        if let Err(e) = main_file_writer_loop(
+            rx,
+            device_names,
+            session_configuration,
+            observe_raw_data,
+            observe_processed_data,
+        )
+        .await
+        {
             eprintln!("Error in file writer: {:?}", e);
         }
     });
@@ -39,23 +43,27 @@ pub fn initialize(session_configuration: CoreSessionConfiguration,
     tx
 }
 
-async fn main_file_writer_loop(mut rx_param: Receiver<BalanceBoardOutput>,
-                               device_names: HashMap<MacAddress, String>,
-                               session_configuration: CoreSessionConfiguration,
-                               observe_raw_data: bool,
-                               observe_processed_data: bool) -> Result<()> {
-
+async fn main_file_writer_loop(
+    mut rx_param: Receiver<BalanceBoardOutput>,
+    device_names: HashMap<MacAddress, String>,
+    session_configuration: CoreSessionConfiguration,
+    observe_raw_data: bool,
+    observe_processed_data: bool,
+) -> Result<()> {
     let mut device_tx_map = HashMap::new();
     let mut join_handles = Vec::new();
 
     let session_id = Utc::now().format("tbt-%Y-%m-%dT%H-%M-%S").to_string();
     let device_file_mapping = create_device_file_name_mapping(&device_names, &session_id);
 
-    write_session_settings_to_disk(&session_configuration,
-                                   &SessionStats::default(),
-                                   &device_names,
-                                   &device_file_mapping,
-                                   &session_id).await?;
+    write_session_settings_to_disk(
+        &session_configuration,
+        &SessionStats::default(),
+        &device_names,
+        &device_file_mapping,
+        &session_id,
+    )
+    .await?;
 
     for device_mac in device_names.keys() {
         let (tx, rx) = mpsc::channel(1000);
@@ -67,18 +75,24 @@ async fn main_file_writer_loop(mut rx_param: Receiver<BalanceBoardOutput>,
         println!("Starting file writer for device: {}", device_mac);
 
         let handle = tokio::spawn(async move {
-            file_write_loop(rx,
-                            output_directory,
-                            device_file_mapping,
-                            observe_raw_data,
-                            observe_processed_data).await.unwrap()
+            file_write_loop(
+                rx,
+                output_directory,
+                device_file_mapping,
+                observe_raw_data,
+                observe_processed_data,
+            )
+            .await
+            .unwrap()
         });
         join_handles.push(handle);
     }
 
     while let Some(data) = rx_param.recv().await {
         let mac_address = data.mac_address();
-        if let Some(tx) = device_tx_map.get_mut(&mac_address) { tx.send(data).await? }
+        if let Some(tx) = device_tx_map.get_mut(&mac_address) {
+            tx.send(data).await?
+        }
     }
 
     println!("File writer stopped receiving events, waiting for child tasks to complete.");
@@ -95,18 +109,24 @@ async fn main_file_writer_loop(mut rx_param: Receiver<BalanceBoardOutput>,
     }
 
     // Update the session settings file with the session data.
-    write_session_settings_to_disk(&session_configuration,
-                                   &first_device_metrics,
-                                   &device_names,
-                                   &device_file_mapping,
-                                   &session_id).await?;
+    write_session_settings_to_disk(
+        &session_configuration,
+        &first_device_metrics,
+        &device_names,
+        &device_file_mapping,
+        &session_id,
+    )
+    .await?;
 
     println!("Main File writer execution complete.");
 
     Ok(())
 }
 
-fn create_device_file_name_mapping(device_name_mapping: &HashMap<MacAddress, String>, session_id: &str) -> HashMap<MacAddress, FileNameMapping> {
+fn create_device_file_name_mapping(
+    device_name_mapping: &HashMap<MacAddress, String>,
+    session_id: &str,
+) -> HashMap<MacAddress, FileNameMapping> {
     device_name_mapping.iter().map(|(mac_address, device_name) | {
         let device_name_without_spaces = device_name.replace(" ", "_");
         let file_readable_mac_address = utils::mac_address_human_name(*mac_address).replace(":", "");
@@ -153,14 +173,16 @@ pub struct SessionStats {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FileNameMapping {
     pub raw_file_name: String,
-    pub processed_file_name: String
+    pub processed_file_name: String,
 }
 
-async fn write_session_settings_to_disk(session_configuration: &CoreSessionConfiguration,
-                                        session_stats: &SessionStats,
-                                        device_names: &HashMap<MacAddress, String>,
-                                        device_file_mappings: &HashMap<MacAddress, FileNameMapping>,
-                                        session_id: &str) -> Result<()> {
+async fn write_session_settings_to_disk(
+    session_configuration: &CoreSessionConfiguration,
+    session_stats: &SessionStats,
+    device_names: &HashMap<MacAddress, String>,
+    device_file_mappings: &HashMap<MacAddress, FileNameMapping>,
+    session_id: &str,
+) -> Result<()> {
     let data = SessionConfigurationFileFormatRef {
         user: &session_configuration.user,
         window_size_ms: session_configuration.window_size_ms,
@@ -178,11 +200,13 @@ async fn write_session_settings_to_disk(session_configuration: &CoreSessionConfi
     Ok(())
 }
 
-async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
-                         output_directory: PathBuf,
-                         file_mapping: FileNameMapping,
-                         observe_raw_data: bool,
-                         observe_processed_data: bool) -> Result<SessionStats> {
+async fn file_write_loop(
+    mut rx: Receiver<BalanceBoardOutput>,
+    output_directory: PathBuf,
+    file_mapping: FileNameMapping,
+    observe_raw_data: bool,
+    observe_processed_data: bool,
+) -> Result<SessionStats> {
     let start = Instant::now();
     let mut raw_events_written: usize = 0;
 
@@ -191,7 +215,8 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
         let file_path = output_directory.join(&file_mapping.raw_file_name);
         println!("WRITING TO RAW FILE ${:?}", file_path);
         let mut file = create_file(file_path).await?;
-        file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n").await?;
+        file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n")
+            .await?;
         Some(file)
     } else {
         None
@@ -201,7 +226,8 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
     let mut processed_values_file = if observe_processed_data {
         let file_path = output_directory.join(&file_mapping.processed_file_name);
         let mut file = create_file(file_path).await?;
-        file.write_all(b"timestamp,vcopx,vcopy,stability_index,mlsi,apsi,vsi,dpsi\n").await?;
+        file.write_all(b"timestamp,vcopx,vcopy,stability_index,mlsi,apsi,vsi,dpsi\n")
+            .await?;
         Some(file)
     } else {
         None
@@ -214,7 +240,8 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
                     raw_events_written += 1;
                     let csv_line = format!(
                         "{},{},{},{},{}\n",
-                        data.timestamp.to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
+                        data.timestamp
+                            .to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
                         data.top_right,
                         data.bottom_right,
                         data.top_left,
@@ -224,26 +251,41 @@ async fn file_write_loop(mut rx: Receiver<BalanceBoardOutput>,
                     file.write_all(csv_line.as_bytes()).await?;
                     file.flush().await?;
                 }
-            },
+            }
             BalanceBoardOutput::Processed(data) => {
                 if let Some(ref mut file) = processed_values_file {
                     let csv_line = format!(
                         "{},{},{},{},{},{},{},{}\n",
-                        data.timestamp.to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
-                        data.sway_metrics.as_ref().map_or(String::new(), |v| v.v_cop_x.to_string()),
-                        data.sway_metrics.as_ref().map_or(String::new(), |v| v.v_cop_y.to_string()),
-                        data.stability_index.as_ref().map_or(String::new(), |v| v.to_string()),
-                        data.dpsi_metrics.as_ref().map_or(String::new(), |d| d.mlsi.to_string()),
-                        data.dpsi_metrics.as_ref().map_or(String::new(), |d| d.apsi.to_string()),
-                        data.dpsi_metrics.as_ref().map_or(String::new(), |d| d.vsi.to_string()),
-                        data.dpsi_metrics.as_ref().map_or(String::new(), |d| d.dpsi.to_string()),
+                        data.timestamp
+                            .to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
+                        data.sway_metrics
+                            .as_ref()
+                            .map_or(String::new(), |v| v.v_cop_x.to_string()),
+                        data.sway_metrics
+                            .as_ref()
+                            .map_or(String::new(), |v| v.v_cop_y.to_string()),
+                        data.stability_index
+                            .as_ref()
+                            .map_or(String::new(), |v| v.to_string()),
+                        data.dpsi_metrics
+                            .as_ref()
+                            .map_or(String::new(), |d| d.mlsi.to_string()),
+                        data.dpsi_metrics
+                            .as_ref()
+                            .map_or(String::new(), |d| d.apsi.to_string()),
+                        data.dpsi_metrics
+                            .as_ref()
+                            .map_or(String::new(), |d| d.vsi.to_string()),
+                        data.dpsi_metrics
+                            .as_ref()
+                            .map_or(String::new(), |d| d.dpsi.to_string()),
                     );
 
                     // Write and flush
                     file.write_all(csv_line.as_bytes()).await?;
                     file.flush().await?;
                 }
-            },
+            }
         }
     }
 
@@ -260,5 +302,6 @@ async fn create_file(output_path: PathBuf) -> io::Result<File> {
         .create(true)
         .write(true)
         .truncate(true)
-        .open(output_path.to_str().unwrap()).await
+        .open(output_path.to_str().unwrap())
+        .await
 }

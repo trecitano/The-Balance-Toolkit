@@ -1,11 +1,11 @@
-use anyhow::Result;
-use lsl::{ChannelFormat, Pushable, StreamInfo, StreamOutlet};
-use std::thread;
-use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::{Receiver, Sender};
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput};
 use crate::processing::data_processor::ProcessedBoardData;
+use anyhow::Result;
+use lsl::{ChannelFormat, Pushable, StreamInfo, StreamOutlet};
+use serde::{Deserialize, Serialize};
+use std::thread;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LslConnectionSettings {
@@ -96,13 +96,28 @@ fn lsl_stream_loop_raw(
         ch.append_child_value("description", desc_text);
     };
     add_channel("timestamp", "microseconds", "timestamp", "Sample timestamp");
-    add_channel("mac_address", "unitless", "identifier", "Device MAC address");
+    add_channel(
+        "mac_address",
+        "unitless",
+        "identifier",
+        "Device MAC address",
+    );
     add_channel("top_right", "kg", "force", "Top right sensor reading");
     add_channel("bottom_right", "kg", "force", "Bottom right sensor reading");
     add_channel("top_left", "kg", "force", "Top left sensor reading");
     add_channel("bottom_left", "kg", "force", "Bottom left sensor reading");
-    add_channel("cop_x", "unitless", "index", "Center of Pressure X Axis. (-1 to 1)");
-    add_channel("cop_y", "unitless", "index", "Center of Pressure Y Axis. (-1 to 1)");
+    add_channel(
+        "cop_x",
+        "unitless",
+        "index",
+        "Center of Pressure X Axis. (-1 to 1)",
+    );
+    add_channel(
+        "cop_y",
+        "unitless",
+        "index",
+        "Center of Pressure Y Axis. (-1 to 1)",
+    );
 
     let outlet = StreamOutlet::new(&stream_info, 0, 360)?;
 
@@ -152,12 +167,27 @@ fn lsl_stream_loop_processed(
         ch.append_child_value("description", desc_text);
     };
     add_channel("timestamp", "microseconds", "timestamp", "Sample timestamp");
-    add_channel("mac_address", "unitless", "identifier", "Device MAC address");
+    add_channel(
+        "mac_address",
+        "unitless",
+        "identifier",
+        "Device MAC address",
+    );
     add_channel("v_cop_x", "1/s", "velocity", "Normalized CoP velocity X");
     add_channel("v_cop_y", "1/s", "velocity", "Normalized CoP velocity Y");
-    add_channel("stability_index", "unitless", "index", "Overall stability index");
+    add_channel(
+        "stability_index",
+        "unitless",
+        "index",
+        "Overall stability index",
+    );
     add_channel("dpsi_mlsi", "unitless", "index", "DPSI - Medial-Lateral");
-    add_channel("dpsi_apsi", "unitless", "index", "DPSI - Anterior-Posterior");
+    add_channel(
+        "dpsi_apsi",
+        "unitless",
+        "index",
+        "DPSI - Anterior-Posterior",
+    );
     add_channel("dpsi_vsi", "unitless", "index", "DPSI - Vertical");
     add_channel("dpsi_overall", "unitless", "index", "DPSI - Overall");
 

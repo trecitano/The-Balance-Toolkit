@@ -1,13 +1,13 @@
-use std::thread;
-use std::time::{Duration, Instant};
-use anyhow::{anyhow, Result};
-use chrono::Utc;
-use hidapi::{HidApi, HidDevice, HidResult};
-use hidapi::HidError::HidApiError;
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::Sender;
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
 use crate::types::MacAddress;
+use anyhow::{Result, anyhow};
+use chrono::Utc;
+use hidapi::HidError::HidApiError;
+use hidapi::{HidApi, HidDevice, HidResult};
+use std::thread;
+use std::time::{Duration, Instant};
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::Sender;
 
 // --- HID Command Constants ---
 const HID_INTERFACE_LED_INPUT: u8 = 0x11;
@@ -38,13 +38,11 @@ const BOARD_STOP_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, 0x30];
 
 pub fn initialize(mac_address: MacAddress) -> Result<Sender<BalanceBoardCommands>> {
     let (tx, rx) = mpsc::channel(100);
-    
+
     let device = connect_via_hid(mac_address)?;
-    
-    thread::spawn(move || {
-        blocking_hid_loop(device, mac_address, rx)
-    });
-    
+
+    thread::spawn(move || blocking_hid_loop(device, mac_address, rx));
+
     Ok(tx)
 }
 
@@ -57,11 +55,19 @@ fn connect_via_hid(mac_address: MacAddress) -> HidResult<HidDevice> {
     let serial_number = format!("{:012x}", mac_address);
     let balance_board_info = api
         .device_list()
-        .find(|device| device.serial_number().is_some_and(|s| s.replace(":", "").to_lowercase() == serial_number))
-        .ok_or(HidApiError { message: format!("Device with the specified device_id was not found. {}", serial_number) })?;
+        .find(|device| {
+            device
+                .serial_number()
+                .is_some_and(|s| s.replace(":", "").to_lowercase() == serial_number)
+        })
+        .ok_or(HidApiError {
+            message: format!(
+                "Device with the specified device_id was not found. {}",
+                serial_number
+            ),
+        })?;
     balance_board_info.open_device(&api)
 }
-
 
 fn blocking_hid_loop(
     device: HidDevice,
@@ -83,20 +89,26 @@ fn blocking_hid_loop(
             Ok(command) => {
                 println!("blocking hid: Got command: {:?}", command);
                 match command {
-                    BalanceBoardCommands::TurnOnLed => { write_to_device(&device, &BOARD_TURN_ON_LED)?; }
-                    BalanceBoardCommands::TurnOffLed => { write_to_device(&device, &BOARD_TURN_OFF_LED)?; }
-                    BalanceBoardCommands::ApplyTare => { update_tare = true; }
+                    BalanceBoardCommands::TurnOnLed => {
+                        write_to_device(&device, &BOARD_TURN_ON_LED)?;
+                    }
+                    BalanceBoardCommands::TurnOffLed => {
+                        write_to_device(&device, &BOARD_TURN_OFF_LED)?;
+                    }
+                    BalanceBoardCommands::ApplyTare => {
+                        update_tare = true;
+                    }
                     BalanceBoardCommands::StartRecording(tx) => {
                         tx_channel = Some(tx);
-                        write_to_device(&device, &BOARD_START_READING)?; 
-                    },
+                        write_to_device(&device, &BOARD_START_READING)?;
+                    }
                     BalanceBoardCommands::FinishRecording => {
                         tx_channel = None;
                         write_to_device(&device, &BOARD_STOP_READING)?;
-                    },
+                    }
                 }
-            },
-            Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ },
+            }
+            Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ }
             Err(mpsc::error::TryRecvError::Disconnected) => {
                 // The async part has shut down. We must exit.
                 println!("HID Loop: Control channel disconnected. Shutting down.");
@@ -118,10 +130,12 @@ fn blocking_hid_loop(
 
                         if update_tare {
                             update_tare = false;
-                            tare_value = reading.clone().calculate_weights(&calibration, mac_address);
+                            tare_value =
+                                reading.clone().calculate_weights(&calibration, mac_address);
                         }
 
-                        let calibrated_reading = reading.calculate_weights(&calibration, mac_address);
+                        let calibrated_reading =
+                            reading.calculate_weights(&calibration, mac_address);
                         let tared_reading = calibrated_reading.apply_tare(&tare_value);
 
                         tx.blocking_send(tared_reading)?;
@@ -165,11 +179,15 @@ fn read_calibration_data(device: &HidDevice) -> anyhow::Result<BalanceBoardCalib
         let mut buf = [0u8; 32];
         let len = read_from_device(device, &mut buf)?;
 
-        if len == 0 { return Err(anyhow!("Timeout reading calibration data.")); }
+        if len == 0 {
+            return Err(anyhow!("Timeout reading calibration data."));
+        }
         // We ignore everything that isn't what we want.
         // When we send a request for this specific data, we receive a data reading through
         // Input Report 0x21
-        if buf[0] != DATA_REPORT_READ_EVENT { continue; }
+        if buf[0] != DATA_REPORT_READ_EVENT {
+            continue;
+        }
 
         println!("Reading is: {:?}", buf);
         for byte in buf {
@@ -178,11 +196,15 @@ fn read_calibration_data(device: &HidDevice) -> anyhow::Result<BalanceBoardCalib
         }
         println!();
 
-        let packet_data_size  = ((buf[3] >> 4) + 1) as usize;
+        let packet_data_size = ((buf[3] >> 4) + 1) as usize;
         let error_code = buf[3] & 0x0F;
 
-        if error_code != 0 { return Err(anyhow!("Error reading board memory: code {}", error_code)); }
-        if bytes_read + packet_data_size > CALIBRATION_DATA_SIZE { return Err(anyhow!("Calibration data overflow.")); }
+        if error_code != 0 {
+            return Err(anyhow!("Error reading board memory: code {}", error_code));
+        }
+        if bytes_read + packet_data_size > CALIBRATION_DATA_SIZE {
+            return Err(anyhow!("Calibration data overflow."));
+        }
 
         let data_chunk = &buf[6..(6 + packet_data_size)];
         calibration_buf[bytes_read..(bytes_read + packet_data_size)].copy_from_slice(data_chunk);
@@ -195,7 +217,6 @@ fn read_calibration_data(device: &HidDevice) -> anyhow::Result<BalanceBoardCalib
 
     BalanceBoardCalibrationData::from_bytes(calibration_buf)
 }
-
 
 pub fn write_to_device(device: &HidDevice, data: &[u8]) -> HidResult<usize> {
     print!("DEVICE_WRITE: ");
@@ -239,7 +260,11 @@ struct BalanceBoardSensorRawReading {
 }
 
 impl BalanceBoardSensorRawReading {
-    fn calculate_weights(&self, cal: &BalanceBoardCalibrationData, mac_address: MacAddress) -> BalanceBoardCalibratedReading {
+    fn calculate_weights(
+        &self,
+        cal: &BalanceBoardCalibrationData,
+        mac_address: MacAddress,
+    ) -> BalanceBoardCalibratedReading {
         BalanceBoardCalibratedReading {
             timestamp: Utc::now(),
             mac_address,

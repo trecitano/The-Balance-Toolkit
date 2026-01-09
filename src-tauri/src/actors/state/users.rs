@@ -1,8 +1,8 @@
 use crate::file_system::UserFileSystem;
 use crate::types::User;
 use anyhow::Result;
-use rand::Rng;
 use chrono::{DateTime, Utc};
+use rand::Rng;
 use std::sync::Arc;
 
 pub struct UserState {
@@ -12,7 +12,11 @@ pub struct UserState {
 impl UserState {
     pub fn new() -> Result<Self> {
         let file_system_users = UserFileSystem::get_users()?;
-        let mut users: Vec<Arc<User>> = file_system_users.clone().into_iter().map(Arc::new).collect();
+        let mut users: Vec<Arc<User>> = file_system_users
+            .clone()
+            .into_iter()
+            .map(Arc::new)
+            .collect();
 
         // Create the default user is needed.
         if !file_system_users.iter().any(|u| u.is_default) {
@@ -21,9 +25,7 @@ impl UserState {
             UserFileSystem::save(&users)?;
         }
 
-        Ok(Self {
-            users
-        })
+        Ok(Self { users })
     }
 
     pub fn get_default_user(&self) -> Arc<User> {
@@ -35,7 +37,11 @@ impl UserState {
     }
 
     pub fn get_user(&self, user_id: usize) -> Arc<User> {
-        self.users.iter().find(|user| user.id == user_id).cloned().unwrap()
+        self.users
+            .iter()
+            .find(|user| user.id == user_id)
+            .cloned()
+            .unwrap()
     }
 
     pub fn create_user(&mut self) -> Result<Arc<User>> {
@@ -89,11 +95,12 @@ fn create_new_unique_id(users: &Vec<Arc<User>>) -> usize {
 
     loop {
         let candidate = format!("New User {}", base_number);
-        let exists = users.iter().any(|u| u.name == candidate || u.id == base_number);
+        let exists = users
+            .iter()
+            .any(|u| u.name == candidate || u.id == base_number);
         if !exists {
             return base_number;
         }
         base_number += 1;
     }
 }
-

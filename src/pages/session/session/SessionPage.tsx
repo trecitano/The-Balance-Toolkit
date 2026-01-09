@@ -4,13 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
 import { Activity, SessionPanelConfiguration, SessionInformation, SelectedBoard } from "@/types.ts";
 import { sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
-import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
 import { listen } from "@tauri-apps/api/event";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 import { BaseOption } from "@/components/SelectPrimitive.tsx";
-import { devicesIcon } from "@/components/navigation/Navigation.tsx";
 
 export const SESSION_QUERY_KEY = ["session_key"];
 export type SessionQueryData = {

@@ -1,8 +1,8 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
-use tokio::sync::mpsc;
-use tokio::time::{timeout, Duration};
 use tokio::process::Command as TokioCommand;
+use tokio::sync::mpsc;
+use tokio::time::{Duration, timeout};
 
 use crate::actors::bluetooth_service::{
     BluetoothAdapterInfo, BluetoothHandler, BluetoothPeripheral,
@@ -18,15 +18,12 @@ struct PeripheralOut {
     is_connected: bool,
 }
 
-
 // Temporary gigantic hack
 pub static BINARY_PATH: &str = "../macos-wii-balance-pair/target/debug/macos-wii-balance-pair";
 pub struct NativeBluetoothHandler;
 #[async_trait]
 impl BluetoothHandler for NativeBluetoothHandler {
-    async fn get_all_bluetooth_adapters_info(
-        &self,
-    ) -> Result<Vec<Result<BluetoothAdapterInfo>>> {
+    async fn get_all_bluetooth_adapters_info(&self) -> Result<Vec<Result<BluetoothAdapterInfo>>> {
         // system-view returns JSON array
         let mut cmd = TokioCommand::new(&BINARY_PATH);
         cmd.arg("system-view");
@@ -41,8 +38,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
             ));
         }
 
-        let stdout = String::from_utf8(output.stdout)
-            .context("system-view stdout not UTF-8")?;
+        let stdout = String::from_utf8(output.stdout).context("system-view stdout not UTF-8")?;
         let devices: Vec<PeripheralOut> =
             serde_json::from_str(&stdout).context("failed to parse system-view JSON")?;
 
@@ -86,8 +82,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
             ));
         }
 
-        let stdout = String::from_utf8(output.stdout)
-            .context("scan-and-pair stdout not UTF-8")?;
+        let stdout = String::from_utf8(output.stdout).context("scan-and-pair stdout not UTF-8")?;
         println!("Stdout!: #{}", stdout);
         let dev: PeripheralOut = match serde_json::from_str(&stdout) {
             Ok(d) => d,

@@ -1,11 +1,11 @@
-use std::path::PathBuf;
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use crate::actors::state::activities::Activity;
-use crate::actors::toolkit_service::{ReplayConfiguration, CoreSessionConfiguration};
+use crate::actors::toolkit_service::{CoreSessionConfiguration, ReplayConfiguration};
 use crate::file_system;
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::file_writer::SessionStats;
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -60,7 +60,7 @@ pub struct UserPageInformation {
 #[serde(rename_all = "camelCase")]
 pub struct SessionActivityState {
     pub activity: Activity,
-    pub ongoing_state: Option<OngoingSessionActivityState>
+    pub ongoing_state: Option<OngoingSessionActivityState>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -187,12 +187,14 @@ impl From<&ReplayConfiguration> for FrontendReplayConfiguration {
     fn from(cfg: &ReplayConfiguration) -> Self {
         FrontendReplayConfiguration {
             user: cfg.core.user.as_ref().clone(),
-            devices: cfg.device_names.iter().map(|(mac_address, name)| {
-                SelectedBoard {
+            devices: cfg
+                .device_names
+                .iter()
+                .map(|(mac_address, name)| SelectedBoard {
                     name: name.clone(),
-                    mac_address: *mac_address
-                }
-            }).collect(),
+                    mac_address: *mac_address,
+                })
+                .collect(),
             core: FrontendCoreSession::from(&cfg.core),
             activity: cfg.core.activity.clone(),
             file_path: cfg.file_path.clone(),
@@ -200,7 +202,6 @@ impl From<&ReplayConfiguration> for FrontendReplayConfiguration {
         }
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
@@ -213,11 +214,27 @@ pub struct NintendoDevice {
 }
 
 impl NintendoDevice {
-    pub fn is_demo_device (&self) -> bool {
+    pub fn is_demo_device(&self) -> bool {
         self.id.starts_with("TBB_MOCKED_DEVICE_ID")
     }
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrontendCalibrationReadingInput {
+    pub mac_address: MacAddress,
+    pub timestamp: i64,
+    pub top_left: f32,
+    pub top_right: f32,
+    pub bottom_left: f32,
+    pub bottom_right: f32,
+    pub total_weight: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct FrontendCapturedReading {
+    pub position: String,
+    pub reading: FrontendCalibrationReadingInput,
+}
 
 pub type MacAddress = u64;
-

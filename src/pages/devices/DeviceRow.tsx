@@ -15,6 +15,7 @@ interface DeviceRowProps {
   handleStartEditName: (deviceId: string) => void;
   handleSaveDeviceName: (macAddress: number, deviceName: string) => void;
   handleIdentifyClick: (device: Device) => void;
+  handleCalibrationClick: (device: Device) => void;
   handleUnselectDevice: (macAddress: number) => void;
   handleRemoveDevice: (macAddress: number) => void;
   handleSelectDeviceForSession: (macAddress: number) => void;
@@ -28,6 +29,7 @@ export default function DeviceRow({
   handleStartEditName,
   handleSaveDeviceName,
   handleIdentifyClick,
+  handleCalibrationClick,
   handleUnselectDevice,
   handleRemoveDevice,
   handleSelectDeviceForSession,
@@ -132,6 +134,16 @@ export default function DeviceRow({
           onClick={() => handleIdentifyClick(device)}
         >
           ID
+        </ToolkitButton>
+        <ToolkitButton
+          disabled={!device.isConnected}
+          type="button"
+          className={"text-sm"}
+          shape="circle"
+          color="white"
+          onClick={() => handleCalibrationClick(device)}
+        >
+          Calibrate
         </ToolkitButton>
         {!isSelected ? (
           <ToolkitButton

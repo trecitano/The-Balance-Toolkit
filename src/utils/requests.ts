@@ -2,6 +2,7 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import {
   Activity,
   BalanceBoardEvent,
+  CalibrationReading,
   Device,
   GeneralSettings,
   ReplayConfiguration,
@@ -49,6 +50,12 @@ export const commands = {
     },
     tareDevice: async (macAddress: number) => invoke<void>("devices_tare_device", { macAddress: macAddress }),
     identifyDevice: async (macAddress: number) => invoke<void>("devices_identify_device", { macAddress: macAddress }),
+    startCalibrationStream: async (calibrationChannel: Channel<CalibrationReading>, macAddress: number) =>
+      invoke<void>("devices_start_calibration_stream", { calibrationChannel, macAddress }),
+    stopCalibrationStream: async (macAddress: number) =>
+      invoke<void>("devices_stop_calibration_stream", { macAddress }),
+    submitCalibration: async (macAddress: number, weightKg: number, readings: { position: string; reading: CalibrationReading }[]) =>
+      invoke<void>("devices_submit_calibration", { macAddress, weightKg, readings }),
   },
 
   session: {

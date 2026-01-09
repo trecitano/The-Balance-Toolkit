@@ -1,33 +1,47 @@
-use std::sync::Arc;
+use crate::bluetooth::bluetooth_service_mock::MockBluetoothHandler;
 #[cfg(target_os = "linux")]
 use crate::bluetooth::linux_bluetooth_service::NativeBluetoothHandler;
-#[cfg(target_os = "windows")]
-use crate::bluetooth::windows_bluetooth_service::NativeBluetoothHandler;
 #[cfg(target_os = "macos")]
 use crate::bluetooth::macos_bluetooth_service::NativeBluetoothHandler;
-use crate::bluetooth::bluetooth_service_mock::MockBluetoothHandler;
+#[cfg(target_os = "windows")]
+use crate::bluetooth::windows_bluetooth_service::NativeBluetoothHandler;
+use std::sync::Arc;
 
-use anyhow::{Result};
+use crate::NINTENDO_BOARD_ID;
+use crate::types::{MacAddress, NintendoDevice};
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::Utc;
 use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
-use crate::NINTENDO_BOARD_ID;
-use crate::types::{MacAddress, NintendoDevice};
 
 #[derive(Debug)]
 pub enum BluetoothCommand {
-    GetNintendoDevices { response: oneshot::Sender<Vec<BluetoothPeripheral>>},
-    StartScanAndPair { response_stream: mpsc::Sender<BluetoothPeripheral>, response: oneshot::Sender<()> },
-    StopScan { response: oneshot::Sender<()> },
-    IsScanning { response: oneshot::Sender<bool>},
-    RemoveDevice { mac_address: MacAddress },
+    GetNintendoDevices {
+        response: oneshot::Sender<Vec<BluetoothPeripheral>>,
+    },
+    StartScanAndPair {
+        response_stream: mpsc::Sender<BluetoothPeripheral>,
+        response: oneshot::Sender<()>,
+    },
+    StopScan {
+        response: oneshot::Sender<()>,
+    },
+    IsScanning {
+        response: oneshot::Sender<bool>,
+    },
+    RemoveDevice {
+        mac_address: MacAddress,
+    },
 }
 
 #[async_trait]
 pub trait BluetoothHandler: Send + Sync {
     async fn get_all_bluetooth_adapters_info(&self) -> Result<Vec<Result<BluetoothAdapterInfo>>>;
-    async fn scan_and_pair_nintendo(&self, response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()>;
+    async fn scan_and_pair_nintendo(
+        &self,
+        response_stream: mpsc::Sender<BluetoothPeripheral>,
+    ) -> Result<()>;
     async fn remove_device(&self, mac_address: MacAddress) -> Result<()>;
 }
 
@@ -60,22 +74,30 @@ impl BluetoothService {
         while let Some(command) = self.bluetooth_rx.recv().await {
             match command {
                 BluetoothCommand::GetNintendoDevices { response } => {
-                    let result = Self::get_nintendo_devices(&self.bluetooth_implementation).await.unwrap();
+                    let result = Self::get_nintendo_devices(&self.bluetooth_implementation)
+                        .await
+                        .unwrap();
                     response.send(result).unwrap();
-                },
-                BluetoothCommand::StartScanAndPair { response_stream, response } => {
+                }
+                BluetoothCommand::StartScanAndPair {
+                    response_stream,
+                    response,
+                } => {
                     self.start_scan(response_stream).await.unwrap();
                     response.send(()).unwrap();
-                },
-                BluetoothCommand::StopScan { response }=> {
+                }
+                BluetoothCommand::StopScan { response } => {
                     self.scan_cancel_tx = None;
-                    response.send(()).unwrap();   
-                },
+                    response.send(()).unwrap();
+                }
                 BluetoothCommand::IsScanning { response } => {
                     response.send(self.scan_cancel_tx.is_some()).unwrap();
                 }
                 BluetoothCommand::RemoveDevice { mac_address } => {
-                    self.bluetooth_implementation.remove_device(mac_address).await.unwrap();
+                    self.bluetooth_implementation
+                        .remove_device(mac_address)
+                        .await
+                        .unwrap();
                 }
             }
         }
@@ -91,10 +113,12 @@ impl BluetoothService {
             println!("Starting Native Bluetooth handler.");
             Arc::new(NativeBluetoothHandler {})
         }
-
     }
 
-    async fn start_scan(&mut self, response_stream: mpsc::Sender<BluetoothPeripheral>) -> Result<()> {
+    async fn start_scan(
+        &mut self,
+        response_stream: mpsc::Sender<BluetoothPeripheral>,
+    ) -> Result<()> {
         if self.scan_cancel_tx.is_some() {
             println!("Scan is already in progress.");
             return Ok(());
@@ -103,7 +127,7 @@ impl BluetoothService {
         let (cancel_tx, mut cancel_rx) = oneshot::channel();
         self.scan_cancel_tx = Some(cancel_tx);
         let bluetooth_handler = self.bluetooth_implementation.clone();
-        
+
         tokio::spawn(async move {
             println!("Scanning for devices in background...");
             loop {
@@ -125,14 +149,16 @@ impl BluetoothService {
         Ok(())
     }
 
-    pub async fn get_nintendo_devices(bluetooth_handler: &Arc<dyn BluetoothHandler>) -> Result<Vec<BluetoothPeripheral>> {
+    pub async fn get_nintendo_devices(
+        bluetooth_handler: &Arc<dyn BluetoothHandler>,
+    ) -> Result<Vec<BluetoothPeripheral>> {
         let adapter_info = bluetooth_handler.get_all_bluetooth_adapters_info().await?;
-        Ok(BluetoothService::filter_nintendo_devices(
-            Ok(adapter_info)).await?
-        )
+        Ok(BluetoothService::filter_nintendo_devices(Ok(adapter_info)).await?)
     }
 
-    pub async fn filter_nintendo_devices(bluetooth_adapter_info: Result<Vec<Result<BluetoothAdapterInfo>>>) -> Result<Vec<BluetoothPeripheral>> {
+    pub async fn filter_nintendo_devices(
+        bluetooth_adapter_info: Result<Vec<Result<BluetoothAdapterInfo>>>,
+    ) -> Result<Vec<BluetoothPeripheral>> {
         let adapters: Vec<BluetoothAdapterInfo> = bluetooth_adapter_info?
             .into_iter()
             .filter_map(|result| result.ok())
@@ -144,8 +170,10 @@ impl BluetoothService {
             .filter_map(|result| result.ok())
             .collect();
 
-        let nintendo_devices = devices.into_iter()
-            .filter(|device| device.name == NINTENDO_BOARD_ID).collect();
+        let nintendo_devices = devices
+            .into_iter()
+            .filter(|device| device.name == NINTENDO_BOARD_ID)
+            .collect();
 
         Ok(nintendo_devices)
     }
@@ -186,7 +214,7 @@ impl From<BluetoothPeripheral> for NintendoDevice {
             id: p.id,
             name: p.name,
             mac_address: p.mac_address,
-            is_connected:  p.is_connected,
+            is_connected: p.is_connected,
             last_connected: if p.is_connected {
                 Some(Utc::now())
             } else {

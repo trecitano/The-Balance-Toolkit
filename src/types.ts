@@ -35,9 +35,9 @@ export interface UserType {
   gender?: string;
   customGender?: string;
   height?: number;
-  heightMetric?: string; // New field for height unit (cm/in)
+  heightMetric?: string;
   weight?: number;
-  weightMetric?: string; // Weight unit (kg/lb)
+  weightMetric?: string;
   dominantHand?: "Right" | "Left" | "Ambidextrous";
   color?: string;
   createdAt: string;
@@ -106,6 +106,16 @@ export type RawBalanceBoardEvent = {
   copY: number;
 };
 
+export type CalibrationReading = {
+  macAddress: number;
+  timestamp: number;
+  topLeft: number;
+  topRight: number;
+  bottomLeft: number;
+  bottomRight: number;
+  totalWeight: number;
+};
+
 export interface AmplitudeSpectrum {
   freqs_hz: number[];
   amplitude_x: number[];
@@ -137,11 +147,6 @@ export type ProcessedSessionData = {
   apsi?: number;
   vsi?: number;
   dpsi?: number;
-};
-
-export type FrequencySpectrum = {
-  freqs_hz: number[];
-  psd_xy: number[]; // mm²/Hz
 };
 
 export type ProcessedSingleFrameSessionData = {
