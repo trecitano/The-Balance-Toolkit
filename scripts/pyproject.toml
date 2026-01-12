@@ -1,0 +1,7 @@
+[project]
+name = "the-balance-toolkit"
+version = "0.1.0"
+description = "Scripts and tools for Balance Toolkit"
+dependencies = [
+    "pylsl"
+]
