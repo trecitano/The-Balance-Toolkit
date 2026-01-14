@@ -19,7 +19,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -157,6 +160,8 @@ fun UserCard(
 fun DeviceCard(
     device: Device,
     onToggleConnection: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -253,6 +258,34 @@ fun DeviceCard(
                         )
                     }
                 }
+            }
+
+            // Edit Button
+            IconButton(
+                onClick = onEdit,
+                modifier = Modifier.semantics {
+                    contentDescription = "Edit device ${device.name}"
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = stringResource(R.string.edit),
+                    tint = TextGray,
+                )
+            }
+
+            // Delete Button
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.semantics {
+                    contentDescription = "Delete device ${device.name}"
+                },
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.delete),
+                    tint = ErrorRed,
+                )
             }
         }
     }

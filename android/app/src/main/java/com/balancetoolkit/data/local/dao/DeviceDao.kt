@@ -41,6 +41,12 @@ interface DeviceDao {
         lastSeen: String,
     )
 
+    @Query("UPDATE devices SET name = :name WHERE id = :id")
+    suspend fun updateDeviceName(
+        id: String,
+        name: String,
+    )
+
     @Delete
     suspend fun deleteDevice(device: DeviceEntity)
 

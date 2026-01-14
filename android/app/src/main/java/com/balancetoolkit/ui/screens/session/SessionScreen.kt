@@ -1,13 +1,14 @@
 package com.balancetoolkit.ui.screens.session
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,13 +21,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -39,6 +42,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
 import com.balancetoolkit.ui.components.AppHeader
@@ -56,11 +62,11 @@ import com.balancetoolkit.ui.theme.SecondaryPurple
 import com.balancetoolkit.ui.theme.TextGray
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 import com.balancetoolkit.util.TrackPerformance
+import com.balancetoolkit.viewmodel.CopPosition
 import com.balancetoolkit.viewmodel.SessionUiState
 import com.balancetoolkit.viewmodel.SessionViewModel
 
 private val cardShape = RoundedCornerShape(12.dp)
-private val timelineCardColor = Color(0xFFEEEEEE)
 
 @Composable
 fun SessionScreen(
@@ -78,6 +84,9 @@ fun SessionScreen(
         onApSiChange = viewModel::setApSi,
         onVsiChange = viewModel::setVsi,
         onDpsiChange = viewModel::setDpsi,
+        onToggleSession = viewModel::togglePlay,
+        onTare = viewModel::applyTare,
+        canStartSession = uiState.canStartSession,
         modifier = modifier,
     )
 }
@@ -92,6 +101,9 @@ private fun SessionScreenContent(
     onApSiChange: (Boolean) -> Unit,
     onVsiChange: (Boolean) -> Unit,
     onDpsiChange: (Boolean) -> Unit,
+    onToggleSession: () -> Unit,
+    onTare: () -> Unit,
+    canStartSession: Boolean,
     modifier: Modifier = Modifier,
 ) {
     TrackPerformance("SessionScreen")
@@ -113,42 +125,25 @@ private fun SessionScreenContent(
                     .verticalScroll(scrollState)
                     .padding(16.dp),
         ) {
-            // Loop info row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = stringResource(R.string.loop_info, uiState.currentLoop, uiState.totalLoops),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = uiState.currentTime,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextGray,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            TimelineCard(
-                sliderPosition = uiState.sliderPosition,
-                startTime = uiState.startTime,
-                endTime = uiState.endTime,
-                onSliderChange = onSliderChange,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             SessionDeviceCard(
                 deviceName = uiState.deviceName,
                 macAddress = uiState.deviceMacAddress,
+                isMockMode = uiState.isMockMode,
+            )
+
+            // Session control buttons
+            SessionControlCard(
+                isRecording = uiState.isRecording,
+                onToggleSession = onToggleSession,
+                onTare = onTare,
+                canStartSession = canStartSession,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             COPVisualizationCard(
+                currentCop = uiState.currentCop,
+                copTrail = uiState.copTrail,
                 showConfidenceEllipse = uiState.showConfidenceEllipse,
                 onConfidenceEllipseChange = onConfidenceEllipseChange,
                 showConvexHull = uiState.showConvexHull,
@@ -164,6 +159,9 @@ private fun SessionScreenContent(
             ) {
                 StabilityCard(
                     force = uiState.stabilityMetrics.force,
+                    isRecording = uiState.isRecording,
+                    onToggleSession = onToggleSession,
+                    canStartSession = canStartSession,
                     modifier = Modifier.weight(1f),
                 )
                 DirectionCard(
@@ -232,62 +230,10 @@ private fun SessionScreenContent(
 }
 
 @Composable
-private fun TimelineCard(
-    sliderPosition: Float,
-    startTime: Float,
-    endTime: Float,
-    onSliderChange: (Float) -> Unit,
-) {
-    Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = "Timeline slider" },
-        shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = timelineCardColor),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(40.dp)
-                        .background(BorderGray, RoundedCornerShape(4.dp)),
-            ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxHeight()
-                            .width(2.dp)
-                            .align(Alignment.CenterStart)
-                            .padding(start = (sliderPosition * 300).dp)
-                            .background(PrimaryRed),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Slider(
-                value = sliderPosition,
-                onValueChange = onSliderChange,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("${startTime}s", style = MaterialTheme.typography.bodySmall, color = TextGray)
-                Text("${endTime.toInt()}s", style = MaterialTheme.typography.bodySmall, color = TextGray)
-            }
-        }
-    }
-}
-
-@Composable
 private fun SessionDeviceCard(
     deviceName: String,
     macAddress: String,
+    isMockMode: Boolean,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -302,11 +248,20 @@ private fun SessionDeviceCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = deviceName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium,
-            )
+            Column {
+                Text(
+                    text = deviceName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                if (isMockMode) {
+                    Text(
+                        text = "Mock Mode",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ChartOrange,
+                    )
+                }
+            }
             Text(
                 text = macAddress,
                 style = MaterialTheme.typography.bodySmall,
@@ -317,12 +272,69 @@ private fun SessionDeviceCard(
 }
 
 @Composable
+private fun SessionControlCard(
+    isRecording: Boolean,
+    onToggleSession: () -> Unit,
+    onTare: () -> Unit,
+    canStartSession: Boolean,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Button(
+                onClick = onToggleSession,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isRecording) PrimaryRed else PrimaryBlue
+                ),
+                modifier = Modifier.weight(1f),
+                enabled = isRecording || canStartSession,
+            ) {
+                Text(
+                    text = if (isRecording) "Stop Session" else "Start Session",
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+
+            Button(
+                onClick = onTare,
+                colors = ButtonDefaults.buttonColors(containerColor = SecondaryPurple),
+                enabled = isRecording,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Tare",
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Tare")
+            }
+        }
+    }
+}
+
+@Composable
 private fun COPVisualizationCard(
+    currentCop: CopPosition,
+    copTrail: List<CopPosition>,
     showConfidenceEllipse: Boolean,
     onConfidenceEllipseChange: (Boolean) -> Unit,
     showConvexHull: Boolean,
     onConvexHullChange: (Boolean) -> Unit,
 ) {
+    val crosshairColor = BorderGray
+    val copDotColor = SecondaryPurple
+    val trailColor = SecondaryPurple.copy(alpha = 0.5f)
+    val hullColor = ChartBlue.copy(alpha = 0.3f)
+    val hullStrokeColor = ChartBlue
+
     Card(
         modifier =
             Modifier
@@ -337,40 +349,98 @@ private fun COPVisualizationCard(
                     Modifier
                         .fillMaxWidth()
                         .height(200.dp)
-                        .border(1.dp, BorderGray, RoundedCornerShape(8.dp)),
+                        .border(2.dp, BorderGray, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Box(modifier = Modifier.size(150.dp)) {
-                    if (showConfidenceEllipse) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(120.dp)
-                                    .align(Alignment.Center)
-                                    .border(2.dp, ChartRed.copy(alpha = 0.7f), CircleShape),
-                        )
+                Canvas(
+                    modifier = Modifier.fillMaxSize().padding(4.dp)
+                ) {
+                    val centerX = size.width / 2
+                    val centerY = size.height / 2
+
+                    // Scale factors to convert mm to pixels
+                    // Board is approximately 433mm x 228mm between sensors
+                    // We want to fit this in our canvas with some margin
+                    val scaleX = size.width * 0.8f / 433f
+                    val scaleY = size.height * 0.8f / 228f
+                    val scale = minOf(scaleX, scaleY)
+
+                    // Draw crosshair lines
+                    drawLine(
+                        color = crosshairColor,
+                        start = Offset(centerX, 0f),
+                        end = Offset(centerX, size.height),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                    drawLine(
+                        color = crosshairColor,
+                        start = Offset(0f, centerY),
+                        end = Offset(size.width, centerY),
+                        strokeWidth = 1.dp.toPx()
+                    )
+
+                    // Draw convex hull of trail points if enabled
+                    if (showConvexHull && copTrail.size >= 3) {
+                        val hull = computeConvexHull(copTrail)
+                        if (hull.size >= 3) {
+                            val hullPath = Path().apply {
+                                val firstPoint = hull.first()
+                                moveTo(
+                                    centerX + firstPoint.x * scale,
+                                    centerY - firstPoint.y * scale // Invert Y for screen coords
+                                )
+                                hull.drop(1).forEach { point ->
+                                    lineTo(
+                                        centerX + point.x * scale,
+                                        centerY - point.y * scale
+                                    )
+                                }
+                                close()
+                            }
+                            drawPath(hullPath, color = hullColor)
+                            drawPath(hullPath, color = hullStrokeColor, style = Stroke(width = 2.dp.toPx()))
+                        }
                     }
-                    if (showConvexHull) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(80.dp)
-                                    .align(Alignment.Center)
-                                    .background(ChartBlue.copy(alpha = 0.2f), RoundedCornerShape(30.dp))
-                                    .border(2.dp, ChartBlue, RoundedCornerShape(30.dp)),
-                        )
+
+                    // Draw CoP trail
+                    if (copTrail.size >= 2) {
+                        val trailPath = Path().apply {
+                            val firstPoint = copTrail.first()
+                            moveTo(
+                                centerX + firstPoint.x * scale,
+                                centerY - firstPoint.y * scale
+                            )
+                            copTrail.drop(1).forEach { point ->
+                                lineTo(
+                                    centerX + point.x * scale,
+                                    centerY - point.y * scale
+                                )
+                            }
+                        }
+                        drawPath(trailPath, color = trailColor, style = Stroke(width = 2.dp.toPx()))
                     }
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(8.dp)
-                                .align(Alignment.Center)
-                                .background(SecondaryPurple, CircleShape),
+
+                    // Draw current CoP position
+                    val copScreenX = centerX + currentCop.x * scale
+                    val copScreenY = centerY - currentCop.y * scale // Invert Y for screen coords
+                    drawCircle(
+                        color = copDotColor,
+                        radius = 6.dp.toPx(),
+                        center = Offset(copScreenX, copScreenY)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // CoP coordinates display
+            Text(
+                text = "CoP: X=%.1f mm, Y=%.1f mm".format(currentCop.x, currentCop.y),
+                style = MaterialTheme.typography.bodySmall,
+                color = TextGray,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -378,18 +448,9 @@ private fun COPVisualizationCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
-                        checked = showConfidenceEllipse,
-                        onCheckedChange = onConfidenceEllipseChange,
-                        colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue),
-                    )
-                    Text(stringResource(R.string.confidence_ellipse), style = MaterialTheme.typography.bodySmall)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
                         checked = showConvexHull,
                         onCheckedChange = onConvexHullChange,
-                        colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue),
+                        colors = CheckboxDefaults.colors(checkedColor = SecondaryPurple),
                     )
                     Text(stringResource(R.string.convex_hull), style = MaterialTheme.typography.bodySmall)
                 }
@@ -398,11 +459,53 @@ private fun COPVisualizationCard(
     }
 }
 
+/**
+ * Compute the convex hull of a set of points using Graham scan algorithm.
+ */
+private fun computeConvexHull(points: List<CopPosition>): List<CopPosition> {
+    if (points.size < 3) return points
+
+    // Find the point with lowest y (and leftmost if tie)
+    val start = points.minWithOrNull(compareBy({ it.y }, { it.x })) ?: return points
+
+    // Sort points by polar angle with respect to start
+    val sorted = points.filter { it != start }.sortedWith { a, b ->
+        val crossProduct = cross(start, a, b)
+        if (crossProduct == 0f) {
+            // Collinear points - sort by distance
+            val distA = (a.x - start.x) * (a.x - start.x) + (a.y - start.y) * (a.y - start.y)
+            val distB = (b.x - start.x) * (b.x - start.x) + (b.y - start.y) * (b.y - start.y)
+            distA.compareTo(distB)
+        } else {
+            -crossProduct.compareTo(0f)
+        }
+    }
+
+    val hull = mutableListOf(start)
+
+    for (point in sorted) {
+        while (hull.size > 1 && cross(hull[hull.size - 2], hull[hull.size - 1], point) <= 0) {
+            hull.removeAt(hull.size - 1)
+        }
+        hull.add(point)
+    }
+
+    return hull
+}
+
+private fun cross(o: CopPosition, a: CopPosition, b: CopPosition): Float {
+    return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
+}
+
 @Composable
 private fun StabilityCard(
     force: Float,
+    isRecording: Boolean,
+    onToggleSession: () -> Unit,
+    canStartSession: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val isEnabled = isRecording || canStartSession
     Card(
         modifier = modifier.semantics { contentDescription = "Stability: Force $force kg" },
         shape = cardShape,
@@ -425,7 +528,15 @@ private fun StabilityCard(
                 modifier =
                     Modifier
                         .size(56.dp)
-                        .background(PrimaryRed, CircleShape),
+                        .background(
+                            when {
+                                !isEnabled -> BorderGray
+                                isRecording -> ChartGreen
+                                else -> PrimaryRed
+                            },
+                            CircleShape
+                        )
+                        .then(if (isEnabled) Modifier.clickable { onToggleSession() } else Modifier),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -447,7 +558,7 @@ private fun StabilityCard(
                 text = String.format("%.2f", force),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = PrimaryRed,
+                color = if (force > 0) PrimaryBlue else PrimaryRed,
             )
         }
     }
@@ -712,6 +823,9 @@ private fun SessionScreenPreview() {
             onApSiChange = {},
             onVsiChange = {},
             onDpsiChange = {},
+            onToggleSession = {},
+            onTare = {},
+            canStartSession = true,
         )
     }
 }

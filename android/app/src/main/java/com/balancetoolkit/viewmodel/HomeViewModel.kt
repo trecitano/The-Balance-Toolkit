@@ -1,19 +1,35 @@
 package com.balancetoolkit.viewmodel
 
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
-import com.balancetoolkit.data.model.SessionStats
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.balancetoolkit.data.local.dao.DeviceDao
+import com.balancetoolkit.data.local.dao.UserDao
+import com.balancetoolkit.data.local.entity.toUser
+import com.balancetoolkit.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+private const val PREF_SELECTED_USER_ID = "selected_user_id"
 
 data class HomeUiState(
-    val lastSessionStats: SessionStats? = null,
-    val connectedBoardsCount: Int = 0,
-    val connectedBoardIndices: List<Int> = emptyList(),
-    val isLoading: Boolean = false,
+    val selectedUser: User? = null,
+    val isBoardConnected: Boolean = false,
+    val isLoading: Boolean = true,
 )
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(
+    private val userDao: UserDao,
+    private val deviceDao: DeviceDao,
+    private val sharedPreferences: SharedPreferences,
+) : ViewModel() {
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
@@ -22,23 +38,53 @@ class HomeViewModel : ViewModel() {
     }
 
     private fun loadHomeData() {
-        // Sample data - in real app this would come from a repository
-        val sampleStats =
-            SessionStats(
-                duration = 122,
-                boardNumber = "7.1.1J",
-                userName = "Mario",
-                userAge = 44,
-                userWeight = 70,
-                userGender = "Male",
-                filePath = "C:\\users\\Andrea\\fOO\\Documents\\the-balance-toolkit\\sessions\\tbt-2023-09-11T12-37-32.settings.json",
-            )
+        viewModelScope.launch {
+            val selectedUserId = sharedPreferences.getString(PREF_SELECTED_USER_ID, null)
 
-        _uiState.value =
-            HomeUiState(
-                lastSessionStats = sampleStats,
-                connectedBoardsCount = 3,
-                connectedBoardIndices = listOf(0, 1, 2),
-            )
+            combine(
+                userDao.getAllUsers().map { entities -> entities.map { it.toUser() } },
+                deviceDao.getAllDevices().map { entities -> entities.any { it.isConnected } }
+            ) { users, hasConnectedDevice ->
+                val selectedUser = if (selectedUserId != null) {
+                    users.find { it.id == selectedUserId }
+                } else {
+                    null
+                }
+                HomeUiState(
+                    selectedUser = selectedUser,
+                    isBoardConnected = hasConnectedDevice,
+                    isLoading = false,
+                )
+            }.catch { e ->
+                _uiState.update {
+                    it.copy(isLoading = false)
+                }
+            }.collect { state ->
+                _uiState.value = state
+            }
+        }
+    }
+
+    fun selectUser(userId: String?) {
+        sharedPreferences.edit().putString(PREF_SELECTED_USER_ID, userId).apply()
+        // The flow will automatically update the UI state
+    }
+
+    fun clearSelectedUser() {
+        selectUser(null)
+    }
+
+    class Factory(
+        private val userDao: UserDao,
+        private val deviceDao: DeviceDao,
+        private val sharedPreferences: SharedPreferences,
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
+                return HomeViewModel(userDao, deviceDao, sharedPreferences) as T
+            }
+            throw IllegalArgumentException("Unknown ViewModel class")
+        }
     }
 }

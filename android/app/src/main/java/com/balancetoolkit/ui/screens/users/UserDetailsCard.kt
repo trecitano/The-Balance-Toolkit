@@ -51,6 +51,7 @@ fun UserDetailsCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    canDelete: Boolean = true,
 ) {
     Card(
         modifier =
@@ -172,24 +173,26 @@ fun UserDetailsCard(
             // Edit and Delete Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = if (canDelete) Arrangement.spacedBy(16.dp) else Arrangement.Center,
             ) {
                 Button(
                     onClick = onEdit,
-                    modifier = Modifier.weight(1f),
+                    modifier = if (canDelete) Modifier.weight(1f) else Modifier,
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
                     shape = buttonShape,
                 ) {
                     Text(stringResource(R.string.edit))
                 }
 
-                Button(
-                    onClick = onDelete,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
-                    shape = buttonShape,
-                ) {
-                    Text(stringResource(R.string.delete))
+                if (canDelete) {
+                    Button(
+                        onClick = onDelete,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
+                        shape = buttonShape,
+                    ) {
+                        Text(stringResource(R.string.delete))
+                    }
                 }
             }
         }

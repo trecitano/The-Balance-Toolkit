@@ -1,5 +1,6 @@
 package com.balancetoolkit.viewmodel
 
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,6 +9,7 @@ import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.entity.toDevice
 import com.balancetoolkit.data.local.entity.toEntity
 import com.balancetoolkit.data.model.Device
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +17,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+private const val PREF_HOST_MAC_ADDRESS = "host_mac_address"
 
 data class DevicesUiState(
     val devices: List<Device> = emptyList(),
@@ -23,19 +28,70 @@ data class DevicesUiState(
     val isScanning: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
+    val hostMacAddress: String? = null,
+    val showMacAddressDialog: Boolean = false,
+    val deviceToDelete: Device? = null,
+    val deviceToEdit: Device? = null,
 ) {
     val connectedCount: Int
         get() = devices.count { it.isConnected }
+
+    val isHostMacConfigured: Boolean
+        get() = !hostMacAddress.isNullOrBlank()
+
+    val showDeleteConfirmDialog: Boolean
+        get() = deviceToDelete != null
+
+    val showEditNameDialog: Boolean
+        get() = deviceToEdit != null
 }
 
 class DevicesViewModel(
     private val deviceDao: DeviceDao,
+    private val sharedPreferences: SharedPreferences,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(DevicesUiState(isLoading = true))
     val uiState: StateFlow<DevicesUiState> = _uiState.asStateFlow()
 
+    private var scanJob: Job? = null
+
     init {
+        loadHostMacAddress()
         loadDevices()
+    }
+
+    private fun loadHostMacAddress() {
+        val savedMac = sharedPreferences.getString(PREF_HOST_MAC_ADDRESS, null)
+        _uiState.update { it.copy(hostMacAddress = savedMac) }
+    }
+
+    fun saveHostMacAddress(macAddress: String) {
+        sharedPreferences.edit().putString(PREF_HOST_MAC_ADDRESS, macAddress).apply()
+        _uiState.update { it.copy(hostMacAddress = macAddress, showMacAddressDialog = false) }
+    }
+
+    fun showMacAddressDialog() {
+        _uiState.update { it.copy(showMacAddressDialog = true) }
+    }
+
+    fun dismissMacAddressDialog() {
+        _uiState.update { it.copy(showMacAddressDialog = false) }
+    }
+
+    fun onScanClick() {
+        if (_uiState.value.isScanning) {
+            stopScanning()
+        } else if (_uiState.value.isHostMacConfigured) {
+            scanForDevices()
+        } else {
+            showMacAddressDialog()
+        }
+    }
+
+    private fun stopScanning() {
+        scanJob?.cancel()
+        scanJob = null
+        _uiState.update { it.copy(isScanning = false) }
     }
 
     private fun loadDevices() {
@@ -61,32 +117,44 @@ class DevicesViewModel(
     }
 
     fun scanForDevices() {
-        viewModelScope.launch {
+        scanJob?.cancel()
+        scanJob = viewModelScope.launch {
+            val initialDeviceCount = _uiState.value.devices.size
             _uiState.update { it.copy(isScanning = true) }
-            // Simulate scanning delay - in real implementation, this would discover Bluetooth devices
-            delay(2000)
 
-            // For demo purposes, add sample devices if none exist
-            if (_uiState.value.devices.isEmpty()) {
-                val sampleDevices =
-                    listOf(
-                        Device(
-                            name = "Nintendo RVL-WBC-01",
-                            macAddress = "37:F6:A1:2B:FD:F4",
-                            isConnected = false,
-                        ),
-                        Device(
-                            name = "Nintendo RVL-WBC-01",
-                            macAddress = "12:E9:CD:B9:71:54",
-                            isConnected = false,
-                        ),
-                    )
-                sampleDevices.forEach { device ->
-                    deviceDao.insertDevice(device.toEntity())
+            // Continue scanning until a new device is found or cancelled
+            while (isActive) {
+                // Simulate scanning - in real implementation, this would discover Bluetooth devices
+                delay(1000)
+
+                // For demo purposes, add sample devices if none exist after a few seconds
+                if (_uiState.value.devices.isEmpty()) {
+                    val sampleDevices =
+                        listOf(
+                            Device(
+                                name = "Nintendo RVL-WBC-01",
+                                macAddress = "37:F6:A1:2B:FD:F4",
+                                isConnected = false,
+                            ),
+                            Device(
+                                name = "Nintendo RVL-WBC-01",
+                                macAddress = "12:E9:CD:B9:71:54",
+                                isConnected = false,
+                            ),
+                        )
+                    sampleDevices.forEach { device ->
+                        deviceDao.insertDevice(device.toEntity())
+                    }
+                }
+
+                // Stop scanning if a new device was found
+                if (_uiState.value.devices.size > initialDeviceCount) {
+                    break
                 }
             }
 
             _uiState.update { it.copy(isScanning = false) }
+            scanJob = null
         }
     }
 
@@ -135,13 +203,54 @@ class DevicesViewModel(
         _uiState.update { it.copy(error = null) }
     }
 
+    fun requestDeleteDevice(device: Device) {
+        _uiState.update { it.copy(deviceToDelete = device) }
+    }
+
+    fun dismissDeleteDialog() {
+        _uiState.update { it.copy(deviceToDelete = null) }
+    }
+
+    fun confirmDeleteDevice() {
+        val device = _uiState.value.deviceToDelete ?: return
+        viewModelScope.launch {
+            runCatching {
+                deviceDao.deleteDeviceById(device.id)
+            }.onFailure { e ->
+                _uiState.update { it.copy(error = e.message ?: "Failed to delete device") }
+            }
+            _uiState.update { it.copy(deviceToDelete = null) }
+        }
+    }
+
+    fun requestEditDevice(device: Device) {
+        _uiState.update { it.copy(deviceToEdit = device) }
+    }
+
+    fun dismissEditDialog() {
+        _uiState.update { it.copy(deviceToEdit = null) }
+    }
+
+    fun saveDeviceName(newName: String) {
+        val device = _uiState.value.deviceToEdit ?: return
+        viewModelScope.launch {
+            runCatching {
+                deviceDao.updateDeviceName(device.id, newName.trim())
+            }.onFailure { e ->
+                _uiState.update { it.copy(error = e.message ?: "Failed to update device name") }
+            }
+            _uiState.update { it.copy(deviceToEdit = null) }
+        }
+    }
+
     class Factory(
         private val deviceDao: DeviceDao,
+        private val sharedPreferences: SharedPreferences,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(DevicesViewModel::class.java)) {
-                return DevicesViewModel(deviceDao) as T
+                return DevicesViewModel(deviceDao, sharedPreferences) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

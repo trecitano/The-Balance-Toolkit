@@ -1,37 +1,161 @@
 package com.balancetoolkit.ui.screens.settings
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.DocumentsContract
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
 import com.balancetoolkit.ui.components.AppHeader
+import com.balancetoolkit.ui.components.HostMacAddressDialog
+import com.balancetoolkit.ui.components.SessionsDirectoryDialog
 import com.balancetoolkit.ui.theme.BackgroundGray
+import com.balancetoolkit.ui.theme.CardBackground
+import com.balancetoolkit.ui.theme.TextGray
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
+import com.balancetoolkit.viewmodel.SettingsUiState
+import com.balancetoolkit.viewmodel.SettingsViewModel
+import java.io.File
+
+private val cardShape = RoundedCornerShape(12.dp)
 
 @Composable
-fun SettingsScreen(modifier: Modifier = Modifier) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Directory picker launcher
+    val directoryPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        uri?.let {
+            // Convert content URI to a path we can use
+            // Take persistable permission for the URI
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            // Save the URI string - we'll need to handle this specially when writing files
+            viewModel.saveSessionsDirectory(it.toString())
+        }
+    }
+
+    if (uiState.showMacAddressDialog) {
+        HostMacAddressDialog(
+            initialMacAddress = uiState.hostMacAddress ?: "",
+            onDismiss = viewModel::dismissMacAddressDialog,
+            onSave = viewModel::saveHostMacAddress,
+        )
+    }
+
+    if (uiState.showSessionsDirectoryDialog) {
+        SessionsDirectoryDialog(
+            currentDirectory = uiState.sessionsDirectory,
+            onDismiss = viewModel::dismissSessionsDirectoryDialog,
+            onPickDirectory = {
+                directoryPickerLauncher.launch(null)
+            },
+            onOpenInFileExplorer = {
+                val directory = uiState.sessionsDirectory
+                try {
+                    if (directory.startsWith("content://")) {
+                        // It's a content URI from SAF - build a document URI and open it
+                        val treeUri = Uri.parse(directory)
+                        val docId = DocumentsContract.getTreeDocumentId(treeUri)
+                        val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            data = docUri
+                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(intent)
+                    } else {
+                        // It's a file path - ensure directory exists and open file picker there
+                        val file = File(directory)
+                        if (!file.exists()) {
+                            file.mkdirs()
+                        }
+                        // Use OPEN_DOCUMENT_TREE with initial URI hint
+                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+                            putExtra(DocumentsContract.EXTRA_INITIAL_URI, Uri.parse("file://$directory"))
+                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        }
+                        context.startActivity(intent)
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.no_file_manager),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            },
+            onResetToDefault = viewModel::resetSessionsDirectoryToDefault,
+        )
+    }
+
+    SettingsScreenContent(
+        uiState = uiState,
+        onEditMacAddress = viewModel::showMacAddressDialog,
+        onMockModeChanged = viewModel::setMockModeEnabled,
+        onEditSessionsDirectory = viewModel::showSessionsDirectoryDialog,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun SettingsScreenContent(
+    uiState: SettingsUiState,
+    onEditMacAddress: () -> Unit,
+    onMockModeChanged: (Boolean) -> Unit,
+    onEditSessionsDirectory: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(BackgroundGray),
+        modifier = modifier
+            .fillMaxSize()
+            .background(BackgroundGray),
     ) {
         AppHeader()
 
         Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
         ) {
             Text(
                 text = stringResource(R.string.settings),
@@ -39,7 +163,115 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold,
             )
 
-            // TODO: Add settings options
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Host MAC Address Setting
+            SettingsItem(
+                title = stringResource(R.string.host_mac_address),
+                value = uiState.hostMacAddress ?: stringResource(R.string.not_configured),
+                onClick = onEditMacAddress,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Sessions Directory Setting
+            SettingsItem(
+                title = stringResource(R.string.sessions_directory),
+                value = uiState.sessionsDirectory.ifEmpty { stringResource(R.string.not_configured) },
+                onClick = onEditSessionsDirectory,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Mock Mode Setting
+            SettingsToggleItem(
+                title = stringResource(R.string.mock_mode),
+                description = stringResource(R.string.mock_mode_description),
+                checked = uiState.mockModeEnabled,
+                onCheckedChange = onMockModeChanged,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsItem(
+    title: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextGray,
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = TextGray,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsToggleItem(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextGray,
+                )
+            }
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+            )
         }
     }
 }
@@ -48,6 +280,29 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun SettingsScreenPreview() {
     TheBalanceToolkitTheme {
-        SettingsScreen()
+        SettingsScreenContent(
+            uiState = SettingsUiState(
+                hostMacAddress = "AA:BB:CC:DD:EE:FF",
+                sessionsDirectory = "/storage/emulated/0/Documents/the-balance-toolkit/sessions",
+            ),
+            onEditMacAddress = {},
+            onMockModeChanged = {},
+            onEditSessionsDirectory = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsScreenNoMacPreview() {
+    TheBalanceToolkitTheme {
+        SettingsScreenContent(
+            uiState = SettingsUiState(
+                hostMacAddress = null,
+            ),
+            onEditMacAddress = {},
+            onMockModeChanged = {},
+            onEditSessionsDirectory = {},
+        )
     }
 }

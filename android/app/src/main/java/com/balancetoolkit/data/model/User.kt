@@ -9,6 +9,8 @@ import com.balancetoolkit.ui.theme.AvatarYellow
 import com.balancetoolkit.ui.theme.AvatarYellowLight
 import java.util.UUID
 
+const val DEFAULT_USER_ID = "default-user"
+
 /**
  * Maps a hex color string to avatar background and icon colors.
  * Returns a Pair of (backgroundColor, iconColor).
@@ -39,7 +41,9 @@ data class User(
     val updatedAt: String = "",
     val avatarBackgroundColor: Color = AvatarBlueLight,
     val avatarIconColor: Color = AvatarBlue,
-)
+) {
+    val isDefaultUser: Boolean get() = id == DEFAULT_USER_ID
+}
 
 enum class Gender {
     MALE,
