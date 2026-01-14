@@ -1,5 +1,6 @@
 package com.balancetoolkit.viewmodel
 
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,7 @@ import com.balancetoolkit.data.Result
 import com.balancetoolkit.data.local.dao.UserDao
 import com.balancetoolkit.data.local.entity.toEntity
 import com.balancetoolkit.data.local.entity.toUser
+import com.balancetoolkit.data.model.DEFAULT_USER_ID
 import com.balancetoolkit.data.model.DominantHand
 import com.balancetoolkit.data.model.Gender
 import com.balancetoolkit.data.model.User
@@ -18,6 +20,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+private const val PREF_SELECTED_USER_ID = "selected_user_id"
 
 data class UsersUiState(
     val users: List<User> = emptyList(),
@@ -48,6 +52,7 @@ data class AddUserFormState(
 
 class UsersViewModel(
     private val userDao: UserDao,
+    private val sharedPreferences: SharedPreferences,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(UsersUiState(isLoading = true))
     val uiState: StateFlow<UsersUiState> = _uiState.asStateFlow()
@@ -56,11 +61,33 @@ class UsersViewModel(
     val addUserFormState: StateFlow<AddUserFormState> = _addUserFormState.asStateFlow()
 
     init {
-        loadUsers()
+        viewModelScope.launch {
+            ensureDefaultUserExists()
+            loadUsers()
+        }
+    }
+
+    private suspend fun ensureDefaultUserExists() {
+        val existingDefaultUser = userDao.getUserById(DEFAULT_USER_ID)
+        if (existingDefaultUser == null) {
+            val defaultUser = User(
+                id = DEFAULT_USER_ID,
+                name = "Default User",
+                updatedAt = java.time.LocalDate.now().toString(),
+            )
+            userDao.insertUser(defaultUser.toEntity())
+            // Set default user as selected if no user was previously selected
+            if (sharedPreferences.getString(PREF_SELECTED_USER_ID, null) == null) {
+                sharedPreferences.edit().putString(PREF_SELECTED_USER_ID, DEFAULT_USER_ID).apply()
+            }
+        }
     }
 
     private fun loadUsers() {
         viewModelScope.launch {
+            val savedUserId = sharedPreferences.getString(PREF_SELECTED_USER_ID, null)
+                ?: DEFAULT_USER_ID  // Default to default user if nothing saved
+
             userDao
                 .getAllUsers()
                 .map { entities -> entities.map { it.toUser() } }
@@ -70,7 +97,11 @@ class UsersViewModel(
                     }
                 }.collect { users ->
                     _uiState.update { state ->
-                        val selectedIndex = state.selectedUserIndex.coerceIn(0, (users.size - 1).coerceAtLeast(0))
+                        // Try to find the saved user, otherwise use the default user
+                        val savedIndex = users.indexOfFirst { it.id == savedUserId }.takeIf { it >= 0 }
+                            ?: users.indexOfFirst { it.id == DEFAULT_USER_ID }.takeIf { it >= 0 }
+                            ?: 0
+                        val selectedIndex = savedIndex.coerceIn(0, (users.size - 1).coerceAtLeast(0))
                         state.copy(
                             users = users,
                             selectedUser = users.getOrNull(selectedIndex),
@@ -89,9 +120,14 @@ class UsersViewModel(
 
     fun onUserSelected(index: Int) {
         _uiState.update { state ->
+            val user = state.users.getOrNull(index)
+            // Save selected user to SharedPreferences for use on Home screen
+            if (user != null) {
+                sharedPreferences.edit().putString(PREF_SELECTED_USER_ID, user.id).apply()
+            }
             state.copy(
                 selectedUserIndex = index,
-                selectedUser = state.users.getOrNull(index),
+                selectedUser = user,
             )
         }
     }
@@ -180,6 +216,12 @@ class UsersViewModel(
     }
 
     fun deleteUser(userId: String) {
+        // Prevent deletion of the default user
+        if (userId == DEFAULT_USER_ID) {
+            _uiState.update { it.copy(error = "Cannot delete the default user") }
+            return
+        }
+
         viewModelScope.launch {
             val result =
                 runCatching {
@@ -206,11 +248,12 @@ class UsersViewModel(
 
     class Factory(
         private val userDao: UserDao,
+        private val sharedPreferences: SharedPreferences,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(UsersViewModel::class.java)) {
-                return UsersViewModel(userDao) as T
+                return UsersViewModel(userDao, sharedPreferences) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

@@ -1,5 +1,6 @@
 package com.balancetoolkit.ui.navigation
 
+import android.content.Context
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,6 +21,7 @@ import com.balancetoolkit.ui.screens.users.UsersScreen
 import com.balancetoolkit.viewmodel.DevicesViewModel
 import com.balancetoolkit.viewmodel.HomeViewModel
 import com.balancetoolkit.viewmodel.SessionViewModel
+import com.balancetoolkit.viewmodel.SettingsViewModel
 import com.balancetoolkit.viewmodel.UsersViewModel
 
 @Composable
@@ -30,6 +32,10 @@ fun AppNavHost(
 ) {
     val application = LocalContext.current.applicationContext as BalanceToolkitApplication
     val database = application.database
+    val sharedPreferences = application.getSharedPreferences(
+        "balance_toolkit_prefs",
+        Context.MODE_PRIVATE
+    )
 
     NavHost(
         navController = navController,
@@ -41,14 +47,23 @@ fun AppNavHost(
         popExitTransition = { ExitTransition.None },
     ) {
         composable(AppDestination.Home.route) {
-            val viewModel: HomeViewModel = viewModel()
+            val viewModel: HomeViewModel = viewModel(
+                factory = HomeViewModel.Factory(
+                    database.userDao(),
+                    database.deviceDao(),
+                    sharedPreferences
+                ),
+            )
             HomeScreen(
                 viewModel = viewModel,
                 modifier = Modifier.padding(innerPadding),
+                onNavigateToUsers = {
+                    navController.navigate(AppDestination.Users.route)
+                },
                 onNavigateToDevices = {
                     navController.navigate(AppDestination.Devices.route)
                 },
-                onNavigateToReplay = {
+                onNavigateToSession = {
                     navController.navigate(AppDestination.Session.route)
                 },
             )
@@ -57,7 +72,7 @@ fun AppNavHost(
         composable(AppDestination.Users.route) {
             val viewModel: UsersViewModel =
                 viewModel(
-                    factory = UsersViewModel.Factory(database.userDao()),
+                    factory = UsersViewModel.Factory(database.userDao(), sharedPreferences),
                 )
             UsersScreen(
                 viewModel = viewModel,
@@ -68,7 +83,7 @@ fun AppNavHost(
         composable(AppDestination.Devices.route) {
             val viewModel: DevicesViewModel =
                 viewModel(
-                    factory = DevicesViewModel.Factory(database.deviceDao()),
+                    factory = DevicesViewModel.Factory(database.deviceDao(), sharedPreferences),
                 )
             DevicesScreen(
                 viewModel = viewModel,
@@ -77,7 +92,14 @@ fun AppNavHost(
         }
 
         composable(AppDestination.Session.route) {
-            val viewModel: SessionViewModel = viewModel()
+            val viewModel: SessionViewModel = viewModel(
+                factory = SessionViewModel.Factory(
+                    application,
+                    sharedPreferences,
+                    database.userDao(),
+                    database.deviceDao(),
+                ),
+            )
             SessionScreen(
                 viewModel = viewModel,
                 modifier = Modifier.padding(innerPadding),
@@ -85,7 +107,11 @@ fun AppNavHost(
         }
 
         composable(AppDestination.Settings.route) {
+            val viewModel: SettingsViewModel = viewModel(
+                factory = SettingsViewModel.Factory(sharedPreferences, application),
+            )
             SettingsScreen(
+                viewModel = viewModel,
                 modifier = Modifier.padding(innerPadding),
             )
         }

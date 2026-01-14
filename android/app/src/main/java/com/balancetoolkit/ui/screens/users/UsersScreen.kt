@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,9 +30,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -189,6 +193,7 @@ private fun UsersScreenContent(
                     user = user,
                     onEdit = { /* Edit user */ },
                     onDelete = onDeleteUser,
+                    canDelete = !user.isDefaultUser,
                 )
             }
 
@@ -209,24 +214,27 @@ private fun UserCarousel(
             pageCount = { users.size },
         )
 
-    val contentPadding =
-        remember {
-            androidx.compose.foundation.layout
-                .PaddingValues(horizontal = 48.dp)
-        }
+    // Sync pager state changes back to ViewModel
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }
+            .collect { page ->
+                if (page != selectedIndex) {
+                    onUserSelected(page)
+                }
+            }
+    }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = contentPadding,
-            pageSpacing = 16.dp,
+            pageSpacing = 1.dp,
+            pageSize = PageSize.Fixed(150.dp),
             key = { users[it].id },
         ) { page ->
             val user = users[page]
             UserCard(
                 name = user.name,
-                isSelected = page == selectedIndex,
+                isSelected = page == pagerState.settledPage,
                 updateDate = user.updatedAt,
                 avatarBackgroundColor = user.avatarBackgroundColor,
                 avatarIconColor = user.avatarIconColor,
@@ -275,8 +283,33 @@ private fun CarouselIndicators(
 @Composable
 private fun UsersScreenPreview() {
     TheBalanceToolkitTheme {
+        val mockUsers = listOf(
+            User(
+                id = "1",
+                name = "John Doe",
+                //isDefaultUser = true,
+                //updatedAt = System.currentTimeMillis(),
+            ),
+            User(
+                id = "2",
+                name = "Jane Smith",
+                //isDefaultUser = false,
+                //updatedAt = System.currentTimeMillis(),
+            ),
+            User(
+                id = "3",
+                name = "Bob Wilson",
+                //isDefaultUser = false,
+                //updatedAt = System.currentTimeMillis(),
+            ),
+        )
+
         UsersScreenContent(
-            uiState = UsersUiState(),
+            uiState = UsersUiState(
+                users = mockUsers,
+                selectedUser = mockUsers.first(),
+                selectedUserIndex = 0,
+            ),
             onSearchQueryChange = {},
             onAddUserClick = {},
             onUserSelected = {},

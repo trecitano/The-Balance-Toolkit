@@ -2,6 +2,7 @@ package com.balancetoolkit.ui.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,10 +13,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -24,22 +26,24 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
-import com.balancetoolkit.data.model.SessionStats
+import com.balancetoolkit.data.model.User
 import com.balancetoolkit.ui.components.AppHeader
-import com.balancetoolkit.ui.components.BoardVisualization
 import com.balancetoolkit.ui.theme.BackgroundGray
 import com.balancetoolkit.ui.theme.CardBackground
 import com.balancetoolkit.ui.theme.PrimaryBlue
@@ -51,22 +55,25 @@ import com.balancetoolkit.viewmodel.HomeViewModel
 
 private val cardShape = RoundedCornerShape(12.dp)
 private val buttonShape = RoundedCornerShape(8.dp)
-private val darkButtonColor = Color(0xFF424242)
+private val connectedColor = Color(0xFF4CAF50)
+private val disconnectedColor = Color(0xFF9E9E9E)
 
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     modifier: Modifier = Modifier,
+    onNavigateToUsers: () -> Unit = {},
     onNavigateToDevices: () -> Unit = {},
-    onNavigateToReplay: () -> Unit = {},
+    onNavigateToSession: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     HomeScreenContent(
         uiState = uiState,
         modifier = modifier,
+        onNavigateToUsers = onNavigateToUsers,
         onNavigateToDevices = onNavigateToDevices,
-        onNavigateToReplay = onNavigateToReplay,
+        onNavigateToSession = onNavigateToSession,
     )
 }
 
@@ -74,238 +81,284 @@ fun HomeScreen(
 private fun HomeScreenContent(
     uiState: HomeUiState,
     modifier: Modifier = Modifier,
+    onNavigateToUsers: () -> Unit = {},
     onNavigateToDevices: () -> Unit = {},
-    onNavigateToReplay: () -> Unit = {},
+    onNavigateToSession: () -> Unit = {},
 ) {
     TrackPerformance("HomeScreen")
     val scrollState = rememberScrollState()
 
     Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .background(BackgroundGray)
-                .verticalScroll(scrollState),
+        modifier = modifier
+            .fillMaxSize()
+            .background(BackgroundGray)
+            .verticalScroll(scrollState),
     ) {
         AppHeader(showWelcome = true, showLinks = true)
 
         Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            uiState.lastSessionStats?.let { stats ->
-                LastSessionCard(
-                    stats = stats,
-                    onNavigateToReplay = onNavigateToReplay,
-                )
-            }
-
-            ConnectionCard(
-                connectedCount = uiState.connectedBoardsCount,
-                connectedBoards = uiState.connectedBoardIndices,
+            // Connection Status Indicator
+            ConnectionStatusIndicator(
+                isConnected = uiState.isBoardConnected,
                 onNavigateToDevices = onNavigateToDevices,
+            )
+
+            // Select User Card
+            SelectUserCard(
+                selectedUser = uiState.selectedUser,
+                onNavigateToUsers = onNavigateToUsers,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Start Session Button
+            StartSessionButton(
+                isEnabled = uiState.selectedUser != null,
+                onStartSession = onNavigateToSession,
             )
         }
     }
 }
 
 @Composable
-private fun LastSessionCard(
-    stats: SessionStats,
-    onNavigateToReplay: () -> Unit,
+private fun ConnectionStatusIndicator(
+    isConnected: Boolean,
+    onNavigateToDevices: () -> Unit,
 ) {
+    val statusText = if (isConnected) {
+        stringResource(R.string.board_connected)
+    } else {
+        stringResource(R.string.no_board_connected)
+    }
+    val statusColor = if (isConnected) connectedColor else disconnectedColor
+
     Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = "Last session information" },
+        onClick = onNavigateToDevices,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = statusText },
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = stringResource(R.string.last_session),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Status dot
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(statusColor)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(modifier = Modifier.fillMaxWidth()) {
-                // Stats Column
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.stats),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.duration_seconds, stats.duration),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextGray,
-                    )
-                    Text(
-                        text = stringResource(R.string.board_number, stats.boardNumber),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextGray,
-                    )
-                }
-
-                // User Column
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.user),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.name_value, stats.userName),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextGray,
-                    )
-                    Text(
-                        text = stringResource(R.string.age_value, stats.userAge),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextGray,
-                    )
-                    Text(
-                        text = stringResource(R.string.weight_value, stats.userWeight),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextGray,
-                    )
-                    Text(
-                        text = stringResource(R.string.gender_value, stats.userGender),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextGray,
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Text(
-                text = stringResource(R.string.file),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                text = statusText,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f),
             )
-            Spacer(modifier = Modifier.height(4.dp))
+
             Text(
-                text = stats.filePath,
+                text = stringResource(R.string.go_to_devices),
                 style = MaterialTheme.typography.bodySmall,
-                color = TextGray,
+                color = PrimaryBlue,
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onNavigateToReplay,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = darkButtonColor),
-                shape = buttonShape,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.go_to_replay))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("→")
-            }
         }
     }
 }
 
 @Composable
-private fun ConnectionCard(
-    connectedCount: Int,
-    connectedBoards: List<Int>,
-    onNavigateToDevices: () -> Unit,
+private fun SelectUserCard(
+    selectedUser: User?,
+    onNavigateToUsers: () -> Unit,
 ) {
     Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = "$connectedCount boards connected" },
+        onClick = onNavigateToUsers,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics {
+                contentDescription = selectedUser?.let { "Selected user: ${it.name}" }
+                    ?: "No user selected"
+            },
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource(R.string.connection),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
+            Text(
+                text = stringResource(R.string.select_user),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
 
-                Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = stringResource(R.string.connected_boards_count, connectedCount),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = stringResource(R.string.go_to_devices_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextGray,
-                )
-            }
+            if (selectedUser != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // User avatar
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(selectedUser.avatarBackgroundColor),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = selectedUser.avatarIconColor,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-            BoardVisualization(connectedBoards = connectedBoards)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = selectedUser.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            text = "${selectedUser.age} years, ${selectedUser.weight} kg",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextGray,
+                        )
+                    }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                    TextButton(onClick = onNavigateToUsers) {
+                        Text(
+                            text = stringResource(R.string.change),
+                            color = PrimaryBlue,
+                        )
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Empty avatar placeholder
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE0E0E0)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = Color(0xFF9E9E9E),
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
 
-            Button(
-                onClick = onNavigateToDevices,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                shape = buttonShape,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Phone,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.go_to_devices))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("→")
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Text(
+                        text = stringResource(R.string.no_user_selected),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextGray,
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    TextButton(onClick = onNavigateToUsers) {
+                        Text(
+                            text = stringResource(R.string.select),
+                            color = PrimaryBlue,
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+@Composable
+private fun StartSessionButton(
+    isEnabled: Boolean,
+    onStartSession: () -> Unit,
+) {
+    Button(
+        onClick = onStartSession,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        enabled = isEnabled,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = PrimaryBlue,
+            disabledContainerColor = Color(0xFFBDBDBD),
+        ),
+        shape = buttonShape,
+    ) {
+        Icon(
+            imageVector = Icons.Default.PlayArrow,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = stringResource(R.string.start_session),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+
+    if (!isEnabled) {
+        Text(
+            text = stringResource(R.string.select_user_to_start),
+            style = MaterialTheme.typography.bodySmall,
+            color = TextGray,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+        )
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
-private fun HomeScreenPreview() {
+private fun HomeScreenPreviewNoUser() {
     TheBalanceToolkitTheme {
         HomeScreenContent(
-            uiState =
-                HomeUiState(
-                    lastSessionStats =
-                        SessionStats(
-                            duration = 122,
-                            boardNumber = "7.1.1J",
-                            userName = "Mario",
-                            userAge = 44,
-                            userWeight = 70,
-                            userGender = "Male",
-                            filePath = "C:\\sessions\\test.json",
-                        ),
-                    connectedBoardsCount = 3,
-                    connectedBoardIndices = listOf(0, 1, 2),
+            uiState = HomeUiState(
+                selectedUser = null,
+                isBoardConnected = false,
+                isLoading = false,
+            ),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun HomeScreenPreviewWithUser() {
+    TheBalanceToolkitTheme {
+        HomeScreenContent(
+            uiState = HomeUiState(
+                selectedUser = User(
+                    name = "John Doe",
+                    age = 35,
+                    weight = 75,
                 ),
+                isBoardConnected = true,
+                isLoading = false,
+            ),
         )
     }
 }

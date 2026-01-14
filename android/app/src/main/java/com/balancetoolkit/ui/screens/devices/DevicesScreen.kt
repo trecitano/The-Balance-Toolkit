@@ -9,17 +9,28 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,10 +40,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.balancetoolkit.ui.theme.ErrorRed
+import com.balancetoolkit.ui.theme.PrimaryBlue
 import com.balancetoolkit.R
 import com.balancetoolkit.data.model.Device
 import com.balancetoolkit.ui.components.AppHeader
 import com.balancetoolkit.ui.components.DeviceCard
+import com.balancetoolkit.ui.components.HostMacAddressDialog
 import com.balancetoolkit.ui.theme.BackgroundGray
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 import com.balancetoolkit.util.TrackPerformance
@@ -49,10 +63,40 @@ fun DevicesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    if (uiState.showMacAddressDialog) {
+        HostMacAddressDialog(
+            initialMacAddress = uiState.hostMacAddress ?: "",
+            onDismiss = viewModel::dismissMacAddressDialog,
+            onSave = { macAddress ->
+                viewModel.saveHostMacAddress(macAddress)
+                viewModel.scanForDevices()
+            },
+        )
+    }
+
+    if (uiState.showDeleteConfirmDialog) {
+        DeleteDeviceConfirmDialog(
+            deviceName = uiState.deviceToDelete?.name ?: "",
+            onConfirm = viewModel::confirmDeleteDevice,
+            onDismiss = viewModel::dismissDeleteDialog,
+        )
+    }
+
+    if (uiState.showEditNameDialog) {
+        EditDeviceNameDialog(
+            currentName = uiState.deviceToEdit?.name ?: "",
+            onSave = viewModel::saveDeviceName,
+            onDismiss = viewModel::dismissEditDialog,
+        )
+    }
+
     DevicesScreenContent(
         uiState = uiState,
-        onScan = viewModel::scanForDevices,
+        onScan = viewModel::onScanClick,
+        onEditMacAddress = viewModel::showMacAddressDialog,
         onToggleConnection = viewModel::toggleConnection,
+        onEditDevice = viewModel::requestEditDevice,
+        onDeleteDevice = viewModel::requestDeleteDevice,
         modifier = modifier,
     )
 }
@@ -61,7 +105,10 @@ fun DevicesScreen(
 private fun DevicesScreenContent(
     uiState: DevicesUiState,
     onScan: () -> Unit,
+    onEditMacAddress: () -> Unit,
     onToggleConnection: (String) -> Unit,
+    onEditDevice: (Device) -> Unit,
+    onDeleteDevice: (Device) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TrackPerformance("DevicesScreen")
@@ -95,26 +142,42 @@ private fun DevicesScreenContent(
                     fontWeight = FontWeight.Bold,
                 )
 
-                Button(
-                    onClick = onScan,
-                    enabled = !uiState.isScanning,
-                    colors = ButtonDefaults.buttonColors(containerColor = scanButtonColor),
-                    shape = buttonShape,
-                    modifier =
-                        Modifier.semantics {
-                            contentDescription = if (uiState.isScanning) "Scanning for devices" else "Scan for devices"
-                        },
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (uiState.isScanning) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.padding(end = 8.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp,
+                    IconButton(
+                        onClick = onEditMacAddress,
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.edit_mac_address),
+                            tint = Color.Gray,
                         )
-                    } else {
-                        Text("⋮⋮", modifier = Modifier.padding(end = 4.dp))
                     }
-                    Text(stringResource(R.string.scan))
+
+
+                    Button(
+                        onClick = onScan,
+                        colors = ButtonDefaults.buttonColors(containerColor = scanButtonColor),
+                        shape = buttonShape,
+                        modifier =
+                            Modifier.semantics {
+                                contentDescription = if (uiState.isScanning) "Stop scanning" else "Scan for devices"
+                            },
+                    ) {
+                        if (uiState.isScanning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(end = 8.dp).size(16.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                            )
+                            Text(stringResource(R.string.stop))
+                        } else {
+                            Text("⋮⋮", modifier = Modifier.padding(end = 4.dp))
+                            Text(stringResource(R.string.scan))
+                        }
+                    }
                 }
             }
 
@@ -125,11 +188,88 @@ private fun DevicesScreenContent(
                 DeviceCard(
                     device = device,
                     onToggleConnection = { onToggleConnection(device.id) },
+                    onEdit = { onEditDevice(device) },
+                    onDelete = { onDeleteDevice(device) },
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
     }
+}
+
+@Composable
+private fun EditDeviceNameDialog(
+    currentName: String,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember { mutableStateOf(currentName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.edit_device_name_title),
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.name)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(name) },
+                enabled = name.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun DeleteDeviceConfirmDialog(
+    deviceName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.delete_device_title),
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Text(stringResource(R.string.delete_device_message, deviceName))
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
+            ) {
+                Text(stringResource(R.string.delete))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }
 
 @Preview(showBackground = true)
@@ -145,9 +285,13 @@ private fun DevicesScreenPreview() {
                             Device(name = "Nintendo RVL-WBC-01", macAddress = "12:E9:CD:B9:71:54", isConnected = true),
                             Device(name = "Nintendo RVL-WBC-01", lastSeen = "N/A", isConnected = false),
                         ),
+                    hostMacAddress = "AA:BB:CC:DD:EE:FF",
                 ),
             onScan = {},
+            onEditMacAddress = {},
             onToggleConnection = {},
+            onEditDevice = {},
+            onDeleteDevice = {},
         )
     }
 }
