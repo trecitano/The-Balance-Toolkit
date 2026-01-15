@@ -70,6 +70,7 @@ fun UserCard(
     avatarBackgroundColor: Color,
     avatarIconColor: Color,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     val containerColor =
         remember(isSelected) {
@@ -82,6 +83,8 @@ fun UserCard(
 
     Box(modifier = modifier.semantics { contentDescription = "User card for $name" }) {
         Card(
+            onClick = onClick ?: {},
+            enabled = onClick != null,
             modifier =
                 Modifier
                     .width(150.dp)

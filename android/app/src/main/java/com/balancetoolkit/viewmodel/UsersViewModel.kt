@@ -30,6 +30,7 @@ data class UsersUiState(
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val showAddUserDialog: Boolean = false,
+    val isEditing: Boolean = false,
     val error: String? = null,
 )
 
@@ -41,13 +42,28 @@ data class AddUserFormState(
     val weight: String = "70",
     val dominantHand: DominantHand = DominantHand.RIGHT,
     val color: String = "#3B82F6",
-    val notes: String = "",
 ) {
     val isValid: Boolean
         get() = name.isNotBlank()
 
     val nameError: String?
         get() = if (name.isBlank()) "Name is required" else null
+}
+
+data class EditUserFormState(
+    val name: String = "",
+    val age: String = "25",
+    val gender: Gender = Gender.MALE,
+    val height: String = "170",
+    val weight: String = "70",
+    val dominantHand: DominantHand = DominantHand.RIGHT,
+    val color: Long = 0xFF3B82F6,
+) {
+    val isValid: Boolean
+        get() = name.isNotBlank()
+
+    val colorHex: String
+        get() = "#%06X".format(color.toInt() and 0xFFFFFF)
 }
 
 class UsersViewModel(
@@ -59,6 +75,9 @@ class UsersViewModel(
 
     private val _addUserFormState = MutableStateFlow(AddUserFormState())
     val addUserFormState: StateFlow<AddUserFormState> = _addUserFormState.asStateFlow()
+
+    private val _editUserFormState = MutableStateFlow(EditUserFormState())
+    val editUserFormState: StateFlow<EditUserFormState> = _editUserFormState.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -169,10 +188,6 @@ class UsersViewModel(
         _addUserFormState.update { it.copy(color = color) }
     }
 
-    fun updateFormNotes(notes: String) {
-        _addUserFormState.update { it.copy(notes = notes) }
-    }
-
     fun addUser() {
         val formState = _addUserFormState.value
         if (!formState.isValid) return
@@ -190,7 +205,6 @@ class UsersViewModel(
                             weight = formState.weight.toIntOrNull() ?: 70,
                             dominantHand = formState.dominantHand,
                             color = formState.color,
-                            notes = formState.notes,
                             updatedAt =
                                 java.time.LocalDate
                                     .now()
@@ -244,6 +258,96 @@ class UsersViewModel(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    // Edit mode methods
+    fun startEditing() {
+        val user = _uiState.value.selectedUser ?: return
+        val colorLong = try {
+            android.graphics.Color.parseColor(user.color).toLong() or 0xFF000000
+        } catch (e: IllegalArgumentException) {
+            0xFF3B82F6L
+        }
+        _editUserFormState.value = EditUserFormState(
+            name = user.name,
+            age = user.age.toString(),
+            gender = user.gender,
+            height = user.height.toString(),
+            weight = user.weight.toString(),
+            dominantHand = user.dominantHand,
+            color = colorLong,
+        )
+        _uiState.update { it.copy(isEditing = true) }
+    }
+
+    fun cancelEditing() {
+        _uiState.update { it.copy(isEditing = false) }
+    }
+
+    fun saveUserChanges() {
+        val user = _uiState.value.selectedUser ?: return
+        val formState = _editUserFormState.value
+        if (!formState.isValid) return
+
+        viewModelScope.launch {
+            val result =
+                runCatching {
+                    val (bgColor, iconColor) = getAvatarColors(formState.colorHex)
+                    val updatedUser = user.copy(
+                        name = if (user.isDefaultUser) user.name else formState.name,
+                        age = formState.age.toIntOrNull() ?: user.age,
+                        gender = formState.gender,
+                        height = formState.height.toIntOrNull() ?: user.height,
+                        weight = formState.weight.toIntOrNull() ?: user.weight,
+                        dominantHand = formState.dominantHand,
+                        color = formState.colorHex,
+                        updatedAt = java.time.LocalDate.now().toString(),
+                        avatarBackgroundColor = bgColor,
+                        avatarIconColor = iconColor,
+                    )
+                    userDao.updateUser(updatedUser.toEntity())
+                    Result.Success(updatedUser)
+                }.getOrElse { e ->
+                    Result.Error(e.message ?: "Failed to update user", e)
+                }
+
+            when (result) {
+                is Result.Success -> {
+                    _uiState.update { it.copy(isEditing = false, error = null) }
+                }
+                is Result.Error -> {
+                    _uiState.update { it.copy(error = result.message) }
+                }
+            }
+        }
+    }
+
+    fun updateEditName(name: String) {
+        _editUserFormState.update { it.copy(name = name) }
+    }
+
+    fun updateEditAge(age: String) {
+        _editUserFormState.update { it.copy(age = age) }
+    }
+
+    fun updateEditGender(gender: Gender) {
+        _editUserFormState.update { it.copy(gender = gender) }
+    }
+
+    fun updateEditHeight(height: String) {
+        _editUserFormState.update { it.copy(height = height) }
+    }
+
+    fun updateEditWeight(weight: String) {
+        _editUserFormState.update { it.copy(weight = weight) }
+    }
+
+    fun updateEditDominantHand(hand: DominantHand) {
+        _editUserFormState.update { it.copy(dominantHand = hand) }
+    }
+
+    fun updateEditColor(colorLong: Long) {
+        _editUserFormState.update { it.copy(color = colorLong) }
     }
 
     class Factory(

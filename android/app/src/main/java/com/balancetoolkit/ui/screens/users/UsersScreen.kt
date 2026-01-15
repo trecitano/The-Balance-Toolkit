@@ -53,8 +53,12 @@ import com.balancetoolkit.ui.theme.CardBackground
 import com.balancetoolkit.ui.theme.PrimaryBlue
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 import com.balancetoolkit.util.TrackPerformance
+import com.balancetoolkit.viewmodel.EditUserFormState
 import com.balancetoolkit.viewmodel.UsersUiState
 import com.balancetoolkit.viewmodel.UsersViewModel
+import androidx.compose.ui.graphics.Color
+import com.balancetoolkit.data.model.DominantHand
+import com.balancetoolkit.data.model.Gender
 
 @Composable
 fun UsersScreen(
@@ -63,13 +67,25 @@ fun UsersScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val formState by viewModel.addUserFormState.collectAsState()
+    val editFormState by viewModel.editUserFormState.collectAsState()
 
     UsersScreenContent(
         uiState = uiState,
+        editFormState = editFormState,
         onSearchQueryChange = viewModel::onSearchQueryChange,
         onAddUserClick = viewModel::showAddUserDialog,
         onUserSelected = viewModel::onUserSelected,
         onDeleteUser = { uiState.selectedUser?.let { viewModel.deleteUser(it.id) } },
+        onEditClick = viewModel::startEditing,
+        onSaveClick = viewModel::saveUserChanges,
+        onCancelClick = viewModel::cancelEditing,
+        onEditNameChange = viewModel::updateEditName,
+        onEditAgeChange = viewModel::updateEditAge,
+        onEditGenderChange = viewModel::updateEditGender,
+        onEditHeightChange = viewModel::updateEditHeight,
+        onEditWeightChange = viewModel::updateEditWeight,
+        onEditDominantHandChange = viewModel::updateEditDominantHand,
+        onEditColorChange = viewModel::updateEditColor,
         modifier = modifier,
     )
 
@@ -83,7 +99,6 @@ fun UsersScreen(
             onWeightChange = viewModel::updateFormWeight,
             onDominantHandChange = viewModel::updateFormDominantHand,
             onColorChange = viewModel::updateFormColor,
-            onNotesChange = viewModel::updateFormNotes,
             onDismiss = viewModel::hideAddUserDialog,
             onAddUser = viewModel::addUser,
         )
@@ -93,10 +108,21 @@ fun UsersScreen(
 @Composable
 private fun UsersScreenContent(
     uiState: UsersUiState,
+    editFormState: EditUserFormState,
     onSearchQueryChange: (String) -> Unit,
     onAddUserClick: () -> Unit,
     onUserSelected: (Int) -> Unit,
     onDeleteUser: () -> Unit,
+    onEditClick: () -> Unit,
+    onSaveClick: () -> Unit,
+    onCancelClick: () -> Unit,
+    onEditNameChange: (String) -> Unit,
+    onEditAgeChange: (String) -> Unit,
+    onEditGenderChange: (Gender) -> Unit,
+    onEditHeightChange: (String) -> Unit,
+    onEditWeightChange: (String) -> Unit,
+    onEditDominantHandChange: (DominantHand) -> Unit,
+    onEditColorChange: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TrackPerformance("UsersScreen")
@@ -191,9 +217,27 @@ private fun UsersScreenContent(
             uiState.selectedUser?.let { user ->
                 UserDetailsCard(
                     user = user,
-                    onEdit = { /* Edit user */ },
+                    isEditing = uiState.isEditing,
+                    onEditClick = onEditClick,
+                    onSaveClick = onSaveClick,
+                    onCancelClick = onCancelClick,
                     onDelete = onDeleteUser,
+                    onNameChange = onEditNameChange,
+                    onAgeChange = onEditAgeChange,
+                    onGenderChange = onEditGenderChange,
+                    onHeightChange = onEditHeightChange,
+                    onWeightChange = onEditWeightChange,
+                    onDominantHandChange = onEditDominantHandChange,
+                    onColorChange = { color -> onEditColorChange(color.value.toLong()) },
+                    editName = editFormState.name,
+                    editAge = editFormState.age,
+                    editGender = editFormState.gender,
+                    editHeight = editFormState.height,
+                    editWeight = editFormState.weight,
+                    editDominantHand = editFormState.dominantHand,
+                    editColor = Color(editFormState.color),
                     canDelete = !user.isDefaultUser,
+                    canEditName = !user.isDefaultUser,
                 )
             }
 
@@ -214,30 +258,36 @@ private fun UserCarousel(
             pageCount = { users.size },
         )
 
-    // Sync pager state changes back to ViewModel
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.settledPage }
-            .collect { page ->
-                if (page != selectedIndex) {
-                    onUserSelected(page)
-                }
-            }
+    // Animate to selected user when selectedIndex changes (from click)
+    LaunchedEffect(selectedIndex) {
+        if (pagerState.currentPage != selectedIndex) {
+            pagerState.animateScrollToPage(selectedIndex)
+        }
     }
+
+    // Calculate contentPadding to show 3 users at once:
+    // - First user: center with one on the right
+    // - Last user: center with one on the left
+    // - Others: center with one on each side
+    val pageWidth = 150.dp
+    val pageSpacing = 8.dp
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         HorizontalPager(
             state = pagerState,
-            pageSpacing = 1.dp,
-            pageSize = PageSize.Fixed(150.dp),
+            pageSpacing = pageSpacing,
+            pageSize = PageSize.Fixed(pageWidth),
+            contentPadding = PaddingValues(horizontal = pageWidth / 2 + pageSpacing / 2),
             key = { users[it].id },
         ) { page ->
             val user = users[page]
             UserCard(
                 name = user.name,
-                isSelected = page == pagerState.settledPage,
+                isSelected = page == selectedIndex,
                 updateDate = user.updatedAt,
                 avatarBackgroundColor = user.avatarBackgroundColor,
                 avatarIconColor = user.avatarIconColor,
+                onClick = { onUserSelected(page) },
             )
         }
 
@@ -246,7 +296,7 @@ private fun UserCarousel(
         // Carousel Indicators
         CarouselIndicators(
             pageCount = users.size,
-            currentPage = pagerState.currentPage,
+            currentPage = selectedIndex,
         )
     }
 }
@@ -287,20 +337,14 @@ private fun UsersScreenPreview() {
             User(
                 id = "1",
                 name = "John Doe",
-                //isDefaultUser = true,
-                //updatedAt = System.currentTimeMillis(),
             ),
             User(
                 id = "2",
                 name = "Jane Smith",
-                //isDefaultUser = false,
-                //updatedAt = System.currentTimeMillis(),
             ),
             User(
                 id = "3",
                 name = "Bob Wilson",
-                //isDefaultUser = false,
-                //updatedAt = System.currentTimeMillis(),
             ),
         )
 
@@ -310,10 +354,21 @@ private fun UsersScreenPreview() {
                 selectedUser = mockUsers.first(),
                 selectedUserIndex = 0,
             ),
+            editFormState = EditUserFormState(),
             onSearchQueryChange = {},
             onAddUserClick = {},
             onUserSelected = {},
             onDeleteUser = {},
+            onEditClick = {},
+            onSaveClick = {},
+            onCancelClick = {},
+            onEditNameChange = {},
+            onEditAgeChange = {},
+            onEditGenderChange = {},
+            onEditHeightChange = {},
+            onEditWeightChange = {},
+            onEditDominantHandChange = {},
+            onEditColorChange = {},
         )
     }
 }

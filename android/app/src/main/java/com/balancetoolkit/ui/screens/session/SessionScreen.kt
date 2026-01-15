@@ -44,6 +44,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
@@ -62,7 +64,9 @@ import com.balancetoolkit.ui.theme.SecondaryPurple
 import com.balancetoolkit.ui.theme.TextGray
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 import com.balancetoolkit.util.TrackPerformance
+import com.balancetoolkit.viewmodel.AmplitudeSpectrum
 import com.balancetoolkit.viewmodel.CopPosition
+import com.balancetoolkit.viewmodel.DpsiMetrics
 import com.balancetoolkit.viewmodel.SessionUiState
 import com.balancetoolkit.viewmodel.SessionViewModel
 
@@ -84,6 +88,9 @@ fun SessionScreen(
         onApSiChange = viewModel::setApSi,
         onVsiChange = viewModel::setVsi,
         onDpsiChange = viewModel::setDpsi,
+        onFftXChange = viewModel::setFftX,
+        onFftYChange = viewModel::setFftY,
+        onFftCombinedChange = viewModel::setFftCombined,
         onToggleSession = viewModel::togglePlay,
         onTare = viewModel::applyTare,
         canStartSession = uiState.canStartSession,
@@ -101,6 +108,9 @@ private fun SessionScreenContent(
     onApSiChange: (Boolean) -> Unit,
     onVsiChange: (Boolean) -> Unit,
     onDpsiChange: (Boolean) -> Unit,
+    onFftXChange: (Boolean) -> Unit,
+    onFftYChange: (Boolean) -> Unit,
+    onFftCombinedChange: (Boolean) -> Unit,
     onToggleSession: () -> Unit,
     onTare: () -> Unit,
     canStartSession: Boolean,
@@ -144,6 +154,7 @@ private fun SessionScreenContent(
             COPVisualizationCard(
                 currentCop = uiState.currentCop,
                 copTrail = uiState.copTrail,
+                confidenceEllipsePoints = uiState.confidenceEllipsePoints,
                 showConfidenceEllipse = uiState.showConfidenceEllipse,
                 onConfidenceEllipseChange = onConfidenceEllipseChange,
                 showConvexHull = uiState.showConvexHull,
@@ -152,7 +163,7 @@ private fun SessionScreenContent(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Stability and Left cards row
+            // Stability and Front cards row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -164,25 +175,54 @@ private fun SessionScreenContent(
                     canStartSession = canStartSession,
                     modifier = Modifier.weight(1f),
                 )
-                DirectionCard(
-                    title = stringResource(R.string.left_direction, uiState.leftValue),
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // CopX and CopY plots row (below Stability)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                CopPlotCard(
+                    title = "copX",
+                    copTrail = uiState.copTrail,
+                    valueSelector = { it.x },
+                    lineColor = ChartBlue,
+                    minLabel = "Left (-1)",
+                    maxLabel = "Right (1)",
+                    modifier = Modifier.weight(1f),
+                )
+                CopPlotCard(
+                    title = "copY",
+                    copTrail = uiState.copTrail,
+                    valueSelector = { it.y },
+                    lineColor = ChartRed,
+                    minLabel = "Back (-1)",
+                    maxLabel = "Front (1)",
                     modifier = Modifier.weight(1f),
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Right and Front cards row
+            // vCopX and vCopY plots row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                DirectionCard(
-                    title = stringResource(R.string.right_direction, uiState.rightValue),
+                VelocityPlotCard(
+                    title = "vCopX",
+                    velocityTrail = uiState.vCopXTrail,
+                    currentValue = uiState.vCopX,
+                    lineColor = ChartBlue,
                     modifier = Modifier.weight(1f),
                 )
-                DirectionCard(
-                    title = stringResource(R.string.front_direction, uiState.frontValue),
+                VelocityPlotCard(
+                    title = "vCopY",
+                    velocityTrail = uiState.vCopYTrail,
+                    currentValue = uiState.vCopY,
+                    lineColor = ChartRed,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -190,38 +230,33 @@ private fun SessionScreenContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             FFTChartCard(
-                mlSi = uiState.showMlSi,
-                onMlSiChange = onMlSiChange,
-                apSi = uiState.showApSi,
-                onApSiChange = onApSiChange,
-                vsi = uiState.showVsi,
-                onVsiChange = onVsiChange,
-                dpsi = uiState.showDpsi,
-                onDpsiChange = onDpsiChange,
+                amplitudeSpectrum = uiState.amplitudeSpectrum,
+                showX = uiState.showFftX,
+                showY = uiState.showFftY,
+                showCombined = uiState.showFftCombined,
+                onShowXChange = onFftXChange,
+                onShowYChange = onFftYChange,
+                onShowCombinedChange = onFftCombinedChange,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // DPSI Metrics and vCopM row
-            Row(
+            // DPSI Metrics card with plot and toggles
+            DpsiMetricsCard(
+                dpsiMetrics = uiState.dpsiMetrics,
+                mlsiTrail = uiState.mlsiTrail,
+                apsiTrail = uiState.apsiTrail,
+                vsiTrail = uiState.vsiTrail,
+                dpsiTrail = uiState.dpsiTrail,
+                showMlsi = uiState.showMlSi,
+                showApsi = uiState.showApSi,
+                showVsi = uiState.showVsi,
+                showDpsi = uiState.showDpsi,
+                onMlsiChange = onMlSiChange,
+                onApsiChange = onApSiChange,
+                onVsiChange = onVsiChange,
+                onDpsiChange = onDpsiChange,
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                MetricsCard(
-                    title = stringResource(R.string.dpsi_metrics),
-                    modifier = Modifier.weight(1f),
-                )
-                MetricsCard(
-                    title = stringResource(R.string.vcop_m),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            MetricsCard(
-                title = stringResource(R.string.vcop_y),
-                modifier = Modifier.fillMaxWidth(0.5f),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -320,10 +355,32 @@ private fun SessionControlCard(
     }
 }
 
+// CoP coordinate range (normalized)
+private const val COP_MIN = -1f
+private const val COP_MAX = 1f
+
+/**
+ * Maps a normalized CoP value [-1, 1] to screen X coordinate.
+ */
+private fun mapCopToScreenX(copX: Float, width: Float): Float {
+    val ratio = (copX - COP_MIN) / (COP_MAX - COP_MIN)
+    return ratio.coerceIn(0f, 1f) * width
+}
+
+/**
+ * Maps a normalized CoP value [-1, 1] to screen Y coordinate.
+ * Inverts Y so positive is visually up.
+ */
+private fun mapCopToScreenY(copY: Float, height: Float): Float {
+    val ratio = (copY - COP_MIN) / (COP_MAX - COP_MIN)
+    return (1f - ratio.coerceIn(0f, 1f)) * height
+}
+
 @Composable
 private fun COPVisualizationCard(
     currentCop: CopPosition,
     copTrail: List<CopPosition>,
+    confidenceEllipsePoints: List<Pair<Float, Float>>,
     showConfidenceEllipse: Boolean,
     onConfidenceEllipseChange: (Boolean) -> Unit,
     showConvexHull: Boolean,
@@ -334,6 +391,8 @@ private fun COPVisualizationCard(
     val trailColor = SecondaryPurple.copy(alpha = 0.5f)
     val hullColor = ChartBlue.copy(alpha = 0.3f)
     val hullStrokeColor = ChartBlue
+    val ellipseColor = ChartOrange.copy(alpha = 0.3f)
+    val ellipseStrokeColor = ChartOrange
 
     Card(
         modifier =
@@ -355,27 +414,22 @@ private fun COPVisualizationCard(
                 Canvas(
                     modifier = Modifier.fillMaxSize().padding(4.dp)
                 ) {
-                    val centerX = size.width / 2
-                    val centerY = size.height / 2
-
-                    // Scale factors to convert mm to pixels
-                    // Board is approximately 433mm x 228mm between sensors
-                    // We want to fit this in our canvas with some margin
-                    val scaleX = size.width * 0.8f / 433f
-                    val scaleY = size.height * 0.8f / 228f
-                    val scale = minOf(scaleX, scaleY)
+                    val w = size.width
+                    val h = size.height
+                    val centerX = w / 2
+                    val centerY = h / 2
 
                     // Draw crosshair lines
                     drawLine(
                         color = crosshairColor,
                         start = Offset(centerX, 0f),
-                        end = Offset(centerX, size.height),
+                        end = Offset(centerX, h),
                         strokeWidth = 1.dp.toPx()
                     )
                     drawLine(
                         color = crosshairColor,
                         start = Offset(0f, centerY),
-                        end = Offset(size.width, centerY),
+                        end = Offset(w, centerY),
                         strokeWidth = 1.dp.toPx()
                     )
 
@@ -386,13 +440,13 @@ private fun COPVisualizationCard(
                             val hullPath = Path().apply {
                                 val firstPoint = hull.first()
                                 moveTo(
-                                    centerX + firstPoint.x * scale,
-                                    centerY - firstPoint.y * scale // Invert Y for screen coords
+                                    mapCopToScreenX(firstPoint.x, w),
+                                    mapCopToScreenY(firstPoint.y, h)
                                 )
                                 hull.drop(1).forEach { point ->
                                     lineTo(
-                                        centerX + point.x * scale,
-                                        centerY - point.y * scale
+                                        mapCopToScreenX(point.x, w),
+                                        mapCopToScreenY(point.y, h)
                                     )
                                 }
                                 close()
@@ -402,18 +456,38 @@ private fun COPVisualizationCard(
                         }
                     }
 
+                    // Draw confidence ellipse if enabled
+                    if (showConfidenceEllipse && confidenceEllipsePoints.size >= 3) {
+                        val ellipsePath = Path().apply {
+                            val firstPoint = confidenceEllipsePoints.first()
+                            moveTo(
+                                mapCopToScreenX(firstPoint.first, w),
+                                mapCopToScreenY(firstPoint.second, h)
+                            )
+                            confidenceEllipsePoints.drop(1).forEach { point ->
+                                lineTo(
+                                    mapCopToScreenX(point.first, w),
+                                    mapCopToScreenY(point.second, h)
+                                )
+                            }
+                            close()
+                        }
+                        drawPath(ellipsePath, color = ellipseColor)
+                        drawPath(ellipsePath, color = ellipseStrokeColor, style = Stroke(width = 2.dp.toPx()))
+                    }
+
                     // Draw CoP trail
                     if (copTrail.size >= 2) {
                         val trailPath = Path().apply {
                             val firstPoint = copTrail.first()
                             moveTo(
-                                centerX + firstPoint.x * scale,
-                                centerY - firstPoint.y * scale
+                                mapCopToScreenX(firstPoint.x, w),
+                                mapCopToScreenY(firstPoint.y, h)
                             )
                             copTrail.drop(1).forEach { point ->
                                 lineTo(
-                                    centerX + point.x * scale,
-                                    centerY - point.y * scale
+                                    mapCopToScreenX(point.x, w),
+                                    mapCopToScreenY(point.y, h)
                                 )
                             }
                         }
@@ -421,8 +495,8 @@ private fun COPVisualizationCard(
                     }
 
                     // Draw current CoP position
-                    val copScreenX = centerX + currentCop.x * scale
-                    val copScreenY = centerY - currentCop.y * scale // Invert Y for screen coords
+                    val copScreenX = mapCopToScreenX(currentCop.x, w)
+                    val copScreenY = mapCopToScreenY(currentCop.y, h)
                     drawCircle(
                         color = copDotColor,
                         radius = 6.dp.toPx(),
@@ -433,9 +507,9 @@ private fun COPVisualizationCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // CoP coordinates display
+            // CoP coordinates display (normalized values)
             Text(
-                text = "CoP: X=%.1f mm, Y=%.1f mm".format(currentCop.x, currentCop.y),
+                text = "CoP: X=%.2f, Y=%.2f".format(currentCop.x, currentCop.y),
                 style = MaterialTheme.typography.bodySmall,
                 color = TextGray,
             )
@@ -445,14 +519,38 @@ private fun COPVisualizationCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = showConvexHull,
                         onCheckedChange = onConvexHullChange,
-                        colors = CheckboxDefaults.colors(checkedColor = SecondaryPurple),
+                        colors = CheckboxDefaults.colors(checkedColor = ChartBlue),
                     )
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(ChartBlue, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(stringResource(R.string.convex_hull), style = MaterialTheme.typography.bodySmall)
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = showConfidenceEllipse,
+                        onCheckedChange = onConfidenceEllipseChange,
+                        colors = CheckboxDefaults.colors(checkedColor = ChartOrange),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(ChartOrange, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("95% Ellipse", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -621,137 +719,715 @@ private fun DirectionCard(
 
 @Composable
 private fun FFTChartCard(
-    mlSi: Boolean,
-    onMlSiChange: (Boolean) -> Unit,
-    apSi: Boolean,
-    onApSiChange: (Boolean) -> Unit,
-    vsi: Boolean,
-    onVsiChange: (Boolean) -> Unit,
-    dpsi: Boolean,
-    onDpsiChange: (Boolean) -> Unit,
+    amplitudeSpectrum: AmplitudeSpectrum,
+    showX: Boolean,
+    showY: Boolean,
+    showCombined: Boolean,
+    onShowXChange: (Boolean) -> Unit,
+    onShowYChange: (Boolean) -> Unit,
+    onShowCombinedChange: (Boolean) -> Unit,
 ) {
+    // Calculate dynamic Y-axis range based on visible data
+    val visibleAmplitudes = mutableListOf<List<Float>>()
+    if (showX) visibleAmplitudes.add(amplitudeSpectrum.amplitudeX)
+    if (showY) visibleAmplitudes.add(amplitudeSpectrum.amplitudeY)
+    if (showCombined) visibleAmplitudes.add(amplitudeSpectrum.amplitudeXY)
+
+    val maxAmplitude = if (visibleAmplitudes.isNotEmpty() && visibleAmplitudes.any { it.isNotEmpty() }) {
+        visibleAmplitudes.flatten().maxOrNull()?.let { maxOf(it, 0.1f) } ?: 1f
+    } else {
+        1f
+    }
+
+    // Round up to nice number for display
+    val yMax = when {
+        maxAmplitude <= 0.5f -> 0.5f
+        maxAmplitude <= 1f -> 1f
+        maxAmplitude <= 2f -> 2f
+        else -> ((maxAmplitude.toInt()) + 1).toFloat()
+    }
+
+    // Max frequency for X-axis (2 Hz)
+    val xMax = 2f
+
     Card(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = "FFT Amplitude Spectrum chart" },
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "FFT Amplitude Spectrum chart" },
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = stringResource(R.string.fft_amplitude_spectrum),
+                text = "FFT Amplitude Spectrum (Normalized)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .border(1.dp, BorderGray, RoundedCornerShape(4.dp))
-                        .padding(8.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.amplitude),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextGray,
-                    modifier =
-                        Modifier
-                            .align(Alignment.CenterStart)
-                            .padding(start = 4.dp),
-                )
-
+            // Chart with Y-axis labels
+            Row(modifier = Modifier.fillMaxWidth()) {
+                // Y-axis labels column
                 Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(start = 40.dp, end = 8.dp, top = 8.dp, bottom = 20.dp),
-                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.width(25.dp).height(120.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(2.dp)
-                                .background(ChartOrange),
+                    Text(
+                        text = "%.1f".format(yMax),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextGray,
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(2.dp)
-                                .background(ChartGreen),
+                    Text(
+                        text = "%.1f".format(yMax / 2),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextGray,
+                    )
+                    Text(
+                        text = "0",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextGray,
                     )
                 }
 
-                Text(
-                    text = stringResource(R.string.frequency_hz),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = TextGray,
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 2.dp),
-                )
+                // Chart area
+                Column(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
+                            val w = size.width
+                            val h = size.height
+
+                            // Draw horizontal grid lines
+                            drawLine(
+                                color = BorderGray.copy(alpha = 0.3f),
+                                start = Offset(0f, h / 2),
+                                end = Offset(w, h / 2),
+                                strokeWidth = 0.5.dp.toPx()
+                            )
+
+                            // Draw each enabled spectrum
+                            if (showX && amplitudeSpectrum.freqsHz.isNotEmpty()) {
+                                drawFftLine(amplitudeSpectrum.freqsHz, amplitudeSpectrum.amplitudeX, ChartYellow, yMax, xMax, w, h)
+                            }
+                            if (showY && amplitudeSpectrum.freqsHz.isNotEmpty()) {
+                                drawFftLine(amplitudeSpectrum.freqsHz, amplitudeSpectrum.amplitudeY, ChartRed, yMax, xMax, w, h)
+                            }
+                            if (showCombined && amplitudeSpectrum.freqsHz.isNotEmpty()) {
+                                drawFftLine(amplitudeSpectrum.freqsHz, amplitudeSpectrum.amplitudeXY, ChartBlue, yMax, xMax, w, h)
+                            }
+
+                            // Draw dots at the last point for each enabled spectrum
+                            if (showX && amplitudeSpectrum.amplitudeX.isNotEmpty()) {
+                                val lastIdx = amplitudeSpectrum.amplitudeX.lastIndex
+                                val x = (amplitudeSpectrum.freqsHz[lastIdx] / xMax).coerceIn(0f, 1f) * w
+                                val y = h - (amplitudeSpectrum.amplitudeX[lastIdx] / yMax).coerceIn(0f, 1f) * h
+                                drawCircle(ChartYellow, 4.dp.toPx(), Offset(x, y))
+                            }
+                            if (showY && amplitudeSpectrum.amplitudeY.isNotEmpty()) {
+                                val lastIdx = amplitudeSpectrum.amplitudeY.lastIndex
+                                val x = (amplitudeSpectrum.freqsHz[lastIdx] / xMax).coerceIn(0f, 1f) * w
+                                val y = h - (amplitudeSpectrum.amplitudeY[lastIdx] / yMax).coerceIn(0f, 1f) * h
+                                drawCircle(ChartRed, 4.dp.toPx(), Offset(x, y))
+                            }
+                            if (showCombined && amplitudeSpectrum.amplitudeXY.isNotEmpty()) {
+                                val lastIdx = amplitudeSpectrum.amplitudeXY.lastIndex
+                                val x = (amplitudeSpectrum.freqsHz[lastIdx] / xMax).coerceIn(0f, 1f) * w
+                                val y = h - (amplitudeSpectrum.amplitudeXY[lastIdx] / yMax).coerceIn(0f, 1f) * h
+                                drawCircle(ChartBlue, 4.dp.toPx(), Offset(x, y))
+                            }
+                        }
+                    }
+
+                    // X-axis labels
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text("0", style = MaterialTheme.typography.labelSmall, color = TextGray)
+                        Text("0.5", style = MaterialTheme.typography.labelSmall, color = TextGray)
+                        Text("1", style = MaterialTheme.typography.labelSmall, color = TextGray)
+                        Text("1.5", style = MaterialTheme.typography.labelSmall, color = TextGray)
+                        Text("2", style = MaterialTheme.typography.labelSmall, color = TextGray)
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Legend row 1
+            // Toggle checkboxes row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(modifier = Modifier.size(12.dp).background(ChartYellow))
-                Text(" X  ", style = MaterialTheme.typography.labelSmall)
-
-                Box(modifier = Modifier.size(12.dp).background(ChartRed))
-                Text(" Y  ", style = MaterialTheme.typography.labelSmall)
-
-                Box(modifier = Modifier.size(12.dp).background(ChartGreen))
-                Text(" Combined  ", style = MaterialTheme.typography.labelSmall)
-
-                Checkbox(
-                    checked = mlSi,
-                    onCheckedChange = onMlSiChange,
-                    modifier = Modifier.size(20.dp),
-                    colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue),
+                FftToggleItem(
+                    label = "X",
+                    checked = showX,
+                    onCheckedChange = onShowXChange,
+                    color = ChartYellow,
                 )
-                Text("ML SI ", style = MaterialTheme.typography.labelSmall)
-
-                Checkbox(
-                    checked = apSi,
-                    onCheckedChange = onApSiChange,
-                    modifier = Modifier.size(20.dp),
-                    colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue),
+                FftToggleItem(
+                    label = "Y",
+                    checked = showY,
+                    onCheckedChange = onShowYChange,
+                    color = ChartRed,
                 )
-                Text("AP SI ", style = MaterialTheme.typography.labelSmall)
-
-                Checkbox(
-                    checked = vsi,
-                    onCheckedChange = onVsiChange,
-                    modifier = Modifier.size(20.dp),
-                    colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue),
+                FftToggleItem(
+                    label = "Combined",
+                    checked = showCombined,
+                    onCheckedChange = onShowCombinedChange,
+                    color = ChartBlue,
                 )
-                Text("VSI", style = MaterialTheme.typography.labelSmall)
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = dpsi,
-                    onCheckedChange = onDpsiChange,
-                    modifier = Modifier.size(20.dp),
-                    colors = CheckboxDefaults.colors(checkedColor = PrimaryBlue),
-                )
-                Text("DPSI", style = MaterialTheme.typography.labelSmall)
             }
         }
+    }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFftLine(
+    freqs: List<Float>,
+    amplitudes: List<Float>,
+    color: Color,
+    yMax: Float,
+    xMax: Float,
+    w: Float,
+    h: Float,
+) {
+    if (freqs.size < 2 || amplitudes.size < 2) return
+
+    val path = Path().apply {
+        val firstX = (freqs[0] / xMax).coerceIn(0f, 1f) * w
+        val firstY = h - (amplitudes[0] / yMax).coerceIn(0f, 1f) * h
+        moveTo(firstX, firstY)
+
+        for (i in 1 until minOf(freqs.size, amplitudes.size)) {
+            val x = (freqs[i] / xMax).coerceIn(0f, 1f) * w
+            val y = h - (amplitudes[i] / yMax).coerceIn(0f, 1f) * h
+            lineTo(x, y)
+        }
+    }
+    drawPath(
+        path = path,
+        color = color,
+        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+    )
+}
+
+@Composable
+private fun FftToggleItem(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    color: Color,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.clickable { onCheckedChange(!checked) },
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.size(20.dp),
+            colors = CheckboxDefaults.colors(checkedColor = color),
+        )
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(color, CircleShape)
+        )
+        Spacer(modifier = Modifier.width(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+@Composable
+private fun CopPlotCard(
+    title: String,
+    copTrail: List<CopPosition>,
+    valueSelector: (CopPosition) -> Float,
+    lineColor: Color,
+    minLabel: String,
+    maxLabel: String,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Labels row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = maxLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextGray,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
+                    val w = size.width
+                    val h = size.height
+                    val centerY = h / 2
+
+                    // Draw center line (zero line)
+                    drawLine(
+                        color = BorderGray,
+                        start = Offset(0f, centerY),
+                        end = Offset(w, centerY),
+                        strokeWidth = 1.dp.toPx()
+                    )
+
+                    // Draw the time-series line
+                    if (copTrail.size >= 2) {
+                        val values = copTrail.map { valueSelector(it) }
+                        val path = Path().apply {
+                            val firstValue = values.first()
+                            // Map value from [-1, 1] to [h, 0] (inverted so +1 is at top)
+                            val firstY = ((1f - firstValue) / 2f) * h
+                            moveTo(0f, firstY)
+
+                            values.forEachIndexed { index, value ->
+                                val x = (index.toFloat() / (values.size - 1)) * w
+                                val y = ((1f - value) / 2f) * h
+                                lineTo(x, y)
+                            }
+                        }
+                        drawPath(
+                            path = path,
+                            color = lineColor,
+                            style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                        )
+
+                        // Draw current position dot
+                        if (copTrail.isNotEmpty()) {
+                            val lastValue = values.last()
+                            val lastX = w
+                            val lastY = ((1f - lastValue) / 2f) * h
+                            drawCircle(
+                                color = lineColor,
+                                radius = 5.dp.toPx(),
+                                center = Offset(lastX, lastY)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = minLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextGray,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VelocityPlotCard(
+    title: String,
+    velocityTrail: List<Float>,
+    currentValue: Float,
+    lineColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    // Calculate dynamic Y-axis range based on data
+    val maxValue = if (velocityTrail.isNotEmpty()) {
+        maxOf(velocityTrail.maxOrNull() ?: 0f, 0.1f)
+    } else {
+        0.5f // Default max
+    }
+    // Round up to nice number for display
+    val yMax = when {
+        maxValue <= 0.1f -> 0.1f
+        maxValue <= 0.2f -> 0.2f
+        maxValue <= 0.3f -> 0.3f
+        maxValue <= 0.5f -> 0.5f
+        maxValue <= 1f -> 1f
+        else -> ((maxValue * 10).toInt() + 1) / 10f
+    }
+
+    Card(
+        modifier = modifier,
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Y-axis labels on the left
+            Row(modifier = Modifier.fillMaxWidth()) {
+                // Y-axis labels column
+                Column(
+                    modifier = Modifier.width(30.dp).height(80.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "%.1f".format(yMax),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextGray,
+                    )
+                    Text(
+                        text = "%.1f".format(yMax / 2),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextGray,
+                    )
+                    Text(
+                        text = "0",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextGray,
+                    )
+                }
+
+                // Chart area
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(80.dp)
+                        .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
+                        val w = size.width
+                        val h = size.height
+
+                        // Draw horizontal grid lines
+                        drawLine(
+                            color = BorderGray.copy(alpha = 0.5f),
+                            start = Offset(0f, h / 2),
+                            end = Offset(w, h / 2),
+                            strokeWidth = 0.5.dp.toPx()
+                        )
+
+                        // Draw the time-series line
+                        if (velocityTrail.size >= 2) {
+                            val path = Path().apply {
+                                val firstValue = velocityTrail.first()
+                                // Map value from [0, yMax] to [h, 0] (inverted so max is at top)
+                                val firstY = h - (firstValue / yMax).coerceIn(0f, 1f) * h
+                                moveTo(0f, firstY)
+
+                                velocityTrail.forEachIndexed { index, value ->
+                                    val x = (index.toFloat() / (velocityTrail.size - 1)) * w
+                                    val y = h - (value / yMax).coerceIn(0f, 1f) * h
+                                    lineTo(x, y)
+                                }
+                            }
+                            drawPath(
+                                path = path,
+                                color = lineColor,
+                                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                            )
+
+                            // Draw current position dot
+                            if (velocityTrail.isNotEmpty()) {
+                                val lastValue = velocityTrail.last()
+                                val lastX = w
+                                val lastY = h - (lastValue / yMax).coerceIn(0f, 1f) * h
+                                drawCircle(
+                                    color = lineColor,
+                                    radius = 5.dp.toPx(),
+                                    center = Offset(lastX, lastY)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DpsiMetricsCard(
+    dpsiMetrics: DpsiMetrics,
+    mlsiTrail: List<Float>,
+    apsiTrail: List<Float>,
+    vsiTrail: List<Float>,
+    dpsiTrail: List<Float>,
+    showMlsi: Boolean,
+    showApsi: Boolean,
+    showVsi: Boolean,
+    showDpsi: Boolean,
+    onMlsiChange: (Boolean) -> Unit,
+    onApsiChange: (Boolean) -> Unit,
+    onVsiChange: (Boolean) -> Unit,
+    onDpsiChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Calculate dynamic Y-axis range based on visible data
+    val visibleTrails = mutableListOf<List<Float>>()
+    if (showMlsi) visibleTrails.add(mlsiTrail)
+    if (showApsi) visibleTrails.add(apsiTrail)
+    if (showVsi) visibleTrails.add(vsiTrail)
+    if (showDpsi) visibleTrails.add(dpsiTrail)
+
+    val maxValue = if (visibleTrails.isNotEmpty()) {
+        visibleTrails.flatten().maxOrNull()?.let { maxOf(it, 0.1f) } ?: 1f
+    } else {
+        1f
+    }
+
+    // Round up to nice number for display
+    val yMax = when {
+        maxValue <= 0.5f -> 0.5f
+        maxValue <= 1f -> 1f
+        maxValue <= 2f -> 2f
+        maxValue <= 5f -> 5f
+        else -> ((maxValue.toInt() / 5) + 1) * 5f
+    }
+
+    Card(
+        modifier = modifier,
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "DPSI Metrics",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Time-series plot
+            Row(modifier = Modifier.fillMaxWidth()) {
+                // Y-axis labels column
+                Column(
+                    modifier = Modifier.width(30.dp).height(120.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "%.1f".format(yMax),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextGray,
+                    )
+                    Text(
+                        text = "%.1f".format(yMax / 2),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextGray,
+                    )
+                    Text(
+                        text = "0",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextGray,
+                    )
+                }
+
+                // Chart area
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(120.dp)
+                        .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
+                        val w = size.width
+                        val h = size.height
+
+                        // Draw horizontal grid lines
+                        drawLine(
+                            color = BorderGray.copy(alpha = 0.3f),
+                            start = Offset(0f, h / 2),
+                            end = Offset(w, h / 2),
+                            strokeWidth = 0.5.dp.toPx()
+                        )
+
+                        // Draw each enabled metric trail
+                        if (showMlsi && mlsiTrail.size >= 2) {
+                            drawMetricLine(mlsiTrail, ChartBlue, yMax, w, h)
+                        }
+                        if (showApsi && apsiTrail.size >= 2) {
+                            drawMetricLine(apsiTrail, ChartRed, yMax, w, h)
+                        }
+                        if (showVsi && vsiTrail.size >= 2) {
+                            drawMetricLine(vsiTrail, ChartGreen, yMax, w, h)
+                        }
+                        if (showDpsi && dpsiTrail.size >= 2) {
+                            drawMetricLine(dpsiTrail, ChartOrange, yMax, w, h)
+                        }
+
+                        // Draw current position dots
+                        if (showMlsi && mlsiTrail.isNotEmpty()) {
+                            val y = h - (mlsiTrail.last() / yMax).coerceIn(0f, 1f) * h
+                            drawCircle(ChartBlue, 5.dp.toPx(), Offset(w, y))
+                        }
+                        if (showApsi && apsiTrail.isNotEmpty()) {
+                            val y = h - (apsiTrail.last() / yMax).coerceIn(0f, 1f) * h
+                            drawCircle(ChartRed, 5.dp.toPx(), Offset(w, y))
+                        }
+                        if (showVsi && vsiTrail.isNotEmpty()) {
+                            val y = h - (vsiTrail.last() / yMax).coerceIn(0f, 1f) * h
+                            drawCircle(ChartGreen, 5.dp.toPx(), Offset(w, y))
+                        }
+                        if (showDpsi && dpsiTrail.isNotEmpty()) {
+                            val y = h - (dpsiTrail.last() / yMax).coerceIn(0f, 1f) * h
+                            drawCircle(ChartOrange, 5.dp.toPx(), Offset(w, y))
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Toggle checkboxes row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DpsiToggleItem(
+                    label = "MLSI",
+                    checked = showMlsi,
+                    onCheckedChange = onMlsiChange,
+                    color = ChartBlue,
+                )
+                DpsiToggleItem(
+                    label = "APSI",
+                    checked = showApsi,
+                    onCheckedChange = onApsiChange,
+                    color = ChartRed,
+                )
+                DpsiToggleItem(
+                    label = "VSI",
+                    checked = showVsi,
+                    onCheckedChange = onVsiChange,
+                    color = ChartGreen,
+                )
+                DpsiToggleItem(
+                    label = "DPSI",
+                    checked = showDpsi,
+                    onCheckedChange = onDpsiChange,
+                    color = ChartOrange,
+                )
+            }
+        }
+    }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawMetricLine(
+    trail: List<Float>,
+    color: Color,
+    yMax: Float,
+    w: Float,
+    h: Float,
+) {
+    val path = Path().apply {
+        val firstY = h - (trail.first() / yMax).coerceIn(0f, 1f) * h
+        moveTo(0f, firstY)
+
+        trail.forEachIndexed { index, value ->
+            val x = (index.toFloat() / (trail.size - 1)) * w
+            val y = h - (value / yMax).coerceIn(0f, 1f) * h
+            lineTo(x, y)
+        }
+    }
+    drawPath(
+        path = path,
+        color = color,
+        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+    )
+}
+
+@Composable
+private fun DpsiToggleItem(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    color: Color,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.clickable { onCheckedChange(!checked) },
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.size(20.dp),
+            colors = CheckboxDefaults.colors(checkedColor = color),
+        )
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(color, CircleShape)
+        )
+        Spacer(modifier = Modifier.width(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+@Composable
+private fun DpsiMetricItem(
+    label: String,
+    value: Float,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(color, CircleShape)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = TextGray,
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "%.3f".format(value),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = color,
+        )
     }
 }
 
@@ -823,6 +1499,9 @@ private fun SessionScreenPreview() {
             onApSiChange = {},
             onVsiChange = {},
             onDpsiChange = {},
+            onFftXChange = {},
+            onFftYChange = {},
+            onFftCombinedChange = {},
             onToggleSession = {},
             onTare = {},
             canStartSession = true,

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.dao.UserDao
 import com.balancetoolkit.data.local.entity.toUser
+import com.balancetoolkit.data.model.DEFAULT_USER_ID
 import com.balancetoolkit.data.model.User
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,11 +46,18 @@ class HomeViewModel(
                 userDao.getAllUsers().map { entities -> entities.map { it.toUser() } },
                 deviceDao.getAllDevices().map { entities -> entities.any { it.isConnected } }
             ) { users, hasConnectedDevice ->
+                // Find selected user, fall back to default user if not found
                 val selectedUser = if (selectedUserId != null) {
                     users.find { it.id == selectedUserId }
                 } else {
                     null
+                } ?: users.find { it.id == DEFAULT_USER_ID } ?: users.firstOrNull()
+
+                // If we found a user but it wasn't in preferences, save it
+                if (selectedUser != null && selectedUserId != selectedUser.id) {
+                    sharedPreferences.edit().putString(PREF_SELECTED_USER_ID, selectedUser.id).apply()
                 }
+
                 HomeUiState(
                     selectedUser = selectedUser,
                     isBoardConnected = hasConnectedDevice,
