@@ -21,6 +21,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val PREF_HOST_MAC_ADDRESS = "host_mac_address"
+private const val PREF_MOCK_MODE_ENABLED = "mock_mode_enabled"
+private const val MOCK_BOARD_1_ID = "mock-board-1"
+private const val MOCK_BOARD_2_ID = "mock-board-2"
 
 data class DevicesUiState(
     val devices: List<Device> = emptyList(),
@@ -32,6 +35,7 @@ data class DevicesUiState(
     val showMacAddressDialog: Boolean = false,
     val deviceToDelete: Device? = null,
     val deviceToEdit: Device? = null,
+    val isMockMode: Boolean = false,
 ) {
     val connectedCount: Int
         get() = devices.count { it.isConnected }
@@ -57,12 +61,48 @@ class DevicesViewModel(
 
     init {
         loadHostMacAddress()
-        loadDevices()
+        loadMockModeAndDevices()
     }
 
     private fun loadHostMacAddress() {
         val savedMac = sharedPreferences.getString(PREF_HOST_MAC_ADDRESS, null)
         _uiState.update { it.copy(hostMacAddress = savedMac) }
+    }
+
+    private fun loadMockModeAndDevices() {
+        viewModelScope.launch {
+            val isMockMode = sharedPreferences.getBoolean(PREF_MOCK_MODE_ENABLED, false)
+            _uiState.update { it.copy(isMockMode = isMockMode) }
+
+            if (isMockMode) {
+                ensureMockBoardsExist()
+            }
+            loadDevices()
+        }
+    }
+
+    private suspend fun ensureMockBoardsExist() {
+        val mockBoard1 = deviceDao.getDeviceById(MOCK_BOARD_1_ID)
+        if (mockBoard1 == null) {
+            val device = Device(
+                id = MOCK_BOARD_1_ID,
+                name = "Mock Board 1",
+                macAddress = "00:00:00:00:00:01",
+                isConnected = false,
+            )
+            deviceDao.insertDevice(device.toEntity())
+        }
+
+        val mockBoard2 = deviceDao.getDeviceById(MOCK_BOARD_2_ID)
+        if (mockBoard2 == null) {
+            val device = Device(
+                id = MOCK_BOARD_2_ID,
+                name = "Mock Board 2",
+                macAddress = "00:00:00:00:00:02",
+                isConnected = false,
+            )
+            deviceDao.insertDevice(device.toEntity())
+        }
     }
 
     fun saveHostMacAddress(macAddress: String) {

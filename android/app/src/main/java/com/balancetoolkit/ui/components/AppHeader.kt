@@ -48,7 +48,7 @@ fun AppHeader(
             modifier
                 .fillMaxWidth()
                 .background(PrimaryRed)
-                .padding(if (showWelcome) 24.dp else 16.dp)
+                .padding(horizontal = 16.dp, vertical = if (showWelcome) 12.dp else 8.dp)
                 .semantics { contentDescription = "App header" },
     ) {
         Column(
@@ -61,32 +61,32 @@ fun AppHeader(
                 modifier = if (showWelcome) Modifier.fillMaxWidth() else Modifier,
             ) {
                 // Logo - white rounded square
-                AppLogo(size = if (showWelcome) 40 else 32)
+                AppLogo(size = if (showWelcome) 36 else 28)
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
                 Text(
                     text = stringResource(R.string.app_title),
                     color = Color.White,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Medium,
                 )
             }
 
             if (showWelcome) {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = stringResource(R.string.welcome),
                     color = Color.White,
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.titleLarge,
                     fontStyle = FontStyle.Italic,
                     fontWeight = FontWeight.Bold,
                 )
             }
 
             if (showLinks) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Row(
                     horizontalArrangement = Arrangement.Center,

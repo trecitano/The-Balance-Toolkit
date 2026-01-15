@@ -102,16 +102,16 @@ private fun HomeScreenContent(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Connection Status Indicator
-            ConnectionStatusIndicator(
-                isConnected = uiState.isBoardConnected,
-                onNavigateToDevices = onNavigateToDevices,
-            )
-
-            // Select User Card
+            // Select User Card (first)
             SelectUserCard(
                 selectedUser = uiState.selectedUser,
                 onNavigateToUsers = onNavigateToUsers,
+            )
+
+            // Connection Status Indicator (second)
+            ConnectionStatusIndicator(
+                isConnected = uiState.isBoardConnected,
+                onNavigateToDevices = onNavigateToDevices,
             )
 
             Spacer(modifier = Modifier.height(8.dp))

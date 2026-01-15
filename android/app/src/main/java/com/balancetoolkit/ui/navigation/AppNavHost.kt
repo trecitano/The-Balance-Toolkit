@@ -58,13 +58,31 @@ fun AppNavHost(
                 viewModel = viewModel,
                 modifier = Modifier.padding(innerPadding),
                 onNavigateToUsers = {
-                    navController.navigate(AppDestination.Users.route)
+                    navController.navigate(AppDestination.Users.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 },
                 onNavigateToDevices = {
-                    navController.navigate(AppDestination.Devices.route)
+                    navController.navigate(AppDestination.Devices.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 },
                 onNavigateToSession = {
-                    navController.navigate(AppDestination.Session.route)
+                    navController.navigate(AppDestination.Session.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
                 },
             )
         }

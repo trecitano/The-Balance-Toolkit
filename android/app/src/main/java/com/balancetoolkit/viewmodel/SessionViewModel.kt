@@ -24,13 +24,41 @@ import java.io.File
 
 /**
  * Represents a Center of Pressure (CoP) position on the balance board.
- * Coordinates are in millimeters relative to center of board.
- * X: positive = right, negative = left
- * Y: positive = front (top), negative = back (bottom)
+ * Coordinates are normalized to [-1, 1] range.
+ * X: -1 = full left, +1 = full right
+ * Y: -1 = full back, +1 = full front
+ * Z: total force in kg (used for VSI calculation)
  */
 data class CopPosition(
     val x: Float = 0f,
-    val y: Float = 0f
+    val y: Float = 0f,
+    val z: Float = 0f, // Total force for VSI calculation
+    val timestampMs: Long = System.currentTimeMillis()
+)
+
+/**
+ * Dynamic Postural Stability Index metrics.
+ * MLSI: Medial-Lateral Stability Index (RMS of X)
+ * APSI: Anterior-Posterior Stability Index (RMS of Y)
+ * VSI: Vertical Stability Index (RMS of force deviation from baseline)
+ * DPSI: Combined Dynamic Postural Stability Index
+ */
+data class DpsiMetrics(
+    val mlsi: Float = 0f,
+    val apsi: Float = 0f,
+    val vsi: Float = 0f,
+    val dpsi: Float = 0f
+)
+
+/**
+ * FFT Amplitude Spectrum data.
+ * Contains frequencies and corresponding amplitudes for X, Y, and combined signals.
+ */
+data class AmplitudeSpectrum(
+    val freqsHz: List<Float> = emptyList(),
+    val amplitudeX: List<Float> = emptyList(),
+    val amplitudeY: List<Float> = emptyList(),
+    val amplitudeXY: List<Float> = emptyList()
 )
 
 /**
@@ -76,6 +104,27 @@ data class SessionUiState(
     val currentReading: SensorReading = SensorReading(),
     // CoP trail for visualization (last N positions)
     val copTrail: List<CopPosition> = emptyList(),
+    // Velocity metrics (vCopX, vCopY are mean absolute velocities)
+    val vCopX: Float = 0f,
+    val vCopY: Float = 0f,
+    // Velocity trails for plotting (instantaneous velocity at each point)
+    val vCopXTrail: List<Float> = emptyList(),
+    val vCopYTrail: List<Float> = emptyList(),
+    // DPSI metrics
+    val dpsiMetrics: DpsiMetrics = DpsiMetrics(),
+    // DPSI metric trails for plotting
+    val mlsiTrail: List<Float> = emptyList(),
+    val apsiTrail: List<Float> = emptyList(),
+    val vsiTrail: List<Float> = emptyList(),
+    val dpsiTrail: List<Float> = emptyList(),
+    // FFT Amplitude Spectrum
+    val amplitudeSpectrum: AmplitudeSpectrum = AmplitudeSpectrum(),
+    // FFT display toggles
+    val showFftX: Boolean = true,
+    val showFftY: Boolean = true,
+    val showFftCombined: Boolean = true,
+    // Confidence ellipse points (for 95% confidence)
+    val confidenceEllipsePoints: List<Pair<Float, Float>> = emptyList(),
     // Log messages
     val logMessages: List<String> = emptyList(),
     // Session file writing
@@ -103,13 +152,8 @@ class SessionViewModel(
     private var currentUserId: String? = null
 
     companion object {
-        // Balance board physical dimensions in mm
-        // Distance between sensors (not the full board size)
-        private const val SENSOR_DISTANCE_X = 433f // Left-right distance between sensors
-        private const val SENSOR_DISTANCE_Y = 228f // Front-back distance between sensors
-
-        // Maximum trail length to keep
-        private const val MAX_TRAIL_LENGTH = 50
+        // Maximum trail length to keep (10 seconds at 100Hz = 1000 points)
+        private const val MAX_TRAIL_LENGTH = 1000
 
         private const val PREF_SESSIONS_DIRECTORY = "sessions_directory"
         private const val PREF_SELECTED_USER_ID = "selected_user_id"
@@ -302,28 +346,102 @@ class SessionViewModel(
             // Add current position to trail
             val newTrail = (state.copTrail + cop).takeLast(MAX_TRAIL_LENGTH)
 
+            // Calculate velocity metrics from trail
+            val (vCopX, vCopY, vCopXTrail, vCopYTrail) = calculateVelocityMetrics(newTrail)
+
+            // Calculate DPSI metrics from trail
+            val dpsiMetrics = calculateDpsiMetrics(newTrail)
+
+            // Update DPSI metric trails
+            val newMlsiTrail = (state.mlsiTrail + dpsiMetrics.mlsi).takeLast(MAX_TRAIL_LENGTH)
+            val newApsiTrail = (state.apsiTrail + dpsiMetrics.apsi).takeLast(MAX_TRAIL_LENGTH)
+            val newVsiTrail = (state.vsiTrail + dpsiMetrics.vsi).takeLast(MAX_TRAIL_LENGTH)
+            val newDpsiTrail = (state.dpsiTrail + dpsiMetrics.dpsi).takeLast(MAX_TRAIL_LENGTH)
+
+            // Calculate FFT amplitude spectrum
+            val amplitudeSpectrum = computeFftAmplitudeSpectrum(newTrail)
+
+            // Generate confidence ellipse (95% confidence)
+            val confidenceEllipse = generateConfidenceEllipsePoints(newTrail)
+
             state.copy(
                 currentReading = reading,
                 currentCop = cop,
                 copTrail = newTrail,
+                vCopX = vCopX,
+                vCopY = vCopY,
+                vCopXTrail = vCopXTrail,
+                vCopYTrail = vCopYTrail,
+                dpsiMetrics = dpsiMetrics,
+                mlsiTrail = newMlsiTrail,
+                apsiTrail = newApsiTrail,
+                vsiTrail = newVsiTrail,
+                dpsiTrail = newDpsiTrail,
+                amplitudeSpectrum = amplitudeSpectrum,
+                confidenceEllipsePoints = confidenceEllipse,
                 stabilityMetrics = state.stabilityMetrics.copy(force = reading.totalForce),
-                // Update direction indicators based on CoP position
-                leftValue = if (cop.x < -10) -1 else 0,
-                rightValue = if (cop.x > 10) 1 else 0,
-                frontValue = if (cop.y > 10) 1 else if (cop.y < -10) -1 else 0
+                // Update direction indicators based on CoP position (normalized thresholds)
+                leftValue = if (cop.x < -0.1f) -1 else 0,
+                rightValue = if (cop.x > 0.1f) 1 else 0,
+                frontValue = if (cop.y > 0.1f) 1 else if (cop.y < -0.1f) -1 else 0
             )
         }
     }
 
     /**
+     * Calculate velocity metrics from CoP trail.
+     * Returns mean absolute velocities (vCopX, vCopY) and velocity trails.
+     * Matches the Tauri/Rust implementation.
+     */
+    private fun calculateVelocityMetrics(trail: List<CopPosition>): VelocityMetrics {
+        if (trail.size < 2) {
+            return VelocityMetrics(0f, 0f, emptyList(), emptyList())
+        }
+
+        val velocitiesX = mutableListOf<Float>()
+        val velocitiesY = mutableListOf<Float>()
+
+        for (i in 1 until trail.size) {
+            val dt = (trail[i].timestampMs - trail[i - 1].timestampMs) / 1000f // Convert to seconds
+
+            if (dt > 0f) {
+                val dx = trail[i].x - trail[i - 1].x
+                val dy = trail[i].y - trail[i - 1].y
+
+                // Instantaneous velocity (absolute value)
+                velocitiesX.add(kotlin.math.abs(dx / dt))
+                velocitiesY.add(kotlin.math.abs(dy / dt))
+            }
+        }
+
+        if (velocitiesX.isEmpty()) {
+            return VelocityMetrics(0f, 0f, emptyList(), emptyList())
+        }
+
+        // Mean absolute velocities
+        val vCopX = velocitiesX.sum() / velocitiesX.size
+        val vCopY = velocitiesY.sum() / velocitiesY.size
+
+        return VelocityMetrics(vCopX, vCopY, velocitiesX, velocitiesY)
+    }
+
+    private data class VelocityMetrics(
+        val vCopX: Float,
+        val vCopY: Float,
+        val vCopXTrail: List<Float>,
+        val vCopYTrail: List<Float>
+    )
+
+    /**
      * Calculate Center of Pressure from sensor readings.
-     * Returns position in mm relative to board center.
+     * Returns normalized position in [-1, 1] range.
+     * Matches the Tauri/Rust implementation for consistency.
      */
     private fun calculateCop(reading: SensorReading): CopPosition {
         val totalForce = reading.totalForce
 
         if (totalForce <= 0.1f) {
-            return CopPosition(0f, 0f)
+            return CopPosition(0f, 0f, 0f)
         }
 
         // Calculate CoP using weighted average of sensor positions
@@ -331,21 +449,251 @@ class SessionViewModel(
         //   TopLeft (TL)     TopRight (TR)      <- Front of board
         //   BottomLeft (BL)  BottomRight (BR)   <- Back of board
         //
-        // X-axis: positive = right
-        // Y-axis: positive = front (top)
+        // X-axis: -1 = full left, +1 = full right
+        // Y-axis: -1 = full back, +1 = full front
 
         val rightForce = reading.topRight + reading.bottomRight
         val leftForce = reading.topLeft + reading.bottomLeft
         val topForce = reading.topLeft + reading.topRight
         val bottomForce = reading.bottomLeft + reading.bottomRight
 
-        // CoP X: weighted average between left (-) and right (+)
-        val copX = (rightForce - leftForce) / totalForce * (SENSOR_DISTANCE_X / 2f)
+        // CoP X: normalized to [-1, 1] range
+        val copX = (rightForce - leftForce) / totalForce
 
-        // CoP Y: weighted average between bottom (-) and top (+)
-        val copY = (topForce - bottomForce) / totalForce * (SENSOR_DISTANCE_Y / 2f)
+        // CoP Y: normalized to [-1, 1] range
+        val copY = (topForce - bottomForce) / totalForce
 
-        return CopPosition(copX, copY)
+        return CopPosition(copX, copY, totalForce)
+    }
+
+    /**
+     * Calculate DPSI (Dynamic Postural Stability Index) metrics from CoP trail.
+     * Matches the Tauri/Rust implementation.
+     *
+     * MLSI: Medial-Lateral Stability Index = sqrt(sum(x²) / n)
+     * APSI: Anterior-Posterior Stability Index = sqrt(sum(y²) / n)
+     * VSI: Vertical Stability Index = sqrt(sum((baseline - z)²) / n)
+     * DPSI: Combined = sqrt((sum(x²) + sum(y²) + sum(zdiff²)) / n)
+     */
+    private fun calculateDpsiMetrics(trail: List<CopPosition>, baselineWeight: Float? = null): DpsiMetrics {
+        if (trail.isEmpty()) {
+            return DpsiMetrics()
+        }
+
+        val n = trail.size.toFloat()
+
+        // Calculate baseline weight (average of all force values if not provided)
+        val baseline = baselineWeight ?: (trail.sumOf { it.z.toDouble() } / n).toFloat()
+
+        var sumX2 = 0f
+        var sumY2 = 0f
+        var sumZdiff2 = 0f
+
+        for (point in trail) {
+            sumX2 += point.x * point.x
+            sumY2 += point.y * point.y
+            val dz = baseline - point.z
+            sumZdiff2 += dz * dz
+        }
+
+        val mlsi = kotlin.math.sqrt(sumX2 / n)
+        val apsi = kotlin.math.sqrt(sumY2 / n)
+        val vsi = kotlin.math.sqrt(sumZdiff2 / n)
+        val dpsi = kotlin.math.sqrt((sumX2 + sumY2 + sumZdiff2) / n)
+
+        return DpsiMetrics(mlsi, apsi, vsi, dpsi)
+    }
+
+    /**
+     * Compute FFT Amplitude Spectrum from CoP trail.
+     * Uses DFT (Discrete Fourier Transform) with Hann window.
+     * Matches the Tauri/Rust implementation.
+     *
+     * @param trail CoP position trail with timestamps
+     * @param maxHz Maximum frequency to include in output (default 2.0 Hz)
+     * @return AmplitudeSpectrum with frequencies and amplitudes for X, Y, and combined
+     */
+    private fun computeFftAmplitudeSpectrum(
+        trail: List<CopPosition>,
+        maxHz: Float = 2.0f
+    ): AmplitudeSpectrum {
+        if (trail.size < 8) {
+            return AmplitudeSpectrum()
+        }
+
+        val n = trail.size
+
+        // Calculate sampling frequency from timestamps
+        val dt = (trail[1].timestampMs - trail[0].timestampMs) / 1000f // seconds
+        if (dt <= 0f) {
+            return AmplitudeSpectrum()
+        }
+        val fs = 1f / dt // Sampling frequency in Hz
+
+        // Demean the signals
+        val meanX = trail.map { it.x }.average().toFloat()
+        val meanY = trail.map { it.y }.average().toFloat()
+
+        val x = trail.map { it.x - meanX }.toMutableList()
+        val y = trail.map { it.y - meanY }.toMutableList()
+
+        // Apply Hann window
+        var coherentGain = 0f
+        for (i in 0 until n) {
+            val w = (0.5f - 0.5f * kotlin.math.cos(2f * kotlin.math.PI.toFloat() * i / (n - 1)))
+            coherentGain += w
+            x[i] *= w
+            y[i] *= w
+        }
+        coherentGain /= n
+
+        // Compute DFT and amplitude spectrum
+        val nHalf = n / 2 + 1
+        val freqs = mutableListOf<Float>()
+        val ampX = mutableListOf<Float>()
+        val ampY = mutableListOf<Float>()
+        val ampXY = mutableListOf<Float>()
+
+        for (k in 0 until nHalf) {
+            val freq = k * fs / n
+
+            // Only include up to maxHz
+            if (freq > maxHz) break
+
+            // Compute DFT for this frequency bin
+            var realX = 0f
+            var imagX = 0f
+            var realY = 0f
+            var imagY = 0f
+
+            for (i in 0 until n) {
+                val angle = -2f * kotlin.math.PI.toFloat() * k * i / n
+                val cos = kotlin.math.cos(angle)
+                val sin = kotlin.math.sin(angle)
+
+                realX += x[i] * cos
+                imagX += x[i] * sin
+                realY += y[i] * cos
+                imagY += y[i] * sin
+            }
+
+            // Compute magnitude
+            val magX = kotlin.math.sqrt(realX * realX + imagX * imagX)
+            val magY = kotlin.math.sqrt(realY * realY + imagY * imagY)
+
+            // One-sided amplitude scaling
+            val isNyquist = n % 2 == 0 && k == n / 2
+            val scale = if (k == 0 || isNyquist) {
+                1f / n
+            } else {
+                2f / n
+            } / coherentGain
+
+            val ax = magX * scale
+            val ay = magY * scale
+            val axy = kotlin.math.sqrt(ax * ax + ay * ay)
+
+            freqs.add(freq)
+            ampX.add(ax)
+            ampY.add(ay)
+            ampXY.add(axy)
+        }
+
+        return AmplitudeSpectrum(freqs, ampX, ampY, ampXY)
+    }
+
+    /**
+     * Chi-square quantile for 2 degrees of freedom.
+     * χ²₂(p) = -2 ln(1 - p)
+     * Matches the Tauri/Rust implementation.
+     */
+    private fun chiSquareQuantile2df(p: Float): Float? {
+        if (p <= 0f || p >= 1f) {
+            return null
+        }
+        return -2f * kotlin.math.ln(1f - p)
+    }
+
+    /**
+     * Generate confidence ellipse points from CoP trail.
+     * Uses eigendecomposition of 2x2 covariance matrix.
+     * Matches the Tauri/Rust implementation.
+     *
+     * @param points CoP position trail
+     * @param confidence Confidence level (0 < confidence < 1), default 0.95 for 95%
+     * @param numPoints Number of points to generate on the ellipse
+     * @return List of (x, y) points forming the ellipse, or empty list if not enough data
+     */
+    private fun generateConfidenceEllipsePoints(
+        points: List<CopPosition>,
+        confidence: Float = 0.95f,
+        numPoints: Int = 64
+    ): List<Pair<Float, Float>> {
+        if (points.size < 3 || numPoints < 3 || confidence <= 0f || confidence >= 1f) {
+            return emptyList()
+        }
+
+        val n = points.size.toFloat()
+
+        // Calculate means
+        val meanX = points.sumOf { it.x.toDouble() }.toFloat() / n
+        val meanY = points.sumOf { it.y.toDouble() }.toFloat() / n
+
+        // Calculate sample covariance matrix
+        var covXX = 0f
+        var covYY = 0f
+        var covXY = 0f
+
+        for (point in points) {
+            val dx = point.x - meanX
+            val dy = point.y - meanY
+            covXX += dx * dx
+            covYY += dy * dy
+            covXY += dx * dy
+        }
+
+        val denom = maxOf(n - 1f, 1f) // Guard against division by zero
+        covXX /= denom
+        covYY /= denom
+        covXY /= denom
+
+        // Eigen decomposition of 2x2 covariance matrix (closed-form)
+        val trace = covXX + covYY
+        val det = covXX * covYY - covXY * covXY
+        val disc = maxOf(trace * trace - 4f * det, 0f)
+        val sqrtDisc = kotlin.math.sqrt(disc)
+
+        val lambda1 = 0.5f * (trace + sqrtDisc)
+        val lambda2 = 0.5f * (trace - sqrtDisc)
+
+        // Orientation (angle of first eigenvector)
+        val theta = 0.5f * kotlin.math.atan2(2f * covXY, covXX - covYY)
+        val cosTheta = kotlin.math.cos(theta)
+        val sinTheta = kotlin.math.sin(theta)
+
+        // Chi-square quantile for 2 DOF at given confidence
+        val chi2 = chiSquareQuantile2df(confidence) ?: return emptyList()
+
+        // Semi-axes (radii) along principal components
+        val r1 = kotlin.math.sqrt(maxOf(chi2 * lambda1, 0f))
+        val r2 = kotlin.math.sqrt(maxOf(chi2 * lambda2, 0f))
+
+        // Sample the ellipse
+        val ellipsePoints = mutableListOf<Pair<Float, Float>>()
+        for (k in 0 until numPoints) {
+            val t = 2f * kotlin.math.PI.toFloat() * k / numPoints
+            val ct = kotlin.math.cos(t)
+            val st = kotlin.math.sin(t)
+
+            // Parametric ellipse equation with rotation
+            // x = cx + r1*ct*cosθ - r2*st*sinθ
+            // y = cy + r1*ct*sinθ + r2*st*cosθ
+            val x = meanX + r1 * ct * cosTheta - r2 * st * sinTheta
+            val y = meanY + r1 * ct * sinTheta + r2 * st * cosTheta
+            ellipsePoints.add(Pair(x, y))
+        }
+
+        return ellipsePoints
     }
 
     private fun addLogMessage(message: String) {
@@ -400,6 +748,18 @@ class SessionViewModel(
 
     fun setDpsi(show: Boolean) {
         _uiState.update { it.copy(showDpsi = show) }
+    }
+
+    fun setFftX(show: Boolean) {
+        _uiState.update { it.copy(showFftX = show) }
+    }
+
+    fun setFftY(show: Boolean) {
+        _uiState.update { it.copy(showFftY = show) }
+    }
+
+    fun setFftCombined(show: Boolean) {
+        _uiState.update { it.copy(showFftCombined = show) }
     }
 
     fun nextLoop() {

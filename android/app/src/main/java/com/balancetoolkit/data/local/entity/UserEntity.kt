@@ -19,7 +19,6 @@ data class UserEntity(
     val weight: Int = 70,
     val dominantHand: DominantHand = DominantHand.RIGHT,
     val color: String = "#3B82F6",
-    val notes: String = "",
     val updatedAt: String = "",
 )
 
@@ -34,7 +33,6 @@ fun UserEntity.toUser(): User {
         weight = weight,
         dominantHand = dominantHand,
         color = color,
-        notes = notes,
         updatedAt = updatedAt,
         avatarBackgroundColor = bgColor,
         avatarIconColor = iconColor,
@@ -51,6 +49,5 @@ fun User.toEntity(): UserEntity =
         weight = weight,
         dominantHand = dominantHand,
         color = color,
-        notes = notes,
         updatedAt = updatedAt,
     )

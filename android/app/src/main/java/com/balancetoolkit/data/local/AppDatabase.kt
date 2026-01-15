@@ -12,7 +12,7 @@ import com.balancetoolkit.data.local.entity.UserEntity
 
 @Database(
     entities = [UserEntity::class, DeviceEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -33,7 +33,9 @@ abstract class AppDatabase : RoomDatabase() {
                             context.applicationContext,
                             AppDatabase::class.java,
                             "balance_toolkit_database",
-                        ).build()
+                        )
+                        .fallbackToDestructiveMigration()
+                        .build()
                 instance = db
                 db
             }

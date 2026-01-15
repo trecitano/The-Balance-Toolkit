@@ -37,7 +37,6 @@ data class User(
     val weight: Int = 70,
     val dominantHand: DominantHand = DominantHand.RIGHT,
     val color: String = "#3B82F6",
-    val notes: String = "",
     val updatedAt: String = "",
     val avatarBackgroundColor: Color = AvatarBlueLight,
     val avatarIconColor: Color = AvatarBlue,

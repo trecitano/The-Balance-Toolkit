@@ -1,6 +1,8 @@
 package com.balancetoolkit.ui.screens.users
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,13 +11,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -60,7 +65,6 @@ fun AddUserDialog(
     onWeightChange: (String) -> Unit,
     onDominantHandChange: (DominantHand) -> Unit,
     onColorChange: (String) -> Unit,
-    onNotesChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onAddUser: () -> Unit,
 ) {
@@ -189,47 +193,15 @@ fun AddUserDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Color Field
-                FormField(
-                    value = formState.color,
-                    onValueChange = onColorChange,
-                    label = stringResource(R.string.color),
-                    leadingIcon = {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .padding(start = 12.dp)
-                                    .height(32.dp)
-                                    .width(32.dp)
-                                    .background(
-                                        try {
-                                            Color(android.graphics.Color.parseColor(formState.color))
-                                        } catch (e: IllegalArgumentException) {
-                                            PrimaryBlue
-                                        },
-                                        RoundedCornerShape(4.dp),
-                                    ),
-                        )
-                    },
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Notes Field
                 Text(
-                    text = stringResource(R.string.notes),
+                    text = stringResource(R.string.color),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextGray,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                OutlinedTextField(
-                    value = formState.notes,
-                    onValueChange = onNotesChange,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                    shape = fieldShape,
-                    placeholder = { Text(stringResource(R.string.additional_notes)) },
+                ColorPickerRow(
+                    selectedColor = formState.color,
+                    onColorChange = onColorChange,
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -307,5 +279,59 @@ private fun FormField(
                     null
                 },
         )
+    }
+}
+
+private val colorOptions = listOf(
+    "#3B82F6" to Color(0xFF3B82F6), // Blue (default)
+    "#E53935" to Color(0xFFE53935), // Red
+    "#FBC02D" to Color(0xFFFBC02D), // Yellow
+    "#4CAF50" to Color(0xFF4CAF50), // Green
+    "#9C27B0" to Color(0xFF9C27B0), // Purple
+    "#FF9800" to Color(0xFFFF9800), // Orange
+    "#00BCD4" to Color(0xFF00BCD4), // Cyan
+    "#E91E63" to Color(0xFFE91E63), // Pink
+)
+
+@Composable
+private fun ColorPickerRow(
+    selectedColor: String,
+    onColorChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, Color(0xFFBDBDBD), fieldShape)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        colorOptions.forEach { (hexColor, color) ->
+            val isSelected = hexColor.equals(selectedColor, ignoreCase = true)
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(color, CircleShape)
+                    .clickable { onColorChange(hexColor) }
+                    .then(
+                        if (isSelected) {
+                            Modifier.border(2.dp, Color.White, CircleShape)
+                        } else {
+                            Modifier
+                        }
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Selected",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+        }
     }
 }
