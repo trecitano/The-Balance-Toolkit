@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.balancetoolkit.bluetooth.MockBalanceBoardConnection
 import com.balancetoolkit.data.Result
 import com.balancetoolkit.data.local.dao.UserDao
 import com.balancetoolkit.data.local.entity.toEntity
@@ -13,6 +14,7 @@ import com.balancetoolkit.data.model.DominantHand
 import com.balancetoolkit.data.model.Gender
 import com.balancetoolkit.data.model.User
 import com.balancetoolkit.data.model.getAvatarColors
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +25,22 @@ import kotlinx.coroutines.launch
 
 private const val PREF_SELECTED_USER_ID = "selected_user_id"
 
+private val availableColors = listOf(
+    "#3B82F6", // Blue
+    "#E53935", // Red
+    "#FBC02D", // Yellow
+    "#4CAF50", // Green
+    "#9C27B0", // Purple
+    "#FF9800", // Orange
+    "#00BCD4", // Cyan
+    "#E91E63", // Pink
+)
+
+enum class WeightMeasureTarget {
+    EDIT_USER,
+    ADD_USER,
+}
+
 data class UsersUiState(
     val users: List<User> = emptyList(),
     val selectedUser: User? = null,
@@ -32,6 +50,9 @@ data class UsersUiState(
     val showAddUserDialog: Boolean = false,
     val isEditing: Boolean = false,
     val error: String? = null,
+    val showWeightMeasure: Boolean = false,
+    val liveWeight: Float? = null,
+    val weightMeasureTarget: WeightMeasureTarget = WeightMeasureTarget.EDIT_USER,
 )
 
 data class AddUserFormState(
@@ -78,6 +99,26 @@ class UsersViewModel(
 
     private val _editUserFormState = MutableStateFlow(EditUserFormState())
     val editUserFormState: StateFlow<EditUserFormState> = _editUserFormState.asStateFlow()
+
+    // Weight measurement
+    private var mockConnection: MockBalanceBoardConnection? = null
+
+    private val weightMeasureListener = object : MockBalanceBoardConnection.Listener {
+        override fun onLog(message: String) {
+            // Not needed for weight measurement
+        }
+
+        override fun onWeightData(topLeft: Float, topRight: Float, bottomLeft: Float, bottomRight: Float) {
+            val totalWeight = topLeft + topRight + bottomLeft + bottomRight
+            viewModelScope.launch(Dispatchers.Main) {
+                _uiState.update { it.copy(liveWeight = totalWeight) }
+            }
+        }
+
+        override fun onError(message: String) {
+            // Not needed for weight measurement
+        }
+    }
 
     init {
         viewModelScope.launch {
@@ -152,7 +193,7 @@ class UsersViewModel(
     }
 
     fun showAddUserDialog() {
-        _addUserFormState.value = AddUserFormState()
+        _addUserFormState.value = AddUserFormState(color = availableColors.random())
         _uiState.update { it.copy(showAddUserDialog = true) }
     }
 
@@ -348,6 +389,61 @@ class UsersViewModel(
 
     fun updateEditColor(colorLong: Long) {
         _editUserFormState.update { it.copy(color = colorLong) }
+    }
+
+    // Weight measure methods
+    fun showWeightMeasureForEdit(hasConnectedDevice: Boolean) {
+        _uiState.update { it.copy(showWeightMeasure = true, weightMeasureTarget = WeightMeasureTarget.EDIT_USER) }
+        if (hasConnectedDevice) {
+            startWeightMeasurement()
+        }
+    }
+
+    fun showWeightMeasureForAdd(hasConnectedDevice: Boolean) {
+        _uiState.update { it.copy(showWeightMeasure = true, weightMeasureTarget = WeightMeasureTarget.ADD_USER) }
+        if (hasConnectedDevice) {
+            startWeightMeasurement()
+        }
+    }
+
+    fun hideWeightMeasure() {
+        stopWeightMeasurement()
+        _uiState.update { it.copy(showWeightMeasure = false, liveWeight = null) }
+    }
+
+    private fun startWeightMeasurement() {
+        if (mockConnection != null) return
+        mockConnection = MockBalanceBoardConnection(weightMeasureListener).also {
+            it.start()
+        }
+    }
+
+    private fun stopWeightMeasurement() {
+        mockConnection?.stop()
+        mockConnection = null
+    }
+
+    fun acceptWeight() {
+        val weight = _uiState.value.liveWeight ?: return
+        val formattedWeight = "%.2f".format(weight)
+        when (_uiState.value.weightMeasureTarget) {
+            WeightMeasureTarget.EDIT_USER -> {
+                _editUserFormState.update { it.copy(weight = formattedWeight) }
+            }
+            WeightMeasureTarget.ADD_USER -> {
+                _addUserFormState.update { it.copy(weight = formattedWeight) }
+            }
+        }
+        hideWeightMeasure()
+    }
+
+    fun tareWeight() {
+        mockConnection?.tare()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopWeightMeasurement()
     }
 
     class Factory(

@@ -59,12 +59,12 @@ fun TheBalanceToolkitApp() {
                         navController.navigate(destination.route) {
                             // Pop up to the start destination to avoid building up a large stack
                             popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
+                                saveState = false
                             }
                             // Avoid multiple copies of the same destination
                             launchSingleTop = true
-                            // Restore state when reselecting a previously selected item
-                            restoreState = true
+                            // Don't restore state - causes issues with ViewModel state mismatch
+                            restoreState = false
                         }
                     },
                 )

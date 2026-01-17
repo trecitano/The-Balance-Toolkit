@@ -26,6 +26,7 @@
     <string name="select_user">Select User</string>
     <string name="no_user_selected">No user selected</string>
     <string name="start_session">Start Session</string>
+    <string name="go_to_session">Go to Session</string>
     <string name="select_user_to_start">Select a user to start a session</string>
     <string name="select">Select</string>
     <string name="change">Change</string>
@@ -76,6 +77,8 @@
     <string name="edit_device_name_title">Edit Device Name</string>
     <string name="delete_device_title">Delete Device</string>
     <string name="delete_device_message">Are you sure you want to delete \"%1$s\"? This action cannot be undone.</string>
+    <string name="no_devices_found">No balance boards found</string>
+    <string name="no_devices_hint">Tap \"Scan\" to discover nearby Wii Balance Boards and connect them to your phone.</string>
 
     <!-- Session Screen -->
     <string name="loop_info">Loop %1$d/%2$d</string>
@@ -94,8 +97,23 @@
     <string name="vcop_m">vCopM</string>
     <string name="vcop_y">vCopY</string>
 
+    <!-- Weight Measure -->
+    <string name="weight_measure">Weight Measure</string>
+    <string name="live_reading">Live reading</string>
+    <string name="no_board_connected_warning">Connect to a board in the Devices page!</string>
+    <string name="tare">Tare</string>
+    <string name="accept">Accept</string>
+
     <!-- Validation -->
     <string name="name_required_error">Name is required</string>
+
+    <!-- About -->
+    <string name="about">About</string>
+    <string name="cite_this_project">Cite This Project</string>
+    <string name="cite_description">If you use The Balance Toolkit in your research, please cite it using the BibTeX entry below.</string>
+    <string name="copy_citation">Copy Citation</string>
+    <string name="citation_copied">Citation copied to clipboard</string>
+    <string name="source_code_description">View the source code on GitHub</string>
 
     <!-- Sessions Directory -->
     <string name="sessions_directory">Sessions Directory</string>

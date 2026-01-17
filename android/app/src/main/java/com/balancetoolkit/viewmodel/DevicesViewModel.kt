@@ -33,6 +33,7 @@ data class DevicesUiState(
     val error: String? = null,
     val hostMacAddress: String? = null,
     val showMacAddressDialog: Boolean = false,
+    val scanAfterMacSave: Boolean = false,
     val deviceToDelete: Device? = null,
     val deviceToEdit: Device? = null,
     val isMockMode: Boolean = false,
@@ -106,16 +107,20 @@ class DevicesViewModel(
     }
 
     fun saveHostMacAddress(macAddress: String) {
+        val shouldScan = _uiState.value.scanAfterMacSave
         sharedPreferences.edit().putString(PREF_HOST_MAC_ADDRESS, macAddress).apply()
-        _uiState.update { it.copy(hostMacAddress = macAddress, showMacAddressDialog = false) }
+        _uiState.update { it.copy(hostMacAddress = macAddress, showMacAddressDialog = false, scanAfterMacSave = false) }
+        if (shouldScan) {
+            scanForDevices()
+        }
     }
 
-    fun showMacAddressDialog() {
-        _uiState.update { it.copy(showMacAddressDialog = true) }
+    fun showMacAddressDialog(scanAfterSave: Boolean = false) {
+        _uiState.update { it.copy(showMacAddressDialog = true, scanAfterMacSave = scanAfterSave) }
     }
 
     fun dismissMacAddressDialog() {
-        _uiState.update { it.copy(showMacAddressDialog = false) }
+        _uiState.update { it.copy(showMacAddressDialog = false, scanAfterMacSave = false) }
     }
 
     fun onScanClick() {
@@ -124,7 +129,7 @@ class DevicesViewModel(
         } else if (_uiState.value.isHostMacConfigured) {
             scanForDevices()
         } else {
-            showMacAddressDialog()
+            showMacAddressDialog(scanAfterSave = true)
         }
     }
 

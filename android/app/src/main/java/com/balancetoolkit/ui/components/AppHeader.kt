@@ -2,7 +2,6 @@ package com.balancetoolkit.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,12 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,9 +34,6 @@ import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 fun AppHeader(
     modifier: Modifier = Modifier,
     showWelcome: Boolean = false,
-    showLinks: Boolean = false,
-    onCiteClick: () -> Unit = {},
-    onSourceCodeClick: () -> Unit = {},
 ) {
     Box(
         modifier =
@@ -84,27 +76,6 @@ fun AppHeader(
                     fontWeight = FontWeight.Bold,
                 )
             }
-
-            if (showLinks) {
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    HeaderLinkButton(
-                        text = stringResource(R.string.cite),
-                        onClick = onCiteClick,
-                    )
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    HeaderLinkButton(
-                        text = stringResource(R.string.source_code),
-                        onClick = onSourceCodeClick,
-                    )
-                }
-            }
         }
     }
 }
@@ -124,26 +95,6 @@ private fun AppLogo(size: Int = 32) {
     }
 }
 
-@Composable
-private fun HeaderLinkButton(
-    text: String,
-    onClick: () -> Unit,
-) {
-    TextButton(onClick = onClick) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(18.dp),
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = text,
-            color = Color.White,
-        )
-    }
-}
-
 @Preview
 @Composable
 private fun AppHeaderSimplePreview() {
@@ -156,6 +107,6 @@ private fun AppHeaderSimplePreview() {
 @Composable
 private fun AppHeaderWithWelcomePreview() {
     TheBalanceToolkitTheme {
-        AppHeader(showWelcome = true, showLinks = true)
+        AppHeader(showWelcome = true)
     }
 }

@@ -94,7 +94,7 @@ private fun HomeScreenContent(
             .background(BackgroundGray)
             .verticalScroll(scrollState),
     ) {
-        AppHeader(showWelcome = true, showLinks = true)
+        AppHeader()
 
         Column(
             modifier = Modifier
@@ -312,7 +312,7 @@ private fun StartSessionButton(
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = stringResource(R.string.start_session),
+            text = stringResource(R.string.go_to_session),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
         )

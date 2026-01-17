@@ -3,6 +3,16 @@ package com.balancetoolkit.data.model
 import androidx.compose.ui.graphics.Color
 import com.balancetoolkit.ui.theme.AvatarBlue
 import com.balancetoolkit.ui.theme.AvatarBlueLight
+import com.balancetoolkit.ui.theme.AvatarCyan
+import com.balancetoolkit.ui.theme.AvatarCyanLight
+import com.balancetoolkit.ui.theme.AvatarGreen
+import com.balancetoolkit.ui.theme.AvatarGreenLight
+import com.balancetoolkit.ui.theme.AvatarOrange
+import com.balancetoolkit.ui.theme.AvatarOrangeLight
+import com.balancetoolkit.ui.theme.AvatarPink
+import com.balancetoolkit.ui.theme.AvatarPinkLight
+import com.balancetoolkit.ui.theme.AvatarPurple
+import com.balancetoolkit.ui.theme.AvatarPurpleLight
 import com.balancetoolkit.ui.theme.AvatarRed
 import com.balancetoolkit.ui.theme.AvatarRedLight
 import com.balancetoolkit.ui.theme.AvatarYellow
@@ -24,6 +34,21 @@ fun getAvatarColors(hexColor: String): Pair<Color, Color> =
         hexColor.contains("FBC02D", ignoreCase = true) ||
             hexColor.contains("FFEB3B", ignoreCase = true) ||
             hexColor.contains("FFC107", ignoreCase = true) -> AvatarYellowLight to AvatarYellow
+
+        hexColor.contains("4CAF50", ignoreCase = true) ||
+            hexColor.contains("66BB6A", ignoreCase = true) -> AvatarGreenLight to AvatarGreen
+
+        hexColor.contains("9C27B0", ignoreCase = true) ||
+            hexColor.contains("AB47BC", ignoreCase = true) -> AvatarPurpleLight to AvatarPurple
+
+        hexColor.contains("FF9800", ignoreCase = true) ||
+            hexColor.contains("FFA726", ignoreCase = true) -> AvatarOrangeLight to AvatarOrange
+
+        hexColor.contains("00BCD4", ignoreCase = true) ||
+            hexColor.contains("26C6DA", ignoreCase = true) -> AvatarCyanLight to AvatarCyan
+
+        hexColor.contains("E91E63", ignoreCase = true) ||
+            hexColor.contains("EC407A", ignoreCase = true) -> AvatarPinkLight to AvatarPink
 
         else -> AvatarBlueLight to AvatarBlue
     }

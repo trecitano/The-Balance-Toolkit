@@ -16,9 +16,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -30,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
 import com.balancetoolkit.ui.components.AppHeader
+import com.balancetoolkit.ui.components.CiteBottomSheet
 import com.balancetoolkit.ui.components.HostMacAddressDialog
 import com.balancetoolkit.ui.components.SessionsDirectoryDialog
 import com.balancetoolkit.ui.theme.BackgroundGray
@@ -128,11 +134,20 @@ fun SettingsScreen(
         )
     }
 
+    if (uiState.showCiteBottomSheet) {
+        CiteBottomSheet(onDismiss = viewModel::dismissCiteBottomSheet)
+    }
+
     SettingsScreenContent(
         uiState = uiState,
         onEditMacAddress = viewModel::showMacAddressDialog,
         onMockModeChanged = viewModel::setMockModeEnabled,
         onEditSessionsDirectory = viewModel::showSessionsDirectoryDialog,
+        onCiteClick = viewModel::showCiteBottomSheet,
+        onSourceCodeClick = {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
+            context.startActivity(intent)
+        },
         modifier = modifier,
     )
 }
@@ -143,8 +158,12 @@ private fun SettingsScreenContent(
     onEditMacAddress: () -> Unit,
     onMockModeChanged: (Boolean) -> Unit,
     onEditSessionsDirectory: () -> Unit,
+    onCiteClick: () -> Unit,
+    onSourceCodeClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -155,6 +174,7 @@ private fun SettingsScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(16.dp),
         ) {
             Text(
@@ -189,6 +209,36 @@ private fun SettingsScreenContent(
                 description = stringResource(R.string.mock_mode_description),
                 checked = uiState.mockModeEnabled,
                 onCheckedChange = onMockModeChanged,
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // About Section
+            Text(
+                text = stringResource(R.string.about),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextGray,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Cite Item
+            SettingsActionItem(
+                title = stringResource(R.string.cite),
+                description = stringResource(R.string.cite_description),
+                icon = Icons.Filled.Info,
+                onClick = onCiteClick,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Source Code Item
+            SettingsActionItem(
+                title = stringResource(R.string.source_code),
+                description = stringResource(R.string.source_code_description),
+                icon = Icons.AutoMirrored.Filled.ExitToApp,
+                onClick = onSourceCodeClick,
             )
         }
     }
@@ -276,6 +326,49 @@ private fun SettingsToggleItem(
     }
 }
 
+@Composable
+private fun SettingsActionItem(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextGray,
+                )
+            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = TextGray,
+            )
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun SettingsScreenPreview() {
@@ -288,6 +381,8 @@ private fun SettingsScreenPreview() {
             onEditMacAddress = {},
             onMockModeChanged = {},
             onEditSessionsDirectory = {},
+            onCiteClick = {},
+            onSourceCodeClick = {},
         )
     }
 }
@@ -303,6 +398,8 @@ private fun SettingsScreenNoMacPreview() {
             onEditMacAddress = {},
             onMockModeChanged = {},
             onEditSessionsDirectory = {},
+            onCiteClick = {},
+            onSourceCodeClick = {},
         )
     }
 }
