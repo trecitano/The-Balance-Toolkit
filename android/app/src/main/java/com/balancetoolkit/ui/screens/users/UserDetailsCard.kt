@@ -51,6 +51,7 @@ import com.balancetoolkit.R
 import com.balancetoolkit.data.model.DominantHand
 import com.balancetoolkit.data.model.Gender
 import com.balancetoolkit.data.model.User
+import com.balancetoolkit.data.model.getAvatarColors
 import com.balancetoolkit.ui.theme.CardBackground
 import com.balancetoolkit.ui.theme.ErrorRed
 import com.balancetoolkit.ui.theme.PrimaryBlue
@@ -59,6 +60,13 @@ import com.balancetoolkit.ui.theme.TextGray
 private val cardShape = RoundedCornerShape(12.dp)
 private val fieldShape = RoundedCornerShape(8.dp)
 private val buttonShape = RoundedCornerShape(24.dp)
+
+private fun Color.toHexString(): String {
+    val r = (red * 255).toInt()
+    val g = (green * 255).toInt()
+    val b = (blue * 255).toInt()
+    return String.format("#%02X%02X%02X", r, g, b)
+}
 
 @Composable
 fun UserDetailsCard(
@@ -75,6 +83,7 @@ fun UserDetailsCard(
     onWeightChange: (String) -> Unit,
     onDominantHandChange: (DominantHand) -> Unit,
     onColorChange: (Color) -> Unit,
+    onWeightButtonClick: () -> Unit,
     editName: String,
     editAge: String,
     editGender: Gender,
@@ -100,6 +109,7 @@ fun UserDetailsCard(
                 user = user,
                 isEditing = isEditing,
                 canDelete = canDelete,
+                editColor = editColor,
                 onEditClick = onEditClick,
                 onSaveClick = onSaveClick,
                 onCancelClick = onCancelClick,
@@ -178,12 +188,10 @@ fun UserDetailsCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             if (isEditing) {
-                EditableField(
+                WeightFieldWithButton(
                     value = editWeight,
                     onValueChange = onWeightChange,
-                    label = stringResource(R.string.weight),
-                    suffix = "kg",
-                    keyboardType = KeyboardType.Number,
+                    onWeightButtonClick = onWeightButtonClick,
                 )
             } else {
                 ReadOnlyField(
@@ -217,36 +225,18 @@ fun UserDetailsCard(
                 color = TextGray,
             )
             Spacer(modifier = Modifier.height(4.dp))
-            if (isEditing) {
-                ColorPickerField(
-                    selectedColor = editColor,
-                    onColorChange = onColorChange,
-                )
-            } else {
-                OutlinedTextField(
-                    value = user.color,
-                    onValueChange = { },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = fieldShape,
-                    readOnly = true,
-                    leadingIcon = {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .padding(start = 12.dp)
-                                    .size(32.dp)
-                                    .background(
-                                        try {
-                                            Color(android.graphics.Color.parseColor(user.color))
-                                        } catch (e: IllegalArgumentException) {
-                                            PrimaryBlue
-                                        },
-                                        RoundedCornerShape(4.dp),
-                                    ),
-                        )
-                    },
-                )
-            }
+            ColorPickerField(
+                selectedColor = if (isEditing) {
+                    editColor
+                } else {
+                    try {
+                        Color(android.graphics.Color.parseColor(user.color))
+                    } catch (e: IllegalArgumentException) {
+                        PrimaryBlue
+                    }
+                },
+                onColorChange = if (isEditing) onColorChange else { _ -> },
+            )
 
         }
     }
@@ -257,11 +247,18 @@ private fun UserDetailsHeader(
     user: User,
     isEditing: Boolean,
     canDelete: Boolean,
+    editColor: Color,
     onEditClick: () -> Unit,
     onSaveClick: () -> Unit,
     onCancelClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
+    val (avatarBackground, avatarIcon) = if (isEditing) {
+        getAvatarColors(editColor.toHexString())
+    } else {
+        user.avatarBackgroundColor to user.avatarIconColor
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth(),
@@ -270,14 +267,14 @@ private fun UserDetailsHeader(
             modifier =
                 Modifier
                     .size(60.dp)
-                    .background(user.avatarBackgroundColor, CircleShape),
+                    .background(avatarBackground, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Default.Person,
                 contentDescription = null,
                 modifier = Modifier.size(36.dp),
-                tint = user.avatarIconColor,
+                tint = avatarIcon,
             )
         }
 
@@ -295,7 +292,19 @@ private fun UserDetailsHeader(
                     fontWeight = FontWeight.Bold,
                 )
                 if (isEditing) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (canDelete) {
+                            IconButton(onClick = onDeleteClick) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = stringResource(R.string.delete),
+                                    tint = ErrorRed,
+                                )
+                            }
+                        }
                         TextButton(onClick = onCancelClick) {
                             Text(
                                 text = stringResource(R.string.cancel),
@@ -411,6 +420,45 @@ private fun EditableField(
             suffix = suffix?.let { { Text(text = it, color = TextGray) } },
             singleLine = true,
         )
+    }
+}
+
+@Composable
+private fun WeightFieldWithButton(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onWeightButtonClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.weight),
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextGray,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.weight(1f),
+                shape = fieldShape,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                suffix = { Text(text = "kg", color = TextGray) },
+                singleLine = true,
+            )
+            Button(
+                onClick = onWeightButtonClick,
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                shape = fieldShape,
+            ) {
+                Text(text = stringResource(R.string.weight))
+            }
+        }
     }
 }
 

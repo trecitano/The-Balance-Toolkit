@@ -20,6 +20,7 @@ data class SettingsUiState(
     val mockModeEnabled: Boolean = false,
     val sessionsDirectory: String = "",
     val showSessionsDirectoryDialog: Boolean = false,
+    val showCiteBottomSheet: Boolean = false,
 ) {
     val isHostMacConfigured: Boolean
         get() = !hostMacAddress.isNullOrBlank()
@@ -95,6 +96,14 @@ class SettingsViewModel(
     fun resetSessionsDirectoryToDefault() {
         val defaultDir = getDefaultSessionsDirectory()
         saveSessionsDirectory(defaultDir)
+    }
+
+    fun showCiteBottomSheet() {
+        _uiState.update { it.copy(showCiteBottomSheet = true) }
+    }
+
+    fun dismissCiteBottomSheet() {
+        _uiState.update { it.copy(showCiteBottomSheet = false) }
     }
 
     class Factory(

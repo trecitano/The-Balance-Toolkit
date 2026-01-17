@@ -9,7 +9,7 @@ import com.balancetoolkit.bluetooth.MockBalanceBoardConnection
 import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.dao.UserDao
 import com.balancetoolkit.data.local.entity.toUser
-import com.balancetoolkit.data.model.StabilityMetrics
+import com.balancetoolkit.data.model.User
 import com.balancetoolkit.session.SessionConfiguration
 import com.balancetoolkit.session.SessionFileWriter
 import com.balancetoolkit.session.SessionUser
@@ -17,7 +17,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -84,7 +83,6 @@ data class SessionUiState(
     val startTime: Float = 4.0f,
     val endTime: Float = 13f,
     val isPlaying: Boolean = false,
-    val stabilityMetrics: StabilityMetrics = StabilityMetrics(force = 0f),
     // Visualization toggles
     val showConfidenceEllipse: Boolean = true,
     val showConvexHull: Boolean = true,
@@ -133,6 +131,8 @@ data class SessionUiState(
     val lastSavedFilePath: String? = null,
     // Device connection status
     val hasConnectedDevice: Boolean = false,
+    // Selected user
+    val selectedUser: User? = null,
 ) {
     val canStartSession: Boolean
         get() = isMockMode || hasConnectedDevice
@@ -166,8 +166,22 @@ class SessionViewModel(
         // Load mock mode setting
         val isMockMode = sharedPreferences.getBoolean(PREF_MOCK_MODE_ENABLED, false)
         _uiState.update { it.copy(isMockMode = isMockMode) }
+        // Load selected user
+        loadSelectedUser()
         // Observe connected devices
         observeConnectedDevices()
+    }
+
+    private fun loadSelectedUser() {
+        val userId = currentUserId ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val user = userDao.getUserById(userId)?.toUser()
+                _uiState.update { it.copy(selectedUser = user) }
+            } catch (e: Exception) {
+                // Ignore errors loading user
+            }
+        }
     }
 
     private fun observeConnectedDevices() {
@@ -379,7 +393,6 @@ class SessionViewModel(
                 dpsiTrail = newDpsiTrail,
                 amplitudeSpectrum = amplitudeSpectrum,
                 confidenceEllipsePoints = confidenceEllipse,
-                stabilityMetrics = state.stabilityMetrics.copy(force = reading.totalForce),
                 // Update direction indicators based on CoP position (normalized thresholds)
                 leftValue = if (cop.x < -0.1f) -1 else 0,
                 rightValue = if (cop.x > 0.1f) 1 else 0,

@@ -20,8 +20,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -49,6 +51,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
+import com.balancetoolkit.data.model.User
 import com.balancetoolkit.ui.components.AppHeader
 import com.balancetoolkit.ui.theme.BackgroundGray
 import com.balancetoolkit.ui.theme.BorderGray
@@ -141,6 +144,11 @@ private fun SessionScreenContent(
                 isMockMode = uiState.isMockMode,
             )
 
+            // Selected user info
+            uiState.selectedUser?.let { user ->
+                SelectedUserCard(user = user)
+            }
+
             // Session control buttons
             SessionControlCard(
                 isRecording = uiState.isRecording,
@@ -162,22 +170,6 @@ private fun SessionScreenContent(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Stability and Front cards row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                StabilityCard(
-                    force = uiState.stabilityMetrics.force,
-                    isRecording = uiState.isRecording,
-                    onToggleSession = onToggleSession,
-                    canStartSession = canStartSession,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             // CopX and CopY plots row (below Stability)
             Row(
@@ -302,6 +294,55 @@ private fun SessionDeviceCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = TextGray,
             )
+        }
+    }
+}
+
+@Composable
+private fun SelectedUserCard(
+    user: User,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // User avatar
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(user.avatarBackgroundColor),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = user.avatarIconColor,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = user.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = "${user.weight} kg",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextGray,
+                )
+            }
         }
     }
 }

@@ -1,7 +1,9 @@
 package com.balancetoolkit.ui.screens.devices
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,17 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -38,8 +37,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.balancetoolkit.ui.theme.ErrorRed
 import com.balancetoolkit.ui.theme.PrimaryBlue
 import com.balancetoolkit.R
@@ -67,10 +68,7 @@ fun DevicesScreen(
         HostMacAddressDialog(
             initialMacAddress = uiState.hostMacAddress ?: "",
             onDismiss = viewModel::dismissMacAddressDialog,
-            onSave = { macAddress ->
-                viewModel.saveHostMacAddress(macAddress)
-                viewModel.scanForDevices()
-            },
+            onSave = viewModel::saveHostMacAddress,
         )
     }
 
@@ -145,18 +143,6 @@ private fun DevicesScreenContent(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(
-                        onClick = onEditMacAddress,
-                        modifier = Modifier.size(40.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.edit_mac_address),
-                            tint = Color.Gray,
-                        )
-                    }
-
-
                     Button(
                         onClick = onScan,
                         colors = ButtonDefaults.buttonColors(containerColor = scanButtonColor),
@@ -181,18 +167,82 @@ private fun DevicesScreenContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Device Cards
-            uiState.devices.forEach { device ->
-                DeviceCard(
-                    device = device,
-                    onToggleConnection = { onToggleConnection(device.id) },
-                    onEdit = { onEditDevice(device) },
-                    onDelete = { onDeleteDevice(device) },
+            // Host MAC Address display
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onEditMacAddress)
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.host_mac_address) + ": ",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = uiState.hostMacAddress ?: stringResource(R.string.not_configured),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = if (uiState.hostMacAddress != null) Color.DarkGray else Color.Gray,
+                )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (uiState.devices.isEmpty()) {
+                // Empty State
+                EmptyDevicesState(modifier = Modifier.weight(1f))
+            } else {
+                // Device Cards
+                uiState.devices.forEach { device ->
+                    DeviceCard(
+                        device = device,
+                        onToggleConnection = { onToggleConnection(device.id) },
+                        onEdit = { onEditDevice(device) },
+                        onDelete = { onDeleteDevice(device) },
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyDevicesState(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp),
+        ) {
+            // Balance board illustration using text
+            Text(
+                text = "\u2696\uFE0F",
+                fontSize = 64.sp,
+                modifier = Modifier.padding(bottom = 16.dp),
+            )
+
+            Text(
+                text = stringResource(R.string.no_devices_found),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.DarkGray,
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = stringResource(R.string.no_devices_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(280.dp),
+            )
         }
     }
 }
@@ -287,6 +337,21 @@ private fun DevicesScreenPreview() {
                         ),
                     hostMacAddress = "AA:BB:CC:DD:EE:FF",
                 ),
+            onScan = {},
+            onEditMacAddress = {},
+            onToggleConnection = {},
+            onEditDevice = {},
+            onDeleteDevice = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Empty State")
+@Composable
+private fun DevicesScreenEmptyPreview() {
+    TheBalanceToolkitTheme {
+        DevicesScreenContent(
+            uiState = DevicesUiState(devices = emptyList()),
             onScan = {},
             onEditMacAddress = {},
             onToggleConnection = {},

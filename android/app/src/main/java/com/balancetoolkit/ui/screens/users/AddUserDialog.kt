@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +33,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,6 +71,7 @@ fun AddUserDialog(
     onWeightChange: (String) -> Unit,
     onDominantHandChange: (DominantHand) -> Unit,
     onColorChange: (String) -> Unit,
+    onWeightButtonClick: () -> Unit,
     onDismiss: () -> Unit,
     onAddUser: () -> Unit,
 ) {
@@ -139,17 +146,9 @@ fun AddUserDialog(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    FormField(
-                        value = formState.gender.toString(),
-                        onValueChange = { },
-                        label = stringResource(R.string.gender),
-                        readOnly = true,
-                        trailingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = null,
-                            )
-                        },
+                    GenderDropdown(
+                        selectedGender = formState.gender,
+                        onGenderChange = onGenderChange,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -166,28 +165,19 @@ fun AddUserDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Weight Field
-                FormField(
+                // Weight Field with Button
+                WeightFieldWithButton(
                     value = formState.weight,
                     onValueChange = onWeightChange,
-                    label = stringResource(R.string.weight_kg),
-                    keyboardType = KeyboardType.Number,
+                    onWeightButtonClick = onWeightButtonClick,
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Dominant hand Field
-                FormField(
-                    value = formState.dominantHand.toString(),
-                    onValueChange = { },
-                    label = stringResource(R.string.dominant_hand),
-                    readOnly = true,
-                    trailingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = null,
-                        )
-                    },
+                DominantHandDropdown(
+                    selectedHand = formState.dominantHand,
+                    onHandChange = onDominantHandChange,
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -230,6 +220,44 @@ fun AddUserDialog(
                         Text(stringResource(R.string.cancel))
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeightFieldWithButton(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onWeightButtonClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.weight_kg),
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextGray,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = Modifier.weight(1f),
+                shape = fieldShape,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+            )
+            Button(
+                onClick = onWeightButtonClick,
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                shape = fieldShape,
+            ) {
+                Text(text = stringResource(R.string.weight))
             }
         }
     }
@@ -279,6 +307,122 @@ private fun FormField(
                     null
                 },
         )
+    }
+}
+
+@Composable
+private fun GenderDropdown(
+    selectedGender: Gender,
+    onGenderChange: (Gender) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.gender),
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextGray,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Box {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Color(0xFFBDBDBD), fieldShape)
+                        .clickable { expanded = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = selectedGender.toString(),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = TextGray,
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                Gender.entries.forEach { gender ->
+                    DropdownMenuItem(
+                        text = { Text(gender.toString()) },
+                        onClick = {
+                            onGenderChange(gender)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DominantHandDropdown(
+    selectedHand: DominantHand,
+    onHandChange: (DominantHand) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.dominant_hand),
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextGray,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Box {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Color(0xFFBDBDBD), fieldShape)
+                        .clickable { expanded = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = selectedHand.toString(),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = TextGray,
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                DominantHand.entries.forEach { hand ->
+                    DropdownMenuItem(
+                        text = { Text(hand.toString()) },
+                        onClick = {
+                            onHandChange(hand)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 

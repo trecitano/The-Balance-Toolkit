@@ -51,23 +51,30 @@ import com.balancetoolkit.ui.theme.BackgroundGray
 import com.balancetoolkit.ui.theme.BorderGrayDark
 import com.balancetoolkit.ui.theme.CardBackground
 import com.balancetoolkit.ui.theme.PrimaryBlue
+import com.balancetoolkit.ui.components.WeightMeasureBottomSheet
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 import com.balancetoolkit.util.TrackPerformance
+import com.balancetoolkit.viewmodel.DevicesViewModel
 import com.balancetoolkit.viewmodel.EditUserFormState
 import com.balancetoolkit.viewmodel.UsersUiState
 import com.balancetoolkit.viewmodel.UsersViewModel
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.balancetoolkit.data.model.DominantHand
 import com.balancetoolkit.data.model.Gender
 
 @Composable
 fun UsersScreen(
     viewModel: UsersViewModel,
+    devicesViewModel: DevicesViewModel,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val formState by viewModel.addUserFormState.collectAsState()
     val editFormState by viewModel.editUserFormState.collectAsState()
+    val devicesUiState by devicesViewModel.uiState.collectAsState()
+
+    val hasConnectedDevices = devicesUiState.connectedDevices.isNotEmpty()
 
     UsersScreenContent(
         uiState = uiState,
@@ -86,6 +93,7 @@ fun UsersScreen(
         onEditWeightChange = viewModel::updateEditWeight,
         onEditDominantHandChange = viewModel::updateEditDominantHand,
         onEditColorChange = viewModel::updateEditColor,
+        onWeightButtonClick = { viewModel.showWeightMeasureForEdit(hasConnectedDevices) },
         modifier = modifier,
     )
 
@@ -99,8 +107,20 @@ fun UsersScreen(
             onWeightChange = viewModel::updateFormWeight,
             onDominantHandChange = viewModel::updateFormDominantHand,
             onColorChange = viewModel::updateFormColor,
+            onWeightButtonClick = { viewModel.showWeightMeasureForAdd(hasConnectedDevices) },
             onDismiss = viewModel::hideAddUserDialog,
             onAddUser = viewModel::addUser,
+        )
+    }
+
+    if (uiState.showWeightMeasure) {
+        WeightMeasureBottomSheet(
+            isDeviceConnected = hasConnectedDevices,
+            liveWeight = uiState.liveWeight,
+            weightUnit = "kg",
+            onAccept = viewModel::acceptWeight,
+            onTare = viewModel::tareWeight,
+            onDismiss = viewModel::hideWeightMeasure,
         )
     }
 }
@@ -123,6 +143,7 @@ private fun UsersScreenContent(
     onEditWeightChange: (String) -> Unit,
     onEditDominantHandChange: (DominantHand) -> Unit,
     onEditColorChange: (Long) -> Unit,
+    onWeightButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TrackPerformance("UsersScreen")
@@ -228,14 +249,15 @@ private fun UsersScreenContent(
                     onHeightChange = onEditHeightChange,
                     onWeightChange = onEditWeightChange,
                     onDominantHandChange = onEditDominantHandChange,
-                    onColorChange = { color -> onEditColorChange(color.value.toLong()) },
+                    onColorChange = { color -> onEditColorChange(color.toArgb().toUInt().toLong()) },
+                    onWeightButtonClick = onWeightButtonClick,
                     editName = editFormState.name,
                     editAge = editFormState.age,
                     editGender = editFormState.gender,
                     editHeight = editFormState.height,
                     editWeight = editFormState.weight,
                     editDominantHand = editFormState.dominantHand,
-                    editColor = Color(editFormState.color),
+                    editColor = Color(editFormState.color.toInt()),
                     canDelete = !user.isDefaultUser,
                     canEditName = !user.isDefaultUser,
                 )
@@ -369,6 +391,7 @@ private fun UsersScreenPreview() {
             onEditWeightChange = {},
             onEditDominantHandChange = {},
             onEditColorChange = {},
+            onWeightButtonClick = {},
         )
     }
 }

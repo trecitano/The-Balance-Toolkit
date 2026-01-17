@@ -60,28 +60,28 @@ fun AppNavHost(
                 onNavigateToUsers = {
                     navController.navigate(AppDestination.Users.route) {
                         popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
+                            saveState = false
                         }
                         launchSingleTop = true
-                        restoreState = true
+                        restoreState = false
                     }
                 },
                 onNavigateToDevices = {
                     navController.navigate(AppDestination.Devices.route) {
                         popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
+                            saveState = false
                         }
                         launchSingleTop = true
-                        restoreState = true
+                        restoreState = false
                     }
                 },
                 onNavigateToSession = {
                     navController.navigate(AppDestination.Session.route) {
                         popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
+                            saveState = false
                         }
                         launchSingleTop = true
-                        restoreState = true
+                        restoreState = false
                     }
                 },
             )
@@ -92,8 +92,13 @@ fun AppNavHost(
                 viewModel(
                     factory = UsersViewModel.Factory(database.userDao(), sharedPreferences),
                 )
+            val devicesViewModel: DevicesViewModel =
+                viewModel(
+                    factory = DevicesViewModel.Factory(database.deviceDao(), sharedPreferences),
+                )
             UsersScreen(
                 viewModel = viewModel,
+                devicesViewModel = devicesViewModel,
                 modifier = Modifier.padding(innerPadding),
             )
         }
