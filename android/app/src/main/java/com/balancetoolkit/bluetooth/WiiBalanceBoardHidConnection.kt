@@ -15,13 +15,8 @@ class WiiBalanceBoardHidConnection(
     private val bluetoothAdapter: BluetoothAdapter,
     private val context: Context,
     private val device: BluetoothDevice,
-    private val listener: Listener
+    private val listener: BalanceBoardListener
 ) {
-    interface Listener {
-        fun onLog(message: String)
-        fun onWeightData(topLeft: Float, topRight: Float, bottomLeft: Float, bottomRight: Float)
-        fun onError(message: String)
-    }
 
     companion object {
         private const val TAG = "WiiBalanceBoard"
@@ -83,17 +78,7 @@ class WiiBalanceBoardHidConnection(
         HiddenApiBypass.addHiddenApiExemptions("")
     }
 
-    private var updateTare = false
-    private var tareValue = TareValue()
-
-
-    data class TareValue(
-        val topLeft: Float = 0f,
-        val topRight: Float = 0f,
-        val bottomLeft: Float = 0f,
-        val bottomRight: Float = 0f
-    )
-
+    private val tareManager = TareManager()
 
     fun connect() {
         listener.onLog("Connecting to HID service...")
@@ -273,7 +258,7 @@ class WiiBalanceBoardHidConnection(
     }
 
     fun tare() {
-        updateTare = true
+        tareManager.requestTare()
     }
 
     private fun handleReport(data: ByteArray) {
@@ -300,8 +285,6 @@ class WiiBalanceBoardHidConnection(
 
         val address = ((data[4].toInt() and 0xFF) shl 8) or (data[5].toInt() and 0xFF)
         val payload = data.copyOfRange(6, data.size)
-
-        //Log.d(TAG, "Memory response addr=%04X size=%d".format(address, payload.size))
 
         pendingCalibrationData[address and 0xFF] = payload
     }
@@ -335,25 +318,27 @@ class WiiBalanceBoardHidConnection(
         val tl = toKg(tlRaw, cal.topLeft)
         val bl = toKg(blRaw, cal.bottomLeft)
 
-        // If tare is requested, capture this reading as the tare value
-        if (updateTare) {
-            updateTare = false
-            tareValue = TareValue(
-                topLeft = tl,
-                topRight = tr,
-                bottomLeft = bl,
-                bottomRight = br
+        val rawReading = SensorReading(
+            topLeft = tl,
+            topRight = tr,
+            bottomLeft = bl,
+            bottomRight = br,
+        )
+
+        val taredReading = tareManager.applyTare(rawReading) { tare ->
+            listener.onLog(
+                "Tare set: TL=%.1f TR=%.1f BL=%.1f BR=%.1f".format(
+                    tare.topLeft, tare.topRight, tare.bottomLeft, tare.bottomRight
+                )
             )
-            listener.onLog("✓ Tare set: TL=%.1f TR=%.1f BL=%.1f BR=%.1f".format(tl, tr, bl, br))
         }
 
-        // Apply tare by subtracting the tare values
-        val tlTared = tl - tareValue.topLeft
-        val trTared = tr - tareValue.topRight
-        val blTared = bl - tareValue.bottomLeft
-        val brTared = br - tareValue.bottomRight
-
-        listener.onWeightData(tlTared, trTared, blTared, brTared)
+        listener.onWeightData(
+            taredReading.topLeft,
+            taredReading.topRight,
+            taredReading.bottomLeft,
+            taredReading.bottomRight,
+        )
     }
 
     private fun requestReport(reportId: Byte, bufferSize: Int = 32): Boolean {

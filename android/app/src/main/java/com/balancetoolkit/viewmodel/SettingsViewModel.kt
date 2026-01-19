@@ -3,16 +3,19 @@ package com.balancetoolkit.viewmodel
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.balancetoolkit.data.MockDeviceIds
+import com.balancetoolkit.data.PreferenceKeys
+import com.balancetoolkit.data.local.dao.DeviceDao
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.File
-
-private const val PREF_HOST_MAC_ADDRESS = "host_mac_address"
-private const val PREF_MOCK_MODE_ENABLED = "mock_mode_enabled"
-private const val PREF_SESSIONS_DIRECTORY = "sessions_directory"
+import javax.inject.Inject
 
 data class SettingsUiState(
     val hostMacAddress: String? = null,
@@ -26,9 +29,11 @@ data class SettingsUiState(
         get() = !hostMacAddress.isNullOrBlank()
 }
 
-class SettingsViewModel(
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
     private val sharedPreferences: SharedPreferences,
-    private val context: Context,
+    private val deviceDao: DeviceDao,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -38,9 +43,9 @@ class SettingsViewModel(
     }
 
     private fun loadSettings() {
-        val savedMac = sharedPreferences.getString(PREF_HOST_MAC_ADDRESS, null)
-        val mockModeEnabled = sharedPreferences.getBoolean(PREF_MOCK_MODE_ENABLED, false)
-        val sessionsDirectory = sharedPreferences.getString(PREF_SESSIONS_DIRECTORY, null)
+        val savedMac = sharedPreferences.getString(PreferenceKeys.HOST_MAC_ADDRESS, null)
+        val mockModeEnabled = sharedPreferences.getBoolean(PreferenceKeys.MOCK_MODE_ENABLED, false)
+        val sessionsDirectory = sharedPreferences.getString(PreferenceKeys.SESSIONS_DIRECTORY, null)
             ?: getDefaultSessionsDirectory()
         _uiState.update {
             it.copy(
@@ -63,7 +68,7 @@ class SettingsViewModel(
     }
 
     fun saveHostMacAddress(macAddress: String) {
-        sharedPreferences.edit().putString(PREF_HOST_MAC_ADDRESS, macAddress).apply()
+        sharedPreferences.edit().putString(PreferenceKeys.HOST_MAC_ADDRESS, macAddress).apply()
         _uiState.update { it.copy(hostMacAddress = macAddress, showMacAddressDialog = false) }
     }
 
@@ -76,12 +81,20 @@ class SettingsViewModel(
     }
 
     fun setMockModeEnabled(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(PREF_MOCK_MODE_ENABLED, enabled).apply()
+        sharedPreferences.edit().putBoolean(PreferenceKeys.MOCK_MODE_ENABLED, enabled).apply()
         _uiState.update { it.copy(mockModeEnabled = enabled) }
+
+        // Delete mock boards when switching to real mode
+        if (!enabled) {
+            viewModelScope.launch {
+                deviceDao.deleteDeviceById(MockDeviceIds.MOCK_BOARD_1)
+                deviceDao.deleteDeviceById(MockDeviceIds.MOCK_BOARD_2)
+            }
+        }
     }
 
     fun saveSessionsDirectory(directory: String) {
-        sharedPreferences.edit().putString(PREF_SESSIONS_DIRECTORY, directory).apply()
+        sharedPreferences.edit().putString(PreferenceKeys.SESSIONS_DIRECTORY, directory).apply()
         _uiState.update { it.copy(sessionsDirectory = directory, showSessionsDirectoryDialog = false) }
     }
 
@@ -104,18 +117,5 @@ class SettingsViewModel(
 
     fun dismissCiteBottomSheet() {
         _uiState.update { it.copy(showCiteBottomSheet = false) }
-    }
-
-    class Factory(
-        private val sharedPreferences: SharedPreferences,
-        private val context: Context,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
-                return SettingsViewModel(sharedPreferences, context) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
     }
 }

@@ -1,7 +1,7 @@
 package com.balancetoolkit.session
 
 import android.content.Context
-import com.balancetoolkit.viewmodel.SensorReading
+import com.balancetoolkit.bluetooth.SensorReading
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString

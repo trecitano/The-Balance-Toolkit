@@ -1,18 +1,15 @@
 package com.balancetoolkit.ui.navigation
 
-import android.content.Context
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.balancetoolkit.BalanceToolkitApplication
 import com.balancetoolkit.ui.screens.devices.DevicesScreen
 import com.balancetoolkit.ui.screens.home.HomeScreen
 import com.balancetoolkit.ui.screens.session.SessionScreen
@@ -30,13 +27,6 @@ fun AppNavHost(
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
-    val application = LocalContext.current.applicationContext as BalanceToolkitApplication
-    val database = application.database
-    val sharedPreferences = application.getSharedPreferences(
-        "balance_toolkit_prefs",
-        Context.MODE_PRIVATE
-    )
-
     NavHost(
         navController = navController,
         startDestination = AppDestination.Home.route,
@@ -47,13 +37,7 @@ fun AppNavHost(
         popExitTransition = { ExitTransition.None },
     ) {
         composable(AppDestination.Home.route) {
-            val viewModel: HomeViewModel = viewModel(
-                factory = HomeViewModel.Factory(
-                    database.userDao(),
-                    database.deviceDao(),
-                    sharedPreferences
-                ),
-            )
+            val viewModel: HomeViewModel = hiltViewModel()
             HomeScreen(
                 viewModel = viewModel,
                 modifier = Modifier.padding(innerPadding),
@@ -88,14 +72,8 @@ fun AppNavHost(
         }
 
         composable(AppDestination.Users.route) {
-            val viewModel: UsersViewModel =
-                viewModel(
-                    factory = UsersViewModel.Factory(database.userDao(), sharedPreferences),
-                )
-            val devicesViewModel: DevicesViewModel =
-                viewModel(
-                    factory = DevicesViewModel.Factory(database.deviceDao(), sharedPreferences),
-                )
+            val viewModel: UsersViewModel = hiltViewModel()
+            val devicesViewModel: DevicesViewModel = hiltViewModel()
             UsersScreen(
                 viewModel = viewModel,
                 devicesViewModel = devicesViewModel,
@@ -104,35 +82,50 @@ fun AppNavHost(
         }
 
         composable(AppDestination.Devices.route) {
-            val viewModel: DevicesViewModel =
-                viewModel(
-                    factory = DevicesViewModel.Factory(database.deviceDao(), sharedPreferences),
-                )
+            val viewModel: DevicesViewModel = hiltViewModel()
             DevicesScreen(
                 viewModel = viewModel,
+                onNavigateToHome = {
+                    navController.navigate(AppDestination.Home.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = false
+                        }
+                        launchSingleTop = true
+                        restoreState = false
+                    }
+                },
                 modifier = Modifier.padding(innerPadding),
             )
         }
 
         composable(AppDestination.Session.route) {
-            val viewModel: SessionViewModel = viewModel(
-                factory = SessionViewModel.Factory(
-                    application,
-                    sharedPreferences,
-                    database.userDao(),
-                    database.deviceDao(),
-                ),
-            )
+            val viewModel: SessionViewModel = hiltViewModel()
             SessionScreen(
                 viewModel = viewModel,
+                onNavigateToUsers = {
+                    navController.navigate(AppDestination.Users.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = false
+                        }
+                        launchSingleTop = true
+                        restoreState = false
+                    }
+                },
+                onNavigateToDevices = {
+                    navController.navigate(AppDestination.Devices.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = false
+                        }
+                        launchSingleTop = true
+                        restoreState = false
+                    }
+                },
                 modifier = Modifier.padding(innerPadding),
             )
         }
 
         composable(AppDestination.Settings.route) {
-            val viewModel: SettingsViewModel = viewModel(
-                factory = SettingsViewModel.Factory(sharedPreferences, application),
-            )
+            val viewModel: SettingsViewModel = hiltViewModel()
             SettingsScreen(
                 viewModel = viewModel,
                 modifier = Modifier.padding(innerPadding),

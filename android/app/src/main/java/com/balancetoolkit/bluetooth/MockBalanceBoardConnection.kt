@@ -11,13 +11,8 @@ import kotlin.random.Random
  * around a balance board.
  */
 class MockBalanceBoardConnection(
-    private val listener: Listener
+    private val listener: BalanceBoardListener
 ) {
-    interface Listener {
-        fun onLog(message: String)
-        fun onWeightData(topLeft: Float, topRight: Float, bottomLeft: Float, bottomRight: Float)
-        fun onError(message: String)
-    }
 
     companion object {
         private const val TAG = "MockBalanceBoard"
@@ -30,15 +25,7 @@ class MockBalanceBoardConnection(
     @Volatile
     private var isRunning = false
 
-    private var updateTare = false
-    private var tareValue = TareValue()
-
-    data class TareValue(
-        val topLeft: Float = 0f,
-        val topRight: Float = 0f,
-        val bottomLeft: Float = 0f,
-        val bottomRight: Float = 0f
-    )
+    private val tareManager = TareManager()
 
     /**
      * Generator that creates realistic balance board readings by
@@ -139,27 +126,27 @@ class MockBalanceBoardConnection(
             while (isRunning) {
                 val reading = mockGenerator?.next() ?: break
 
-                // Apply tare if requested
-                if (updateTare) {
-                    updateTare = false
-                    tareValue = TareValue(
-                        topLeft = reading.topLeft,
-                        topRight = reading.topRight,
-                        bottomLeft = reading.bottomLeft,
-                        bottomRight = reading.bottomRight
+                val rawReading = SensorReading(
+                    topLeft = reading.topLeft,
+                    topRight = reading.topRight,
+                    bottomLeft = reading.bottomLeft,
+                    bottomRight = reading.bottomRight,
+                )
+
+                val taredReading = tareManager.applyTare(rawReading) { tare ->
+                    listener.onLog(
+                        "Tare set: TL=%.1f TR=%.1f BL=%.1f BR=%.1f".format(
+                            tare.topLeft, tare.topRight, tare.bottomLeft, tare.bottomRight
+                        )
                     )
-                    listener.onLog("Tare set: TL=%.1f TR=%.1f BL=%.1f BR=%.1f".format(
-                        reading.topLeft, reading.topRight, reading.bottomLeft, reading.bottomRight
-                    ))
                 }
 
-                // Apply tare by subtracting tare values
-                val tlTared = reading.topLeft - tareValue.topLeft
-                val trTared = reading.topRight - tareValue.topRight
-                val blTared = reading.bottomLeft - tareValue.bottomLeft
-                val brTared = reading.bottomRight - tareValue.bottomRight
-
-                listener.onWeightData(tlTared, trTared, blTared, brTared)
+                listener.onWeightData(
+                    taredReading.topLeft,
+                    taredReading.topRight,
+                    taredReading.bottomLeft,
+                    taredReading.bottomRight,
+                )
 
                 try {
                     Thread.sleep(SAMPLE_INTERVAL_MS)
@@ -177,7 +164,7 @@ class MockBalanceBoardConnection(
      * Request a tare (zero) on the next reading.
      */
     fun tare() {
-        updateTare = true
+        tareManager.requestTare()
     }
 
     /**

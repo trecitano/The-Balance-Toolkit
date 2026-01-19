@@ -32,6 +32,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -78,6 +79,8 @@ private val cardShape = RoundedCornerShape(12.dp)
 @Composable
 fun SessionScreen(
     viewModel: SessionViewModel,
+    onNavigateToUsers: () -> Unit,
+    onNavigateToDevices: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -97,6 +100,8 @@ fun SessionScreen(
         onToggleSession = viewModel::togglePlay,
         onTare = viewModel::applyTare,
         canStartSession = uiState.canStartSession,
+        onUserClick = onNavigateToUsers,
+        onDevicesClick = onNavigateToDevices,
         modifier = modifier,
     )
 }
@@ -117,6 +122,8 @@ private fun SessionScreenContent(
     onToggleSession: () -> Unit,
     onTare: () -> Unit,
     canStartSession: Boolean,
+    onUserClick: () -> Unit,
+    onDevicesClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     TrackPerformance("SessionScreen")
@@ -146,7 +153,7 @@ private fun SessionScreenContent(
 
             // Selected user info
             uiState.selectedUser?.let { user ->
-                SelectedUserCard(user = user)
+                SelectedUserCard(user = user, onClick = onUserClick)
             }
 
             // Session control buttons
@@ -155,6 +162,7 @@ private fun SessionScreenContent(
                 onToggleSession = onToggleSession,
                 onTare = onTare,
                 canStartSession = canStartSession,
+                onDevicesClick = onDevicesClick,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -301,9 +309,12 @@ private fun SessionDeviceCard(
 @Composable
 private fun SelectedUserCard(
     user: User,
+    onClick: () -> Unit,
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
@@ -353,44 +364,64 @@ private fun SessionControlCard(
     onToggleSession: () -> Unit,
     onTare: () -> Unit,
     canStartSession: Boolean,
+    onDevicesClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Button(
-                onClick = onToggleSession,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isRecording) PrimaryRed else PrimaryBlue
-                ),
-                modifier = Modifier.weight(1f),
-                enabled = isRecording || canStartSession,
+        if (!canStartSession && !isRecording) {
+            // No device connected state
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(4.dp),
             ) {
-                Text(
-                    text = if (isRecording) "Stop Session" else "Start Session",
-                    fontWeight = FontWeight.Medium,
-                )
+                OutlinedButton(
+                    onClick = onDevicesClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(
+                        text = "No balance board is connected",
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
-
-            Button(
-                onClick = onTare,
-                colors = ButtonDefaults.buttonColors(containerColor = SecondaryPurple),
-                enabled = isRecording,
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Tare",
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Tare")
+                Button(
+                    onClick = onToggleSession,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isRecording) PrimaryRed else PrimaryBlue
+                    ),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        text = if (isRecording) "Stop Session" else "Start Session",
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+
+                Button(
+                    onClick = onTare,
+                    colors = ButtonDefaults.buttonColors(containerColor = SecondaryPurple),
+                    enabled = isRecording,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Tare",
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Tare")
+                }
             }
         }
     }
@@ -1546,6 +1577,8 @@ private fun SessionScreenPreview() {
             onToggleSession = {},
             onTare = {},
             canStartSession = true,
+            onUserClick = {},
+            onDevicesClick = {},
         )
     }
 }

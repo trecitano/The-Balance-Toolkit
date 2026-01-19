@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Icon
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
@@ -19,7 +20,9 @@ import androidx.navigation.compose.rememberNavController
 import com.balancetoolkit.ui.navigation.AppDestination
 import com.balancetoolkit.ui.navigation.AppNavHost
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,7 +52,7 @@ fun TheBalanceToolkitApp() {
                 item(
                     icon = {
                         Icon(
-                            imageVector = destination.icon,
+                            painter = painterResource(destination.icon),
                             contentDescription = destination.label,
                         )
                     },

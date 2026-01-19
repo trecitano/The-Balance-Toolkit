@@ -2,13 +2,14 @@ package com.balancetoolkit.viewmodel
 
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.dao.UserDao
 import com.balancetoolkit.data.local.entity.toUser
 import com.balancetoolkit.data.model.DEFAULT_USER_ID
 import com.balancetoolkit.data.model.User
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,8 +18,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-private const val PREF_SELECTED_USER_ID = "selected_user_id"
+import javax.inject.Inject
 
 data class HomeUiState(
     val selectedUser: User? = null,
@@ -26,7 +26,8 @@ data class HomeUiState(
     val isLoading: Boolean = true,
 )
 
-class HomeViewModel(
+@HiltViewModel
+class HomeViewModel @Inject constructor(
     private val userDao: UserDao,
     private val deviceDao: DeviceDao,
     private val sharedPreferences: SharedPreferences,
@@ -40,7 +41,7 @@ class HomeViewModel(
 
     private fun loadHomeData() {
         viewModelScope.launch {
-            val selectedUserId = sharedPreferences.getString(PREF_SELECTED_USER_ID, null)
+            val selectedUserId = sharedPreferences.getString(PreferenceKeys.SELECTED_USER_ID, null)
 
             combine(
                 userDao.getAllUsers().map { entities -> entities.map { it.toUser() } },
@@ -55,7 +56,7 @@ class HomeViewModel(
 
                 // If we found a user but it wasn't in preferences, save it
                 if (selectedUser != null && selectedUserId != selectedUser.id) {
-                    sharedPreferences.edit().putString(PREF_SELECTED_USER_ID, selectedUser.id).apply()
+                    sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, selectedUser.id).apply()
                 }
 
                 HomeUiState(
@@ -74,25 +75,11 @@ class HomeViewModel(
     }
 
     fun selectUser(userId: String?) {
-        sharedPreferences.edit().putString(PREF_SELECTED_USER_ID, userId).apply()
+        sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, userId).apply()
         // The flow will automatically update the UI state
     }
 
     fun clearSelectedUser() {
         selectUser(null)
-    }
-
-    class Factory(
-        private val userDao: UserDao,
-        private val deviceDao: DeviceDao,
-        private val sharedPreferences: SharedPreferences,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
-                return HomeViewModel(userDao, deviceDao, sharedPreferences) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
     }
 }

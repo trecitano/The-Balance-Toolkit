@@ -2,9 +2,10 @@ package com.balancetoolkit.viewmodel
 
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.balancetoolkit.bluetooth.MockBalanceBoardConnection
+import com.balancetoolkit.bluetooth.MockConnectionManager
+import com.balancetoolkit.bluetooth.SimpleWeightListener
+import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.Result
 import com.balancetoolkit.data.local.dao.UserDao
 import com.balancetoolkit.data.local.entity.toEntity
@@ -14,6 +15,8 @@ import com.balancetoolkit.data.model.DominantHand
 import com.balancetoolkit.data.model.Gender
 import com.balancetoolkit.data.model.User
 import com.balancetoolkit.data.model.getAvatarColors
+import com.balancetoolkit.ui.theme.UserColors
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,19 +25,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-private const val PREF_SELECTED_USER_ID = "selected_user_id"
-
-private val availableColors = listOf(
-    "#3B82F6", // Blue
-    "#E53935", // Red
-    "#FBC02D", // Yellow
-    "#4CAF50", // Green
-    "#9C27B0", // Purple
-    "#FF9800", // Orange
-    "#00BCD4", // Cyan
-    "#E91E63", // Pink
-)
+import javax.inject.Inject
 
 enum class WeightMeasureTarget {
     EDIT_USER,
@@ -87,9 +78,11 @@ data class EditUserFormState(
         get() = "#%06X".format(color.toInt() and 0xFFFFFF)
 }
 
-class UsersViewModel(
+@HiltViewModel
+class UsersViewModel @Inject constructor(
     private val userDao: UserDao,
     private val sharedPreferences: SharedPreferences,
+    private val mockConnectionManager: MockConnectionManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(UsersUiState(isLoading = true))
     val uiState: StateFlow<UsersUiState> = _uiState.asStateFlow()
@@ -100,23 +93,10 @@ class UsersViewModel(
     private val _editUserFormState = MutableStateFlow(EditUserFormState())
     val editUserFormState: StateFlow<EditUserFormState> = _editUserFormState.asStateFlow()
 
-    // Weight measurement
-    private var mockConnection: MockBalanceBoardConnection? = null
-
-    private val weightMeasureListener = object : MockBalanceBoardConnection.Listener {
-        override fun onLog(message: String) {
-            // Not needed for weight measurement
-        }
-
-        override fun onWeightData(topLeft: Float, topRight: Float, bottomLeft: Float, bottomRight: Float) {
-            val totalWeight = topLeft + topRight + bottomLeft + bottomRight
-            viewModelScope.launch(Dispatchers.Main) {
-                _uiState.update { it.copy(liveWeight = totalWeight) }
-            }
-        }
-
-        override fun onError(message: String) {
-            // Not needed for weight measurement
+    // Weight measurement listener
+    private val weightMeasureListener = SimpleWeightListener { totalWeight ->
+        viewModelScope.launch(Dispatchers.Main) {
+            _uiState.update { it.copy(liveWeight = totalWeight) }
         }
     }
 
@@ -137,15 +117,15 @@ class UsersViewModel(
             )
             userDao.insertUser(defaultUser.toEntity())
             // Set default user as selected if no user was previously selected
-            if (sharedPreferences.getString(PREF_SELECTED_USER_ID, null) == null) {
-                sharedPreferences.edit().putString(PREF_SELECTED_USER_ID, DEFAULT_USER_ID).apply()
+            if (sharedPreferences.getString(PreferenceKeys.SELECTED_USER_ID, null) == null) {
+                sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, DEFAULT_USER_ID).apply()
             }
         }
     }
 
     private fun loadUsers() {
         viewModelScope.launch {
-            val savedUserId = sharedPreferences.getString(PREF_SELECTED_USER_ID, null)
+            val savedUserId = sharedPreferences.getString(PreferenceKeys.SELECTED_USER_ID, null)
                 ?: DEFAULT_USER_ID  // Default to default user if nothing saved
 
             userDao
@@ -183,7 +163,7 @@ class UsersViewModel(
             val user = state.users.getOrNull(index)
             // Save selected user to SharedPreferences for use on Home screen
             if (user != null) {
-                sharedPreferences.edit().putString(PREF_SELECTED_USER_ID, user.id).apply()
+                sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, user.id).apply()
             }
             state.copy(
                 selectedUserIndex = index,
@@ -193,7 +173,7 @@ class UsersViewModel(
     }
 
     fun showAddUserDialog() {
-        _addUserFormState.value = AddUserFormState(color = availableColors.random())
+        _addUserFormState.value = AddUserFormState(color = UserColors.randomHex())
         _uiState.update { it.copy(showAddUserDialog = true) }
     }
 
@@ -412,15 +392,11 @@ class UsersViewModel(
     }
 
     private fun startWeightMeasurement() {
-        if (mockConnection != null) return
-        mockConnection = MockBalanceBoardConnection(weightMeasureListener).also {
-            it.start()
-        }
+        mockConnectionManager.start(weightMeasureListener)
     }
 
     private fun stopWeightMeasurement() {
-        mockConnection?.stop()
-        mockConnection = null
+        mockConnectionManager.stop()
     }
 
     fun acceptWeight() {
@@ -438,24 +414,11 @@ class UsersViewModel(
     }
 
     fun tareWeight() {
-        mockConnection?.tare()
+        mockConnectionManager.tare()
     }
 
     override fun onCleared() {
         super.onCleared()
         stopWeightMeasurement()
-    }
-
-    class Factory(
-        private val userDao: UserDao,
-        private val sharedPreferences: SharedPreferences,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(UsersViewModel::class.java)) {
-                return UsersViewModel(userDao, sharedPreferences) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
     }
 }

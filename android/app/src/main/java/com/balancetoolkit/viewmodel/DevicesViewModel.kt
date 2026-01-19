@@ -1,14 +1,20 @@
 package com.balancetoolkit.viewmodel
 
+import android.Manifest
 import android.content.SharedPreferences
+import androidx.annotation.RequiresPermission
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.balancetoolkit.bluetooth.BluetoothScanManager
+import com.balancetoolkit.bluetooth.ScanEvent
+import com.balancetoolkit.data.MockDeviceIds
+import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.Result
 import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.entity.toDevice
 import com.balancetoolkit.data.local.entity.toEntity
 import com.balancetoolkit.data.model.Device
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,13 +23,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-
-private const val PREF_HOST_MAC_ADDRESS = "host_mac_address"
-private const val PREF_MOCK_MODE_ENABLED = "mock_mode_enabled"
-private const val MOCK_BOARD_1_ID = "mock-board-1"
-private const val MOCK_BOARD_2_ID = "mock-board-2"
+import javax.inject.Inject
 
 data class DevicesUiState(
     val devices: List<Device> = emptyList(),
@@ -51,28 +52,79 @@ data class DevicesUiState(
         get() = deviceToEdit != null
 }
 
-class DevicesViewModel(
+@HiltViewModel
+class DevicesViewModel @Inject constructor(
     private val deviceDao: DeviceDao,
     private val sharedPreferences: SharedPreferences,
+    private val bluetoothScanManager: BluetoothScanManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(DevicesUiState(isLoading = true))
     val uiState: StateFlow<DevicesUiState> = _uiState.asStateFlow()
 
     private var scanJob: Job? = null
 
+    private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == PreferenceKeys.MOCK_MODE_ENABLED) {
+            val isMockMode = sharedPreferences.getBoolean(PreferenceKeys.MOCK_MODE_ENABLED, false)
+            _uiState.update { it.copy(isMockMode = isMockMode) }
+        }
+    }
+
     init {
         loadHostMacAddress()
         loadMockModeAndDevices()
+        sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceListener)
+        observeScanEvents()
+        observeScanningState()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        sharedPreferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
+        bluetoothScanManager.cleanup()
+    }
+
+    private fun observeScanEvents() {
+        viewModelScope.launch {
+            bluetoothScanManager.events.collect { event ->
+                when (event) {
+                    is ScanEvent.PairingSucceeded -> {
+                        // Save the newly paired device to the database
+                        val device = Device(
+                            name = event.device.name ?: "Balance Board",
+                            macAddress = event.device.address,
+                            isConnected = false,
+                        )
+                        deviceDao.insertDevice(device.toEntity())
+                    }
+                    is ScanEvent.Error -> {
+                        _uiState.update { it.copy(error = event.message) }
+                    }
+                    is ScanEvent.PairingFailed -> {
+                        _uiState.update { it.copy(error = "Pairing failed: ${event.reason}") }
+                    }
+                    else -> { /* Log events handled by BluetoothScanManager */ }
+                }
+            }
+        }
+    }
+
+    private fun observeScanningState() {
+        viewModelScope.launch {
+            bluetoothScanManager.isScanning.collect { isScanning ->
+                _uiState.update { it.copy(isScanning = isScanning) }
+            }
+        }
     }
 
     private fun loadHostMacAddress() {
-        val savedMac = sharedPreferences.getString(PREF_HOST_MAC_ADDRESS, null)
+        val savedMac = sharedPreferences.getString(PreferenceKeys.HOST_MAC_ADDRESS, null)
         _uiState.update { it.copy(hostMacAddress = savedMac) }
     }
 
     private fun loadMockModeAndDevices() {
         viewModelScope.launch {
-            val isMockMode = sharedPreferences.getBoolean(PREF_MOCK_MODE_ENABLED, false)
+            val isMockMode = sharedPreferences.getBoolean(PreferenceKeys.MOCK_MODE_ENABLED, false)
             _uiState.update { it.copy(isMockMode = isMockMode) }
 
             if (isMockMode) {
@@ -83,10 +135,10 @@ class DevicesViewModel(
     }
 
     private suspend fun ensureMockBoardsExist() {
-        val mockBoard1 = deviceDao.getDeviceById(MOCK_BOARD_1_ID)
+        val mockBoard1 = deviceDao.getDeviceById(MockDeviceIds.MOCK_BOARD_1)
         if (mockBoard1 == null) {
             val device = Device(
-                id = MOCK_BOARD_1_ID,
+                id = MockDeviceIds.MOCK_BOARD_1,
                 name = "Mock Board 1",
                 macAddress = "00:00:00:00:00:01",
                 isConnected = false,
@@ -94,10 +146,10 @@ class DevicesViewModel(
             deviceDao.insertDevice(device.toEntity())
         }
 
-        val mockBoard2 = deviceDao.getDeviceById(MOCK_BOARD_2_ID)
+        val mockBoard2 = deviceDao.getDeviceById(MockDeviceIds.MOCK_BOARD_2)
         if (mockBoard2 == null) {
             val device = Device(
-                id = MOCK_BOARD_2_ID,
+                id = MockDeviceIds.MOCK_BOARD_2,
                 name = "Mock Board 2",
                 macAddress = "00:00:00:00:00:02",
                 isConnected = false,
@@ -108,7 +160,7 @@ class DevicesViewModel(
 
     fun saveHostMacAddress(macAddress: String) {
         val shouldScan = _uiState.value.scanAfterMacSave
-        sharedPreferences.edit().putString(PREF_HOST_MAC_ADDRESS, macAddress).apply()
+        sharedPreferences.edit().putString(PreferenceKeys.HOST_MAC_ADDRESS, macAddress).apply()
         _uiState.update { it.copy(hostMacAddress = macAddress, showMacAddressDialog = false, scanAfterMacSave = false) }
         if (shouldScan) {
             scanForDevices()
@@ -133,10 +185,11 @@ class DevicesViewModel(
         }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     private fun stopScanning() {
         scanJob?.cancel()
         scanJob = null
-        _uiState.update { it.copy(isScanning = false) }
+        bluetoothScanManager.stopScanning()
     }
 
     private fun loadDevices() {
@@ -161,45 +214,25 @@ class DevicesViewModel(
         }
     }
 
+    @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT])
     fun scanForDevices() {
         scanJob?.cancel()
         scanJob = viewModelScope.launch {
-            val initialDeviceCount = _uiState.value.devices.size
-            _uiState.update { it.copy(isScanning = true) }
-
-            // Continue scanning until a new device is found or cancelled
-            while (isActive) {
-                // Simulate scanning - in real implementation, this would discover Bluetooth devices
-                delay(1000)
-
-                // For demo purposes, add sample devices if none exist after a few seconds
-                if (_uiState.value.devices.isEmpty()) {
-                    val sampleDevices =
-                        listOf(
-                            Device(
-                                name = "Nintendo RVL-WBC-01",
-                                macAddress = "37:F6:A1:2B:FD:F4",
-                                isConnected = false,
-                            ),
-                            Device(
-                                name = "Nintendo RVL-WBC-01",
-                                macAddress = "12:E9:CD:B9:71:54",
-                                isConnected = false,
-                            ),
-                        )
-                    sampleDevices.forEach { device ->
-                        deviceDao.insertDevice(device.toEntity())
-                    }
-                }
-
-                // Stop scanning if a new device was found
-                if (_uiState.value.devices.size > initialDeviceCount) {
-                    break
-                }
+            if (_uiState.value.isMockMode) {
+                // In mock mode, add mock boards
+                _uiState.update { it.copy(isScanning = true) }
+                delay(500) // Brief delay to show scanning state
+                ensureMockBoardsExist()
+                _uiState.update { it.copy(isScanning = false) }
+                scanJob = null
+                return@launch
             }
 
-            _uiState.update { it.copy(isScanning = false) }
-            scanJob = null
+            // Real mode: Use BluetoothScanManager
+            val started = bluetoothScanManager.startScanning()
+            if (!started) {
+                scanJob = null
+            }
         }
     }
 
@@ -285,19 +318,6 @@ class DevicesViewModel(
                 _uiState.update { it.copy(error = e.message ?: "Failed to update device name") }
             }
             _uiState.update { it.copy(deviceToEdit = null) }
-        }
-    }
-
-    class Factory(
-        private val deviceDao: DeviceDao,
-        private val sharedPreferences: SharedPreferences,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(DevicesViewModel::class.java)) {
-                return DevicesViewModel(deviceDao, sharedPreferences) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
         }
     }
 }

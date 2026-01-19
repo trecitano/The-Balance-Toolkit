@@ -1,5 +1,12 @@
 package com.balancetoolkit.ui.screens.devices
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,14 +32,20 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -41,14 +54,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.balancetoolkit.ui.theme.ErrorRed
-import com.balancetoolkit.ui.theme.PrimaryBlue
+import androidx.core.content.ContextCompat
 import com.balancetoolkit.R
 import com.balancetoolkit.data.model.Device
 import com.balancetoolkit.ui.components.AppHeader
 import com.balancetoolkit.ui.components.DeviceCard
 import com.balancetoolkit.ui.components.HostMacAddressDialog
 import com.balancetoolkit.ui.theme.BackgroundGray
+import com.balancetoolkit.ui.theme.ErrorRed
+import com.balancetoolkit.ui.theme.PrimaryBlue
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 import com.balancetoolkit.util.TrackPerformance
 import com.balancetoolkit.viewmodel.DevicesUiState
@@ -57,12 +71,99 @@ import com.balancetoolkit.viewmodel.DevicesViewModel
 private val scanButtonColor = Color(0xFF424242)
 private val buttonShape = RoundedCornerShape(8.dp)
 
+private val bluetoothPermissions = arrayOf(
+    Manifest.permission.BLUETOOTH_SCAN,
+    Manifest.permission.BLUETOOTH_CONNECT,
+)
+
 @Composable
 fun DevicesScreen(
     viewModel: DevicesViewModel,
+    onNavigateToHome: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Check if permissions are currently granted
+    fun hasBluetoothPermissions(): Boolean {
+        return bluetoothPermissions.all { permission ->
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    // Track permission states
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    var hasLaunchedInitialRequest by remember { mutableStateOf(false) }
+    var waitingForSettingsReturn by remember { mutableStateOf(false) }
+
+    // Permission launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (!allGranted) {
+            // Permissions denied - show settings dialog
+            showSettingsDialog = true
+        }
+        // If granted, do nothing - screen will show normally
+    }
+
+    // Initial permission check on first composition
+    LaunchedEffect(Unit) {
+        if (!hasBluetoothPermissions()) {
+            hasLaunchedInitialRequest = true
+            permissionLauncher.launch(bluetoothPermissions)
+        }
+    }
+
+    // Re-check permissions when returning from settings
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && waitingForSettingsReturn) {
+                waitingForSettingsReturn = false
+                if (!hasBluetoothPermissions()) {
+                    // Still no permissions after returning from settings
+                    showSettingsDialog = true
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Settings dialog
+    if (showSettingsDialog) {
+        BluetoothPermissionSettingsDialog(
+            onOpenSettings = {
+                showSettingsDialog = false
+                waitingForSettingsReturn = true
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", context.packageName, null)
+                }
+                context.startActivity(intent)
+            },
+            onDismiss = {
+                showSettingsDialog = false
+                onNavigateToHome()
+            }
+        )
+    }
+
+    // Handle scan click with permission check
+    val onScanWithPermissionCheck = {
+        if (uiState.isScanning) {
+            // Already scanning, stop it
+            viewModel.onScanClick()
+        } else if (hasBluetoothPermissions()) {
+            viewModel.onScanClick()
+        } else {
+            showSettingsDialog = true
+        }
+    }
 
     if (uiState.showMacAddressDialog) {
         HostMacAddressDialog(
@@ -90,7 +191,7 @@ fun DevicesScreen(
 
     DevicesScreenContent(
         uiState = uiState,
-        onScan = viewModel::onScanClick,
+        onScan = onScanWithPermissionCheck,
         onEditMacAddress = viewModel::showMacAddressDialog,
         onToggleConnection = viewModel::toggleConnection,
         onEditDevice = viewModel::requestEditDevice,
@@ -190,11 +291,7 @@ private fun DevicesScreenContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (uiState.devices.isEmpty()) {
-                // Empty State
-                EmptyDevicesState(modifier = Modifier.weight(1f))
-            } else {
-                // Device Cards
+            if (uiState.devices.isNotEmpty()) {
                 uiState.devices.forEach { device ->
                     DeviceCard(
                         device = device,
@@ -204,6 +301,8 @@ private fun DevicesScreenContent(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
+            } else if (!uiState.isLoading) {
+                EmptyDevicesState(modifier = Modifier.weight(1f))
             }
         }
     }
@@ -245,6 +344,38 @@ private fun EmptyDevicesState(modifier: Modifier = Modifier) {
             )
         }
     }
+}
+
+@Composable
+private fun BluetoothPermissionSettingsDialog(
+    onOpenSettings: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.bluetooth_permission_required_title),
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Text(stringResource(R.string.bluetooth_permission_required_message))
+        },
+        confirmButton = {
+            Button(
+                onClick = onOpenSettings,
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+            ) {
+                Text(stringResource(R.string.open_settings))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }
 
 @Composable

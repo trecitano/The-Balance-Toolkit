@@ -1,46 +1,41 @@
 package com.balancetoolkit.ui.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.DrawableRes
+import com.balancetoolkit.R
 
 sealed class AppDestination(
     val route: String,
     val label: String,
-    val icon: ImageVector,
+    @DrawableRes val icon: Int,
 ) {
     data object Home : AppDestination(
         route = "home",
         label = "Home",
-        icon = Icons.Default.Home,
+        icon = R.drawable.home_24,
     )
 
     data object Users : AppDestination(
         route = "users",
         label = "Users",
-        icon = Icons.Default.Person,
+        icon = R.drawable.group_24,
     )
 
     data object Devices : AppDestination(
         route = "devices",
         label = "Devices",
-        icon = Icons.Default.Phone,
+        icon = R.drawable.monitor_24,
     )
 
     data object Session : AppDestination(
         route = "session",
         label = "Session",
-        icon = Icons.Default.Refresh,
+        icon = R.drawable.bar_chart_4_bars_24,
     )
 
     data object Settings : AppDestination(
         route = "settings",
         label = "Settings",
-        icon = Icons.Default.Settings,
+        icon = R.drawable.settings_24,
     )
 
     companion object {

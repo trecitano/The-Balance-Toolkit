@@ -1,42 +1,26 @@
 package com.balancetoolkit.ui.screens.users
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,12 +35,15 @@ import androidx.compose.ui.window.DialogProperties
 import com.balancetoolkit.R
 import com.balancetoolkit.data.model.DominantHand
 import com.balancetoolkit.data.model.Gender
+import com.balancetoolkit.ui.components.ColorPickerRow
+import com.balancetoolkit.ui.components.EnumDropdown
+import com.balancetoolkit.ui.components.LabeledTextField
+import com.balancetoolkit.ui.components.WeightFieldWithButton
 import com.balancetoolkit.ui.theme.CardBackground
 import com.balancetoolkit.ui.theme.PrimaryBlue
 import com.balancetoolkit.ui.theme.TextGray
 import com.balancetoolkit.viewmodel.AddUserFormState
 
-private val fieldShape = RoundedCornerShape(8.dp)
 private val buttonShape = RoundedCornerShape(24.dp)
 private val dialogShape = RoundedCornerShape(16.dp)
 private val cancelButtonColor = Color(0xFF9E9E9E)
@@ -80,20 +67,18 @@ fun AddUserDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Surface(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .semantics { contentDescription = "Add new user dialog" },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .semantics { contentDescription = "Add new user dialog" },
             shape = dialogShape,
             color = CardBackground,
         ) {
             Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                        .padding(20.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
             ) {
                 // Header
                 Row(
@@ -108,10 +93,9 @@ fun AddUserDialog(
                     )
                     IconButton(
                         onClick = onDismiss,
-                        modifier =
-                            Modifier.semantics {
-                                contentDescription = "Close dialog"
-                            },
+                        modifier = Modifier.semantics {
+                            contentDescription = "Close dialog"
+                        },
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -123,7 +107,7 @@ fun AddUserDialog(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Name Field (required)
-                FormField(
+                LabeledTextField(
                     value = formState.name,
                     onValueChange = onNameChange,
                     label = stringResource(R.string.name_required),
@@ -136,7 +120,7 @@ fun AddUserDialog(
 
                 // Age and Gender Row
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    FormField(
+                    LabeledTextField(
                         value = formState.age,
                         onValueChange = onAgeChange,
                         label = stringResource(R.string.age),
@@ -146,9 +130,11 @@ fun AddUserDialog(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    GenderDropdown(
-                        selectedGender = formState.gender,
-                        onGenderChange = onGenderChange,
+                    EnumDropdown(
+                        selected = formState.gender,
+                        onSelect = onGenderChange,
+                        entries = Gender.entries,
+                        label = stringResource(R.string.gender),
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -156,7 +142,7 @@ fun AddUserDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Height Field
-                FormField(
+                LabeledTextField(
                     value = formState.height,
                     onValueChange = onHeightChange,
                     label = stringResource(R.string.height_cm),
@@ -175,9 +161,11 @@ fun AddUserDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Dominant hand Field
-                DominantHandDropdown(
-                    selectedHand = formState.dominantHand,
-                    onHandChange = onDominantHandChange,
+                EnumDropdown(
+                    selected = formState.dominantHand,
+                    onSelect = onDominantHandChange,
+                    entries = DominantHand.entries,
+                    label = stringResource(R.string.dominant_hand),
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -219,261 +207,6 @@ fun AddUserDialog(
                     ) {
                         Text(stringResource(R.string.cancel))
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WeightFieldWithButton(
-    value: String,
-    onValueChange: (String) -> Unit,
-    onWeightButtonClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier) {
-        Text(
-            text = stringResource(R.string.weight_kg),
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextGray,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.weight(1f),
-                shape = fieldShape,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-            )
-            Button(
-                onClick = onWeightButtonClick,
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
-                shape = fieldShape,
-            ) {
-                Text(text = stringResource(R.string.weight))
-            }
-        }
-    }
-}
-
-@Composable
-private fun FormField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    modifier: Modifier = Modifier,
-    placeholder: String = "",
-    keyboardType: KeyboardType = KeyboardType.Text,
-    readOnly: Boolean = false,
-    isError: Boolean = false,
-    errorMessage: String? = null,
-    leadingIcon: @Composable (() -> Unit)? = null,
-    trailingIcon: @Composable (() -> Unit)? = null,
-) {
-    Column(modifier = modifier) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextGray,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder =
-                if (placeholder.isNotEmpty()) {
-                    { Text(placeholder) }
-                } else {
-                    null
-                },
-            shape = fieldShape,
-            readOnly = readOnly,
-            isError = isError,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            leadingIcon = leadingIcon,
-            trailingIcon = trailingIcon,
-            supportingText =
-                if (isError && errorMessage != null) {
-                    { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
-                } else {
-                    null
-                },
-        )
-    }
-}
-
-@Composable
-private fun GenderDropdown(
-    selectedGender: Gender,
-    onGenderChange: (Gender) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(modifier = modifier) {
-        Text(
-            text = stringResource(R.string.gender),
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextGray,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Box {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, Color(0xFFBDBDBD), fieldShape)
-                        .clickable { expanded = true }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = selectedGender.toString(),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = null,
-                        tint = TextGray,
-                    )
-                }
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                Gender.entries.forEach { gender ->
-                    DropdownMenuItem(
-                        text = { Text(gender.toString()) },
-                        onClick = {
-                            onGenderChange(gender)
-                            expanded = false
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DominantHandDropdown(
-    selectedHand: DominantHand,
-    onHandChange: (DominantHand) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(modifier = modifier) {
-        Text(
-            text = stringResource(R.string.dominant_hand),
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextGray,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Box {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, Color(0xFFBDBDBD), fieldShape)
-                        .clickable { expanded = true }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = selectedHand.toString(),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = null,
-                        tint = TextGray,
-                    )
-                }
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                DominantHand.entries.forEach { hand ->
-                    DropdownMenuItem(
-                        text = { Text(hand.toString()) },
-                        onClick = {
-                            onHandChange(hand)
-                            expanded = false
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-private val colorOptions = listOf(
-    "#3B82F6" to Color(0xFF3B82F6), // Blue (default)
-    "#E53935" to Color(0xFFE53935), // Red
-    "#FBC02D" to Color(0xFFFBC02D), // Yellow
-    "#4CAF50" to Color(0xFF4CAF50), // Green
-    "#9C27B0" to Color(0xFF9C27B0), // Purple
-    "#FF9800" to Color(0xFFFF9800), // Orange
-    "#00BCD4" to Color(0xFF00BCD4), // Cyan
-    "#E91E63" to Color(0xFFE91E63), // Pink
-)
-
-@Composable
-private fun ColorPickerRow(
-    selectedColor: String,
-    onColorChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .border(1.dp, Color(0xFFBDBDBD), fieldShape)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        colorOptions.forEach { (hexColor, color) ->
-            val isSelected = hexColor.equals(selectedColor, ignoreCase = true)
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(color, CircleShape)
-                    .clickable { onColorChange(hexColor) }
-                    .then(
-                        if (isSelected) {
-                            Modifier.border(2.dp, Color.White, CircleShape)
-                        } else {
-                            Modifier
-                        }
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp),
-                    )
                 }
             }
         }
