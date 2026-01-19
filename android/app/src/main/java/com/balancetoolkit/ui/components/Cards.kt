@@ -212,6 +212,15 @@ fun DeviceCard(
                     color = TextGray,
                 )
 
+                // Mock device indicator
+                if (device.isMock) {
+                    Text(
+                        text = "Mock Device",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFFF9800),
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Status and Action buttons

@@ -3,9 +3,11 @@ package com.balancetoolkit.viewmodel
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.balancetoolkit.bluetooth.MockBalanceBoardConnection
+import com.balancetoolkit.bluetooth.FullDataListener
+import com.balancetoolkit.bluetooth.MockConnectionManager
+import com.balancetoolkit.bluetooth.SensorReading
+import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.dao.UserDao
 import com.balancetoolkit.data.local.entity.toUser
@@ -13,6 +15,8 @@ import com.balancetoolkit.data.model.User
 import com.balancetoolkit.session.SessionConfiguration
 import com.balancetoolkit.session.SessionFileWriter
 import com.balancetoolkit.session.SessionUser
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import javax.inject.Inject
 
 /**
  * Represents a Center of Pressure (CoP) position on the balance board.
@@ -59,19 +64,6 @@ data class AmplitudeSpectrum(
     val amplitudeY: List<Float> = emptyList(),
     val amplitudeXY: List<Float> = emptyList()
 )
-
-/**
- * Represents the raw sensor readings from the balance board.
- */
-data class SensorReading(
-    val topLeft: Float = 0f,
-    val topRight: Float = 0f,
-    val bottomLeft: Float = 0f,
-    val bottomRight: Float = 0f
-) {
-    val totalForce: Float
-        get() = topLeft + topRight + bottomLeft + bottomRight
-}
 
 data class SessionUiState(
     val deviceName: String = "Nintendo RVL-WBC-01",
@@ -138,33 +130,30 @@ data class SessionUiState(
         get() = isMockMode || hasConnectedDevice
 }
 
-class SessionViewModel(
-    private val context: Context,
+@HiltViewModel
+class SessionViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val sharedPreferences: SharedPreferences,
     private val userDao: UserDao,
     private val deviceDao: DeviceDao,
+    private val mockConnectionManager: MockConnectionManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SessionUiState())
     val uiState: StateFlow<SessionUiState> = _uiState.asStateFlow()
 
-    private var mockConnection: MockBalanceBoardConnection? = null
     private var sessionFileWriter: SessionFileWriter? = null
     private var currentUserId: String? = null
 
     companion object {
         // Maximum trail length to keep (10 seconds at 100Hz = 1000 points)
         private const val MAX_TRAIL_LENGTH = 1000
-
-        private const val PREF_SESSIONS_DIRECTORY = "sessions_directory"
-        private const val PREF_SELECTED_USER_ID = "selected_user_id"
-        private const val PREF_MOCK_MODE_ENABLED = "mock_mode_enabled"
     }
 
     init {
         // Load the selected user ID
-        currentUserId = sharedPreferences.getString(PREF_SELECTED_USER_ID, null)
+        currentUserId = sharedPreferences.getString(PreferenceKeys.SELECTED_USER_ID, null)
         // Load mock mode setting
-        val isMockMode = sharedPreferences.getBoolean(PREF_MOCK_MODE_ENABLED, false)
+        val isMockMode = sharedPreferences.getBoolean(PreferenceKeys.MOCK_MODE_ENABLED, false)
         _uiState.update { it.copy(isMockMode = isMockMode) }
         // Load selected user
         loadSelectedUser()
@@ -193,7 +182,7 @@ class SessionViewModel(
     }
 
     private fun getSessionsDirectory(): String {
-        return sharedPreferences.getString(PREF_SESSIONS_DIRECTORY, null)
+        return sharedPreferences.getString(PreferenceKeys.SESSIONS_DIRECTORY, null)
             ?: getDefaultSessionsDirectory()
     }
 
@@ -208,21 +197,15 @@ class SessionViewModel(
         }
     }
 
-    private val mockListener = object : MockBalanceBoardConnection.Listener {
-        override fun onLog(message: String) {
-            addLogMessage(message)
-        }
-
-        override fun onWeightData(topLeft: Float, topRight: Float, bottomLeft: Float, bottomRight: Float) {
+    private val mockListener = FullDataListener(
+        onData = { topLeft, topRight, bottomLeft, bottomRight ->
             viewModelScope.launch(Dispatchers.Main) {
                 updateSensorData(topLeft, topRight, bottomLeft, bottomRight)
             }
-        }
-
-        override fun onError(message: String) {
-            addLogMessage("ERROR: $message")
-        }
-    }
+        },
+        onLogMessage = { message -> addLogMessage(message) },
+        onErrorMessage = { message -> addLogMessage("ERROR: $message") },
+    )
 
     /**
      * Start a mock recording session.
@@ -256,9 +239,7 @@ class SessionViewModel(
             }
         }
 
-        mockConnection = MockBalanceBoardConnection(mockListener).also {
-            it.start()
-        }
+        mockConnectionManager.start(mockListener)
 
         _uiState.update { it.copy(
             isRecording = true,
@@ -272,8 +253,7 @@ class SessionViewModel(
      * Stop the current recording session.
      */
     fun stopSession() {
-        mockConnection?.stop()
-        mockConnection = null
+        mockConnectionManager.stop()
 
         // Finalize file writing
         viewModelScope.launch(Dispatchers.IO) {
@@ -339,7 +319,7 @@ class SessionViewModel(
      * Apply tare (zero) to the current readings.
      */
     fun applyTare() {
-        mockConnection?.tare()
+        mockConnectionManager.tare()
     }
 
     /**
@@ -798,20 +778,5 @@ class SessionViewModel(
     override fun onCleared() {
         super.onCleared()
         stopSession()
-    }
-
-    class Factory(
-        private val context: Context,
-        private val sharedPreferences: SharedPreferences,
-        private val userDao: UserDao,
-        private val deviceDao: DeviceDao,
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(SessionViewModel::class.java)) {
-                return SessionViewModel(context, sharedPreferences, userDao, deviceDao) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
     }
 }

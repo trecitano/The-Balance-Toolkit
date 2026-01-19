@@ -1,5 +1,6 @@
 package com.balancetoolkit.data.model
 
+import com.balancetoolkit.data.MockDeviceIds
 import java.util.UUID
 
 data class Device(
@@ -11,4 +12,7 @@ data class Device(
 ) {
     val displayInfo: String
         get() = macAddress?.let { "MAC: $it" } ?: "Last seen: ${lastSeen ?: "N/A"}"
+
+    val isMock: Boolean
+        get() = id == MockDeviceIds.MOCK_BOARD_1 || id == MockDeviceIds.MOCK_BOARD_2
 }

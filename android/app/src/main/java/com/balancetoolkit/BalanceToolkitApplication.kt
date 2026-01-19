@@ -1,8 +1,7 @@
 package com.balancetoolkit
 
 import android.app.Application
-import com.balancetoolkit.data.local.AppDatabase
+import dagger.hilt.android.HiltAndroidApp
 
-class BalanceToolkitApplication : Application() {
-    val database: AppDatabase by lazy { AppDatabase.getInstance(this) }
-}
+@HiltAndroidApp
+class BalanceToolkitApplication : Application()
