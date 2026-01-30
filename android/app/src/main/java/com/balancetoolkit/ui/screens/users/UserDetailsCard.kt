@@ -159,37 +159,40 @@ fun UserDetailsCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Height Field
-            if (isEditing) {
-                LabeledTextField(
-                    value = editHeight,
-                    onValueChange = onHeightChange,
-                    label = stringResource(R.string.height),
-                    keyboardType = KeyboardType.Number,
-                )
-            } else {
-                ReadOnlyFieldWithBorder(
-                    value = user.height.toString(),
-                    label = stringResource(R.string.height),
-                    suffix = "cm",
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Weight Field
-            if (isEditing) {
-                WeightFieldWithButton(
-                    value = editWeight,
-                    onValueChange = onWeightChange,
-                    onWeightButtonClick = onWeightButtonClick,
-                )
-            } else {
-                ReadOnlyFieldWithBorder(
-                    value = user.weight.toString(),
-                    label = stringResource(R.string.weight),
-                    suffix = "kg",
-                )
+            // Height and Weight Row
+            Row(modifier = Modifier.fillMaxWidth()) {
+                if (isEditing) {
+                    LabeledTextField(
+                        value = editHeight,
+                        onValueChange = onHeightChange,
+                        label = stringResource(R.string.height_cm),
+                        keyboardType = KeyboardType.Number,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    ReadOnlyFieldWithBorder(
+                        value = user.height.toString(),
+                        label = stringResource(R.string.height),
+                        suffix = "cm",
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                if (isEditing) {
+                    WeightFieldWithButton(
+                        value = editWeight,
+                        onValueChange = onWeightChange,
+                        onWeightButtonClick = onWeightButtonClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    ReadOnlyFieldWithBorder(
+                        value = user.weight.toString(),
+                        label = stringResource(R.string.weight),
+                        suffix = "kg",
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

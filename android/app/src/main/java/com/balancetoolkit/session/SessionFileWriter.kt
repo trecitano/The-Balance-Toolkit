@@ -1,6 +1,7 @@
 package com.balancetoolkit.session
 
 import android.content.Context
+import android.os.Environment
 import com.balancetoolkit.bluetooth.SensorReading
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -51,15 +52,23 @@ class SessionFileWriter(
 
         /**
          * Gets the default sessions directory path.
+         * Uses Documents/the-balance-toolkit/sessions/ for easy access via file managers.
          */
+        @Suppress("DEPRECATION")
         fun getDefaultSessionsDirectory(context: Context): String {
-            // Use app's external files directory which doesn't require permissions
-            val externalFilesDir = context.getExternalFilesDir(null)
-            return if (externalFilesDir != null) {
-                File(externalFilesDir, "sessions").absolutePath
+            // Use public Documents directory for easy access
+            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            return if (documentsDir != null) {
+                File(documentsDir, "the-balance-toolkit/sessions").absolutePath
             } else {
-                // Fallback to internal storage
-                File(context.filesDir, "sessions").absolutePath
+                // Fallback to app's external files directory
+                val externalFilesDir = context.getExternalFilesDir(null)
+                if (externalFilesDir != null) {
+                    File(externalFilesDir, "sessions").absolutePath
+                } else {
+                    // Final fallback to internal storage
+                    File(context.filesDir, "sessions").absolutePath
+                }
             }
         }
     }

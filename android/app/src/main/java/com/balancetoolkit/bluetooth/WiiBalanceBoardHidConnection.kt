@@ -363,7 +363,7 @@ class WiiBalanceBoardHidConnection(
         Log.d(TAG, "Polling switched to report %02X".format(reportId.toInt() and 0xFF))
     }
 
-    private fun startPolling(reportId: Byte, intervalMs: Long = 50) {
+    private fun startPolling(reportId: Byte, intervalMs: Long = 16) {
         pollingReportId = reportId
 
         pollingThread = Thread {

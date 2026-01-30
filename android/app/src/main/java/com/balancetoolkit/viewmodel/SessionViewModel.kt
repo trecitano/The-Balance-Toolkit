@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.balancetoolkit.bluetooth.BalanceBoardConnectionManager
 import com.balancetoolkit.bluetooth.FullDataListener
-import com.balancetoolkit.bluetooth.MockConnectionManager
 import com.balancetoolkit.bluetooth.SensorReading
 import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.local.dao.DeviceDao
@@ -125,9 +125,17 @@ data class SessionUiState(
     val hasConnectedDevice: Boolean = false,
     // Selected user
     val selectedUser: User? = null,
+    // Reading frequency in Hz
+    val readingFrequencyHz: Float = 0f,
+    // Session start timestamp (for UI protection)
+    val sessionStartTimeMs: Long = 0L,
 ) {
     val canStartSession: Boolean
         get() = isMockMode || hasConnectedDevice
+
+    // Protect checkboxes from accidental changes for 500ms after session start
+    val isSessionStarting: Boolean
+        get() = isRecording && (System.currentTimeMillis() - sessionStartTimeMs) < 500L
 }
 
 @HiltViewModel
@@ -136,7 +144,7 @@ class SessionViewModel @Inject constructor(
     private val sharedPreferences: SharedPreferences,
     private val userDao: UserDao,
     private val deviceDao: DeviceDao,
-    private val mockConnectionManager: MockConnectionManager,
+    private val connectionManager: BalanceBoardConnectionManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SessionUiState())
     val uiState: StateFlow<SessionUiState> = _uiState.asStateFlow()
@@ -147,7 +155,36 @@ class SessionViewModel @Inject constructor(
     companion object {
         // Maximum trail length to keep (10 seconds at 100Hz = 1000 points)
         private const val MAX_TRAIL_LENGTH = 1000
+        // Number of samples to average for frequency calculation
+        private const val FREQUENCY_SAMPLE_COUNT = 20
+        // Interval for derived metrics (FFT, velocity, DPSI) - 50ms = 20 Hz
+        private const val METRICS_COMPUTE_INTERVAL_MS = 50L
     }
+
+    // For frequency calculation
+    private var lastReadingTimestampMs: Long = 0L
+    private val recentIntervals = mutableListOf<Long>()
+
+    // For metrics throttling
+    private var lastMetricsComputeMs: Long = 0L
+
+    // For checkbox debouncing (prevent spurious toggles)
+    private var lastConvexHullToggleMs: Long = 0L
+    private var lastEllipseToggleMs: Long = 0L
+    private val TOGGLE_DEBOUNCE_MS = 300L
+
+    // Cached metrics computation results
+    private var cachedVCopX = 0f
+    private var cachedVCopY = 0f
+    private var cachedVCopXTrail = emptyList<Float>()
+    private var cachedVCopYTrail = emptyList<Float>()
+    private var cachedDpsiMetrics = DpsiMetrics()
+    private var cachedMlsiTrail = emptyList<Float>()
+    private var cachedApsiTrail = emptyList<Float>()
+    private var cachedVsiTrail = emptyList<Float>()
+    private var cachedDpsiTrail = emptyList<Float>()
+    private var cachedAmplitudeSpectrum = AmplitudeSpectrum()
+    private var cachedConfidenceEllipse = emptyList<Pair<Float, Float>>()
 
     init {
         // Load the selected user ID
@@ -197,7 +234,7 @@ class SessionViewModel @Inject constructor(
         }
     }
 
-    private val mockListener = FullDataListener(
+    private val sensorDataListener = FullDataListener(
         onData = { topLeft, topRight, bottomLeft, bottomRight ->
             viewModelScope.launch(Dispatchers.Main) {
                 updateSensorData(topLeft, topRight, bottomLeft, bottomRight)
@@ -208,10 +245,29 @@ class SessionViewModel @Inject constructor(
     )
 
     /**
-     * Start a mock recording session.
+     * Start a recording session.
+     * The connection manager handles whether to use mock or real board based on settings.
      */
-    fun startMockSession() {
+    fun startSession() {
         if (_uiState.value.isRecording) return
+
+        // Reset frequency tracking
+        lastReadingTimestampMs = 0L
+        recentIntervals.clear()
+
+        // Reset metrics throttling state
+        lastMetricsComputeMs = 0L
+        cachedVCopX = 0f
+        cachedVCopY = 0f
+        cachedVCopXTrail = emptyList()
+        cachedVCopYTrail = emptyList()
+        cachedDpsiMetrics = DpsiMetrics()
+        cachedMlsiTrail = emptyList()
+        cachedApsiTrail = emptyList()
+        cachedVsiTrail = emptyList()
+        cachedDpsiTrail = emptyList()
+        cachedAmplitudeSpectrum = AmplitudeSpectrum()
+        cachedConfidenceEllipse = emptyList()
 
         val sessionId = SessionFileWriter.generateSessionId()
         val state = _uiState.value
@@ -239,21 +295,25 @@ class SessionViewModel @Inject constructor(
             }
         }
 
-        mockConnectionManager.start(mockListener)
-
-        _uiState.update { it.copy(
-            isRecording = true,
-            isPlaying = true,
-            copTrail = emptyList(),
-            sessionId = sessionId,
-        ) }
+        val started = connectionManager.start(sensorDataListener)
+        if (started) {
+            _uiState.update { it.copy(
+                isRecording = true,
+                isPlaying = true,
+                copTrail = emptyList(),
+                sessionId = sessionId,
+                sessionStartTimeMs = System.currentTimeMillis(),
+            ) }
+        } else {
+            addLogMessage("ERROR: Failed to start board connection")
+        }
     }
 
     /**
      * Stop the current recording session.
      */
     fun stopSession() {
-        mockConnectionManager.stop()
+        connectionManager.stop()
 
         // Finalize file writing
         viewModelScope.launch(Dispatchers.IO) {
@@ -319,61 +379,93 @@ class SessionViewModel @Inject constructor(
      * Apply tare (zero) to the current readings.
      */
     fun applyTare() {
-        mockConnectionManager.tare()
+        connectionManager.tare()
     }
 
     /**
      * Update sensor data and calculate derived values.
+     * CoP and trail are updated in real-time.
+     * FFT, velocity, and DPSI metrics are throttled to 50ms intervals.
      */
     private fun updateSensorData(topLeft: Float, topRight: Float, bottomLeft: Float, bottomRight: Float) {
         val reading = SensorReading(topLeft, topRight, bottomLeft, bottomRight)
         val cop = calculateCop(reading)
+        val currentTimeMs = System.currentTimeMillis()
 
-        // Write reading to file
+        // Calculate reading frequency (always, for accurate measurement)
+        val frequencyHz = if (lastReadingTimestampMs > 0) {
+            val interval = currentTimeMs - lastReadingTimestampMs
+            if (interval > 0) {
+                recentIntervals.add(interval)
+                if (recentIntervals.size > FREQUENCY_SAMPLE_COUNT) {
+                    recentIntervals.removeAt(0)
+                }
+                val avgInterval = recentIntervals.average()
+                if (avgInterval > 0) (1000.0 / avgInterval).toFloat() else 0f
+            } else 0f
+        } else 0f
+        lastReadingTimestampMs = currentTimeMs
+
+        // Always write reading to file (no throttling for data capture)
         sessionFileWriter?.let { writer ->
             viewModelScope.launch(Dispatchers.IO) {
                 writer.writeReading(reading)
             }
         }
 
+        // Check if we should compute derived metrics (every 50ms)
+        val shouldComputeMetrics = currentTimeMs - lastMetricsComputeMs >= METRICS_COMPUTE_INTERVAL_MS
+
+        // Update UI state - CoP and trail are always real-time
         _uiState.update { state ->
-            // Add current position to trail
+            // Add current position to trail (real-time)
             val newTrail = (state.copTrail + cop).takeLast(MAX_TRAIL_LENGTH)
 
-            // Calculate velocity metrics from trail
-            val (vCopX, vCopY, vCopXTrail, vCopYTrail) = calculateVelocityMetrics(newTrail)
+            // Compute derived metrics only at throttled intervals
+            if (shouldComputeMetrics) {
+                lastMetricsComputeMs = currentTimeMs
 
-            // Calculate DPSI metrics from trail
-            val dpsiMetrics = calculateDpsiMetrics(newTrail)
+                // Calculate velocity metrics
+                val (vCopX, vCopY, vCopXTrail, vCopYTrail) = calculateVelocityMetrics(newTrail)
+                cachedVCopX = vCopX
+                cachedVCopY = vCopY
+                cachedVCopXTrail = vCopXTrail
+                cachedVCopYTrail = vCopYTrail
 
-            // Update DPSI metric trails
-            val newMlsiTrail = (state.mlsiTrail + dpsiMetrics.mlsi).takeLast(MAX_TRAIL_LENGTH)
-            val newApsiTrail = (state.apsiTrail + dpsiMetrics.apsi).takeLast(MAX_TRAIL_LENGTH)
-            val newVsiTrail = (state.vsiTrail + dpsiMetrics.vsi).takeLast(MAX_TRAIL_LENGTH)
-            val newDpsiTrail = (state.dpsiTrail + dpsiMetrics.dpsi).takeLast(MAX_TRAIL_LENGTH)
+                // Calculate DPSI metrics
+                val dpsiMetrics = calculateDpsiMetrics(newTrail)
+                cachedDpsiMetrics = dpsiMetrics
+                cachedMlsiTrail = (state.mlsiTrail + dpsiMetrics.mlsi).takeLast(MAX_TRAIL_LENGTH)
+                cachedApsiTrail = (state.apsiTrail + dpsiMetrics.apsi).takeLast(MAX_TRAIL_LENGTH)
+                cachedVsiTrail = (state.vsiTrail + dpsiMetrics.vsi).takeLast(MAX_TRAIL_LENGTH)
+                cachedDpsiTrail = (state.dpsiTrail + dpsiMetrics.dpsi).takeLast(MAX_TRAIL_LENGTH)
 
-            // Calculate FFT amplitude spectrum
-            val amplitudeSpectrum = computeFftAmplitudeSpectrum(newTrail)
+                // Calculate FFT amplitude spectrum
+                cachedAmplitudeSpectrum = computeFftAmplitudeSpectrum(newTrail)
 
-            // Generate confidence ellipse (95% confidence)
-            val confidenceEllipse = generateConfidenceEllipsePoints(newTrail)
+                // Generate confidence ellipse (95% confidence)
+                cachedConfidenceEllipse = generateConfidenceEllipsePoints(newTrail)
+            }
 
             state.copy(
+                // Real-time updates
                 currentReading = reading,
                 currentCop = cop,
                 copTrail = newTrail,
-                vCopX = vCopX,
-                vCopY = vCopY,
-                vCopXTrail = vCopXTrail,
-                vCopYTrail = vCopYTrail,
-                dpsiMetrics = dpsiMetrics,
-                mlsiTrail = newMlsiTrail,
-                apsiTrail = newApsiTrail,
-                vsiTrail = newVsiTrail,
-                dpsiTrail = newDpsiTrail,
-                amplitudeSpectrum = amplitudeSpectrum,
-                confidenceEllipsePoints = confidenceEllipse,
-                // Update direction indicators based on CoP position (normalized thresholds)
+                readingFrequencyHz = frequencyHz,
+                // Throttled metrics (use cached values)
+                vCopX = cachedVCopX,
+                vCopY = cachedVCopY,
+                vCopXTrail = cachedVCopXTrail,
+                vCopYTrail = cachedVCopYTrail,
+                dpsiMetrics = cachedDpsiMetrics,
+                mlsiTrail = cachedMlsiTrail,
+                apsiTrail = cachedApsiTrail,
+                vsiTrail = cachedVsiTrail,
+                dpsiTrail = cachedDpsiTrail,
+                amplitudeSpectrum = cachedAmplitudeSpectrum,
+                confidenceEllipsePoints = cachedConfidenceEllipse,
+                // Direction indicators (real-time)
                 leftValue = if (cop.x < -0.1f) -1 else 0,
                 rightValue = if (cop.x > 0.1f) 1 else 0,
                 frontValue = if (cop.y > 0.1f) 1 else if (cop.y < -0.1f) -1 else 0
@@ -707,7 +799,7 @@ class SessionViewModel @Inject constructor(
         if (state.isRecording) {
             stopSession()
         } else if (state.canStartSession) {
-            startMockSession()
+            startSession()
         }
     }
 
@@ -720,10 +812,16 @@ class SessionViewModel @Inject constructor(
     }
 
     fun setConfidenceEllipse(show: Boolean) {
+        val now = System.currentTimeMillis()
+        if (now - lastEllipseToggleMs < TOGGLE_DEBOUNCE_MS) return
+        lastEllipseToggleMs = now
         _uiState.update { it.copy(showConfidenceEllipse = show) }
     }
 
     fun setConvexHull(show: Boolean) {
+        val now = System.currentTimeMillis()
+        if (now - lastConvexHullToggleMs < TOGGLE_DEBOUNCE_MS) return
+        lastConvexHullToggleMs = now
         _uiState.update { it.copy(showConvexHull = show) }
     }
 

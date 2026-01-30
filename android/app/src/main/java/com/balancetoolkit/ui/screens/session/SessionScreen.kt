@@ -15,10 +15,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -43,15 +42,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
+import com.balancetoolkit.bluetooth.SensorReading
 import com.balancetoolkit.data.model.User
 import com.balancetoolkit.ui.components.AppHeader
 import com.balancetoolkit.ui.theme.BackgroundGray
@@ -127,7 +132,6 @@ private fun SessionScreenContent(
     modifier: Modifier = Modifier,
 ) {
     TrackPerformance("SessionScreen")
-    val scrollState = rememberScrollState()
 
     Column(
         modifier =
@@ -137,129 +141,142 @@ private fun SessionScreenContent(
     ) {
         AppHeader()
 
-        Column(
+        LazyColumn(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .verticalScroll(scrollState)
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
-            SessionDeviceCard(
-                deviceName = uiState.deviceName,
-                macAddress = uiState.deviceMacAddress,
-                isMockMode = uiState.isMockMode,
-            )
+            item(key = "device_card") {
+                Spacer(modifier = Modifier.height(16.dp))
+                SessionDeviceCard(
+                    deviceName = uiState.deviceName,
+                    macAddress = uiState.deviceMacAddress,
+                    isMockMode = uiState.isMockMode,
+                )
+            }
 
             // Selected user info
             uiState.selectedUser?.let { user ->
-                SelectedUserCard(user = user, onClick = onUserClick)
+                item(key = "user_card") {
+                    SelectedUserCard(user = user, onClick = onUserClick)
+                }
             }
 
-            // Session control buttons
-            SessionControlCard(
-                isRecording = uiState.isRecording,
-                onToggleSession = onToggleSession,
-                onTare = onTare,
-                canStartSession = canStartSession,
-                onDevicesClick = onDevicesClick,
-            )
+            item(key = "control_card") {
+                // Session control buttons
+                SessionControlCard(
+                    isRecording = uiState.isRecording,
+                    onToggleSession = onToggleSession,
+                    onTare = onTare,
+                    canStartSession = canStartSession,
+                    onDevicesClick = onDevicesClick,
+                )
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            COPVisualizationCard(
-                currentCop = uiState.currentCop,
-                copTrail = uiState.copTrail,
-                confidenceEllipsePoints = uiState.confidenceEllipsePoints,
-                showConfidenceEllipse = uiState.showConfidenceEllipse,
-                onConfidenceEllipseChange = onConfidenceEllipseChange,
-                showConvexHull = uiState.showConvexHull,
-                onConvexHullChange = onConvexHullChange,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // CopX and CopY plots row (below Stability)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                CopPlotCard(
-                    title = "copX",
+            item(key = "cop_viz") {
+                Spacer(modifier = Modifier.height(16.dp))
+                COPVisualizationCard(
+                    currentCop = uiState.currentCop,
+                    currentReading = uiState.currentReading,
+                    readingFrequencyHz = uiState.readingFrequencyHz,
                     copTrail = uiState.copTrail,
-                    valueSelector = { it.x },
-                    lineColor = ChartBlue,
-                    minLabel = "Left (-1)",
-                    maxLabel = "Right (1)",
-                    modifier = Modifier.weight(1f),
-                )
-                CopPlotCard(
-                    title = "copY",
-                    copTrail = uiState.copTrail,
-                    valueSelector = { it.y },
-                    lineColor = ChartRed,
-                    minLabel = "Back (-1)",
-                    maxLabel = "Front (1)",
-                    modifier = Modifier.weight(1f),
+                    confidenceEllipsePoints = uiState.confidenceEllipsePoints,
+                    showConfidenceEllipse = uiState.showConfidenceEllipse,
+                    onConfidenceEllipseChange = onConfidenceEllipseChange,
+                    showConvexHull = uiState.showConvexHull,
+                    onConvexHullChange = onConvexHullChange,
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            item(key = "cop_plots") {
+                Spacer(modifier = Modifier.height(16.dp))
+                // CopX and CopY plots row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    CopPlotCard(
+                        title = "copX",
+                        copTrail = uiState.copTrail,
+                        valueSelector = { it.x },
+                        lineColor = ChartBlue,
+                        minLabel = "Left (-1)",
+                        maxLabel = "Right (1)",
+                        modifier = Modifier.weight(1f),
+                    )
+                    CopPlotCard(
+                        title = "copY",
+                        copTrail = uiState.copTrail,
+                        valueSelector = { it.y },
+                        lineColor = ChartRed,
+                        minLabel = "Back (-1)",
+                        maxLabel = "Front (1)",
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
 
-            // vCopX and vCopY plots row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                VelocityPlotCard(
-                    title = "vCopX",
-                    velocityTrail = uiState.vCopXTrail,
-                    currentValue = uiState.vCopX,
-                    lineColor = ChartBlue,
-                    modifier = Modifier.weight(1f),
-                )
-                VelocityPlotCard(
-                    title = "vCopY",
-                    velocityTrail = uiState.vCopYTrail,
-                    currentValue = uiState.vCopY,
-                    lineColor = ChartRed,
-                    modifier = Modifier.weight(1f),
+            item(key = "velocity_plots") {
+                Spacer(modifier = Modifier.height(12.dp))
+                // vCopX and vCopY plots row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    VelocityPlotCard(
+                        title = "vCopX",
+                        velocityTrail = uiState.vCopXTrail,
+                        currentValue = uiState.vCopX,
+                        lineColor = ChartBlue,
+                        modifier = Modifier.weight(1f),
+                    )
+                    VelocityPlotCard(
+                        title = "vCopY",
+                        velocityTrail = uiState.vCopYTrail,
+                        currentValue = uiState.vCopY,
+                        lineColor = ChartRed,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            item(key = "fft_chart") {
+                Spacer(modifier = Modifier.height(16.dp))
+                FFTChartCard(
+                    amplitudeSpectrum = uiState.amplitudeSpectrum,
+                    showX = uiState.showFftX,
+                    showY = uiState.showFftY,
+                    showCombined = uiState.showFftCombined,
+                    onShowXChange = onFftXChange,
+                    onShowYChange = onFftYChange,
+                    onShowCombinedChange = onFftCombinedChange,
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            FFTChartCard(
-                amplitudeSpectrum = uiState.amplitudeSpectrum,
-                showX = uiState.showFftX,
-                showY = uiState.showFftY,
-                showCombined = uiState.showFftCombined,
-                onShowXChange = onFftXChange,
-                onShowYChange = onFftYChange,
-                onShowCombinedChange = onFftCombinedChange,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // DPSI Metrics card with plot and toggles
-            DpsiMetricsCard(
-                dpsiMetrics = uiState.dpsiMetrics,
-                mlsiTrail = uiState.mlsiTrail,
-                apsiTrail = uiState.apsiTrail,
-                vsiTrail = uiState.vsiTrail,
-                dpsiTrail = uiState.dpsiTrail,
-                showMlsi = uiState.showMlSi,
-                showApsi = uiState.showApSi,
-                showVsi = uiState.showVsi,
-                showDpsi = uiState.showDpsi,
-                onMlsiChange = onMlSiChange,
-                onApsiChange = onApSiChange,
-                onVsiChange = onVsiChange,
-                onDpsiChange = onDpsiChange,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            item(key = "dpsi_metrics") {
+                Spacer(modifier = Modifier.height(16.dp))
+                // DPSI Metrics card with plot and toggles
+                DpsiMetricsCard(
+                    dpsiMetrics = uiState.dpsiMetrics,
+                    mlsiTrail = uiState.mlsiTrail,
+                    apsiTrail = uiState.apsiTrail,
+                    vsiTrail = uiState.vsiTrail,
+                    dpsiTrail = uiState.dpsiTrail,
+                    showMlsi = uiState.showMlSi,
+                    showApsi = uiState.showApSi,
+                    showVsi = uiState.showVsi,
+                    showDpsi = uiState.showDpsi,
+                    onMlsiChange = onMlSiChange,
+                    onApsiChange = onApSiChange,
+                    onVsiChange = onVsiChange,
+                    onDpsiChange = onDpsiChange,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 }
@@ -451,6 +468,8 @@ private fun mapCopToScreenY(copY: Float, height: Float): Float {
 @Composable
 private fun COPVisualizationCard(
     currentCop: CopPosition,
+    currentReading: SensorReading,
+    readingFrequencyHz: Float,
     copTrail: List<CopPosition>,
     confidenceEllipsePoints: List<Pair<Float, Float>>,
     showConfidenceEllipse: Boolean,
@@ -465,6 +484,17 @@ private fun COPVisualizationCard(
     val hullStrokeColor = ChartBlue
     val ellipseColor = ChartOrange.copy(alpha = 0.3f)
     val ellipseStrokeColor = ChartOrange
+
+    // Color range for weight intensity
+    val lowLoadColor = ChartGreen.copy(alpha = 0.4f)
+    val highLoadColor = ChartRed.copy(alpha = 0.7f)
+    val maxSensorValue = maxOf(
+        currentReading.topLeft,
+        currentReading.topRight,
+        currentReading.bottomLeft,
+        currentReading.bottomRight,
+        0.1f
+    )
 
     Card(
         modifier =
@@ -483,6 +513,36 @@ private fun COPVisualizationCard(
                         .border(2.dp, BorderGray, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center,
             ) {
+                // Sensor weight overlays in corners
+                SensorWeightLabel(
+                    weight = currentReading.topLeft,
+                    relativeIntensity = currentReading.topLeft / maxSensorValue,
+                    lowColor = lowLoadColor,
+                    highColor = highLoadColor,
+                    modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
+                )
+                SensorWeightLabel(
+                    weight = currentReading.topRight,
+                    relativeIntensity = currentReading.topRight / maxSensorValue,
+                    lowColor = lowLoadColor,
+                    highColor = highLoadColor,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
+                )
+                SensorWeightLabel(
+                    weight = currentReading.bottomLeft,
+                    relativeIntensity = currentReading.bottomLeft / maxSensorValue,
+                    lowColor = lowLoadColor,
+                    highColor = highLoadColor,
+                    modifier = Modifier.align(Alignment.BottomStart).padding(4.dp),
+                )
+                SensorWeightLabel(
+                    weight = currentReading.bottomRight,
+                    relativeIntensity = currentReading.bottomRight / maxSensorValue,
+                    lowColor = lowLoadColor,
+                    highColor = highLoadColor,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
+                )
+
                 Canvas(
                     modifier = Modifier.fillMaxSize().padding(4.dp)
                 ) {
@@ -579,24 +639,61 @@ private fun COPVisualizationCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // CoP coordinates display (normalized values)
-            Text(
-                text = "CoP: X=%.2f, Y=%.2f".format(currentCop.x, currentCop.y),
-                style = MaterialTheme.typography.bodySmall,
-                color = TextGray,
-            )
+            // CoP coordinates, total weight, and frequency display
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "CoP: (%6.2f, %6.2f)".format(currentCop.x, currentCop.y),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = TextGray,
+                )
+                Column(
+                    horizontalAlignment = Alignment.End,
+                ) {
+                    Text(
+                        text = "%7.1f kg".format(currentReading.totalForce),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Medium,
+                        color = PrimaryBlue,
+                    )
+                    Text(
+                        text = "%5.1f Hz".format(readingFrequencyHz),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = TextGray,
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Stable references for tap handlers
+            val currentConvexHullState = rememberUpdatedState(showConvexHull)
+            val currentConvexHullCallback = rememberUpdatedState(onConvexHullChange)
+            val currentEllipseState = rememberUpdatedState(showConfidenceEllipse)
+            val currentEllipseCallback = rememberUpdatedState(onConfidenceEllipseChange)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Use pointerInput with detectTapGestures for explicit tap handling
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { currentConvexHullCallback.value(!currentConvexHullState.value) }
+                        )
+                    },
+                ) {
                     Checkbox(
                         checked = showConvexHull,
-                        onCheckedChange = onConvexHullChange,
+                        onCheckedChange = null, // Disabled - only explicit tap triggers change
                         colors = CheckboxDefaults.colors(checkedColor = ChartBlue),
                     )
                     Box(
@@ -610,10 +707,17 @@ private fun COPVisualizationCard(
 
                 Spacer(modifier = Modifier.width(16.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { currentEllipseCallback.value(!currentEllipseState.value) }
+                        )
+                    },
+                ) {
                     Checkbox(
                         checked = showConfidenceEllipse,
-                        onCheckedChange = onConfidenceEllipseChange,
+                        onCheckedChange = null, // Disabled - only explicit tap triggers change
                         colors = CheckboxDefaults.colors(checkedColor = ChartOrange),
                     )
                     Box(
@@ -626,6 +730,34 @@ private fun COPVisualizationCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * Compact sensor weight label for corner overlay.
+ */
+@Composable
+private fun SensorWeightLabel(
+    weight: Float,
+    relativeIntensity: Float,
+    lowColor: Color,
+    highColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val backgroundColor = lerp(lowColor, highColor, relativeIntensity.coerceIn(0f, 1f))
+
+    Box(
+        modifier = modifier
+            .background(backgroundColor, RoundedCornerShape(4.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "%.1f".format(weight),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black.copy(alpha = 0.8f),
+        )
     }
 }
 
@@ -998,7 +1130,6 @@ private fun FftToggleItem(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clickable { onCheckedChange(!checked) },
     ) {
         Checkbox(
             checked = checked,
@@ -1445,7 +1576,6 @@ private fun DpsiToggleItem(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.clickable { onCheckedChange(!checked) },
     ) {
         Checkbox(
             checked = checked,

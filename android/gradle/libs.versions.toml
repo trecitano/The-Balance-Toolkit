@@ -1,21 +1,21 @@
 [versions]
-agp = "8.13.2"
-kotlin = "2.0.21"
-ksp = "2.0.21-1.0.28"
-hilt = "2.51.1"
-room = "2.6.1"
-detekt = "1.23.7"
-kotlinter = "5.0.1"
-kotlinxSerialization = "1.7.3"
+agp = "9.0.0"
+kotlin = "2.3.0"
+ksp = "2.3.4"
+hilt = "2.59"
+room = "2.8.4"
+detekt = "1.23.8"
+kotlinter = "5.4.0"
+kotlinxSerialization = "1.10.0"
 coreKtx = "1.17.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
-activityCompose = "1.12.2"
-composeBom = "2024.09.00"
-navigationCompose = "2.8.5"
-hiddenApiBypass = "4.3"
+activityCompose = "1.12.3"
+composeBom = "2026.01.01"
+navigationCompose = "2.9.7"
+hiddenApiBypass = "6.1"
 
 [libraries]
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
@@ -46,7 +46,6 @@ hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-com
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

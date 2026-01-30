@@ -59,6 +59,9 @@ fun TheBalanceToolkitApp() {
                     label = { Text(destination.label) },
                     selected = selected,
                     onClick = {
+                        // Skip navigation if already on this destination
+                        if (selected) return@item
+
                         navController.navigate(destination.route) {
                             // Pop up to the start destination to avoid building up a large stack
                             popUpTo(navController.graph.startDestinationId) {
