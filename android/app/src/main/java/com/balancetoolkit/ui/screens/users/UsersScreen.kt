@@ -1,6 +1,8 @@
 package com.balancetoolkit.ui.screens.users
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,13 +33,17 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -148,12 +154,19 @@ private fun UsersScreenContent(
 ) {
     TrackPerformance("UsersScreen")
     val scrollState = rememberScrollState()
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier =
             modifier
                 .fillMaxSize()
-                .background(BackgroundGray),
+                .background(BackgroundGray)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    focusManager.clearFocus()
+                },
     ) {
         AppHeader()
 
@@ -219,6 +232,9 @@ private fun UsersScreenContent(
                         unfocusedContainerColor = CardBackground,
                         focusedContainerColor = CardBackground,
                     ),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -372,7 +388,7 @@ private fun UsersScreenPreview() {
 
         UsersScreenContent(
             uiState = UsersUiState(
-                users = mockUsers,
+                allUsers = mockUsers,
                 selectedUser = mockUsers.first(),
                 selectedUserIndex = 0,
             ),

@@ -4,11 +4,14 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.SharedPreferences
+import com.balancetoolkit.bluetooth.BalanceBoardConnectionManager
+import com.balancetoolkit.bluetooth.BalanceBoardConnectionManagerImpl
 import com.balancetoolkit.bluetooth.BluetoothScanManager
 import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.local.AppDatabase
 import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.dao.UserDao
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -57,4 +60,14 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDeviceDao(database: AppDatabase): DeviceDao = database.deviceDao()
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class BindingsModule {
+    @Binds
+    @Singleton
+    abstract fun bindBalanceBoardConnectionManager(
+        impl: BalanceBoardConnectionManagerImpl
+    ): BalanceBoardConnectionManager
 }

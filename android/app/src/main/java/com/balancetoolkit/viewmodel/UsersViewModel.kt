@@ -3,7 +3,7 @@ package com.balancetoolkit.viewmodel
 import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.balancetoolkit.bluetooth.MockConnectionManager
+import com.balancetoolkit.bluetooth.BalanceBoardConnectionManager
 import com.balancetoolkit.bluetooth.SimpleWeightListener
 import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.Result
@@ -33,7 +33,7 @@ enum class WeightMeasureTarget {
 }
 
 data class UsersUiState(
-    val users: List<User> = emptyList(),
+    val allUsers: List<User> = emptyList(),
     val selectedUser: User? = null,
     val selectedUserIndex: Int = 0,
     val searchQuery: String = "",
@@ -44,7 +44,14 @@ data class UsersUiState(
     val showWeightMeasure: Boolean = false,
     val liveWeight: Float? = null,
     val weightMeasureTarget: WeightMeasureTarget = WeightMeasureTarget.EDIT_USER,
-)
+) {
+    val users: List<User>
+        get() = if (searchQuery.isBlank()) {
+            allUsers
+        } else {
+            allUsers.filter { it.name.contains(searchQuery, ignoreCase = true) }
+        }
+}
 
 data class AddUserFormState(
     val name: String = "",
@@ -82,7 +89,7 @@ data class EditUserFormState(
 class UsersViewModel @Inject constructor(
     private val userDao: UserDao,
     private val sharedPreferences: SharedPreferences,
-    private val mockConnectionManager: MockConnectionManager,
+    private val connectionManager: BalanceBoardConnectionManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(UsersUiState(isLoading = true))
     val uiState: StateFlow<UsersUiState> = _uiState.asStateFlow()
@@ -143,7 +150,7 @@ class UsersViewModel @Inject constructor(
                             ?: 0
                         val selectedIndex = savedIndex.coerceIn(0, (users.size - 1).coerceAtLeast(0))
                         state.copy(
-                            users = users,
+                            allUsers = users,
                             selectedUser = users.getOrNull(selectedIndex),
                             selectedUserIndex = selectedIndex,
                             isLoading = false,
@@ -159,12 +166,14 @@ class UsersViewModel @Inject constructor(
     }
 
     fun onUserSelected(index: Int) {
+        val currentState = _uiState.value
+        val filteredUsers = currentState.users
+        val user = filteredUsers.getOrNull(index)
+        // Save selected user to SharedPreferences for use on Home screen
+        if (user != null) {
+            sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, user.id).apply()
+        }
         _uiState.update { state ->
-            val user = state.users.getOrNull(index)
-            // Save selected user to SharedPreferences for use on Home screen
-            if (user != null) {
-                sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, user.id).apply()
-            }
             state.copy(
                 selectedUserIndex = index,
                 selectedUser = user,
@@ -392,11 +401,11 @@ class UsersViewModel @Inject constructor(
     }
 
     private fun startWeightMeasurement() {
-        mockConnectionManager.start(weightMeasureListener)
+        connectionManager.start(weightMeasureListener)
     }
 
     private fun stopWeightMeasurement() {
-        mockConnectionManager.stop()
+        connectionManager.stop()
     }
 
     fun acceptWeight() {
@@ -414,7 +423,7 @@ class UsersViewModel @Inject constructor(
     }
 
     fun tareWeight() {
-        mockConnectionManager.tare()
+        connectionManager.tare()
     }
 
     override fun onCleared() {

@@ -38,6 +38,7 @@ data class DevicesUiState(
     val deviceToDelete: Device? = null,
     val deviceToEdit: Device? = null,
     val isMockMode: Boolean = false,
+    val scanLogs: List<String> = emptyList(),
 ) {
     val connectedCount: Int
         get() = devices.count { it.isConnected }
@@ -103,7 +104,10 @@ class DevicesViewModel @Inject constructor(
                     is ScanEvent.PairingFailed -> {
                         _uiState.update { it.copy(error = "Pairing failed: ${event.reason}") }
                     }
-                    else -> { /* Log events handled by BluetoothScanManager */ }
+                    is ScanEvent.Log -> {
+                        _uiState.update { it.copy(scanLogs = it.scanLogs + event.message) }
+                    }
+                    else -> { /* Other events not handled in UI */ }
                 }
             }
         }
@@ -217,6 +221,7 @@ class DevicesViewModel @Inject constructor(
     @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT])
     fun scanForDevices() {
         scanJob?.cancel()
+        _uiState.update { it.copy(scanLogs = emptyList()) }
         scanJob = viewModelScope.launch {
             if (_uiState.value.isMockMode) {
                 // In mock mode, add mock boards

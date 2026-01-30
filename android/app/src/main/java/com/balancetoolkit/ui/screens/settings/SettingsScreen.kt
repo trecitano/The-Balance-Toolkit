@@ -2,10 +2,16 @@ package com.balancetoolkit.ui.screens.settings
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Environment
 import android.provider.DocumentsContract
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,10 +29,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
+import com.balancetoolkit.data.HeightUnit
+import com.balancetoolkit.data.WeightUnit
 import com.balancetoolkit.ui.components.AppHeader
 import com.balancetoolkit.ui.components.CiteBottomSheet
 import com.balancetoolkit.ui.components.HostMacAddressDialog
@@ -62,6 +74,14 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Refresh storage permission when returning from settings
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.refreshStoragePermission()
+        }
+    }
 
     // Directory picker launcher
     val directoryPickerLauncher = rememberLauncherForActivityResult(
@@ -143,6 +163,14 @@ fun SettingsScreen(
         onEditMacAddress = viewModel::showMacAddressDialog,
         onMockModeChanged = viewModel::setMockModeEnabled,
         onEditSessionsDirectory = viewModel::showSessionsDirectoryDialog,
+        onRequestStoragePermission = {
+            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                data = Uri.parse("package:${context.packageName}")
+            }
+            context.startActivity(intent)
+        },
+        onHeightUnitChanged = viewModel::setHeightUnit,
+        onWeightUnitChanged = viewModel::setWeightUnit,
         onCiteClick = viewModel::showCiteBottomSheet,
         onSourceCodeClick = {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
@@ -158,6 +186,9 @@ private fun SettingsScreenContent(
     onEditMacAddress: () -> Unit,
     onMockModeChanged: (Boolean) -> Unit,
     onEditSessionsDirectory: () -> Unit,
+    onRequestStoragePermission: () -> Unit,
+    onHeightUnitChanged: (HeightUnit) -> Unit,
+    onWeightUnitChanged: (WeightUnit) -> Unit,
     onCiteClick: () -> Unit,
     onSourceCodeClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -199,6 +230,56 @@ private fun SettingsScreenContent(
                 title = stringResource(R.string.sessions_directory),
                 value = uiState.sessionsDirectory.ifEmpty { stringResource(R.string.not_configured) },
                 onClick = onEditSessionsDirectory,
+            )
+
+            // Storage Permission Warning
+            if (uiState.needsStoragePermission) {
+                Spacer(modifier = Modifier.height(8.dp))
+                SettingsWarningItem(
+                    title = stringResource(R.string.storage_permission_required),
+                    description = stringResource(R.string.storage_permission_description),
+                    onClick = onRequestStoragePermission,
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Units Section
+            Text(
+                text = stringResource(R.string.units),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextGray,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Height Unit Setting
+            SettingsSegmentedItem(
+                title = stringResource(R.string.height_unit),
+                options = HeightUnit.entries.map { it.label },
+                selectedIndex = HeightUnit.entries.indexOf(uiState.heightUnit),
+                onSelectionChanged = { index -> onHeightUnitChanged(HeightUnit.entries[index]) },
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Weight Unit Setting
+            SettingsSegmentedItem(
+                title = stringResource(R.string.weight_unit),
+                options = WeightUnit.entries.map { it.label },
+                selectedIndex = WeightUnit.entries.indexOf(uiState.weightUnit),
+                onSelectionChanged = { index -> onWeightUnitChanged(WeightUnit.entries[index]) },
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Developer Section
+            Text(
+                text = stringResource(R.string.developer),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextGray,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -369,6 +450,94 @@ private fun SettingsActionItem(
     }
 }
 
+@Composable
+private fun SettingsWarningItem(
+    title: String,
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+        }
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsSegmentedItem(
+    title: String,
+    options: List<String>,
+    selectedIndex: Int,
+    onSelectionChanged: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                options.forEachIndexed { index, label ->
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                        onClick = { onSelectionChanged(index) },
+                        selected = index == selectedIndex,
+                    ) {
+                        Text(label)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 private fun SettingsScreenPreview() {
@@ -377,10 +546,14 @@ private fun SettingsScreenPreview() {
             uiState = SettingsUiState(
                 hostMacAddress = "AA:BB:CC:DD:EE:FF",
                 sessionsDirectory = "/storage/emulated/0/Documents/the-balance-toolkit/sessions",
+                hasStoragePermission = true,
             ),
             onEditMacAddress = {},
             onMockModeChanged = {},
             onEditSessionsDirectory = {},
+            onRequestStoragePermission = {},
+            onHeightUnitChanged = {},
+            onWeightUnitChanged = {},
             onCiteClick = {},
             onSourceCodeClick = {},
         )
@@ -398,6 +571,9 @@ private fun SettingsScreenNoMacPreview() {
             onEditMacAddress = {},
             onMockModeChanged = {},
             onEditSessionsDirectory = {},
+            onRequestStoragePermission = {},
+            onHeightUnitChanged = {},
+            onWeightUnitChanged = {},
             onCiteClick = {},
             onSourceCodeClick = {},
         )

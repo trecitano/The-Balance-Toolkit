@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -53,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.balancetoolkit.R
@@ -291,6 +295,12 @@ private fun DevicesScreenContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Show scan logs when scanning in real mode or when there are logs
+            if (!uiState.isMockMode && uiState.scanLogs.isNotEmpty()) {
+                ScanLogsSection(logs = uiState.scanLogs)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             if (uiState.devices.isNotEmpty()) {
                 uiState.devices.forEach { device ->
                     DeviceCard(
@@ -451,6 +461,53 @@ private fun DeleteDeviceConfirmDialog(
             }
         },
     )
+}
+
+@Composable
+private fun ScanLogsSection(
+    logs: List<String>,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+
+    // Auto-scroll to bottom when new logs arrive
+    LaunchedEffect(logs.size) {
+        if (logs.isNotEmpty()) {
+            listState.animateScrollToItem(logs.size - 1)
+        }
+    }
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "Scan Log",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .background(
+                    color = Color(0xFF1E1E1E),
+                    shape = RoundedCornerShape(8.dp),
+                )
+                .padding(8.dp),
+        ) {
+            LazyColumn(state = listState) {
+                items(logs) { log ->
+                    Text(
+                        text = log,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color(0xFF00FF00),
+                        modifier = Modifier.padding(vertical = 2.dp),
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true)

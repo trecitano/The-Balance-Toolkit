@@ -17,6 +17,9 @@ interface DeviceDao {
     @Query("SELECT * FROM devices WHERE isConnected = 1")
     fun getConnectedDevices(): Flow<List<DeviceEntity>>
 
+    @Query("SELECT * FROM devices WHERE isConnected = 1")
+    suspend fun getConnectedDevicesOnce(): List<DeviceEntity>
+
     @Query("SELECT * FROM devices WHERE id = :id")
     suspend fun getDeviceById(id: String): DeviceEntity?
 

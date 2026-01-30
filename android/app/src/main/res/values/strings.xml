@@ -82,6 +82,7 @@
     <string name="bluetooth_permission_required_title">Bluetooth Permission Required</string>
     <string name="bluetooth_permission_required_message">To scan for and connect to Balance Boards, this app needs Bluetooth permissions. Please enable them in Settings.</string>
     <string name="open_settings">Open Settings</string>
+    <string name="more_options">More options</string>
 
     <!-- Session Screen -->
     <string name="loop_info">Loop %1$d/%2$d</string>
@@ -110,6 +111,14 @@
     <!-- Validation -->
     <string name="name_required_error">Name is required</string>
 
+    <!-- Units -->
+    <string name="units">Units</string>
+    <string name="height_unit">Height Unit</string>
+    <string name="weight_unit">Weight Unit</string>
+
+    <!-- Developer -->
+    <string name="developer">Developer</string>
+
     <!-- About -->
     <string name="about">About</string>
     <string name="cite_this_project">Cite This Project</string>
@@ -121,6 +130,8 @@
     <!-- Sessions Directory -->
     <string name="sessions_directory">Sessions Directory</string>
     <string name="sessions_directory_description">Configure where session data files are stored</string>
+    <string name="storage_permission_required">Storage Permission Required</string>
+    <string name="storage_permission_description">Tap to grant permission to write session files to the Documents folder</string>
     <string name="directory_path">Directory path</string>
     <string name="reset_to_default">Reset to default</string>
     <string name="directory_contents">Directory Contents</string>

@@ -141,22 +141,25 @@ fun AddUserDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Height Field
-                LabeledTextField(
-                    value = formState.height,
-                    onValueChange = onHeightChange,
-                    label = stringResource(R.string.height_cm),
-                    keyboardType = KeyboardType.Number,
-                )
+                // Height and Weight Row
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    LabeledTextField(
+                        value = formState.height,
+                        onValueChange = onHeightChange,
+                        label = stringResource(R.string.height_cm),
+                        keyboardType = KeyboardType.Number,
+                        modifier = Modifier.weight(1f),
+                    )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                // Weight Field with Button
-                WeightFieldWithButton(
-                    value = formState.weight,
-                    onValueChange = onWeightChange,
-                    onWeightButtonClick = onWeightButtonClick,
-                )
+                    WeightFieldWithButton(
+                        value = formState.weight,
+                        onValueChange = onWeightChange,
+                        onWeightButtonClick = onWeightButtonClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 

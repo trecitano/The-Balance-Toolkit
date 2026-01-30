@@ -21,7 +21,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -29,9 +32,13 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -167,6 +174,8 @@ fun DeviceCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Card(
         modifier =
             modifier
@@ -206,98 +215,144 @@ fun DeviceCard(
                     }
                 }
 
-                Text(
-                    text = device.displayInfo,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextGray,
-                )
-
-                // Mock device indicator
-                if (device.isMock) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     Text(
-                        text = "Mock Device",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFFF9800),
+                        text = device.displayInfo,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGray,
+                    )
+
+                    // Mock device indicator
+                    if (device.isMock) {
+                        Text(
+                            text = "Mock",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFFFF9800),
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Status indicator and Action button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    // Small status dot with text
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(
+                                    if (device.isConnected) StatusConnected else Color(0xFFBDBDBD),
+                                    CircleShape,
+                                ),
+                        )
+                        Text(
+                            text = if (device.isConnected) {
+                                stringResource(R.string.connected)
+                            } else {
+                                stringResource(R.string.disconnected)
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextGray,
+                        )
+                    }
+
+                    // Action Button - compact styling
+                    if (device.isConnected) {
+                        OutlinedButton(
+                            onClick = onToggleConnection,
+                            border = BorderStroke(1.dp, ErrorRed),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            modifier = Modifier.height(28.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.disconnect),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ErrorRed,
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = onToggleConnection,
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            modifier = Modifier.height(28.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.connect),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // More options menu
+            Box {
+                IconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .semantics {
+                            contentDescription = "More options for ${device.name}"
+                        },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.more_options),
+                        tint = TextGray,
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Status and Action buttons
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
                 ) {
-                    // Status Badge
-                    Box(
-                        modifier =
-                            Modifier
-                                .background(
-                                    if (device.isConnected) StatusConnected else StatusDisconnected,
-                                    statusBadgeShape,
-                                ).padding(horizontal = 12.dp, vertical = 6.dp),
-                    ) {
-                        Text(
-                            text =
-                                if (device.isConnected) {
-                                    stringResource(R.string.connected)
-                                } else {
-                                    stringResource(R.string.disconnected)
-                                },
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (device.isConnected) Color.White else TextDarkGray,
-                        )
-                    }
-
-                    // Action Button
-                    Button(
-                        onClick = onToggleConnection,
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = if (device.isConnected) ErrorRed else PrimaryBlue,
-                            ),
-                        shape = statusBadgeShape,
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-                    ) {
-                        Text(
-                            text =
-                                if (device.isConnected) {
-                                    stringResource(R.string.disconnect)
-                                } else {
-                                    stringResource(R.string.connect)
-                                },
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                    }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.edit)) },
+                        onClick = {
+                            showMenu = false
+                            onEdit()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = TextGray,
+                            )
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.delete),
+                                color = ErrorRed,
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onDelete()
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = ErrorRed,
+                            )
+                        },
+                    )
                 }
-            }
-
-            // Edit Button
-            IconButton(
-                onClick = onEdit,
-                modifier = Modifier.semantics {
-                    contentDescription = "Edit device ${device.name}"
-                },
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = stringResource(R.string.edit),
-                    tint = TextGray,
-                )
-            }
-
-            // Delete Button
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.semantics {
-                    contentDescription = "Delete device ${device.name}"
-                },
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.delete),
-                    tint = ErrorRed,
-                )
             }
         }
     }
