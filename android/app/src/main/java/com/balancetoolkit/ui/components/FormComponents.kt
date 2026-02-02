@@ -77,11 +77,12 @@ fun <T> EnumDropdown(
         Spacer(modifier = Modifier.height(4.dp))
         Box {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, borderColor, fieldShape)
-                    .clickable { expanded = true }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, borderColor, fieldShape)
+                        .clickable { expanded = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -145,22 +146,24 @@ fun LabeledTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = if (placeholder.isNotEmpty()) {
-                { Text(placeholder) }
-            } else {
-                null
-            },
+            placeholder =
+                if (placeholder.isNotEmpty()) {
+                    { Text(placeholder) }
+                } else {
+                    null
+                },
             shape = fieldShape,
             readOnly = readOnly,
             isError = isError,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
-            supportingText = if (isError && errorMessage != null) {
-                { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
-            } else {
-                null
-            },
+            supportingText =
+                if (isError && errorMessage != null) {
+                    { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
+                } else {
+                    null
+                },
         )
     }
 }
@@ -216,27 +219,29 @@ private fun ColorPickerRowInternal(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .border(1.dp, borderColor, fieldShape)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .border(1.dp, borderColor, fieldShape)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         UserColors.options.forEach { option ->
             val selected = isSelected(option)
             Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(option.color, CircleShape)
-                    .clickable { onSelect(option) }
-                    .then(
-                        if (selected) {
-                            Modifier.border(2.dp, Color.White, CircleShape)
-                        } else {
-                            Modifier
-                        }
-                    ),
+                modifier =
+                    Modifier
+                        .size(32.dp)
+                        .background(option.color, CircleShape)
+                        .clickable { onSelect(option) }
+                        .then(
+                            if (selected) {
+                                Modifier.border(2.dp, Color.White, CircleShape)
+                            } else {
+                                Modifier
+                            },
+                        ),
                 contentAlignment = Alignment.Center,
             ) {
                 if (selected) {
@@ -287,9 +292,10 @@ fun ReadOnlyFieldWithBorder(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

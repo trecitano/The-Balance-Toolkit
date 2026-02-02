@@ -67,18 +67,20 @@ fun AddUserDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .semantics { contentDescription = "Add new user dialog" },
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .semantics { contentDescription = "Add new user dialog" },
             shape = dialogShape,
             color = CardBackground,
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(20.dp),
             ) {
                 // Header
                 Row(
@@ -93,9 +95,10 @@ fun AddUserDialog(
                     )
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Close dialog"
-                        },
+                        modifier =
+                            Modifier.semantics {
+                                contentDescription = "Close dialog"
+                            },
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,

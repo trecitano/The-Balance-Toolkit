@@ -34,15 +34,14 @@ private val LightColorScheme =
     )
 
 @Composable
-fun TheBalanceToolkitTheme(
-    content: @Composable () -> Unit,
-) {
+fun TheBalanceToolkitTheme(content: @Composable () -> Unit) {
     // Always use light theme - dark mode is not supported
-    val colorScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        dynamicLightColorScheme(LocalContext.current)
-    } else {
-        LightColorScheme
-    }
+    val colorScheme =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            dynamicLightColorScheme(LocalContext.current)
+        } else {
+            LightColorScheme
+        }
 
     MaterialTheme(
         colorScheme = colorScheme,

@@ -6,7 +6,14 @@ package com.balancetoolkit.bluetooth
  */
 interface BalanceBoardListener {
     fun onLog(message: String)
-    fun onWeightData(topLeft: Float, topRight: Float, bottomLeft: Float, bottomRight: Float)
+
+    fun onWeightData(
+        topLeft: Float,
+        topRight: Float,
+        bottomLeft: Float,
+        bottomRight: Float,
+    )
+
     fun onError(message: String)
 }
 
@@ -20,7 +27,12 @@ open class SimpleWeightListener(
         // Default: ignore logs
     }
 
-    override fun onWeightData(topLeft: Float, topRight: Float, bottomLeft: Float, bottomRight: Float) {
+    override fun onWeightData(
+        topLeft: Float,
+        topRight: Float,
+        bottomLeft: Float,
+        bottomRight: Float,
+    ) {
         val totalWeight = topLeft + topRight + bottomLeft + bottomRight
         onWeight(totalWeight)
     }
@@ -42,7 +54,12 @@ open class FullDataListener(
         onLogMessage(message)
     }
 
-    override fun onWeightData(topLeft: Float, topRight: Float, bottomLeft: Float, bottomRight: Float) {
+    override fun onWeightData(
+        topLeft: Float,
+        topRight: Float,
+        bottomLeft: Float,
+        bottomRight: Float,
+    ) {
         onData(topLeft, topRight, bottomLeft, bottomRight)
     }
 

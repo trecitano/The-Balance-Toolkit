@@ -8,10 +8,6 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +36,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -50,6 +47,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.balancetoolkit.R
 import com.balancetoolkit.data.HeightUnit
 import com.balancetoolkit.data.WeightUnit
@@ -84,20 +84,21 @@ fun SettingsScreen(
     }
 
     // Directory picker launcher
-    val directoryPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        uri?.let {
-            // Convert content URI to a path we can use
-            // Take persistable permission for the URI
-            context.contentResolver.takePersistableUriPermission(
-                it,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            )
-            // Save the URI string - we'll need to handle this specially when writing files
-            viewModel.saveSessionsDirectory(it.toString())
+    val directoryPickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocumentTree(),
+        ) { uri: Uri? ->
+            uri?.let {
+                // Convert content URI to a path we can use
+                // Take persistable permission for the URI
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+                // Save the URI string - we'll need to handle this specially when writing files
+                viewModel.saveSessionsDirectory(it.toString())
+            }
         }
-    }
 
     if (uiState.showMacAddressDialog) {
         HostMacAddressDialog(
@@ -123,31 +124,61 @@ fun SettingsScreen(
                         val docId = DocumentsContract.getTreeDocumentId(treeUri)
                         val docUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
 
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            data = docUri
-                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                                Intent.FLAG_ACTIVITY_NEW_TASK
-                        }
+                        val intent =
+                            Intent(Intent.ACTION_VIEW).apply {
+                                data = docUri
+                                flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                    Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
                         context.startActivity(intent)
                     } else {
-                        // It's a file path - ensure directory exists and open file picker there
+                        // It's a file path - ensure directory exists and open in file manager
                         val file = File(directory)
                         if (!file.exists()) {
                             file.mkdirs()
                         }
-                        // Use OPEN_DOCUMENT_TREE with initial URI hint
-                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-                            putExtra(DocumentsContract.EXTRA_INITIAL_URI, Uri.parse("file://$directory"))
-                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        // Build a document URI for the external storage documents provider
+                        val relativePath =
+                            when {
+                                directory.startsWith("/storage/emulated/0/") -> {
+                                    directory.removePrefix("/storage/emulated/0/")
+                                }
+
+                                directory.startsWith(context.getExternalFilesDir(null)?.absolutePath ?: "") -> {
+                                    "Android/data/${context.packageName}/files" +
+                                        directory.removePrefix(context.getExternalFilesDir(null)?.absolutePath ?: "")
+                                }
+
+                                else -> {
+                                    null
+                                }
+                            }
+                        if (relativePath != null) {
+                            val encodedPath = relativePath.replace("/", "%2F")
+                            val uri = Uri.parse("content://com.android.externalstorage.documents/document/primary:$encodedPath")
+                            val intent =
+                                Intent(Intent.ACTION_VIEW).apply {
+                                    data = uri
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                            context.startActivity(intent)
+                        } else {
+                            // Fallback: show toast with the path
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.sessions_directory_path, directory),
+                                    Toast.LENGTH_LONG,
+                                ).show()
                         }
-                        context.startActivity(intent)
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.no_file_manager),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.no_file_manager),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 }
             },
             onResetToDefault = viewModel::resetSessionsDirectoryToDefault,
@@ -164,9 +195,10 @@ fun SettingsScreen(
         onMockModeChanged = viewModel::setMockModeEnabled,
         onEditSessionsDirectory = viewModel::showSessionsDirectoryDialog,
         onRequestStoragePermission = {
-            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                data = Uri.parse("package:${context.packageName}")
-            }
+            val intent =
+                Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                }
             context.startActivity(intent)
         },
         onHeightUnitChanged = viewModel::setHeightUnit,
@@ -196,17 +228,19 @@ private fun SettingsScreenContent(
     val scrollState = rememberScrollState()
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(BackgroundGray),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(BackgroundGray),
     ) {
         AppHeader()
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(16.dp),
         ) {
             Text(
                 text = stringResource(R.string.settings),
@@ -333,16 +367,18 @@ private fun SettingsItem(
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -381,9 +417,10 @@ private fun SettingsToggleItem(
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -416,16 +453,18 @@ private fun SettingsActionItem(
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -458,16 +497,18 @@ private fun SettingsWarningItem(
     modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -513,9 +554,10 @@ private fun SettingsSegmentedItem(
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
         ) {
             Text(
                 text = title,
@@ -543,11 +585,12 @@ private fun SettingsSegmentedItem(
 private fun SettingsScreenPreview() {
     TheBalanceToolkitTheme {
         SettingsScreenContent(
-            uiState = SettingsUiState(
-                hostMacAddress = "AA:BB:CC:DD:EE:FF",
-                sessionsDirectory = "/storage/emulated/0/Documents/the-balance-toolkit/sessions",
-                hasStoragePermission = true,
-            ),
+            uiState =
+                SettingsUiState(
+                    hostMacAddress = "AA:BB:CC:DD:EE:FF",
+                    sessionsDirectory = "/storage/emulated/0/Documents/the-balance-toolkit/sessions",
+                    hasStoragePermission = true,
+                ),
             onEditMacAddress = {},
             onMockModeChanged = {},
             onEditSessionsDirectory = {},
@@ -565,9 +608,10 @@ private fun SettingsScreenPreview() {
 private fun SettingsScreenNoMacPreview() {
     TheBalanceToolkitTheme {
         SettingsScreenContent(
-            uiState = SettingsUiState(
-                hostMacAddress = null,
-            ),
+            uiState =
+                SettingsUiState(
+                    hostMacAddress = null,
+                ),
             onEditMacAddress = {},
             onMockModeChanged = {},
             onEditSessionsDirectory = {},

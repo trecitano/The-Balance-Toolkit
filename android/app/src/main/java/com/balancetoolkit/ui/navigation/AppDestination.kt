@@ -6,7 +6,7 @@ import com.balancetoolkit.R
 sealed class AppDestination(
     val route: String,
     val label: String,
-    @DrawableRes val icon: Int,
+    @param:DrawableRes val icon: Int,
 ) {
     data object Home : AppDestination(
         route = "home",

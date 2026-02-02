@@ -22,7 +22,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
-
     @Provides
     @Singleton
     fun provideBluetoothAdapter(
@@ -44,8 +43,7 @@ object AppModule {
     @Singleton
     fun provideSharedPreferences(
         @ApplicationContext context: Context,
-    ): SharedPreferences =
-        context.getSharedPreferences(PreferenceKeys.PREFS_NAME, Context.MODE_PRIVATE)
+    ): SharedPreferences = context.getSharedPreferences(PreferenceKeys.PREFS_NAME, Context.MODE_PRIVATE)
 
     @Provides
     @Singleton
@@ -67,7 +65,5 @@ object AppModule {
 abstract class BindingsModule {
     @Binds
     @Singleton
-    abstract fun bindBalanceBoardConnectionManager(
-        impl: BalanceBoardConnectionManagerImpl
-    ): BalanceBoardConnectionManager
+    abstract fun bindBalanceBoardConnectionManager(impl: BalanceBoardConnectionManagerImpl): BalanceBoardConnectionManager
 }

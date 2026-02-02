@@ -14,23 +14,27 @@ object PreferenceKeys {
     const val WEIGHT_UNIT = "weight_unit"
 }
 
-enum class HeightUnit(val label: String) {
+enum class HeightUnit(
+    val label: String,
+) {
     CENTIMETERS("cm"),
-    FEET("ft");
+    FEET("ft"),
+    ;
 
     companion object {
-        fun fromString(value: String?): HeightUnit =
-            entries.find { it.name == value } ?: CENTIMETERS
+        fun fromString(value: String?): HeightUnit = entries.find { it.name == value } ?: CENTIMETERS
     }
 }
 
-enum class WeightUnit(val label: String) {
+enum class WeightUnit(
+    val label: String,
+) {
     KILOGRAMS("kg"),
-    POUNDS("lbs");
+    POUNDS("lbs"),
+    ;
 
     companion object {
-        fun fromString(value: String?): WeightUnit =
-            entries.find { it.name == value } ?: KILOGRAMS
+        fun fromString(value: String?): WeightUnit = entries.find { it.name == value } ?: KILOGRAMS
     }
 }
 

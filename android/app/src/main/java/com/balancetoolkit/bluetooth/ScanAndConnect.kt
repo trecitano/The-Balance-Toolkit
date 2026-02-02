@@ -11,24 +11,39 @@ import androidx.annotation.RequiresPermission
 class ScanAndConnect(
     private val bluetoothAdapter: BluetoothAdapter,
     var hostMacAddress: String,
-    private val listener: Listener
+    private val listener: Listener,
 ) : BroadcastReceiver() {
-
     interface Listener {
-        fun onDeviceFound(name: String, address: String)
+        fun onDeviceFound(
+            name: String,
+            address: String,
+        )
+
         fun onBalanceBoardFound(device: BluetoothDevice)
+
         fun onPairingStateChanged(state: PairingState)
+
         fun onDeviceConnected(device: BluetoothDevice)
+
         fun onDeviceDisconnected(device: BluetoothDevice)
+
         fun onError(message: String)
+
         fun onLog(message: String)
     }
 
     sealed class PairingState {
         object Scanning : PairingState()
+
         object Pairing : PairingState()
-        data class Paired(val device: BluetoothDevice) : PairingState()
-        data class Failed(val reason: String) : PairingState()
+
+        data class Paired(
+            val device: BluetoothDevice,
+        ) : PairingState()
+
+        data class Failed(
+            val reason: String,
+        ) : PairingState()
     }
 
     private val foundDevices = mutableSetOf<String>()
@@ -49,15 +64,16 @@ class ScanAndConnect(
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    fun findPairedBalanceBoard(): BluetoothDevice? {
-        return bluetoothAdapter.bondedDevices?.find { device -> isBalanceBoard(device) }
-    }
+    fun findPairedBalanceBoard(): BluetoothDevice? = bluetoothAdapter.bondedDevices?.find { device -> isBalanceBoard(device) }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         val device = getDeviceFromIntent(intent)
         if (device == null || !isBalanceBoard(device)) {
-            return;
+            return
         }
 
         when (intent.action) {
@@ -66,10 +82,22 @@ class ScanAndConnect(
                 listener.onLog("Balance Board found! Starting pairing...")
                 startPairing(device)
             }
-            BluetoothDevice.ACTION_PAIRING_REQUEST -> handlePairingRequest(device)
-            BluetoothDevice.ACTION_BOND_STATE_CHANGED -> handleBondStateChange(device, intent)
-            BluetoothDevice.ACTION_ACL_CONNECTED -> listener.onDeviceConnected(device)
-            BluetoothDevice.ACTION_ACL_DISCONNECTED -> listener.onDeviceDisconnected(device)
+
+            BluetoothDevice.ACTION_PAIRING_REQUEST -> {
+                handlePairingRequest(device)
+            }
+
+            BluetoothDevice.ACTION_BOND_STATE_CHANGED -> {
+                handleBondStateChange(device, intent)
+            }
+
+            BluetoothDevice.ACTION_ACL_CONNECTED -> {
+                listener.onDeviceConnected(device)
+            }
+
+            BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
+                listener.onDeviceDisconnected(device)
+            }
         }
     }
 
@@ -92,18 +120,23 @@ class ScanAndConnect(
         }
     }
 
-    private fun handleBondStateChange(device: BluetoothDevice, intent: Intent) {
+    private fun handleBondStateChange(
+        device: BluetoothDevice,
+        intent: Intent,
+    ) {
         val state = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)
 
         when (state) {
             BluetoothDevice.BOND_BONDING -> {
                 listener.onPairingStateChanged(PairingState.Pairing)
             }
+
             BluetoothDevice.BOND_BONDED -> {
                 device.let {
                     listener.onPairingStateChanged(PairingState.Paired(it))
                 }
             }
+
             BluetoothDevice.BOND_NONE -> {
                 listener.onPairingStateChanged(PairingState.Failed("Pairing failed or cancelled"))
             }
@@ -120,16 +153,11 @@ class ScanAndConnect(
         }
     }
 
-    private fun getDeviceFromIntent(intent: Intent): BluetoothDevice? {
-        return intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
-    }
+    private fun getDeviceFromIntent(intent: Intent): BluetoothDevice? =
+        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    private fun isBalanceBoard(device: BluetoothDevice): Boolean {
-        return device.name?.contains("RVL-WBC-01", ignoreCase = true) ?: false
-    }
+    private fun isBalanceBoard(device: BluetoothDevice): Boolean = device.name?.contains("RVL-WBC-01", ignoreCase = true) ?: false
 
-    private fun parseMacAddress(macStr: String): ByteArray {
-        return macStr.split(':').map { it.toInt(16).toByte() }.toByteArray()
-    }
+    private fun parseMacAddress(macStr: String): ByteArray = macStr.split(':').map { it.toInt(16).toByte() }.toByteArray()
 }

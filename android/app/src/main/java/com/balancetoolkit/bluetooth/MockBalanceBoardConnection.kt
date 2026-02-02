@@ -11,9 +11,8 @@ import kotlin.random.Random
  * around a balance board.
  */
 class MockBalanceBoardConnection(
-    private val listener: BalanceBoardListener
+    private val listener: BalanceBoardListener,
 ) {
-
     companion object {
         private const val TAG = "MockBalanceBoard"
         private const val SAMPLE_INTERVAL_MS = 10L
@@ -89,7 +88,11 @@ class MockBalanceBoardConnection(
          * Convert Center of Pressure (x, y) and total force to four corner weights.
          * Uses bilinear distribution that keeps all corners >= 0.
          */
-        private fun readingFromCop(x: Float, y: Float, totalForce: Float): Reading {
+        private fun readingFromCop(
+            x: Float,
+            y: Float,
+            totalForce: Float,
+        ): Reading {
             // Normalize to [-1, 1] range based on board dimensions
             val xn = (x / 300f).coerceIn(-1f, 1f)
             val yn = (y / 200f).coerceIn(-1f, 1f)
@@ -109,7 +112,7 @@ class MockBalanceBoardConnection(
         val topLeft: Float,
         val topRight: Float,
         val bottomLeft: Float,
-        val bottomRight: Float
+        val bottomRight: Float,
     )
 
     /**
@@ -122,42 +125,48 @@ class MockBalanceBoardConnection(
         mockGenerator = MockBoardGenerator()
         listener.onLog("Mock balance board started")
 
-        pollingThread = Thread {
-            while (isRunning) {
-                val reading = mockGenerator?.next() ?: break
+        pollingThread =
+            Thread {
+                while (isRunning) {
+                    val reading = mockGenerator?.next() ?: break
 
-                val rawReading = SensorReading(
-                    topLeft = reading.topLeft,
-                    topRight = reading.topRight,
-                    bottomLeft = reading.bottomLeft,
-                    bottomRight = reading.bottomRight,
-                )
-
-                val taredReading = tareManager.applyTare(rawReading) { tare ->
-                    listener.onLog(
-                        "Tare set: TL=%.1f TR=%.1f BL=%.1f BR=%.1f".format(
-                            tare.topLeft, tare.topRight, tare.bottomLeft, tare.bottomRight
+                    val rawReading =
+                        SensorReading(
+                            topLeft = reading.topLeft,
+                            topRight = reading.topRight,
+                            bottomLeft = reading.bottomLeft,
+                            bottomRight = reading.bottomRight,
                         )
+
+                    val taredReading =
+                        tareManager.applyTare(rawReading) { tare ->
+                            listener.onLog(
+                                "Tare set: TL=%.1f TR=%.1f BL=%.1f BR=%.1f".format(
+                                    tare.topLeft,
+                                    tare.topRight,
+                                    tare.bottomLeft,
+                                    tare.bottomRight,
+                                ),
+                            )
+                        }
+
+                    listener.onWeightData(
+                        taredReading.topLeft,
+                        taredReading.topRight,
+                        taredReading.bottomLeft,
+                        taredReading.bottomRight,
                     )
-                }
 
-                listener.onWeightData(
-                    taredReading.topLeft,
-                    taredReading.topRight,
-                    taredReading.bottomLeft,
-                    taredReading.bottomRight,
-                )
-
-                try {
-                    Thread.sleep(SAMPLE_INTERVAL_MS)
-                } catch (_: InterruptedException) {
-                    break
+                    try {
+                        Thread.sleep(SAMPLE_INTERVAL_MS)
+                    } catch (_: InterruptedException) {
+                        break
+                    }
                 }
+            }.apply {
+                name = "MockBoard-Polling"
+                start()
             }
-        }.apply {
-            name = "MockBoard-Polling"
-            start()
-        }
     }
 
     /**
