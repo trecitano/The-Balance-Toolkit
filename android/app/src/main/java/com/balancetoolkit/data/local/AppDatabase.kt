@@ -33,8 +33,7 @@ abstract class AppDatabase : RoomDatabase() {
                             context.applicationContext,
                             AppDatabase::class.java,
                             "balance_toolkit_database",
-                        )
-                        .fallbackToDestructiveMigration()
+                        ).fallbackToDestructiveMigration(dropAllTables = true)
                         .build()
                 instance = db
                 db

@@ -141,4 +141,5 @@
     <string name="change_directory">Change</string>
     <string name="open_folder">Open Folder</string>
     <string name="no_file_manager">No file manager app found</string>
+    <string name="sessions_directory_path">Sessions directory: %1$s</string>
 </resources>

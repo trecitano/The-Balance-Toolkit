@@ -69,9 +69,10 @@ fun SessionsDirectoryDialog(
             colors = CardDefaults.cardColors(containerColor = CardBackground),
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
             ) {
                 Text(
                     text = stringResource(R.string.sessions_directory),
@@ -140,19 +141,21 @@ fun SessionsDirectoryDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 200.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            RoundedCornerShape(8.dp)
-                        ),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                RoundedCornerShape(8.dp),
+                            ),
                 ) {
                     if (files.isEmpty()) {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(24.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -225,20 +228,22 @@ private fun FileListItem(
     val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = Icons.Default.Info,
             contentDescription = null,
             modifier = Modifier.size(20.dp),
-            tint = if (file.isDirectory) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
+            tint =
+                if (file.isDirectory) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
         )
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -268,20 +273,22 @@ private fun FileListItem(
     }
 }
 
-private fun getFilesInDirectory(path: String): List<SessionFileInfo> {
-    return try {
+private fun getFilesInDirectory(path: String): List<SessionFileInfo> =
+    try {
         val directory = File(path)
         if (directory.exists() && directory.isDirectory) {
-            directory.listFiles()
+            directory
+                .listFiles()
                 ?.sortedByDescending { it.lastModified() }
                 ?.map { file ->
                     SessionFileInfo(
                         name = file.name,
-                        size = if (file.isDirectory) {
-                            file.listFiles()?.size?.toLong() ?: 0L
-                        } else {
-                            file.length()
-                        },
+                        size =
+                            if (file.isDirectory) {
+                                file.listFiles()?.size?.toLong() ?: 0L
+                            } else {
+                                file.length()
+                            },
                         lastModified = file.lastModified(),
                         isDirectory = file.isDirectory,
                     )
@@ -292,13 +299,11 @@ private fun getFilesInDirectory(path: String): List<SessionFileInfo> {
     } catch (e: Exception) {
         emptyList()
     }
-}
 
-private fun formatFileSize(bytes: Long): String {
-    return when {
+private fun formatFileSize(bytes: Long): String =
+    when {
         bytes < 1024 -> "$bytes B"
         bytes < 1024 * 1024 -> "${bytes / 1024} KB"
         bytes < 1024 * 1024 * 1024 -> "${bytes / (1024 * 1024)} MB"
         else -> "${bytes / (1024 * 1024 * 1024)} GB"
     }
-}

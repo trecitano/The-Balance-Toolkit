@@ -42,9 +42,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,13 +49,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.balancetoolkit.R
 import com.balancetoolkit.data.model.Device
 import com.balancetoolkit.ui.components.AppHeader
@@ -75,10 +75,11 @@ import com.balancetoolkit.viewmodel.DevicesViewModel
 private val scanButtonColor = Color(0xFF424242)
 private val buttonShape = RoundedCornerShape(8.dp)
 
-private val bluetoothPermissions = arrayOf(
-    Manifest.permission.BLUETOOTH_SCAN,
-    Manifest.permission.BLUETOOTH_CONNECT,
-)
+private val bluetoothPermissions =
+    arrayOf(
+        Manifest.permission.BLUETOOTH_SCAN,
+        Manifest.permission.BLUETOOTH_CONNECT,
+    )
 
 @Composable
 fun DevicesScreen(
@@ -91,11 +92,10 @@ fun DevicesScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Check if permissions are currently granted
-    fun hasBluetoothPermissions(): Boolean {
-        return bluetoothPermissions.all { permission ->
+    fun hasBluetoothPermissions(): Boolean =
+        bluetoothPermissions.all { permission ->
             ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
         }
-    }
 
     // Track permission states
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -103,16 +103,17 @@ fun DevicesScreen(
     var waitingForSettingsReturn by remember { mutableStateOf(false) }
 
     // Permission launcher
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        if (!allGranted) {
-            // Permissions denied - show settings dialog
-            showSettingsDialog = true
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestMultiplePermissions(),
+        ) { permissions ->
+            val allGranted = permissions.values.all { it }
+            if (!allGranted) {
+                // Permissions denied - show settings dialog
+                showSettingsDialog = true
+            }
+            // If granted, do nothing - screen will show normally
         }
-        // If granted, do nothing - screen will show normally
-    }
 
     // Initial permission check on first composition
     LaunchedEffect(Unit) {
@@ -124,15 +125,16 @@ fun DevicesScreen(
 
     // Re-check permissions when returning from settings
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME && waitingForSettingsReturn) {
-                waitingForSettingsReturn = false
-                if (!hasBluetoothPermissions()) {
-                    // Still no permissions after returning from settings
-                    showSettingsDialog = true
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME && waitingForSettingsReturn) {
+                    waitingForSettingsReturn = false
+                    if (!hasBluetoothPermissions()) {
+                        // Still no permissions after returning from settings
+                        showSettingsDialog = true
+                    }
                 }
             }
-        }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
@@ -145,15 +147,16 @@ fun DevicesScreen(
             onOpenSettings = {
                 showSettingsDialog = false
                 waitingForSettingsReturn = true
-                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = Uri.fromParts("package", context.packageName, null)
-                }
+                val intent =
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
                 context.startActivity(intent)
             },
             onDismiss = {
                 showSettingsDialog = false
                 onNavigateToHome()
-            }
+            },
         )
     }
 
@@ -274,10 +277,11 @@ private fun DevicesScreenContent(
 
             // Host MAC Address display
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onEditMacAddress)
-                    .padding(vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onEditMacAddress)
+                        .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -486,14 +490,14 @@ private fun ScanLogsSection(
         )
 
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .background(
-                    color = Color(0xFF1E1E1E),
-                    shape = RoundedCornerShape(8.dp),
-                )
-                .padding(8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .background(
+                        color = Color(0xFF1E1E1E),
+                        shape = RoundedCornerShape(8.dp),
+                    ).padding(8.dp),
         ) {
             LazyColumn(state = listState) {
                 items(logs) { log ->

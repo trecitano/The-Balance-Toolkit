@@ -1,5 +1,6 @@
 package com.balancetoolkit.ui.components
 
+import android.content.ClipData
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,13 +18,14 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,6 +34,7 @@ import com.balancetoolkit.R
 import com.balancetoolkit.ui.theme.CardBackground
 import com.balancetoolkit.ui.theme.PrimaryBlue
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
+import kotlinx.coroutines.launch
 
 private const val CITATION_TEXT = """@software{the_balance_toolkit,
   author = {The Balance Toolkit Contributors},
@@ -47,8 +50,9 @@ fun CiteBottomSheet(
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState()
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -56,10 +60,11 @@ fun CiteBottomSheet(
         modifier = modifier,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp),
         ) {
             Text(
                 text = stringResource(R.string.cite_this_project),
@@ -94,12 +99,16 @@ fun CiteBottomSheet(
 
             Button(
                 onClick = {
-                    clipboardManager.setText(AnnotatedString(CITATION_TEXT))
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.citation_copied),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    scope.launch {
+                        val clipData = ClipData.newPlainText("citation", CITATION_TEXT)
+                        clipboard.setClipEntry(ClipEntry(clipData))
+                    }
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.citation_copied),
+                            Toast.LENGTH_SHORT,
+                        ).show()
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),

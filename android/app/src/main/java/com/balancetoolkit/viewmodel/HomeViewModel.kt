@@ -27,59 +27,62 @@ data class HomeUiState(
 )
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(
-    private val userDao: UserDao,
-    private val deviceDao: DeviceDao,
-    private val sharedPreferences: SharedPreferences,
-) : ViewModel() {
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+class HomeViewModel
+    @Inject
+    constructor(
+        private val userDao: UserDao,
+        private val deviceDao: DeviceDao,
+        private val sharedPreferences: SharedPreferences,
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow(HomeUiState())
+        val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    init {
-        loadHomeData()
-    }
+        init {
+            loadHomeData()
+        }
 
-    private fun loadHomeData() {
-        viewModelScope.launch {
-            val selectedUserId = sharedPreferences.getString(PreferenceKeys.SELECTED_USER_ID, null)
+        private fun loadHomeData() {
+            viewModelScope.launch {
+                val selectedUserId = sharedPreferences.getString(PreferenceKeys.SELECTED_USER_ID, null)
 
-            combine(
-                userDao.getAllUsers().map { entities -> entities.map { it.toUser() } },
-                deviceDao.getAllDevices().map { entities -> entities.any { it.isConnected } }
-            ) { users, hasConnectedDevice ->
-                // Find selected user, fall back to default user if not found
-                val selectedUser = if (selectedUserId != null) {
-                    users.find { it.id == selectedUserId }
-                } else {
-                    null
-                } ?: users.find { it.id == DEFAULT_USER_ID } ?: users.firstOrNull()
+                combine(
+                    userDao.getAllUsers().map { entities -> entities.map { it.toUser() } },
+                    deviceDao.getAllDevices().map { entities -> entities.any { it.isConnected } },
+                ) { users, hasConnectedDevice ->
+                    // Find selected user, fall back to default user if not found
+                    val selectedUser =
+                        if (selectedUserId != null) {
+                            users.find { it.id == selectedUserId }
+                        } else {
+                            null
+                        } ?: users.find { it.id == DEFAULT_USER_ID } ?: users.firstOrNull()
 
-                // If we found a user but it wasn't in preferences, save it
-                if (selectedUser != null && selectedUserId != selectedUser.id) {
-                    sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, selectedUser.id).apply()
+                    // If we found a user but it wasn't in preferences, save it
+                    if (selectedUser != null && selectedUserId != selectedUser.id) {
+                        sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, selectedUser.id).apply()
+                    }
+
+                    HomeUiState(
+                        selectedUser = selectedUser,
+                        isBoardConnected = hasConnectedDevice,
+                        isLoading = false,
+                    )
+                }.catch { e ->
+                    _uiState.update {
+                        it.copy(isLoading = false)
+                    }
+                }.collect { state ->
+                    _uiState.value = state
                 }
-
-                HomeUiState(
-                    selectedUser = selectedUser,
-                    isBoardConnected = hasConnectedDevice,
-                    isLoading = false,
-                )
-            }.catch { e ->
-                _uiState.update {
-                    it.copy(isLoading = false)
-                }
-            }.collect { state ->
-                _uiState.value = state
             }
         }
-    }
 
-    fun selectUser(userId: String?) {
-        sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, userId).apply()
-        // The flow will automatically update the UI state
-    }
+        fun selectUser(userId: String?) {
+            sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, userId).apply()
+            // The flow will automatically update the UI state
+        }
 
-    fun clearSelectedUser() {
-        selectUser(null)
+        fun clearSelectedUser() {
+            selectUser(null)
+        }
     }
-}

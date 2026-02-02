@@ -7,9 +7,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
-import java.io.BufferedWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -32,10 +32,11 @@ class SessionFileWriter(
     private var rawEventsWritten: Int = 0
     private var sessionStartTime: Long = 0L
 
-    private val json = Json {
-        prettyPrint = true
-        encodeDefaults = true
-    }
+    private val json =
+        Json {
+            prettyPrint = true
+            encodeDefaults = true
+        }
 
     companion object {
         private const val RAW_CSV_HEADER = "timestamp,top_right,bottom_right,top_left,bottom_left\n"
@@ -77,108 +78,117 @@ class SessionFileWriter(
      * Initializes the file writer and creates necessary files.
      * Should be called when a session starts.
      */
-    suspend fun initialize(): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            sessionStartTime = System.currentTimeMillis()
+    suspend fun initialize(): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                sessionStartTime = System.currentTimeMillis()
 
-            // Ensure output directory exists
-            val outputDir = File(outputDirectory)
-            if (!outputDir.exists()) {
-                outputDir.mkdirs()
+                // Ensure output directory exists
+                val outputDir = File(outputDirectory)
+                if (!outputDir.exists()) {
+                    outputDir.mkdirs()
+                }
+
+                // Create raw data CSV file
+                val sanitizedDeviceName = deviceName.replace(" ", "_")
+                val sanitizedMac = deviceMacAddress.replace(":", "")
+                val rawFileName = "$sessionId-$sanitizedDeviceName-$sanitizedMac-raw.csv"
+                val rawFile = File(outputDir, rawFileName)
+
+                rawDataWriter = BufferedWriter(FileWriter(rawFile))
+                rawDataWriter?.write(RAW_CSV_HEADER)
+                rawDataWriter?.flush()
+
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
             }
-
-            // Create raw data CSV file
-            val sanitizedDeviceName = deviceName.replace(" ", "_")
-            val sanitizedMac = deviceMacAddress.replace(":", "")
-            val rawFileName = "$sessionId-$sanitizedDeviceName-$sanitizedMac-raw.csv"
-            val rawFile = File(outputDir, rawFileName)
-
-            rawDataWriter = BufferedWriter(FileWriter(rawFile))
-            rawDataWriter?.write(RAW_CSV_HEADER)
-            rawDataWriter?.flush()
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
         }
-    }
 
     /**
      * Writes a sensor reading to the raw data CSV file.
      */
-    suspend fun writeReading(reading: SensorReading): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            rawDataWriter?.let { writer ->
-                val timestamp = getCurrentTimestamp()
-                val line = "$timestamp,${reading.topRight},${reading.bottomRight},${reading.topLeft},${reading.bottomLeft}\n"
-                writer.write(line)
-                writer.flush()
-                rawEventsWritten++
+    suspend fun writeReading(reading: SensorReading): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                rawDataWriter?.let { writer ->
+                    val timestamp = getCurrentTimestamp()
+                    val line = "$timestamp,${reading.topRight},${reading.bottomRight},${reading.topLeft},${reading.bottomLeft}\n"
+                    writer.write(line)
+                    writer.flush()
+                    rawEventsWritten++
+                }
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
             }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
         }
-    }
 
     /**
      * Writes the session configuration/settings JSON file.
      * Should be called when the session ends.
      */
-    suspend fun writeSessionConfiguration(configuration: SessionConfiguration): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            val outputDir = File(outputDirectory)
-            val settingsFileName = "$sessionId.settings.json"
-            val settingsFile = File(outputDir, settingsFileName)
+    suspend fun writeSessionConfiguration(configuration: SessionConfiguration): Result<String> =
+        withContext(Dispatchers.IO) {
+            try {
+                val outputDir = File(outputDirectory)
+                val settingsFileName = "$sessionId.settings.json"
+                val settingsFile = File(outputDir, settingsFileName)
 
-            // Calculate session stats
-            val duration = System.currentTimeMillis() - sessionStartTime
-            val durationSeconds = duration / 1000.0
-            val samplingRate = if (durationSeconds > 0) {
-                rawEventsWritten / durationSeconds
-            } else {
-                0.0
-            }
+                // Calculate session stats
+                val duration = System.currentTimeMillis() - sessionStartTime
+                val durationSeconds = duration / 1000.0
+                val samplingRate =
+                    if (durationSeconds > 0) {
+                        rawEventsWritten / durationSeconds
+                    } else {
+                        0.0
+                    }
 
-            // Create the file mapping
-            val sanitizedDeviceName = deviceName.replace(" ", "_")
-            val sanitizedMac = deviceMacAddress.replace(":", "")
-            val rawFileName = "$sessionId-$sanitizedDeviceName-$sanitizedMac-raw.csv"
+                // Create the file mapping
+                val sanitizedDeviceName = deviceName.replace(" ", "_")
+                val sanitizedMac = deviceMacAddress.replace(":", "")
+                val rawFileName = "$sessionId-$sanitizedDeviceName-$sanitizedMac-raw.csv"
 
-            val configWithStats = configuration.copy(
-                sessionStats = SessionStats(
-                    boardSamplingRate = samplingRate,
-                    durationMs = duration,
-                ),
-                deviceFileMappings = mapOf(
-                    deviceMacAddress to FileNameMapping(
-                        rawFileName = rawFileName,
+                val configWithStats =
+                    configuration.copy(
+                        sessionStats =
+                            SessionStats(
+                                boardSamplingRate = samplingRate,
+                                durationMs = duration,
+                            ),
+                        deviceFileMappings =
+                            mapOf(
+                                deviceMacAddress to
+                                    FileNameMapping(
+                                        rawFileName = rawFileName,
+                                    ),
+                            ),
                     )
-                )
-            )
 
-            val jsonContent = json.encodeToString(configWithStats)
-            settingsFile.writeText(jsonContent)
+                val jsonContent = json.encodeToString(configWithStats)
+                settingsFile.writeText(jsonContent)
 
-            Result.success(settingsFile.absolutePath)
-        } catch (e: Exception) {
-            Result.failure(e)
+                Result.success(settingsFile.absolutePath)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
         }
-    }
 
     /**
      * Closes the file writer and releases resources.
      * Should be called when the session ends.
      */
-    suspend fun close(): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            rawDataWriter?.close()
-            rawDataWriter = null
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
+    suspend fun close(): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                rawDataWriter?.close()
+                rawDataWriter = null
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
         }
-    }
 
     /**
      * Gets the current timestamp in RFC3339 format with microsecond precision.

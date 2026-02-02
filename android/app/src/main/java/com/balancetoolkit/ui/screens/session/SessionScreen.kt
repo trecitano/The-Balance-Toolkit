@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -36,24 +36,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
 import com.balancetoolkit.bluetooth.SensorReading
@@ -329,24 +329,27 @@ private fun SelectedUserCard(
     onClick: () -> Unit,
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // User avatar
             Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(user.avatarBackgroundColor),
+                modifier =
+                    Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(user.avatarBackgroundColor),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -391,9 +394,10 @@ private fun SessionControlCard(
         if (!canStartSession && !isRecording) {
             // No device connected state
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(4.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
             ) {
                 OutlinedButton(
                     onClick = onDevicesClick,
@@ -408,16 +412,18 @@ private fun SessionControlCard(
             }
         } else {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(4.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Button(
                     onClick = onToggleSession,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isRecording) PrimaryRed else PrimaryBlue
-                    ),
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = if (isRecording) PrimaryRed else PrimaryBlue,
+                        ),
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(
@@ -451,7 +457,10 @@ private const val COP_MAX = 1f
 /**
  * Maps a normalized CoP value [-1, 1] to screen X coordinate.
  */
-private fun mapCopToScreenX(copX: Float, width: Float): Float {
+private fun mapCopToScreenX(
+    copX: Float,
+    width: Float,
+): Float {
     val ratio = (copX - COP_MIN) / (COP_MAX - COP_MIN)
     return ratio.coerceIn(0f, 1f) * width
 }
@@ -460,7 +469,10 @@ private fun mapCopToScreenX(copX: Float, width: Float): Float {
  * Maps a normalized CoP value [-1, 1] to screen Y coordinate.
  * Inverts Y so positive is visually up.
  */
-private fun mapCopToScreenY(copY: Float, height: Float): Float {
+private fun mapCopToScreenY(
+    copY: Float,
+    height: Float,
+): Float {
     val ratio = (copY - COP_MIN) / (COP_MAX - COP_MIN)
     return (1f - ratio.coerceIn(0f, 1f)) * height
 }
@@ -488,13 +500,14 @@ private fun COPVisualizationCard(
     // Color range for weight intensity
     val lowLoadColor = ChartGreen.copy(alpha = 0.4f)
     val highLoadColor = ChartRed.copy(alpha = 0.7f)
-    val maxSensorValue = maxOf(
-        currentReading.topLeft,
-        currentReading.topRight,
-        currentReading.bottomLeft,
-        currentReading.bottomRight,
-        0.1f
-    )
+    val maxSensorValue =
+        maxOf(
+            currentReading.topLeft,
+            currentReading.topRight,
+            currentReading.bottomLeft,
+            currentReading.bottomRight,
+            0.1f,
+        )
 
     Card(
         modifier =
@@ -544,7 +557,7 @@ private fun COPVisualizationCard(
                 )
 
                 Canvas(
-                    modifier = Modifier.fillMaxSize().padding(4.dp)
+                    modifier = Modifier.fillMaxSize().padding(4.dp),
                 ) {
                     val w = size.width
                     val h = size.height
@@ -556,33 +569,34 @@ private fun COPVisualizationCard(
                         color = crosshairColor,
                         start = Offset(centerX, 0f),
                         end = Offset(centerX, h),
-                        strokeWidth = 1.dp.toPx()
+                        strokeWidth = 1.dp.toPx(),
                     )
                     drawLine(
                         color = crosshairColor,
                         start = Offset(0f, centerY),
                         end = Offset(w, centerY),
-                        strokeWidth = 1.dp.toPx()
+                        strokeWidth = 1.dp.toPx(),
                     )
 
                     // Draw convex hull of trail points if enabled
                     if (showConvexHull && copTrail.size >= 3) {
                         val hull = computeConvexHull(copTrail)
                         if (hull.size >= 3) {
-                            val hullPath = Path().apply {
-                                val firstPoint = hull.first()
-                                moveTo(
-                                    mapCopToScreenX(firstPoint.x, w),
-                                    mapCopToScreenY(firstPoint.y, h)
-                                )
-                                hull.drop(1).forEach { point ->
-                                    lineTo(
-                                        mapCopToScreenX(point.x, w),
-                                        mapCopToScreenY(point.y, h)
+                            val hullPath =
+                                Path().apply {
+                                    val firstPoint = hull.first()
+                                    moveTo(
+                                        mapCopToScreenX(firstPoint.x, w),
+                                        mapCopToScreenY(firstPoint.y, h),
                                     )
+                                    hull.drop(1).forEach { point ->
+                                        lineTo(
+                                            mapCopToScreenX(point.x, w),
+                                            mapCopToScreenY(point.y, h),
+                                        )
+                                    }
+                                    close()
                                 }
-                                close()
-                            }
                             drawPath(hullPath, color = hullColor)
                             drawPath(hullPath, color = hullStrokeColor, style = Stroke(width = 2.dp.toPx()))
                         }
@@ -590,39 +604,41 @@ private fun COPVisualizationCard(
 
                     // Draw confidence ellipse if enabled
                     if (showConfidenceEllipse && confidenceEllipsePoints.size >= 3) {
-                        val ellipsePath = Path().apply {
-                            val firstPoint = confidenceEllipsePoints.first()
-                            moveTo(
-                                mapCopToScreenX(firstPoint.first, w),
-                                mapCopToScreenY(firstPoint.second, h)
-                            )
-                            confidenceEllipsePoints.drop(1).forEach { point ->
-                                lineTo(
-                                    mapCopToScreenX(point.first, w),
-                                    mapCopToScreenY(point.second, h)
+                        val ellipsePath =
+                            Path().apply {
+                                val firstPoint = confidenceEllipsePoints.first()
+                                moveTo(
+                                    mapCopToScreenX(firstPoint.first, w),
+                                    mapCopToScreenY(firstPoint.second, h),
                                 )
+                                confidenceEllipsePoints.drop(1).forEach { point ->
+                                    lineTo(
+                                        mapCopToScreenX(point.first, w),
+                                        mapCopToScreenY(point.second, h),
+                                    )
+                                }
+                                close()
                             }
-                            close()
-                        }
                         drawPath(ellipsePath, color = ellipseColor)
                         drawPath(ellipsePath, color = ellipseStrokeColor, style = Stroke(width = 2.dp.toPx()))
                     }
 
                     // Draw CoP trail
                     if (copTrail.size >= 2) {
-                        val trailPath = Path().apply {
-                            val firstPoint = copTrail.first()
-                            moveTo(
-                                mapCopToScreenX(firstPoint.x, w),
-                                mapCopToScreenY(firstPoint.y, h)
-                            )
-                            copTrail.drop(1).forEach { point ->
-                                lineTo(
-                                    mapCopToScreenX(point.x, w),
-                                    mapCopToScreenY(point.y, h)
+                        val trailPath =
+                            Path().apply {
+                                val firstPoint = copTrail.first()
+                                moveTo(
+                                    mapCopToScreenX(firstPoint.x, w),
+                                    mapCopToScreenY(firstPoint.y, h),
                                 )
+                                copTrail.drop(1).forEach { point ->
+                                    lineTo(
+                                        mapCopToScreenX(point.x, w),
+                                        mapCopToScreenY(point.y, h),
+                                    )
+                                }
                             }
-                        }
                         drawPath(trailPath, color = trailColor, style = Stroke(width = 2.dp.toPx()))
                     }
 
@@ -632,7 +648,7 @@ private fun COPVisualizationCard(
                     drawCircle(
                         color = copDotColor,
                         radius = 6.dp.toPx(),
-                        center = Offset(copScreenX, copScreenY)
+                        center = Offset(copScreenX, copScreenY),
                     )
                 }
             }
@@ -685,11 +701,12 @@ private fun COPVisualizationCard(
                 // Use pointerInput with detectTapGestures for explicit tap handling
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = { currentConvexHullCallback.value(!currentConvexHullState.value) }
-                        )
-                    },
+                    modifier =
+                        Modifier.pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = { currentConvexHullCallback.value(!currentConvexHullState.value) },
+                            )
+                        },
                 ) {
                     Checkbox(
                         checked = showConvexHull,
@@ -697,9 +714,10 @@ private fun COPVisualizationCard(
                         colors = CheckboxDefaults.colors(checkedColor = ChartBlue),
                     )
                     Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(ChartBlue, CircleShape)
+                        modifier =
+                            Modifier
+                                .size(8.dp)
+                                .background(ChartBlue, CircleShape),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(stringResource(R.string.convex_hull), style = MaterialTheme.typography.bodySmall)
@@ -709,11 +727,12 @@ private fun COPVisualizationCard(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = { currentEllipseCallback.value(!currentEllipseState.value) }
-                        )
-                    },
+                    modifier =
+                        Modifier.pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = { currentEllipseCallback.value(!currentEllipseState.value) },
+                            )
+                        },
                 ) {
                     Checkbox(
                         checked = showConfidenceEllipse,
@@ -721,9 +740,10 @@ private fun COPVisualizationCard(
                         colors = CheckboxDefaults.colors(checkedColor = ChartOrange),
                     )
                     Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(ChartOrange, CircleShape)
+                        modifier =
+                            Modifier
+                                .size(8.dp)
+                                .background(ChartOrange, CircleShape),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("95% Ellipse", style = MaterialTheme.typography.bodySmall)
@@ -747,9 +767,10 @@ private fun SensorWeightLabel(
     val backgroundColor = lerp(lowColor, highColor, relativeIntensity.coerceIn(0f, 1f))
 
     Box(
-        modifier = modifier
-            .background(backgroundColor, RoundedCornerShape(4.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+        modifier =
+            modifier
+                .background(backgroundColor, RoundedCornerShape(4.dp))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -771,17 +792,18 @@ private fun computeConvexHull(points: List<CopPosition>): List<CopPosition> {
     val start = points.minWithOrNull(compareBy({ it.y }, { it.x })) ?: return points
 
     // Sort points by polar angle with respect to start
-    val sorted = points.filter { it != start }.sortedWith { a, b ->
-        val crossProduct = cross(start, a, b)
-        if (crossProduct == 0f) {
-            // Collinear points - sort by distance
-            val distA = (a.x - start.x) * (a.x - start.x) + (a.y - start.y) * (a.y - start.y)
-            val distB = (b.x - start.x) * (b.x - start.x) + (b.y - start.y) * (b.y - start.y)
-            distA.compareTo(distB)
-        } else {
-            -crossProduct.compareTo(0f)
+    val sorted =
+        points.filter { it != start }.sortedWith { a, b ->
+            val crossProduct = cross(start, a, b)
+            if (crossProduct == 0f) {
+                // Collinear points - sort by distance
+                val distA = (a.x - start.x) * (a.x - start.x) + (a.y - start.y) * (a.y - start.y)
+                val distB = (b.x - start.x) * (b.x - start.x) + (b.y - start.y) * (b.y - start.y)
+                distA.compareTo(distB)
+            } else {
+                -crossProduct.compareTo(0f)
+            }
         }
-    }
 
     val hull = mutableListOf(start)
 
@@ -795,9 +817,11 @@ private fun computeConvexHull(points: List<CopPosition>): List<CopPosition> {
     return hull
 }
 
-private fun cross(o: CopPosition, a: CopPosition, b: CopPosition): Float {
-    return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
-}
+private fun cross(
+    o: CopPosition,
+    a: CopPosition,
+    b: CopPosition,
+): Float = (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
 
 @Composable
 private fun StabilityCard(
@@ -836,9 +860,8 @@ private fun StabilityCard(
                                 isRecording -> ChartGreen
                                 else -> PrimaryRed
                             },
-                            CircleShape
-                        )
-                        .then(if (isEnabled) Modifier.clickable { onToggleSession() } else Modifier),
+                            CircleShape,
+                        ).then(if (isEnabled) Modifier.clickable { onToggleSession() } else Modifier),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -937,27 +960,30 @@ private fun FFTChartCard(
     if (showY) visibleAmplitudes.add(amplitudeSpectrum.amplitudeY)
     if (showCombined) visibleAmplitudes.add(amplitudeSpectrum.amplitudeXY)
 
-    val maxAmplitude = if (visibleAmplitudes.isNotEmpty() && visibleAmplitudes.any { it.isNotEmpty() }) {
-        visibleAmplitudes.flatten().maxOrNull()?.let { maxOf(it, 0.1f) } ?: 1f
-    } else {
-        1f
-    }
+    val maxAmplitude =
+        if (visibleAmplitudes.isNotEmpty() && visibleAmplitudes.any { it.isNotEmpty() }) {
+            visibleAmplitudes.flatten().maxOrNull()?.let { maxOf(it, 0.1f) } ?: 1f
+        } else {
+            1f
+        }
 
     // Round up to nice number for display
-    val yMax = when {
-        maxAmplitude <= 0.5f -> 0.5f
-        maxAmplitude <= 1f -> 1f
-        maxAmplitude <= 2f -> 2f
-        else -> ((maxAmplitude.toInt()) + 1).toFloat()
-    }
+    val yMax =
+        when {
+            maxAmplitude <= 0.5f -> 0.5f
+            maxAmplitude <= 1f -> 1f
+            maxAmplitude <= 2f -> 2f
+            else -> ((maxAmplitude.toInt()) + 1).toFloat()
+        }
 
     // Max frequency for X-axis (2 Hz)
     val xMax = 2f
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { contentDescription = "FFT Amplitude Spectrum chart" },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "FFT Amplitude Spectrum chart" },
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
@@ -997,10 +1023,11 @@ private fun FFTChartCard(
                 // Chart area
                 Column(modifier = Modifier.weight(1f)) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(120.dp)
+                                .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
                             val w = size.width
@@ -1011,7 +1038,7 @@ private fun FFTChartCard(
                                 color = BorderGray.copy(alpha = 0.3f),
                                 start = Offset(0f, h / 2),
                                 end = Offset(w, h / 2),
-                                strokeWidth = 0.5.dp.toPx()
+                                strokeWidth = 0.5.dp.toPx(),
                             )
 
                             // Draw each enabled spectrum
@@ -1103,21 +1130,22 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFftLine(
 ) {
     if (freqs.size < 2 || amplitudes.size < 2) return
 
-    val path = Path().apply {
-        val firstX = (freqs[0] / xMax).coerceIn(0f, 1f) * w
-        val firstY = h - (amplitudes[0] / yMax).coerceIn(0f, 1f) * h
-        moveTo(firstX, firstY)
+    val path =
+        Path().apply {
+            val firstX = (freqs[0] / xMax).coerceIn(0f, 1f) * w
+            val firstY = h - (amplitudes[0] / yMax).coerceIn(0f, 1f) * h
+            moveTo(firstX, firstY)
 
-        for (i in 1 until minOf(freqs.size, amplitudes.size)) {
-            val x = (freqs[i] / xMax).coerceIn(0f, 1f) * w
-            val y = h - (amplitudes[i] / yMax).coerceIn(0f, 1f) * h
-            lineTo(x, y)
+            for (i in 1 until minOf(freqs.size, amplitudes.size)) {
+                val x = (freqs[i] / xMax).coerceIn(0f, 1f) * w
+                val y = h - (amplitudes[i] / yMax).coerceIn(0f, 1f) * h
+                lineTo(x, y)
+            }
         }
-    }
     drawPath(
         path = path,
         color = color,
-        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
     )
 }
 
@@ -1138,9 +1166,10 @@ private fun FftToggleItem(
             colors = CheckboxDefaults.colors(checkedColor = color),
         )
         Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(color, CircleShape)
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .background(color, CircleShape),
         )
         Spacer(modifier = Modifier.width(2.dp))
         Text(
@@ -1187,10 +1216,11 @@ private fun CopPlotCard(
             }
 
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
             ) {
                 Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
                     val w = size.width
@@ -1202,28 +1232,29 @@ private fun CopPlotCard(
                         color = BorderGray,
                         start = Offset(0f, centerY),
                         end = Offset(w, centerY),
-                        strokeWidth = 1.dp.toPx()
+                        strokeWidth = 1.dp.toPx(),
                     )
 
                     // Draw the time-series line
                     if (copTrail.size >= 2) {
                         val values = copTrail.map { valueSelector(it) }
-                        val path = Path().apply {
-                            val firstValue = values.first()
-                            // Map value from [-1, 1] to [h, 0] (inverted so +1 is at top)
-                            val firstY = ((1f - firstValue) / 2f) * h
-                            moveTo(0f, firstY)
+                        val path =
+                            Path().apply {
+                                val firstValue = values.first()
+                                // Map value from [-1, 1] to [h, 0] (inverted so +1 is at top)
+                                val firstY = ((1f - firstValue) / 2f) * h
+                                moveTo(0f, firstY)
 
-                            values.forEachIndexed { index, value ->
-                                val x = (index.toFloat() / (values.size - 1)) * w
-                                val y = ((1f - value) / 2f) * h
-                                lineTo(x, y)
+                                values.forEachIndexed { index, value ->
+                                    val x = (index.toFloat() / (values.size - 1)) * w
+                                    val y = ((1f - value) / 2f) * h
+                                    lineTo(x, y)
+                                }
                             }
-                        }
                         drawPath(
                             path = path,
                             color = lineColor,
-                            style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                            style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
                         )
 
                         // Draw current position dot
@@ -1234,7 +1265,7 @@ private fun CopPlotCard(
                             drawCircle(
                                 color = lineColor,
                                 radius = 5.dp.toPx(),
-                                center = Offset(lastX, lastY)
+                                center = Offset(lastX, lastY),
                             )
                         }
                     }
@@ -1264,20 +1295,22 @@ private fun VelocityPlotCard(
     modifier: Modifier = Modifier,
 ) {
     // Calculate dynamic Y-axis range based on data
-    val maxValue = if (velocityTrail.isNotEmpty()) {
-        maxOf(velocityTrail.maxOrNull() ?: 0f, 0.1f)
-    } else {
-        0.5f // Default max
-    }
+    val maxValue =
+        if (velocityTrail.isNotEmpty()) {
+            maxOf(velocityTrail.maxOrNull() ?: 0f, 0.1f)
+        } else {
+            0.5f // Default max
+        }
     // Round up to nice number for display
-    val yMax = when {
-        maxValue <= 0.1f -> 0.1f
-        maxValue <= 0.2f -> 0.2f
-        maxValue <= 0.3f -> 0.3f
-        maxValue <= 0.5f -> 0.5f
-        maxValue <= 1f -> 1f
-        else -> ((maxValue * 10).toInt() + 1) / 10f
-    }
+    val yMax =
+        when {
+            maxValue <= 0.1f -> 0.1f
+            maxValue <= 0.2f -> 0.2f
+            maxValue <= 0.3f -> 0.3f
+            maxValue <= 0.5f -> 0.5f
+            maxValue <= 1f -> 1f
+            else -> ((maxValue * 10).toInt() + 1) / 10f
+        }
 
     Card(
         modifier = modifier,
@@ -1319,10 +1352,11 @@ private fun VelocityPlotCard(
 
                 // Chart area
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(80.dp)
-                        .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .height(80.dp)
+                            .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
                         val w = size.width
@@ -1333,27 +1367,28 @@ private fun VelocityPlotCard(
                             color = BorderGray.copy(alpha = 0.5f),
                             start = Offset(0f, h / 2),
                             end = Offset(w, h / 2),
-                            strokeWidth = 0.5.dp.toPx()
+                            strokeWidth = 0.5.dp.toPx(),
                         )
 
                         // Draw the time-series line
                         if (velocityTrail.size >= 2) {
-                            val path = Path().apply {
-                                val firstValue = velocityTrail.first()
-                                // Map value from [0, yMax] to [h, 0] (inverted so max is at top)
-                                val firstY = h - (firstValue / yMax).coerceIn(0f, 1f) * h
-                                moveTo(0f, firstY)
+                            val path =
+                                Path().apply {
+                                    val firstValue = velocityTrail.first()
+                                    // Map value from [0, yMax] to [h, 0] (inverted so max is at top)
+                                    val firstY = h - (firstValue / yMax).coerceIn(0f, 1f) * h
+                                    moveTo(0f, firstY)
 
-                                velocityTrail.forEachIndexed { index, value ->
-                                    val x = (index.toFloat() / (velocityTrail.size - 1)) * w
-                                    val y = h - (value / yMax).coerceIn(0f, 1f) * h
-                                    lineTo(x, y)
+                                    velocityTrail.forEachIndexed { index, value ->
+                                        val x = (index.toFloat() / (velocityTrail.size - 1)) * w
+                                        val y = h - (value / yMax).coerceIn(0f, 1f) * h
+                                        lineTo(x, y)
+                                    }
                                 }
-                            }
                             drawPath(
                                 path = path,
                                 color = lineColor,
-                                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
                             )
 
                             // Draw current position dot
@@ -1364,7 +1399,7 @@ private fun VelocityPlotCard(
                                 drawCircle(
                                     color = lineColor,
                                     radius = 5.dp.toPx(),
-                                    center = Offset(lastX, lastY)
+                                    center = Offset(lastX, lastY),
                                 )
                             }
                         }
@@ -1399,20 +1434,22 @@ private fun DpsiMetricsCard(
     if (showVsi) visibleTrails.add(vsiTrail)
     if (showDpsi) visibleTrails.add(dpsiTrail)
 
-    val maxValue = if (visibleTrails.isNotEmpty()) {
-        visibleTrails.flatten().maxOrNull()?.let { maxOf(it, 0.1f) } ?: 1f
-    } else {
-        1f
-    }
+    val maxValue =
+        if (visibleTrails.isNotEmpty()) {
+            visibleTrails.flatten().maxOrNull()?.let { maxOf(it, 0.1f) } ?: 1f
+        } else {
+            1f
+        }
 
     // Round up to nice number for display
-    val yMax = when {
-        maxValue <= 0.5f -> 0.5f
-        maxValue <= 1f -> 1f
-        maxValue <= 2f -> 2f
-        maxValue <= 5f -> 5f
-        else -> ((maxValue.toInt() / 5) + 1) * 5f
-    }
+    val yMax =
+        when {
+            maxValue <= 0.5f -> 0.5f
+            maxValue <= 1f -> 1f
+            maxValue <= 2f -> 2f
+            maxValue <= 5f -> 5f
+            else -> ((maxValue.toInt() / 5) + 1) * 5f
+        }
 
     Card(
         modifier = modifier,
@@ -1454,10 +1491,11 @@ private fun DpsiMetricsCard(
 
                 // Chart area
                 Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(120.dp)
-                        .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .height(120.dp)
+                            .border(1.dp, BorderGray, RoundedCornerShape(4.dp)),
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
                         val w = size.width
@@ -1468,7 +1506,7 @@ private fun DpsiMetricsCard(
                             color = BorderGray.copy(alpha = 0.3f),
                             start = Offset(0f, h / 2),
                             end = Offset(w, h / 2),
-                            strokeWidth = 0.5.dp.toPx()
+                            strokeWidth = 0.5.dp.toPx(),
                         )
 
                         // Draw each enabled metric trail
@@ -1550,20 +1588,21 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawMetricLine(
     w: Float,
     h: Float,
 ) {
-    val path = Path().apply {
-        val firstY = h - (trail.first() / yMax).coerceIn(0f, 1f) * h
-        moveTo(0f, firstY)
+    val path =
+        Path().apply {
+            val firstY = h - (trail.first() / yMax).coerceIn(0f, 1f) * h
+            moveTo(0f, firstY)
 
-        trail.forEachIndexed { index, value ->
-            val x = (index.toFloat() / (trail.size - 1)) * w
-            val y = h - (value / yMax).coerceIn(0f, 1f) * h
-            lineTo(x, y)
+            trail.forEachIndexed { index, value ->
+                val x = (index.toFloat() / (trail.size - 1)) * w
+                val y = h - (value / yMax).coerceIn(0f, 1f) * h
+                lineTo(x, y)
+            }
         }
-    }
     drawPath(
         path = path,
         color = color,
-        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
     )
 }
 
@@ -1584,9 +1623,10 @@ private fun DpsiToggleItem(
             colors = CheckboxDefaults.colors(checkedColor = color),
         )
         Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(color, CircleShape)
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .background(color, CircleShape),
         )
         Spacer(modifier = Modifier.width(2.dp))
         Text(
@@ -1612,9 +1652,10 @@ private fun DpsiMetricItem(
             horizontalArrangement = Arrangement.Center,
         ) {
             Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .background(color, CircleShape)
+                modifier =
+                    Modifier
+                        .size(8.dp)
+                        .background(color, CircleShape),
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(

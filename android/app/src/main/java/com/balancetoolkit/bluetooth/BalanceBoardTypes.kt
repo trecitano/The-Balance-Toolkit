@@ -53,12 +53,13 @@ class TareManager {
     ): SensorReading {
         if (updateTare) {
             updateTare = false
-            tareValue = TareValue(
-                topLeft = reading.topLeft,
-                topRight = reading.topRight,
-                bottomLeft = reading.bottomLeft,
-                bottomRight = reading.bottomRight,
-            )
+            tareValue =
+                TareValue(
+                    topLeft = reading.topLeft,
+                    topRight = reading.topRight,
+                    bottomLeft = reading.bottomLeft,
+                    bottomRight = reading.bottomRight,
+                )
             onTareSet?.invoke(tareValue)
         }
 

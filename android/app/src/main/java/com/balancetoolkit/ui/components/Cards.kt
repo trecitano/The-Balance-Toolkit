@@ -23,14 +23,14 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -248,19 +248,21 @@ fun DeviceCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(
-                                    if (device.isConnected) StatusConnected else Color(0xFFBDBDBD),
-                                    CircleShape,
-                                ),
+                            modifier =
+                                Modifier
+                                    .size(8.dp)
+                                    .background(
+                                        if (device.isConnected) StatusConnected else Color(0xFFBDBDBD),
+                                        CircleShape,
+                                    ),
                         )
                         Text(
-                            text = if (device.isConnected) {
-                                stringResource(R.string.connected)
-                            } else {
-                                stringResource(R.string.disconnected)
-                            },
+                            text =
+                                if (device.isConnected) {
+                                    stringResource(R.string.connected)
+                                } else {
+                                    stringResource(R.string.disconnected)
+                                },
                             style = MaterialTheme.typography.labelSmall,
                             color = TextGray,
                         )
@@ -302,11 +304,12 @@ fun DeviceCard(
             Box {
                 IconButton(
                     onClick = { showMenu = true },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .semantics {
-                            contentDescription = "More options for ${device.name}"
-                        },
+                    modifier =
+                        Modifier
+                            .size(40.dp)
+                            .semantics {
+                                contentDescription = "More options for ${device.name}"
+                            },
                 ) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,

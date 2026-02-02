@@ -20,6 +20,8 @@ import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -33,41 +35,39 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
+import com.balancetoolkit.data.model.DominantHand
+import com.balancetoolkit.data.model.Gender
 import com.balancetoolkit.data.model.User
 import com.balancetoolkit.ui.components.AppHeader
 import com.balancetoolkit.ui.components.UserCard
+import com.balancetoolkit.ui.components.WeightMeasureBottomSheet
 import com.balancetoolkit.ui.theme.BackgroundGray
 import com.balancetoolkit.ui.theme.BorderGrayDark
 import com.balancetoolkit.ui.theme.CardBackground
 import com.balancetoolkit.ui.theme.PrimaryBlue
-import com.balancetoolkit.ui.components.WeightMeasureBottomSheet
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 import com.balancetoolkit.util.TrackPerformance
 import com.balancetoolkit.viewmodel.DevicesViewModel
 import com.balancetoolkit.viewmodel.EditUserFormState
 import com.balancetoolkit.viewmodel.UsersUiState
 import com.balancetoolkit.viewmodel.UsersViewModel
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import com.balancetoolkit.data.model.DominantHand
-import com.balancetoolkit.data.model.Gender
 
 @Composable
 fun UsersScreen(
@@ -371,27 +371,29 @@ private fun CarouselIndicators(
 @Composable
 private fun UsersScreenPreview() {
     TheBalanceToolkitTheme {
-        val mockUsers = listOf(
-            User(
-                id = "1",
-                name = "John Doe",
-            ),
-            User(
-                id = "2",
-                name = "Jane Smith",
-            ),
-            User(
-                id = "3",
-                name = "Bob Wilson",
-            ),
-        )
+        val mockUsers =
+            listOf(
+                User(
+                    id = "1",
+                    name = "John Doe",
+                ),
+                User(
+                    id = "2",
+                    name = "Jane Smith",
+                ),
+                User(
+                    id = "3",
+                    name = "Bob Wilson",
+                ),
+            )
 
         UsersScreenContent(
-            uiState = UsersUiState(
-                allUsers = mockUsers,
-                selectedUser = mockUsers.first(),
-                selectedUserIndex = 0,
-            ),
+            uiState =
+                UsersUiState(
+                    allUsers = mockUsers,
+                    selectedUser = mockUsers.first(),
+                    selectedUserIndex = 0,
+                ),
             editFormState = EditUserFormState(),
             onSearchQueryChange = {},
             onAddUserClick = {},

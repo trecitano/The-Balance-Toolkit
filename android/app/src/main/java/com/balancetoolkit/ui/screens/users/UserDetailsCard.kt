@@ -85,9 +85,10 @@ fun UserDetailsCard(
     canEditName: Boolean = true,
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .semantics { contentDescription = "User details for ${user.name}" },
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = "User details for ${user.name}" },
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
@@ -222,15 +223,16 @@ fun UserDetailsCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             ColorPickerRowColor(
-                selectedColor = if (isEditing) {
-                    editColor
-                } else {
-                    try {
-                        Color(android.graphics.Color.parseColor(user.color))
-                    } catch (e: IllegalArgumentException) {
-                        PrimaryBlue
-                    }
-                },
+                selectedColor =
+                    if (isEditing) {
+                        editColor
+                    } else {
+                        try {
+                            Color(android.graphics.Color.parseColor(user.color))
+                        } catch (e: IllegalArgumentException) {
+                            PrimaryBlue
+                        }
+                    },
                 onColorChange = if (isEditing) onColorChange else { _ -> },
             )
         }
@@ -248,20 +250,22 @@ private fun UserDetailsHeader(
     onCancelClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
-    val (avatarBackground, avatarIcon) = if (isEditing) {
-        getAvatarColors(editColor.toHexString())
-    } else {
-        user.avatarBackgroundColor to user.avatarIconColor
-    }
+    val (avatarBackground, avatarIcon) =
+        if (isEditing) {
+            getAvatarColors(editColor.toHexString())
+        } else {
+            user.avatarBackgroundColor to user.avatarIconColor
+        }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Box(
-            modifier = Modifier
-                .size(60.dp)
-                .background(avatarBackground, CircleShape),
+            modifier =
+                Modifier
+                    .size(60.dp)
+                    .background(avatarBackground, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

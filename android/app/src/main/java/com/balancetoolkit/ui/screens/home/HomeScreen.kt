@@ -89,17 +89,19 @@ private fun HomeScreenContent(
     val scrollState = rememberScrollState()
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(BackgroundGray)
-            .verticalScroll(scrollState),
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(BackgroundGray)
+                .verticalScroll(scrollState),
     ) {
         AppHeader()
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Select User Card (first)
@@ -130,33 +132,37 @@ private fun ConnectionStatusIndicator(
     isConnected: Boolean,
     onNavigateToDevices: () -> Unit,
 ) {
-    val statusText = if (isConnected) {
-        stringResource(R.string.board_connected)
-    } else {
-        stringResource(R.string.no_board_connected)
-    }
+    val statusText =
+        if (isConnected) {
+            stringResource(R.string.board_connected)
+        } else {
+            stringResource(R.string.no_board_connected)
+        }
     val statusColor = if (isConnected) connectedColor else disconnectedColor
 
     Card(
         onClick = onNavigateToDevices,
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics { contentDescription = statusText },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = statusText },
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Status dot
             Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(statusColor)
+                modifier =
+                    Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(statusColor),
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -184,12 +190,13 @@ private fun SelectUserCard(
 ) {
     Card(
         onClick = onNavigateToUsers,
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics {
-                contentDescription = selectedUser?.let { "Selected user: ${it.name}" }
-                    ?: "No user selected"
-            },
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics {
+                    contentDescription = selectedUser?.let { "Selected user: ${it.name}" }
+                        ?: "No user selected"
+                },
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
@@ -210,10 +217,11 @@ private fun SelectUserCard(
                 ) {
                     // User avatar
                     Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(selectedUser.avatarBackgroundColor),
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(selectedUser.avatarBackgroundColor),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -253,10 +261,11 @@ private fun SelectUserCard(
                 ) {
                     // Empty avatar placeholder
                     Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFE0E0E0)),
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFE0E0E0)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -295,14 +304,16 @@ private fun StartSessionButton(
 ) {
     Button(
         onClick = onStartSession,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp),
         enabled = isEnabled,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = PrimaryBlue,
-            disabledContainerColor = Color(0xFFBDBDBD),
-        ),
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = PrimaryBlue,
+                disabledContainerColor = Color(0xFFBDBDBD),
+            ),
         shape = buttonShape,
     ) {
         Icon(
@@ -324,9 +335,10 @@ private fun StartSessionButton(
             style = MaterialTheme.typography.bodySmall,
             color = TextGray,
             textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
         )
     }
 }
@@ -336,11 +348,12 @@ private fun StartSessionButton(
 private fun HomeScreenPreviewNoUser() {
     TheBalanceToolkitTheme {
         HomeScreenContent(
-            uiState = HomeUiState(
-                selectedUser = null,
-                isBoardConnected = false,
-                isLoading = false,
-            ),
+            uiState =
+                HomeUiState(
+                    selectedUser = null,
+                    isBoardConnected = false,
+                    isLoading = false,
+                ),
         )
     }
 }
@@ -350,15 +363,17 @@ private fun HomeScreenPreviewNoUser() {
 private fun HomeScreenPreviewWithUser() {
     TheBalanceToolkitTheme {
         HomeScreenContent(
-            uiState = HomeUiState(
-                selectedUser = User(
-                    name = "John Doe",
-                    age = 35,
-                    weight = 75,
+            uiState =
+                HomeUiState(
+                    selectedUser =
+                        User(
+                            name = "John Doe",
+                            age = 35,
+                            weight = 75,
+                        ),
+                    isBoardConnected = true,
+                    isLoading = false,
                 ),
-                isBoardConnected = true,
-                isLoading = false,
-            ),
         )
     }
 }
