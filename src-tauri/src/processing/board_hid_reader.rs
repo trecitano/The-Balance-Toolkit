@@ -53,12 +53,18 @@ fn connect_via_hid(mac_address: MacAddress) -> HidResult<HidDevice> {
     // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
     // Note: We must convert the mac address from u64 to the serial number format.
     let serial_number = format!("{:012x}", mac_address);
+    println!("Connecting to {:?}", api.device_list()
+        .map(|device| { device.serial_number()})
+        .map(|option| { option.unwrap_or("")})
+        .collect::<Vec<_>>());
+    let normalized_serial = serial_number.replace(":", "").to_lowercase();
+    println!("Tentative: {}", normalized_serial);
     let balance_board_info = api
         .device_list()
         .find(|device| {
             device
                 .serial_number()
-                .is_some_and(|s| s.replace(":", "").to_lowercase() == serial_number)
+                .is_some_and(|s| s.replace(":", "").to_lowercase() == normalized_serial)
         })
         .ok_or(HidApiError {
             message: format!(
