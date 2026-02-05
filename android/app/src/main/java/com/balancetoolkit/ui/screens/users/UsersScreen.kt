@@ -80,7 +80,7 @@ fun UsersScreen(
     val editFormState by viewModel.editUserFormState.collectAsState()
     val devicesUiState by devicesViewModel.uiState.collectAsState()
 
-    val hasConnectedDevices = devicesUiState.connectedDevices.isNotEmpty()
+    val hasSelectedDevice = devicesUiState.hasSelectedDevice
 
     UsersScreenContent(
         uiState = uiState,
@@ -99,7 +99,7 @@ fun UsersScreen(
         onEditWeightChange = viewModel::updateEditWeight,
         onEditDominantHandChange = viewModel::updateEditDominantHand,
         onEditColorChange = viewModel::updateEditColor,
-        onWeightButtonClick = { viewModel.showWeightMeasureForEdit(hasConnectedDevices) },
+        onWeightButtonClick = { viewModel.showWeightMeasureForEdit(hasSelectedDevice) },
         modifier = modifier,
     )
 
@@ -113,7 +113,7 @@ fun UsersScreen(
             onWeightChange = viewModel::updateFormWeight,
             onDominantHandChange = viewModel::updateFormDominantHand,
             onColorChange = viewModel::updateFormColor,
-            onWeightButtonClick = { viewModel.showWeightMeasureForAdd(hasConnectedDevices) },
+            onWeightButtonClick = { viewModel.showWeightMeasureForAdd(hasSelectedDevice) },
             onDismiss = viewModel::hideAddUserDialog,
             onAddUser = viewModel::addUser,
         )
@@ -121,7 +121,7 @@ fun UsersScreen(
 
     if (uiState.showWeightMeasure) {
         WeightMeasureBottomSheet(
-            isDeviceConnected = hasConnectedDevices,
+            isDeviceConnected = hasSelectedDevice,
             liveWeight = uiState.liveWeight,
             weightUnit = "kg",
             onAccept = viewModel::acceptWeight,

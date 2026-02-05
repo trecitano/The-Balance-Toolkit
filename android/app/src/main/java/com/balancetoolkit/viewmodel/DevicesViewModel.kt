@@ -29,6 +29,7 @@ import javax.inject.Inject
 data class DevicesUiState(
     val devices: List<Device> = emptyList(),
     val connectedDevices: List<Device> = emptyList(),
+    val selectedDevice: Device? = null,
     val isScanning: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -42,6 +43,9 @@ data class DevicesUiState(
 ) {
     val connectedCount: Int
         get() = devices.count { it.isConnected }
+
+    val hasSelectedDevice: Boolean
+        get() = selectedDevice != null
 
     val isHostMacConfigured: Boolean
         get() = !hostMacAddress.isNullOrBlank()
@@ -80,6 +84,7 @@ class DevicesViewModel
             sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceListener)
             observeScanEvents()
             observeScanningState()
+            observeSelectedDevice()
         }
 
         override fun onCleared() {
@@ -129,6 +134,14 @@ class DevicesViewModel
             }
         }
 
+        private fun observeSelectedDevice() {
+            viewModelScope.launch {
+                deviceDao.getSelectedDevice().collect { selectedEntity ->
+                    _uiState.update { it.copy(selectedDevice = selectedEntity?.toDevice()) }
+                }
+            }
+        }
+
         private fun loadHostMacAddress() {
             val savedMac = sharedPreferences.getString(PreferenceKeys.HOST_MAC_ADDRESS, null)
             _uiState.update { it.copy(hostMacAddress = savedMac) }
@@ -154,9 +167,11 @@ class DevicesViewModel
                         id = MockDeviceIds.MOCK_BOARD_1,
                         name = "Mock Board 1",
                         macAddress = "00:00:00:00:00:01",
-                        isConnected = false,
+                        isConnected = true,
                     )
                 deviceDao.insertDevice(device.toEntity())
+            } else if (!mockBoard1.isConnected) {
+                deviceDao.updateConnectionStatus(MockDeviceIds.MOCK_BOARD_1, true)
             }
 
             val mockBoard2 = deviceDao.getDeviceById(MockDeviceIds.MOCK_BOARD_2)
@@ -166,9 +181,25 @@ class DevicesViewModel
                         id = MockDeviceIds.MOCK_BOARD_2,
                         name = "Mock Board 2",
                         macAddress = "00:00:00:00:00:02",
+                        isConnected = true,
+                    )
+                deviceDao.insertDevice(device.toEntity())
+            } else if (!mockBoard2.isConnected) {
+                deviceDao.updateConnectionStatus(MockDeviceIds.MOCK_BOARD_2, true)
+            }
+
+            val mockBoard3 = deviceDao.getDeviceById(MockDeviceIds.MOCK_BOARD_3)
+            if (mockBoard3 == null) {
+                val device =
+                    Device(
+                        id = MockDeviceIds.MOCK_BOARD_3,
+                        name = "Mock Board 3",
+                        macAddress = "00:00:00:00:00:03",
                         isConnected = false,
                     )
                 deviceDao.insertDevice(device.toEntity())
+            } else if (mockBoard3.isConnected) {
+                deviceDao.updateConnectionStatus(MockDeviceIds.MOCK_BOARD_3, false)
             }
         }
 
@@ -252,14 +283,20 @@ class DevicesViewModel
                 }
         }
 
-        fun connectDevice(deviceId: String) {
+        fun selectDevice(deviceId: String) {
             viewModelScope.launch {
                 val result =
                     runCatching {
-                        deviceDao.updateConnectionStatus(deviceId, true)
-                        Result.Success(Unit)
+                        val device = _uiState.value.devices.find { it.id == deviceId }
+                        if (device == null) {
+                            Result.Error("Device not found", null)
+                        } else {
+                            deviceDao.clearAllSelections()
+                            deviceDao.updateSelectionStatus(deviceId, true)
+                            Result.Success(Unit)
+                        }
                     }.getOrElse { e ->
-                        Result.Error(e.message ?: "Failed to connect device", e)
+                        Result.Error(e.message ?: "Failed to select device", e)
                     }
 
                 if (result is Result.Error) {
@@ -268,28 +305,19 @@ class DevicesViewModel
             }
         }
 
-        fun disconnectDevice(deviceId: String) {
+        fun deselectDevice(deviceId: String) {
             viewModelScope.launch {
                 val result =
                     runCatching {
-                        deviceDao.updateConnectionStatus(deviceId, false)
+                        deviceDao.updateSelectionStatus(deviceId, false)
                         Result.Success(Unit)
                     }.getOrElse { e ->
-                        Result.Error(e.message ?: "Failed to disconnect device", e)
+                        Result.Error(e.message ?: "Failed to deselect device", e)
                     }
 
                 if (result is Result.Error) {
                     _uiState.update { it.copy(error = result.message) }
                 }
-            }
-        }
-
-        fun toggleConnection(deviceId: String) {
-            val device = _uiState.value.devices.find { it.id == deviceId } ?: return
-            if (device.isConnected) {
-                disconnectDevice(deviceId)
-            } else {
-                connectDevice(deviceId)
             }
         }
 

@@ -66,18 +66,18 @@ class BalanceBoardConnectionManagerImpl
                     return false
                 }
 
-            // Get the first connected device
-            val connectedDevices =
+            // Get the selected device
+            val selectedDevice =
                 runBlocking {
-                    deviceDao.getConnectedDevicesOnce()
+                    deviceDao.getSelectedDeviceOnce()
                 }
 
-            if (connectedDevices.isEmpty()) {
-                listener.onError("No connected device found")
+            if (selectedDevice == null) {
+                listener.onError("No device selected. Please select a device in the Devices page.")
                 return false
             }
 
-            val device = connectedDevices.first().toDevice()
+            val device = selectedDevice.toDevice()
             val macAddress =
                 device.macAddress ?: run {
                     listener.onError("Device has no MAC address")

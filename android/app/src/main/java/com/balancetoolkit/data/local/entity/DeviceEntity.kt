@@ -13,6 +13,7 @@ data class DeviceEntity(
     val macAddress: String? = null,
     val lastSeen: String? = null,
     val isConnected: Boolean = false,
+    val isSelected: Boolean = false,
 )
 
 fun DeviceEntity.toDevice(): Device =
@@ -22,6 +23,7 @@ fun DeviceEntity.toDevice(): Device =
         macAddress = macAddress,
         lastSeen = lastSeen,
         isConnected = isConnected,
+        isSelected = isSelected,
     )
 
 fun Device.toEntity(): DeviceEntity =
@@ -31,4 +33,5 @@ fun Device.toEntity(): DeviceEntity =
         macAddress = macAddress,
         lastSeen = lastSeen,
         isConnected = isConnected,
+        isSelected = isSelected,
     )

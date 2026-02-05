@@ -172,7 +172,22 @@ class UsersViewModel
         }
 
         fun onSearchQueryChange(query: String) {
-            _uiState.update { it.copy(searchQuery = query) }
+            _uiState.update { state ->
+                val updated = state.copy(searchQuery = query)
+                val filtered = updated.users
+                if (filtered.isEmpty()) {
+                    updated.copy(selectedUserIndex = 0, selectedUser = null)
+                } else {
+                    // Keep current selection if it's still in the filtered list
+                    val currentUser = state.selectedUser
+                    val indexInFiltered = if (currentUser != null) filtered.indexOfFirst { it.id == currentUser.id } else -1
+                    if (indexInFiltered >= 0) {
+                        updated.copy(selectedUserIndex = indexInFiltered, selectedUser = currentUser)
+                    } else {
+                        updated.copy(selectedUserIndex = 0, selectedUser = filtered.first())
+                    }
+                }
+            }
         }
 
         fun onUserSelected(index: Int) {
@@ -192,7 +207,8 @@ class UsersViewModel
         }
 
         fun showAddUserDialog() {
-            _addUserFormState.value = AddUserFormState(color = UserColors.randomHex())
+            val userCount = _uiState.value.allUsers.size
+            _addUserFormState.value = AddUserFormState(name = "User $userCount", color = UserColors.randomHex())
             _uiState.update { it.copy(showAddUserDialog = true) }
         }
 
