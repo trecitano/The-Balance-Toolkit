@@ -44,4 +44,5 @@ enum class WeightUnit(
 object MockDeviceIds {
     const val MOCK_BOARD_1 = "mock-board-1"
     const val MOCK_BOARD_2 = "mock-board-2"
+    const val MOCK_BOARD_3 = "mock-board-3"
 }

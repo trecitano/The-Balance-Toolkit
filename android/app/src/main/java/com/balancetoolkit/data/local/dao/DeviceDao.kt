@@ -38,6 +38,21 @@ interface DeviceDao {
         isConnected: Boolean,
     )
 
+    @Query("SELECT * FROM devices WHERE isSelected = 1 LIMIT 1")
+    fun getSelectedDevice(): kotlinx.coroutines.flow.Flow<DeviceEntity?>
+
+    @Query("SELECT * FROM devices WHERE isSelected = 1 LIMIT 1")
+    suspend fun getSelectedDeviceOnce(): DeviceEntity?
+
+    @Query("UPDATE devices SET isSelected = :isSelected WHERE id = :id")
+    suspend fun updateSelectionStatus(
+        id: String,
+        isSelected: Boolean,
+    )
+
+    @Query("UPDATE devices SET isSelected = 0")
+    suspend fun clearAllSelections()
+
     @Query("UPDATE devices SET lastSeen = :lastSeen WHERE id = :id")
     suspend fun updateLastSeen(
         id: String,

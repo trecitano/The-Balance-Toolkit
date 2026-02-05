@@ -66,8 +66,8 @@ data class AmplitudeSpectrum(
 )
 
 data class SessionUiState(
-    val deviceName: String = "Nintendo RVL-WBC-01",
-    val deviceMacAddress: String = "00:23:31:87:14:14",
+    val deviceName: String = "",
+    val deviceMacAddress: String = "",
     val currentLoop: Int = 2,
     val totalLoops: Int = 10,
     val currentTime: String = "00:22:02:10",
@@ -216,8 +216,14 @@ class SessionViewModel
 
         private fun observeConnectedDevices() {
             viewModelScope.launch {
-                deviceDao.getConnectedDevices().collect { connectedDevices ->
-                    _uiState.update { it.copy(hasConnectedDevice = connectedDevices.isNotEmpty()) }
+                deviceDao.getSelectedDevice().collect { selectedDevice ->
+                    _uiState.update {
+                        it.copy(
+                            hasConnectedDevice = selectedDevice != null,
+                            deviceName = selectedDevice?.name ?: "",
+                            deviceMacAddress = selectedDevice?.macAddress ?: "",
+                        )
+                    }
                 }
             }
         }

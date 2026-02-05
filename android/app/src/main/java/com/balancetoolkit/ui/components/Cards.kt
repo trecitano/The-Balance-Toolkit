@@ -169,20 +169,38 @@ fun UserCard(
 @Composable
 fun DeviceCard(
     device: Device,
-    onToggleConnection: () -> Unit,
+    onToggleSelection: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
+    val statusDescription =
+        when {
+            device.isSelected -> "selected"
+            device.isConnected -> "connected"
+            else -> "disconnected"
+        }
+
+    val containerColor =
+        remember(device.isSelected) {
+            if (device.isSelected) PrimaryBlueBackground else CardBackground
+        }
+
+    val border =
+        remember(device.isSelected) {
+            if (device.isSelected) selectedBorder else null
+        }
+
     Card(
         modifier =
             modifier
                 .fillMaxWidth()
-                .semantics { contentDescription = "Device ${device.name}, ${if (device.isConnected) "connected" else "disconnected"}" },
+                .semantics { contentDescription = "Device ${device.name}, $statusDescription" },
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = border,
     ) {
         Row(
             modifier =
@@ -237,7 +255,7 @@ fun DeviceCard(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Status indicator and Action button
+                // Status indicator and Action buttons
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -247,52 +265,55 @@ fun DeviceCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
+                        val statusColor =
+                            when {
+                                device.isSelected -> PrimaryBlue
+                                device.isConnected -> StatusConnected
+                                else -> Color(0xFFBDBDBD)
+                            }
                         Box(
                             modifier =
                                 Modifier
                                     .size(8.dp)
-                                    .background(
-                                        if (device.isConnected) StatusConnected else Color(0xFFBDBDBD),
-                                        CircleShape,
-                                    ),
+                                    .background(statusColor, CircleShape),
                         )
                         Text(
                             text =
-                                if (device.isConnected) {
-                                    stringResource(R.string.connected)
-                                } else {
-                                    stringResource(R.string.disconnected)
+                                when {
+                                    device.isSelected -> stringResource(R.string.selected)
+                                    device.isConnected -> stringResource(R.string.connected)
+                                    else -> stringResource(R.string.disconnected)
                                 },
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextGray,
+                            color = if (device.isSelected) PrimaryBlue else TextGray,
                         )
                     }
 
-                    // Action Button - compact styling
-                    if (device.isConnected) {
+                    // Action Buttons - Select or Deselect (only for connected devices)
+                    if (device.isSelected) {
                         OutlinedButton(
-                            onClick = onToggleConnection,
-                            border = BorderStroke(1.dp, ErrorRed),
+                            onClick = onToggleSelection,
+                            border = BorderStroke(1.dp, PrimaryBlue),
                             shape = RoundedCornerShape(6.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             modifier = Modifier.height(28.dp),
                         ) {
                             Text(
-                                text = stringResource(R.string.disconnect),
+                                text = stringResource(R.string.deselect),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = ErrorRed,
+                                color = PrimaryBlue,
                             )
                         }
-                    } else {
+                    } else if (device.isConnected) {
                         Button(
-                            onClick = onToggleConnection,
+                            onClick = onToggleSelection,
                             colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
                             shape = RoundedCornerShape(6.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             modifier = Modifier.height(28.dp),
                         ) {
                             Text(
-                                text = stringResource(R.string.connect),
+                                text = stringResource(R.string.select),
                                 style = MaterialTheme.typography.labelSmall,
                             )
                         }

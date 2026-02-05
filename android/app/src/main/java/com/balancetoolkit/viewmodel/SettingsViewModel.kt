@@ -118,6 +118,7 @@ class SettingsViewModel
                 viewModelScope.launch {
                     deviceDao.deleteDeviceById(MockDeviceIds.MOCK_BOARD_1)
                     deviceDao.deleteDeviceById(MockDeviceIds.MOCK_BOARD_2)
+                    deviceDao.deleteDeviceById(MockDeviceIds.MOCK_BOARD_3)
                 }
             }
         }

@@ -60,6 +60,8 @@
     <string name="disconnected">Disconnected</string>
     <string name="connect">Connect</string>
     <string name="disconnect">Disconnect</string>
+    <string name="selected">Selected</string>
+    <string name="deselect">Deselect</string>
     <string name="external_link">External link</string>
     <string name="host_mac_required">Host MAC Address Required</string>
     <string name="host_mac_explanation">To pair with your Balance Board, we need your phone\'s Bluetooth MAC address.</string>
@@ -104,7 +106,7 @@
     <!-- Weight Measure -->
     <string name="weight_measure">Weight Measure</string>
     <string name="live_reading">Live reading</string>
-    <string name="no_board_connected_warning">Connect to a board in the Devices page!</string>
+    <string name="no_board_connected_warning">Connect and select a board in the Devices page!</string>
     <string name="tare">Tare</string>
     <string name="accept">Accept</string>
 

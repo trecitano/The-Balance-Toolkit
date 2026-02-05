@@ -196,11 +196,23 @@ fun DevicesScreen(
         )
     }
 
+    // Handle selection toggle
+    val onToggleSelection: (String) -> Unit = { deviceId ->
+        val device = uiState.devices.find { it.id == deviceId }
+        if (device != null) {
+            if (device.isSelected) {
+                viewModel.deselectDevice(deviceId)
+            } else {
+                viewModel.selectDevice(deviceId)
+            }
+        }
+    }
+
     DevicesScreenContent(
         uiState = uiState,
         onScan = onScanWithPermissionCheck,
         onEditMacAddress = viewModel::showMacAddressDialog,
-        onToggleConnection = viewModel::toggleConnection,
+        onToggleSelection = onToggleSelection,
         onEditDevice = viewModel::requestEditDevice,
         onDeleteDevice = viewModel::requestDeleteDevice,
         modifier = modifier,
@@ -212,7 +224,7 @@ private fun DevicesScreenContent(
     uiState: DevicesUiState,
     onScan: () -> Unit,
     onEditMacAddress: () -> Unit,
-    onToggleConnection: (String) -> Unit,
+    onToggleSelection: (String) -> Unit,
     onEditDevice: (Device) -> Unit,
     onDeleteDevice: (Device) -> Unit,
     modifier: Modifier = Modifier,
@@ -309,7 +321,7 @@ private fun DevicesScreenContent(
                 uiState.devices.forEach { device ->
                     DeviceCard(
                         device = device,
-                        onToggleConnection = { onToggleConnection(device.id) },
+                        onToggleSelection = { onToggleSelection(device.id) },
                         onEdit = { onEditDevice(device) },
                         onDelete = { onDeleteDevice(device) },
                     )
@@ -523,7 +535,7 @@ private fun DevicesScreenPreview() {
                 DevicesUiState(
                     devices =
                         listOf(
-                            Device(name = "Nintendo RVL-WBC-01", macAddress = "37:F6:A1:2B:FD:F4", isConnected = true),
+                            Device(name = "Nintendo RVL-WBC-01", macAddress = "37:F6:A1:2B:FD:F4", isConnected = true, isSelected = true),
                             Device(name = "Nintendo RVL-WBC-01", macAddress = "12:E9:CD:B9:71:54", isConnected = true),
                             Device(name = "Nintendo RVL-WBC-01", lastSeen = "N/A", isConnected = false),
                         ),
@@ -531,7 +543,7 @@ private fun DevicesScreenPreview() {
                 ),
             onScan = {},
             onEditMacAddress = {},
-            onToggleConnection = {},
+            onToggleSelection = {},
             onEditDevice = {},
             onDeleteDevice = {},
         )
@@ -546,7 +558,7 @@ private fun DevicesScreenEmptyPreview() {
             uiState = DevicesUiState(devices = emptyList()),
             onScan = {},
             onEditMacAddress = {},
-            onToggleConnection = {},
+            onToggleSelection = {},
             onEditDevice = {},
             onDeleteDevice = {},
         )
