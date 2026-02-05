@@ -8,8 +8,10 @@ import com.balancetoolkit.bluetooth.BalanceBoardConnectionManager
 import com.balancetoolkit.bluetooth.FullDataListener
 import com.balancetoolkit.bluetooth.SensorReading
 import com.balancetoolkit.data.PreferenceKeys
+import com.balancetoolkit.data.UserSelectionRepository
 import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.dao.UserDao
+import com.balancetoolkit.data.local.entity.toDevice
 import com.balancetoolkit.data.local.entity.toUser
 import com.balancetoolkit.data.model.User
 import com.balancetoolkit.session.SessionConfiguration
@@ -68,6 +70,7 @@ data class AmplitudeSpectrum(
 data class SessionUiState(
     val deviceName: String = "",
     val deviceMacAddress: String = "",
+    val boardStatus: BoardSelectionStatus = BoardSelectionStatus.NoBoardConnected,
     val currentLoop: Int = 2,
     val totalLoops: Int = 10,
     val currentTime: String = "00:22:02:10",
@@ -144,6 +147,7 @@ class SessionViewModel
     constructor(
         @param:ApplicationContext private val context: Context,
         private val sharedPreferences: SharedPreferences,
+        private val userSelectionRepository: UserSelectionRepository,
         private val userDao: UserDao,
         private val deviceDao: DeviceDao,
         private val connectionManager: BalanceBoardConnectionManager,
@@ -153,6 +157,8 @@ class SessionViewModel
 
         private var sessionFileWriter: SessionFileWriter? = null
         private var currentUserId: String? = null
+        private var latestSelectedUserId: String? = null
+        private var activeSessionUserId: String? = null
 
         companion object {
             // Maximum trail length to keep (10 seconds at 100Hz = 1000 points)
@@ -191,19 +197,39 @@ class SessionViewModel
         private var cachedConfidenceEllipse = emptyList<Pair<Float, Float>>()
 
         init {
-            // Load the selected user ID
-            currentUserId = sharedPreferences.getString(PreferenceKeys.SELECTED_USER_ID, null)
             // Load mock mode setting
             val isMockMode = sharedPreferences.getBoolean(PreferenceKeys.MOCK_MODE_ENABLED, false)
             _uiState.update { it.copy(isMockMode = isMockMode) }
-            // Load selected user
-            loadSelectedUser()
+            // Observe selected user
+            observeSelectedUser()
             // Observe connected devices
             observeConnectedDevices()
         }
 
-        private fun loadSelectedUser() {
-            val userId = currentUserId ?: return
+        private fun observeSelectedUser() {
+            viewModelScope.launch {
+                userSelectionRepository.selectedUserId.collect { userId ->
+                    latestSelectedUserId = userId
+                    if (_uiState.value.isRecording) {
+                        return@collect
+                    }
+
+                    if (currentUserId == userId) {
+                        return@collect
+                    }
+
+                    currentUserId = userId
+                    loadSelectedUser(userId)
+                }
+            }
+        }
+
+        private fun loadSelectedUser(userId: String?) {
+            if (userId == null) {
+                _uiState.update { it.copy(selectedUser = null) }
+                return
+            }
+
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     val user = userDao.getUserById(userId)?.toUser()
@@ -216,12 +242,15 @@ class SessionViewModel
 
         private fun observeConnectedDevices() {
             viewModelScope.launch {
-                deviceDao.getSelectedDevice().collect { selectedDevice ->
+                deviceDao.getAllDevices().collect { deviceEntities ->
+                    val boardSelectionInfo = deviceEntities.map { it.toDevice() }.toBoardSelectionInfo()
+                    val selectedConnectedDevice = boardSelectionInfo.selectedConnectedDevice
                     _uiState.update {
                         it.copy(
-                            hasConnectedDevice = selectedDevice != null,
-                            deviceName = selectedDevice?.name ?: "",
-                            deviceMacAddress = selectedDevice?.macAddress ?: "",
+                            hasConnectedDevice = boardSelectionInfo.status == BoardSelectionStatus.BoardSelected,
+                            boardStatus = boardSelectionInfo.status,
+                            deviceName = selectedConnectedDevice?.name ?: "",
+                            deviceMacAddress = selectedConnectedDevice?.macAddress ?: "",
                         )
                     }
                 }
@@ -260,6 +289,9 @@ class SessionViewModel
          */
         fun startSession() {
             if (_uiState.value.isRecording) return
+
+            // Lock selected user for the duration of this recording.
+            activeSessionUserId = latestSelectedUserId ?: currentUserId ?: userSelectionRepository.getSelectedUserId()
 
             // Reset frequency tracking
             lastReadingTimestampMs = 0L
@@ -333,7 +365,7 @@ class SessionViewModel
             viewModelScope.launch(Dispatchers.IO) {
                 sessionFileWriter?.let { writer ->
                     // Load user data for the configuration file
-                    val userId = currentUserId
+                    val userId = activeSessionUserId ?: currentUserId
                     val user =
                         if (userId != null) {
                             try {
@@ -391,6 +423,13 @@ class SessionViewModel
                     isRecording = false,
                     isPlaying = false,
                 )
+            }
+
+            activeSessionUserId = null
+            val selectedUserId = latestSelectedUserId
+            if (currentUserId != selectedUserId) {
+                currentUserId = selectedUserId
+                loadSelectedUser(selectedUserId)
             }
         }
 

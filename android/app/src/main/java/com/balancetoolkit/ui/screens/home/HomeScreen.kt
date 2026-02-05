@@ -28,8 +28,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,12 +50,14 @@ import com.balancetoolkit.ui.theme.PrimaryBlue
 import com.balancetoolkit.ui.theme.TextGray
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 import com.balancetoolkit.util.TrackPerformance
+import com.balancetoolkit.viewmodel.BoardSelectionStatus
 import com.balancetoolkit.viewmodel.HomeUiState
 import com.balancetoolkit.viewmodel.HomeViewModel
 
 private val cardShape = RoundedCornerShape(12.dp)
 private val buttonShape = RoundedCornerShape(8.dp)
 private val connectedColor = Color(0xFF4CAF50)
+private val attentionColor = Color(0xFFF57C00)
 private val disconnectedColor = Color(0xFF9E9E9E)
 
 @Composable
@@ -66,7 +68,7 @@ fun HomeScreen(
     onNavigateToDevices: () -> Unit = {},
     onNavigateToSession: () -> Unit = {},
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     HomeScreenContent(
         uiState = uiState,
@@ -112,7 +114,8 @@ private fun HomeScreenContent(
 
             // Connection Status Indicator (second)
             ConnectionStatusIndicator(
-                isConnected = uiState.isBoardConnected,
+                boardStatus = uiState.boardStatus,
+                selectedBoardName = uiState.selectedBoardName,
                 onNavigateToDevices = onNavigateToDevices,
             )
 
@@ -129,16 +132,22 @@ private fun HomeScreenContent(
 
 @Composable
 private fun ConnectionStatusIndicator(
-    isConnected: Boolean,
+    boardStatus: BoardSelectionStatus,
+    selectedBoardName: String?,
     onNavigateToDevices: () -> Unit,
 ) {
     val statusText =
-        if (isConnected) {
-            stringResource(R.string.board_connected)
-        } else {
-            stringResource(R.string.no_board_connected)
+        when (boardStatus) {
+            BoardSelectionStatus.NoBoardConnected -> stringResource(R.string.no_board_connected)
+            BoardSelectionStatus.BoardConnectedNotSelected -> stringResource(R.string.board_connected_select_board)
+            BoardSelectionStatus.BoardSelected -> stringResource(R.string.board_selected, selectedBoardName ?: stringResource(R.string.board))
         }
-    val statusColor = if (isConnected) connectedColor else disconnectedColor
+    val statusColor =
+        when (boardStatus) {
+            BoardSelectionStatus.NoBoardConnected -> disconnectedColor
+            BoardSelectionStatus.BoardConnectedNotSelected -> attentionColor
+            BoardSelectionStatus.BoardSelected -> connectedColor
+        }
 
     Card(
         onClick = onNavigateToDevices,
@@ -351,7 +360,7 @@ private fun HomeScreenPreviewNoUser() {
             uiState =
                 HomeUiState(
                     selectedUser = null,
-                    isBoardConnected = false,
+                    boardStatus = BoardSelectionStatus.NoBoardConnected,
                     isLoading = false,
                 ),
         )
@@ -371,7 +380,8 @@ private fun HomeScreenPreviewWithUser() {
                             age = 35,
                             weight = 75,
                         ),
-                    isBoardConnected = true,
+                    boardStatus = BoardSelectionStatus.BoardSelected,
+                    selectedBoardName = "Wii Board A",
                     isLoading = false,
                 ),
         )

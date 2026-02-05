@@ -35,7 +35,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
@@ -51,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.balancetoolkit.R
 import com.balancetoolkit.data.model.DominantHand
 import com.balancetoolkit.data.model.Gender
@@ -75,12 +75,12 @@ fun UsersScreen(
     devicesViewModel: DevicesViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val formState by viewModel.addUserFormState.collectAsState()
-    val editFormState by viewModel.editUserFormState.collectAsState()
-    val devicesUiState by devicesViewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val formState by viewModel.addUserFormState.collectAsStateWithLifecycle()
+    val editFormState by viewModel.editUserFormState.collectAsStateWithLifecycle()
+    val devicesUiState by devicesViewModel.uiState.collectAsStateWithLifecycle()
 
-    val hasSelectedDevice = devicesUiState.hasSelectedDevice
+    val boardStatus = devicesUiState.boardStatus
 
     UsersScreenContent(
         uiState = uiState,
@@ -99,7 +99,7 @@ fun UsersScreen(
         onEditWeightChange = viewModel::updateEditWeight,
         onEditDominantHandChange = viewModel::updateEditDominantHand,
         onEditColorChange = viewModel::updateEditColor,
-        onWeightButtonClick = { viewModel.showWeightMeasureForEdit(hasSelectedDevice) },
+        onWeightButtonClick = { viewModel.showWeightMeasureForEdit(boardStatus) },
         modifier = modifier,
     )
 
@@ -113,7 +113,7 @@ fun UsersScreen(
             onWeightChange = viewModel::updateFormWeight,
             onDominantHandChange = viewModel::updateFormDominantHand,
             onColorChange = viewModel::updateFormColor,
-            onWeightButtonClick = { viewModel.showWeightMeasureForAdd(hasSelectedDevice) },
+            onWeightButtonClick = { viewModel.showWeightMeasureForAdd(boardStatus) },
             onDismiss = viewModel::hideAddUserDialog,
             onAddUser = viewModel::addUser,
         )
@@ -121,7 +121,7 @@ fun UsersScreen(
 
     if (uiState.showWeightMeasure) {
         WeightMeasureBottomSheet(
-            isDeviceConnected = hasSelectedDevice,
+            boardStatus = boardStatus,
             liveWeight = uiState.liveWeight,
             weightUnit = "kg",
             onAccept = viewModel::acceptWeight,

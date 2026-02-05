@@ -23,15 +23,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.balancetoolkit.R
 import com.balancetoolkit.ui.theme.PrimaryBlue
 import com.balancetoolkit.ui.theme.TextGray
+import com.balancetoolkit.viewmodel.BoardSelectionStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeightMeasureBottomSheet(
-    isDeviceConnected: Boolean,
+    boardStatus: BoardSelectionStatus,
     liveWeight: Float?,
     weightUnit: String,
     onAccept: () -> Unit,
@@ -62,10 +62,14 @@ fun WeightMeasureBottomSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            if (!isDeviceConnected) {
-                // No device connected warning
+            if (boardStatus != BoardSelectionStatus.BoardSelected) {
                 Text(
-                    text = stringResource(R.string.no_board_connected_warning),
+                    text =
+                        when (boardStatus) {
+                            BoardSelectionStatus.NoBoardConnected -> stringResource(R.string.no_board_connected_warning)
+                            BoardSelectionStatus.BoardConnectedNotSelected -> stringResource(R.string.no_board_selected_warning)
+                            BoardSelectionStatus.BoardSelected -> ""
+                        },
                     style = MaterialTheme.typography.bodyLarge,
                     color = TextGray,
                 )
