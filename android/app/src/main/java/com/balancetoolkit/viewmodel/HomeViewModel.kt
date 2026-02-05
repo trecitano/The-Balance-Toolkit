@@ -1,11 +1,11 @@
 package com.balancetoolkit.viewmodel
 
-import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.balancetoolkit.data.PreferenceKeys
+import com.balancetoolkit.data.UserSelectionRepository
 import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.dao.UserDao
+import com.balancetoolkit.data.local.entity.toDevice
 import com.balancetoolkit.data.local.entity.toUser
 import com.balancetoolkit.data.model.DEFAULT_USER_ID
 import com.balancetoolkit.data.model.User
@@ -22,7 +22,8 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val selectedUser: User? = null,
-    val isBoardConnected: Boolean = false,
+    val boardStatus: BoardSelectionStatus = BoardSelectionStatus.NoBoardConnected,
+    val selectedBoardName: String? = null,
     val isLoading: Boolean = true,
 )
 
@@ -32,7 +33,7 @@ class HomeViewModel
     constructor(
         private val userDao: UserDao,
         private val deviceDao: DeviceDao,
-        private val sharedPreferences: SharedPreferences,
+        private val userSelectionRepository: UserSelectionRepository,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(HomeUiState())
         val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -43,12 +44,11 @@ class HomeViewModel
 
         private fun loadHomeData() {
             viewModelScope.launch {
-                val selectedUserId = sharedPreferences.getString(PreferenceKeys.SELECTED_USER_ID, null)
-
                 combine(
                     userDao.getAllUsers().map { entities -> entities.map { it.toUser() } },
-                    deviceDao.getAllDevices().map { entities -> entities.any { it.isConnected } },
-                ) { users, hasConnectedDevice ->
+                    deviceDao.getAllDevices().map { entities -> entities.map { it.toDevice() } },
+                    userSelectionRepository.selectedUserId,
+                ) { users, devices, selectedUserId ->
                     // Find selected user, fall back to default user if not found
                     val selectedUser =
                         if (selectedUserId != null) {
@@ -59,15 +59,18 @@ class HomeViewModel
 
                     // If we found a user but it wasn't in preferences, save it
                     if (selectedUser != null && selectedUserId != selectedUser.id) {
-                        sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, selectedUser.id).apply()
+                        userSelectionRepository.setSelectedUserId(selectedUser.id)
                     }
+
+                    val boardSelectionInfo = devices.toBoardSelectionInfo()
 
                     HomeUiState(
                         selectedUser = selectedUser,
-                        isBoardConnected = hasConnectedDevice,
+                        boardStatus = boardSelectionInfo.status,
+                        selectedBoardName = boardSelectionInfo.selectedConnectedDevice?.name,
                         isLoading = false,
                     )
-                }.catch { e ->
+                }.catch {
                     _uiState.update {
                         it.copy(isLoading = false)
                     }
@@ -78,8 +81,7 @@ class HomeViewModel
         }
 
         fun selectUser(userId: String?) {
-            sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, userId).apply()
-            // The flow will automatically update the UI state
+            userSelectionRepository.setSelectedUserId(userId)
         }
 
         fun clearSelectedUser() {

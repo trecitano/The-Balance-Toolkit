@@ -34,7 +34,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -55,6 +54,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.balancetoolkit.R
 import com.balancetoolkit.bluetooth.SensorReading
 import com.balancetoolkit.data.model.User
@@ -74,12 +74,16 @@ import com.balancetoolkit.ui.theme.TextGray
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 import com.balancetoolkit.util.TrackPerformance
 import com.balancetoolkit.viewmodel.AmplitudeSpectrum
+import com.balancetoolkit.viewmodel.BoardSelectionStatus
 import com.balancetoolkit.viewmodel.CopPosition
 import com.balancetoolkit.viewmodel.DpsiMetrics
 import com.balancetoolkit.viewmodel.SessionUiState
 import com.balancetoolkit.viewmodel.SessionViewModel
 
 private val cardShape = RoundedCornerShape(12.dp)
+private val statusConnectedColor = Color(0xFF4CAF50)
+private val statusAttentionColor = Color(0xFFF57C00)
+private val statusDisconnectedColor = Color(0xFF9E9E9E)
 
 @Composable
 fun SessionScreen(
@@ -88,7 +92,7 @@ fun SessionScreen(
     onNavigateToDevices: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     SessionScreenContent(
         uiState = uiState,
@@ -152,6 +156,7 @@ private fun SessionScreenContent(
             item(key = "device_card") {
                 Spacer(modifier = Modifier.height(16.dp))
                 SessionDeviceCard(
+                    boardStatus = uiState.boardStatus,
                     deviceName = uiState.deviceName,
                     macAddress = uiState.deviceMacAddress,
                     isMockMode = uiState.isMockMode,
@@ -168,6 +173,7 @@ private fun SessionScreenContent(
             item(key = "control_card") {
                 // Session control buttons
                 SessionControlCard(
+                    boardStatus = uiState.boardStatus,
                     isRecording = uiState.isRecording,
                     onToggleSession = onToggleSession,
                     onTare = onTare,
@@ -199,21 +205,21 @@ private fun SessionScreenContent(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     CopPlotCard(
-                        title = "copX",
+                        title = stringResource(R.string.cop_x_title),
                         copTrail = uiState.copTrail,
                         valueSelector = { it.x },
                         lineColor = ChartBlue,
-                        minLabel = "Left (-1)",
-                        maxLabel = "Right (1)",
+                        minLabel = stringResource(R.string.left_negative_one),
+                        maxLabel = stringResource(R.string.right_positive_one),
                         modifier = Modifier.weight(1f),
                     )
                     CopPlotCard(
-                        title = "copY",
+                        title = stringResource(R.string.cop_y_title),
                         copTrail = uiState.copTrail,
                         valueSelector = { it.y },
                         lineColor = ChartRed,
-                        minLabel = "Back (-1)",
-                        maxLabel = "Front (1)",
+                        minLabel = stringResource(R.string.back_negative_one),
+                        maxLabel = stringResource(R.string.front_positive_one),
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -283,10 +289,24 @@ private fun SessionScreenContent(
 
 @Composable
 private fun SessionDeviceCard(
+    boardStatus: BoardSelectionStatus,
     deviceName: String,
     macAddress: String,
     isMockMode: Boolean,
 ) {
+    val statusText =
+        when (boardStatus) {
+            BoardSelectionStatus.NoBoardConnected -> stringResource(R.string.no_board_connected)
+            BoardSelectionStatus.BoardConnectedNotSelected -> stringResource(R.string.board_connected_select_board)
+            BoardSelectionStatus.BoardSelected -> stringResource(R.string.board_selected, deviceName.ifBlank { stringResource(R.string.board) })
+        }
+    val statusColor =
+        when (boardStatus) {
+            BoardSelectionStatus.NoBoardConnected -> statusDisconnectedColor
+            BoardSelectionStatus.BoardConnectedNotSelected -> statusAttentionColor
+            BoardSelectionStatus.BoardSelected -> statusConnectedColor
+        }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = cardShape,
@@ -300,22 +320,29 @@ private fun SessionDeviceCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = deviceName,
+                    text = statusText,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium,
                 )
                 if (isMockMode) {
                     Text(
-                        text = "Mock Mode",
+                        text = stringResource(R.string.mock_mode),
                         style = MaterialTheme.typography.bodySmall,
                         color = ChartOrange,
                     )
                 }
             }
+            Box(
+                modifier =
+                    Modifier
+                        .size(10.dp)
+                        .background(statusColor, CircleShape),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = macAddress,
+                text = if (boardStatus == BoardSelectionStatus.BoardSelected) macAddress else "",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextGray,
             )
@@ -380,6 +407,7 @@ private fun SelectedUserCard(
 
 @Composable
 private fun SessionControlCard(
+    boardStatus: BoardSelectionStatus,
     isRecording: Boolean,
     onToggleSession: () -> Unit,
     onTare: () -> Unit,
@@ -392,7 +420,6 @@ private fun SessionControlCard(
         colors = CardDefaults.cardColors(containerColor = CardBackground),
     ) {
         if (!canStartSession && !isRecording) {
-            // No device connected state
             Box(
                 modifier =
                     Modifier
@@ -405,7 +432,12 @@ private fun SessionControlCard(
                     shape = RoundedCornerShape(8.dp),
                 ) {
                     Text(
-                        text = "No balance board is connected",
+                        text =
+                            when (boardStatus) {
+                                BoardSelectionStatus.NoBoardConnected -> stringResource(R.string.no_board_connected)
+                                BoardSelectionStatus.BoardConnectedNotSelected -> stringResource(R.string.board_connected_select_board)
+                                BoardSelectionStatus.BoardSelected -> stringResource(R.string.board_selected, stringResource(R.string.board))
+                            },
                         fontWeight = FontWeight.Medium,
                     )
                 }
@@ -427,7 +459,7 @@ private fun SessionControlCard(
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(
-                        text = if (isRecording) "Stop Session" else "Start Session",
+                        text = if (isRecording) stringResource(R.string.stop_session) else stringResource(R.string.start_session),
                         fontWeight = FontWeight.Medium,
                     )
                 }
@@ -439,11 +471,11 @@ private fun SessionControlCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "Tare",
+                        contentDescription = stringResource(R.string.tare),
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Tare")
+                    Text(stringResource(R.string.tare))
                 }
             }
         }
@@ -989,7 +1021,7 @@ private fun FFTChartCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "FFT Amplitude Spectrum (Normalized)",
+                text = stringResource(R.string.fft_amplitude_spectrum),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -1109,7 +1141,7 @@ private fun FFTChartCard(
                     color = ChartRed,
                 )
                 FftToggleItem(
-                    label = "Combined",
+                    label = stringResource(R.string.combined),
                     checked = showCombined,
                     onCheckedChange = onShowCombinedChange,
                     color = ChartBlue,
@@ -1458,7 +1490,7 @@ private fun DpsiMetricsCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "DPSI Metrics",
+                text = stringResource(R.string.dpsi_metrics),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )

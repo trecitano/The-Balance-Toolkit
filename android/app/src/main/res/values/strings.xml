@@ -22,10 +22,14 @@
 
     <!-- Home Screen -->
     <string name="board_connected">Board Connected</string>
+    <string name="board_connected_select_board">Board connected. Select a board in Devices.</string>
+    <string name="board_selected">Selected board: %1$s</string>
+    <string name="board">Board</string>
     <string name="no_board_connected">No Board Connected</string>
     <string name="select_user">Select User</string>
     <string name="no_user_selected">No user selected</string>
     <string name="start_session">Start Session</string>
+    <string name="stop_session">Stop Session</string>
     <string name="go_to_session">Go to Session</string>
     <string name="select_user_to_start">Select a user to start a session</string>
     <string name="select">Select</string>
@@ -100,13 +104,21 @@
     <string name="amplitude">Amplitude</string>
     <string name="frequency_hz">Frequency (Hz)</string>
     <string name="dpsi_metrics">DPSI Metrics</string>
+    <string name="cop_x_title">copX</string>
+    <string name="cop_y_title">copY</string>
+    <string name="left_negative_one">Left (-1)</string>
+    <string name="right_positive_one">Right (1)</string>
+    <string name="back_negative_one">Back (-1)</string>
+    <string name="front_positive_one">Front (1)</string>
+    <string name="combined">Combined</string>
     <string name="vcop_m">vCopM</string>
     <string name="vcop_y">vCopY</string>
 
     <!-- Weight Measure -->
     <string name="weight_measure">Weight Measure</string>
     <string name="live_reading">Live reading</string>
-    <string name="no_board_connected_warning">Connect and select a board in the Devices page!</string>
+    <string name="no_board_connected_warning">No board connected. Connect a board in the Devices page.</string>
+    <string name="no_board_selected_warning">Board connected. Select a board in Devices.</string>
     <string name="tare">Tare</string>
     <string name="accept">Accept</string>
 

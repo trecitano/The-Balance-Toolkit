@@ -44,28 +44,28 @@ fun AppNavHost(
                 onNavigateToUsers = {
                     navController.navigate(AppDestination.Users.route) {
                         popUpTo(navController.graph.startDestinationId) {
-                            saveState = false
+                            saveState = true
                         }
                         launchSingleTop = true
-                        restoreState = false
+                        restoreState = true
                     }
                 },
                 onNavigateToDevices = {
                     navController.navigate(AppDestination.Devices.route) {
                         popUpTo(navController.graph.startDestinationId) {
-                            saveState = false
+                            saveState = true
                         }
                         launchSingleTop = true
-                        restoreState = false
+                        restoreState = true
                     }
                 },
                 onNavigateToSession = {
                     navController.navigate(AppDestination.Session.route) {
                         popUpTo(navController.graph.startDestinationId) {
-                            saveState = false
+                            saveState = true
                         }
                         launchSingleTop = true
-                        restoreState = false
+                        restoreState = true
                     }
                 },
             )
@@ -88,10 +88,10 @@ fun AppNavHost(
                 onNavigateToHome = {
                     navController.navigate(AppDestination.Home.route) {
                         popUpTo(navController.graph.startDestinationId) {
-                            saveState = false
+                            saveState = true
                         }
                         launchSingleTop = true
-                        restoreState = false
+                        restoreState = true
                     }
                 },
                 modifier = Modifier.padding(innerPadding),
@@ -105,19 +105,19 @@ fun AppNavHost(
                 onNavigateToUsers = {
                     navController.navigate(AppDestination.Users.route) {
                         popUpTo(navController.graph.startDestinationId) {
-                            saveState = false
+                            saveState = true
                         }
                         launchSingleTop = true
-                        restoreState = false
+                        restoreState = true
                     }
                 },
                 onNavigateToDevices = {
                     navController.navigate(AppDestination.Devices.route) {
                         popUpTo(navController.graph.startDestinationId) {
-                            saveState = false
+                            saveState = true
                         }
                         launchSingleTop = true
-                        restoreState = false
+                        restoreState = true
                     }
                 },
                 modifier = Modifier.padding(innerPadding),

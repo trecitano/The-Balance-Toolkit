@@ -1,12 +1,11 @@
 package com.balancetoolkit.viewmodel
 
-import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.balancetoolkit.bluetooth.BalanceBoardConnectionManager
 import com.balancetoolkit.bluetooth.SimpleWeightListener
-import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.Result
+import com.balancetoolkit.data.UserSelectionRepository
 import com.balancetoolkit.data.local.dao.UserDao
 import com.balancetoolkit.data.local.entity.toEntity
 import com.balancetoolkit.data.local.entity.toUser
@@ -22,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -91,7 +91,7 @@ class UsersViewModel
     @Inject
     constructor(
         private val userDao: UserDao,
-        private val sharedPreferences: SharedPreferences,
+        private val userSelectionRepository: UserSelectionRepository,
         private val connectionManager: BalanceBoardConnectionManager,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(UsersUiState(isLoading = true))
@@ -132,26 +132,25 @@ class UsersViewModel
                     )
                 userDao.insertUser(defaultUser.toEntity())
                 // Set default user as selected if no user was previously selected
-                if (sharedPreferences.getString(PreferenceKeys.SELECTED_USER_ID, null) == null) {
-                    sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, DEFAULT_USER_ID).apply()
+                if (userSelectionRepository.getSelectedUserId() == null) {
+                    userSelectionRepository.setSelectedUserId(DEFAULT_USER_ID)
                 }
             }
         }
 
         private fun loadUsers() {
             viewModelScope.launch {
-                val savedUserId =
-                    sharedPreferences.getString(PreferenceKeys.SELECTED_USER_ID, null)
-                        ?: DEFAULT_USER_ID // Default to default user if nothing saved
-
-                userDao
-                    .getAllUsers()
-                    .map { entities -> entities.map { it.toUser() } }
+                combine(
+                    userDao.getAllUsers().map { entities -> entities.map { it.toUser() } },
+                    userSelectionRepository.selectedUserId,
+                ) { users, selectedUserId ->
+                    users to (selectedUserId ?: DEFAULT_USER_ID)
+                }
                     .catch { e ->
                         _uiState.update {
                             it.copy(isLoading = false, error = e.message ?: "Failed to load users")
                         }
-                    }.collect { users ->
+                    }.collect { (users, savedUserId) ->
                         _uiState.update { state ->
                             // Try to find the saved user, otherwise use the default user
                             val savedIndex =
@@ -194,9 +193,9 @@ class UsersViewModel
             val currentState = _uiState.value
             val filteredUsers = currentState.users
             val user = filteredUsers.getOrNull(index)
-            // Save selected user to SharedPreferences for use on Home screen
+            // Save selected user for all screens
             if (user != null) {
-                sharedPreferences.edit().putString(PreferenceKeys.SELECTED_USER_ID, user.id).apply()
+                userSelectionRepository.setSelectedUserId(user.id)
             }
             _uiState.update { state ->
                 state.copy(
@@ -418,16 +417,16 @@ class UsersViewModel
         }
 
         // Weight measure methods
-        fun showWeightMeasureForEdit(hasConnectedDevice: Boolean) {
+        fun showWeightMeasureForEdit(boardStatus: BoardSelectionStatus) {
             _uiState.update { it.copy(showWeightMeasure = true, weightMeasureTarget = WeightMeasureTarget.EDIT_USER) }
-            if (hasConnectedDevice) {
+            if (boardStatus == BoardSelectionStatus.BoardSelected) {
                 startWeightMeasurement()
             }
         }
 
-        fun showWeightMeasureForAdd(hasConnectedDevice: Boolean) {
+        fun showWeightMeasureForAdd(boardStatus: BoardSelectionStatus) {
             _uiState.update { it.copy(showWeightMeasure = true, weightMeasureTarget = WeightMeasureTarget.ADD_USER) }
-            if (hasConnectedDevice) {
+            if (boardStatus == BoardSelectionStatus.BoardSelected) {
                 startWeightMeasurement()
             }
         }

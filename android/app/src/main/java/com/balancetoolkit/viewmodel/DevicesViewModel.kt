@@ -7,10 +7,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.balancetoolkit.bluetooth.BluetoothScanManager
 import com.balancetoolkit.bluetooth.ScanEvent
-import com.balancetoolkit.data.MockDeviceIds
 import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.Result
 import com.balancetoolkit.data.local.dao.DeviceDao
+import com.balancetoolkit.data.local.dao.syncMockBoards
 import com.balancetoolkit.data.local.entity.toDevice
 import com.balancetoolkit.data.local.entity.toEntity
 import com.balancetoolkit.data.model.Device
@@ -30,6 +30,7 @@ data class DevicesUiState(
     val devices: List<Device> = emptyList(),
     val connectedDevices: List<Device> = emptyList(),
     val selectedDevice: Device? = null,
+    val boardStatus: BoardSelectionStatus = BoardSelectionStatus.NoBoardConnected,
     val isScanning: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -45,7 +46,7 @@ data class DevicesUiState(
         get() = devices.count { it.isConnected }
 
     val hasSelectedDevice: Boolean
-        get() = selectedDevice != null
+        get() = boardStatus == BoardSelectionStatus.BoardSelected
 
     val isHostMacConfigured: Boolean
         get() = !hostMacAddress.isNullOrBlank()
@@ -75,6 +76,9 @@ class DevicesViewModel
                 if (key == PreferenceKeys.MOCK_MODE_ENABLED) {
                     val isMockMode = sharedPreferences.getBoolean(PreferenceKeys.MOCK_MODE_ENABLED, false)
                     _uiState.update { it.copy(isMockMode = isMockMode) }
+                    viewModelScope.launch {
+                        deviceDao.syncMockBoards(isMockMode)
+                    }
                 }
             }
 
@@ -137,7 +141,14 @@ class DevicesViewModel
         private fun observeSelectedDevice() {
             viewModelScope.launch {
                 deviceDao.getSelectedDevice().collect { selectedEntity ->
-                    _uiState.update { it.copy(selectedDevice = selectedEntity?.toDevice()) }
+                    _uiState.update {
+                        it.copy(
+                            selectedDevice =
+                                selectedEntity
+                                    ?.takeIf { entity -> entity.isConnected }
+                                    ?.toDevice(),
+                        )
+                    }
                 }
             }
         }
@@ -153,53 +164,9 @@ class DevicesViewModel
                 _uiState.update { it.copy(isMockMode = isMockMode) }
 
                 if (isMockMode) {
-                    ensureMockBoardsExist()
+                    deviceDao.syncMockBoards(mockModeEnabled = true)
                 }
                 loadDevices()
-            }
-        }
-
-        private suspend fun ensureMockBoardsExist() {
-            val mockBoard1 = deviceDao.getDeviceById(MockDeviceIds.MOCK_BOARD_1)
-            if (mockBoard1 == null) {
-                val device =
-                    Device(
-                        id = MockDeviceIds.MOCK_BOARD_1,
-                        name = "Mock Board 1",
-                        macAddress = "00:00:00:00:00:01",
-                        isConnected = true,
-                    )
-                deviceDao.insertDevice(device.toEntity())
-            } else if (!mockBoard1.isConnected) {
-                deviceDao.updateConnectionStatus(MockDeviceIds.MOCK_BOARD_1, true)
-            }
-
-            val mockBoard2 = deviceDao.getDeviceById(MockDeviceIds.MOCK_BOARD_2)
-            if (mockBoard2 == null) {
-                val device =
-                    Device(
-                        id = MockDeviceIds.MOCK_BOARD_2,
-                        name = "Mock Board 2",
-                        macAddress = "00:00:00:00:00:02",
-                        isConnected = true,
-                    )
-                deviceDao.insertDevice(device.toEntity())
-            } else if (!mockBoard2.isConnected) {
-                deviceDao.updateConnectionStatus(MockDeviceIds.MOCK_BOARD_2, true)
-            }
-
-            val mockBoard3 = deviceDao.getDeviceById(MockDeviceIds.MOCK_BOARD_3)
-            if (mockBoard3 == null) {
-                val device =
-                    Device(
-                        id = MockDeviceIds.MOCK_BOARD_3,
-                        name = "Mock Board 3",
-                        macAddress = "00:00:00:00:00:03",
-                        isConnected = false,
-                    )
-                deviceDao.insertDevice(device.toEntity())
-            } else if (mockBoard3.isConnected) {
-                deviceDao.updateConnectionStatus(MockDeviceIds.MOCK_BOARD_3, false)
             }
         }
 
@@ -247,10 +214,20 @@ class DevicesViewModel
                             it.copy(isLoading = false, error = e.message ?: "Failed to load devices")
                         }
                     }.collect { devices ->
+                        val staleSelectedDevices = devices.filter { device -> device.isSelected && !device.isConnected }
+                        if (staleSelectedDevices.isNotEmpty()) {
+                            staleSelectedDevices.forEach { staleDevice ->
+                                deviceDao.updateSelectionStatus(staleDevice.id, false)
+                            }
+                            return@collect
+                        }
+
+                        val boardSelectionInfo = devices.toBoardSelectionInfo()
                         _uiState.update {
                             it.copy(
                                 devices = devices,
                                 connectedDevices = devices.filter { device -> device.isConnected },
+                                boardStatus = boardSelectionInfo.status,
                                 isLoading = false,
                                 error = null,
                             )
@@ -269,7 +246,7 @@ class DevicesViewModel
                         // In mock mode, add mock boards
                         _uiState.update { it.copy(isScanning = true) }
                         delay(500) // Brief delay to show scanning state
-                        ensureMockBoardsExist()
+                        deviceDao.syncMockBoards(mockModeEnabled = true)
                         _uiState.update { it.copy(isScanning = false) }
                         scanJob = null
                         return@launch

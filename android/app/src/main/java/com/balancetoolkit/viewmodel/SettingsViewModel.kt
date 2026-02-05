@@ -6,10 +6,10 @@ import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.balancetoolkit.data.HeightUnit
-import com.balancetoolkit.data.MockDeviceIds
 import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.WeightUnit
 import com.balancetoolkit.data.local.dao.DeviceDao
+import com.balancetoolkit.data.local.dao.syncMockBoards
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -112,14 +112,8 @@ class SettingsViewModel
         fun setMockModeEnabled(enabled: Boolean) {
             sharedPreferences.edit().putBoolean(PreferenceKeys.MOCK_MODE_ENABLED, enabled).apply()
             _uiState.update { it.copy(mockModeEnabled = enabled) }
-
-            // Delete mock boards when switching to real mode
-            if (!enabled) {
-                viewModelScope.launch {
-                    deviceDao.deleteDeviceById(MockDeviceIds.MOCK_BOARD_1)
-                    deviceDao.deleteDeviceById(MockDeviceIds.MOCK_BOARD_2)
-                    deviceDao.deleteDeviceById(MockDeviceIds.MOCK_BOARD_3)
-                }
+            viewModelScope.launch {
+                deviceDao.syncMockBoards(enabled)
             }
         }
 
