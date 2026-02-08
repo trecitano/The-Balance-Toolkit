@@ -1,15 +1,20 @@
 package com.balancetoolkit.session
 
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
+import android.provider.DocumentsContract
 import com.balancetoolkit.bluetooth.SensorReading
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
+import java.io.OutputStreamWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -31,6 +36,15 @@ class SessionFileWriter(
     private var rawDataWriter: BufferedWriter? = null
     private var rawEventsWritten: Int = 0
     private var sessionStartTime: Long = 0L
+    private var rawFileName: String? = null
+    private var outputMode: OutputMode? = null
+    private var lastFlushTimestampMs: Long = 0L
+
+    private val writerMutex = Mutex()
+    private val timestampFormatter =
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
 
     private val json =
         Json {
@@ -40,6 +54,9 @@ class SessionFileWriter(
 
     companion object {
         private const val RAW_CSV_HEADER = "timestamp,top_right,bottom_right,top_left,bottom_left\n"
+        private const val RAW_FILE_MIME_TYPE = "text/csv"
+        private const val SETTINGS_FILE_MIME_TYPE = "application/json"
+        private const val FLUSH_INTERVAL_MS = 250L
 
         /**
          * Generates a session ID based on current timestamp.
@@ -74,34 +91,56 @@ class SessionFileWriter(
         }
     }
 
+    private sealed interface OutputMode {
+        data class FileSystem(
+            val outputDir: File,
+        ) : OutputMode
+
+        data class SafTree(
+            val treeUri: Uri,
+            val treeDocumentUri: Uri,
+        ) : OutputMode
+    }
+
     /**
      * Initializes the file writer and creates necessary files.
      * Should be called when a session starts.
      */
     suspend fun initialize(): Result<Unit> =
         withContext(Dispatchers.IO) {
-            try {
-                sessionStartTime = System.currentTimeMillis()
+            writerMutex.withLock {
+                try {
+                    sessionStartTime = System.currentTimeMillis()
+                    val mode = resolveOutputMode()
+                    outputMode = mode
 
-                // Ensure output directory exists
-                val outputDir = File(outputDirectory)
-                if (!outputDir.exists()) {
-                    outputDir.mkdirs()
+                    val sanitizedDeviceName = deviceName.replace(" ", "_")
+                    val sanitizedMac = deviceMacAddress.replace(":", "")
+                    rawFileName = "$sessionId-$sanitizedDeviceName-$sanitizedMac-raw.csv"
+
+                    val writer =
+                        when (mode) {
+                            is OutputMode.FileSystem -> {
+                                val rawFile = File(mode.outputDir, rawFileName!!)
+                                BufferedWriter(FileWriter(rawFile))
+                            }
+
+                            is OutputMode.SafTree -> {
+                                val rawFileUri = createSafDocument(mode.treeDocumentUri, RAW_FILE_MIME_TYPE, rawFileName!!)
+                                openBufferedWriter(rawFileUri)
+                            }
+                        }
+
+                    rawDataWriter = writer
+                    writer.write(RAW_CSV_HEADER)
+                    writer.flush()
+                    rawEventsWritten = 0
+                    lastFlushTimestampMs = System.currentTimeMillis()
+
+                    Result.success(Unit)
+                } catch (e: Exception) {
+                    Result.failure(e)
                 }
-
-                // Create raw data CSV file
-                val sanitizedDeviceName = deviceName.replace(" ", "_")
-                val sanitizedMac = deviceMacAddress.replace(":", "")
-                val rawFileName = "$sessionId-$sanitizedDeviceName-$sanitizedMac-raw.csv"
-                val rawFile = File(outputDir, rawFileName)
-
-                rawDataWriter = BufferedWriter(FileWriter(rawFile))
-                rawDataWriter?.write(RAW_CSV_HEADER)
-                rawDataWriter?.flush()
-
-                Result.success(Unit)
-            } catch (e: Exception) {
-                Result.failure(e)
             }
         }
 
@@ -110,17 +149,24 @@ class SessionFileWriter(
      */
     suspend fun writeReading(reading: SensorReading): Result<Unit> =
         withContext(Dispatchers.IO) {
-            try {
-                rawDataWriter?.let { writer ->
+            writerMutex.withLock {
+                try {
+                    val writer = rawDataWriter ?: return@withLock Result.failure(IllegalStateException("Session file writer is not initialized"))
                     val timestamp = getCurrentTimestamp()
                     val line = "$timestamp,${reading.topRight},${reading.bottomRight},${reading.topLeft},${reading.bottomLeft}\n"
                     writer.write(line)
-                    writer.flush()
                     rawEventsWritten++
+
+                    val now = System.currentTimeMillis()
+                    if (now - lastFlushTimestampMs >= FLUSH_INTERVAL_MS) {
+                        writer.flush()
+                        lastFlushTimestampMs = now
+                    }
+
+                    Result.success(Unit)
+                } catch (e: Exception) {
+                    Result.failure(e)
                 }
-                Result.success(Unit)
-            } catch (e: Exception) {
-                Result.failure(e)
             }
         }
 
@@ -130,48 +176,59 @@ class SessionFileWriter(
      */
     suspend fun writeSessionConfiguration(configuration: SessionConfiguration): Result<String> =
         withContext(Dispatchers.IO) {
-            try {
-                val outputDir = File(outputDirectory)
-                val settingsFileName = "$sessionId.settings.json"
-                val settingsFile = File(outputDir, settingsFileName)
+            writerMutex.withLock {
+                try {
+                    rawDataWriter?.flush()
 
-                // Calculate session stats
-                val duration = System.currentTimeMillis() - sessionStartTime
-                val durationSeconds = duration / 1000.0
-                val samplingRate =
-                    if (durationSeconds > 0) {
-                        rawEventsWritten / durationSeconds
-                    } else {
-                        0.0
+                    val settingsFileName = "$sessionId.settings.json"
+
+                    val duration = System.currentTimeMillis() - sessionStartTime
+                    val durationSeconds = duration / 1000.0
+                    val samplingRate =
+                        if (durationSeconds > 0) {
+                            rawEventsWritten / durationSeconds
+                        } else {
+                            0.0
+                        }
+
+                    val configWithStats =
+                        configuration.copy(
+                            sessionStats =
+                                SessionStats(
+                                    boardSamplingRate = samplingRate,
+                                    durationMs = duration,
+                                ),
+                            deviceFileMappings =
+                                mapOf(
+                                    deviceMacAddress to
+                                        FileNameMapping(
+                                            rawFileName = rawFileName ?: "",
+                                        ),
+                                ),
+                        )
+
+                    val jsonContent = json.encodeToString(configWithStats)
+                    val mode = outputMode ?: return@withLock Result.failure(IllegalStateException("Session output is not initialized"))
+
+                    when (mode) {
+                        is OutputMode.FileSystem -> {
+                            val settingsFile = File(mode.outputDir, settingsFileName)
+                            settingsFile.writeText(jsonContent)
+                            Result.success(settingsFile.absolutePath)
+                        }
+
+                        is OutputMode.SafTree -> {
+                            val settingsFileUri = createSafDocument(mode.treeDocumentUri, SETTINGS_FILE_MIME_TYPE, settingsFileName)
+                            context.contentResolver.openOutputStream(settingsFileUri, "wt")?.use { outputStream ->
+                                outputStream.write(jsonContent.toByteArray())
+                                outputStream.flush()
+                            } ?: return@withLock Result.failure(IllegalStateException("Failed to open output stream for settings file"))
+                            Result.success(settingsFileUri.toString())
+                        }
                     }
-
-                // Create the file mapping
-                val sanitizedDeviceName = deviceName.replace(" ", "_")
-                val sanitizedMac = deviceMacAddress.replace(":", "")
-                val rawFileName = "$sessionId-$sanitizedDeviceName-$sanitizedMac-raw.csv"
-
-                val configWithStats =
-                    configuration.copy(
-                        sessionStats =
-                            SessionStats(
-                                boardSamplingRate = samplingRate,
-                                durationMs = duration,
-                            ),
-                        deviceFileMappings =
-                            mapOf(
-                                deviceMacAddress to
-                                    FileNameMapping(
-                                        rawFileName = rawFileName,
-                                    ),
-                            ),
-                    )
-
-                val jsonContent = json.encodeToString(configWithStats)
-                settingsFile.writeText(jsonContent)
-
-                Result.success(settingsFile.absolutePath)
-            } catch (e: Exception) {
-                Result.failure(e)
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
             }
         }
 
@@ -181,12 +238,15 @@ class SessionFileWriter(
      */
     suspend fun close(): Result<Unit> =
         withContext(Dispatchers.IO) {
-            try {
-                rawDataWriter?.close()
-                rawDataWriter = null
-                Result.success(Unit)
-            } catch (e: Exception) {
-                Result.failure(e)
+            writerMutex.withLock {
+                try {
+                    rawDataWriter?.flush()
+                    rawDataWriter?.close()
+                    rawDataWriter = null
+                    Result.success(Unit)
+                } catch (e: Exception) {
+                    Result.failure(e)
+                }
             }
         }
 
@@ -194,9 +254,42 @@ class SessionFileWriter(
      * Gets the current timestamp in RFC3339 format with microsecond precision.
      */
     private fun getCurrentTimestamp(): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", Locale.US)
-        dateFormat.timeZone = TimeZone.getTimeZone("UTC")
-        return dateFormat.format(Date())
+        return timestampFormatter.format(Date())
+    }
+
+    private fun resolveOutputMode(): OutputMode {
+        if (outputDirectory.startsWith("content://")) {
+            val treeUri = Uri.parse(outputDirectory)
+            val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
+            val treeDocumentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, treeDocId)
+            return OutputMode.SafTree(treeUri = treeUri, treeDocumentUri = treeDocumentUri)
+        }
+
+        val outputDir = File(outputDirectory)
+        if (!outputDir.exists() && !outputDir.mkdirs()) {
+            throw IllegalStateException("Unable to create output directory: $outputDirectory")
+        }
+        if (!outputDir.isDirectory) {
+            throw IllegalStateException("Output path is not a directory: $outputDirectory")
+        }
+        return OutputMode.FileSystem(outputDir)
+    }
+
+    private fun createSafDocument(
+        parentDocumentUri: Uri,
+        mimeType: String,
+        displayName: String,
+    ): Uri {
+        return DocumentsContract
+            .createDocument(context.contentResolver, parentDocumentUri, mimeType, displayName)
+            ?: throw IllegalStateException("Failed to create SAF document: $displayName")
+    }
+
+    private fun openBufferedWriter(uri: Uri): BufferedWriter {
+        val outputStream =
+            context.contentResolver.openOutputStream(uri, "wt")
+                ?: throw IllegalStateException("Failed to open output stream for URI: $uri")
+        return BufferedWriter(OutputStreamWriter(outputStream))
     }
 
     /**

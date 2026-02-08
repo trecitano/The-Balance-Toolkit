@@ -317,7 +317,14 @@ private fun DevicesScreenContent(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            if (uiState.devices.isNotEmpty()) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (uiState.devices.isNotEmpty()) {
                 uiState.devices.forEach { device ->
                     DeviceCard(
                         device = device,
@@ -327,7 +334,7 @@ private fun DevicesScreenContent(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
-            } else if (!uiState.isLoading) {
+            } else {
                 EmptyDevicesState(modifier = Modifier.weight(1f))
             }
         }

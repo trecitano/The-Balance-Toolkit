@@ -2,6 +2,7 @@ package com.balancetoolkit.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -86,12 +89,15 @@ private fun AppLogo(size: Int = 32) {
         modifier =
             Modifier
                 .size(size.dp)
-                .clip(RoundedCornerShape(if (size > 32) 8.dp else 6.dp))
-                .border(2.dp, Color.White, RoundedCornerShape(if (size > 32) 8.dp else 6.dp))
                 .semantics { contentDescription = "Balance Toolkit logo" },
         contentAlignment = Alignment.Center,
     ) {
-        // Empty white border square as logo placeholder
+        Image(
+            painter = painterResource(R.drawable.logo_flamingo_white),
+            contentDescription = null,
+            modifier = Modifier.size((size - 8).dp),
+            contentScale = ContentScale.Fit,
+        )
     }
 }
 

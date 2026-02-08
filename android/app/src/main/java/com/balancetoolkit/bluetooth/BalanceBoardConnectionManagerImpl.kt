@@ -7,7 +7,6 @@ import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.entity.toDevice
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,7 +36,7 @@ class BalanceBoardConnectionManagerImpl
                     realConnection?.isConnected == true
                 }
 
-        override fun start(listener: BalanceBoardListener): Boolean {
+        override suspend fun start(listener: BalanceBoardListener): Boolean {
             stop()
             currentListener = listener
 
@@ -59,7 +58,7 @@ class BalanceBoardConnectionManagerImpl
             return true
         }
 
-        private fun startRealConnection(listener: BalanceBoardListener): Boolean {
+        private suspend fun startRealConnection(listener: BalanceBoardListener): Boolean {
             val adapter =
                 bluetoothAdapter ?: run {
                     listener.onError("Bluetooth adapter not available")
@@ -67,10 +66,7 @@ class BalanceBoardConnectionManagerImpl
                 }
 
             // Get the selected device
-            val selectedDevice =
-                runBlocking {
-                    deviceDao.getSelectedDeviceOnce()
-                }
+            val selectedDevice = deviceDao.getSelectedDeviceOnce()
 
             if (selectedDevice == null) {
                 listener.onError("No device selected. Please select a device in the Devices page.")

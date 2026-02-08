@@ -37,7 +37,8 @@ object AppModule {
         @ApplicationContext context: Context,
         bluetoothAdapter: BluetoothAdapter?,
         sharedPreferences: SharedPreferences,
-    ): BluetoothScanManager = BluetoothScanManager(context, bluetoothAdapter, sharedPreferences)
+        deviceDao: DeviceDao,
+    ): BluetoothScanManager = BluetoothScanManager(context, bluetoothAdapter, sharedPreferences, deviceDao)
 
     @Provides
     @Singleton
