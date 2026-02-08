@@ -1,6 +1,9 @@
 package com.balancetoolkit.ui.screens.devices
 
 import android.Manifest
+import android.app.Activity
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -90,6 +93,9 @@ fun DevicesScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val bluetoothAdapter = remember {
+        (context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+    }
 
     // Check if permissions are currently granted
     fun hasBluetoothPermissions(): Boolean =
@@ -101,6 +107,16 @@ fun DevicesScreen(
     var showSettingsDialog by remember { mutableStateOf(false) }
     var hasLaunchedInitialRequest by remember { mutableStateOf(false) }
     var waitingForSettingsReturn by remember { mutableStateOf(false) }
+
+    // Bluetooth enable launcher - prompts user to turn on Bluetooth
+    val bluetoothEnableLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                viewModel.onScanClick()
+            }
+        }
 
     // Permission launcher
     val permissionLauncher =
@@ -160,15 +176,17 @@ fun DevicesScreen(
         )
     }
 
-    // Handle scan click with permission check
+    // Handle scan click with permission and Bluetooth state checks
     val onScanWithPermissionCheck = {
         if (uiState.isScanning) {
             // Already scanning, stop it
             viewModel.onScanClick()
-        } else if (hasBluetoothPermissions()) {
-            viewModel.onScanClick()
-        } else {
+        } else if (!hasBluetoothPermissions()) {
             showSettingsDialog = true
+        } else if (bluetoothAdapter?.isEnabled == false) {
+            bluetoothEnableLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+        } else {
+            viewModel.onScanClick()
         }
     }
 

@@ -51,8 +51,13 @@
     <string name="height_cm">Height (cm)</string>
     <string name="weight">Weight</string>
     <string name="weight_kg">Weight (kg)</string>
+    <string name="years">years</string>
     <string name="dominant_hand">Dominant hand</string>
     <string name="color">Color</string>
+    <string name="user_profile_section">Profile</string>
+    <string name="user_body_metrics_section">Body metrics</string>
+    <string name="user_preferences_section">Preferences</string>
+    <string name="delete_user_action">Delete user</string>
     <string name="notes">Notes</string>
     <string name="additional_notes">Additional notes…</string>
     <string name="updated_on">Updated on %1$s</string>
