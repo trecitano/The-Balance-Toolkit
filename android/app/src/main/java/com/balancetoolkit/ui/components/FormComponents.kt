@@ -45,6 +45,7 @@ import com.balancetoolkit.ui.theme.UserColors
 
 private val fieldShape = RoundedCornerShape(8.dp)
 private val borderColor = Color(0xFFBDBDBD)
+private val readOnlyBackground = Color(0xFFF8FAFC)
 
 /**
  * Generic dropdown for any enum type.
@@ -295,6 +296,8 @@ fun ReadOnlyFieldWithBorder(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .background(readOnlyBackground, fieldShape)
+                    .border(1.dp, borderColor, fieldShape)
                     .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,

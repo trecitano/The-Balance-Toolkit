@@ -74,50 +74,50 @@ fun TheBalanceToolkitApp() {
         )
 
     CompositionLocalProvider(LocalRippleConfiguration provides null) {
-        NavigationSuiteScaffold(
-            navigationSuiteItems = {
-                AppDestination.entries.forEach { destination ->
-                    val selected =
-                        currentDestination?.hierarchy?.any {
-                            it.route == destination.route
-                        } == true
+    NavigationSuiteScaffold(
+        navigationSuiteItems = {
+            AppDestination.entries.forEach { destination ->
+                val selected =
+                    currentDestination?.hierarchy?.any {
+                        it.route == destination.route
+                    } == true
 
-                    item(
-                        icon = {
-                            Icon(
-                                painter = painterResource(destination.icon),
-                                contentDescription = destination.label,
-                            )
-                        },
-                        label = { Text(destination.label) },
-                        colors = navSuiteItemColors,
-                        selected = selected,
-                        onClick = {
-                            // Skip navigation if already on this destination
-                            if (selected) return@item
+                item(
+                    icon = {
+                        Icon(
+                            painter = painterResource(destination.icon),
+                            contentDescription = destination.label,
+                        )
+                    },
+                    label = { Text(destination.label) },
+                    colors = navSuiteItemColors,
+                    selected = selected,
+                    onClick = {
+                        // Skip navigation if already on this destination
+                        if (selected) return@item
 
-                            navController.navigate(destination.route) {
-                                // Pop up to the start destination to avoid building up a large stack
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
-                                }
-                                // Avoid multiple copies of the same destination
-                                launchSingleTop = true
-                                // Restore destination state when switching tabs
-                                restoreState = true
+                        navController.navigate(destination.route) {
+                            // Pop up to the start destination to avoid building up a large stack
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
                             }
-                        },
-                    )
-                }
-            },
-        ) {
-            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                AppNavHost(
-                    navController = navController,
-                    innerPadding = innerPadding,
+                            // Avoid multiple copies of the same destination
+                            launchSingleTop = true
+                            // Restore destination state when switching tabs
+                            restoreState = true
+                        }
+                    },
                 )
             }
+        },
+    ) {
+        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+            AppNavHost(
+                navController = navController,
+                innerPadding = innerPadding,
+            )
         }
+    }
     }
 }
 
