@@ -46,12 +46,14 @@ data class UsersUiState(
     val weightMeasureTarget: WeightMeasureTarget = WeightMeasureTarget.EDIT_USER,
 ) {
     val users: List<User>
-        get() =
-            if (searchQuery.isBlank()) {
-                allUsers
-            } else {
-                allUsers.filter { it.name.contains(searchQuery, ignoreCase = true) }
-            }
+        get() = allUsers
+
+    val searchMatches: List<User>
+        get() {
+            val trimmedQuery = searchQuery.trim()
+            if (trimmedQuery.isBlank()) return emptyList()
+            return allUsers.filter { it.name.contains(trimmedQuery, ignoreCase = true) }
+        }
 }
 
 data class AddUserFormState(
@@ -171,28 +173,29 @@ class UsersViewModel
         }
 
         fun onSearchQueryChange(query: String) {
-            _uiState.update { state ->
-                val updated = state.copy(searchQuery = query)
-                val filtered = updated.users
-                if (filtered.isEmpty()) {
-                    updated.copy(selectedUserIndex = 0, selectedUser = null)
-                } else {
-                    // Keep current selection if it's still in the filtered list
-                    val currentUser = state.selectedUser
-                    val indexInFiltered = if (currentUser != null) filtered.indexOfFirst { it.id == currentUser.id } else -1
-                    if (indexInFiltered >= 0) {
-                        updated.copy(selectedUserIndex = indexInFiltered, selectedUser = currentUser)
-                    } else {
-                        updated.copy(selectedUserIndex = 0, selectedUser = filtered.first())
-                    }
-                }
+            _uiState.update { it.copy(searchQuery = query) }
+        }
+
+        fun onSearchResultSelected(userId: String) {
+            val currentState = _uiState.value
+            val selectedIndex = currentState.allUsers.indexOfFirst { it.id == userId }
+            if (selectedIndex < 0) return
+
+            val selectedUser = currentState.allUsers[selectedIndex]
+            userSelectionRepository.setSelectedUserId(selectedUser.id)
+
+            _uiState.update {
+                it.copy(
+                    selectedUserIndex = selectedIndex,
+                    selectedUser = selectedUser,
+                    searchQuery = "",
+                )
             }
         }
 
         fun onUserSelected(index: Int) {
             val currentState = _uiState.value
-            val filteredUsers = currentState.users
-            val user = filteredUsers.getOrNull(index)
+            val user = currentState.allUsers.getOrNull(index)
             // Save selected user for all screens
             if (user != null) {
                 userSelectionRepository.setSelectedUserId(user.id)
