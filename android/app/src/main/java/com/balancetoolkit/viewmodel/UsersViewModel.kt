@@ -437,7 +437,9 @@ class UsersViewModel
         }
 
         private fun startWeightMeasurement() {
-            connectionManager.start(weightMeasureListener)
+            viewModelScope.launch {
+                connectionManager.start(weightMeasureListener)
+            }
         }
 
         private fun stopWeightMeasurement() {

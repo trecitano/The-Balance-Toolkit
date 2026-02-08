@@ -102,14 +102,19 @@ class DevicesViewModel
                 bluetoothScanManager.events.collect { event ->
                     when (event) {
                         is ScanEvent.PairingSucceeded -> {
-                            // Save the newly paired device to the database
-                            val device =
-                                Device(
-                                    name = event.device.name ?: "Balance Board",
-                                    macAddress = event.device.address,
-                                    isConnected = false,
-                                )
-                            deviceDao.insertDevice(device.toEntity())
+                            val macAddress = event.device.address
+                            val existing = deviceDao.getDeviceByMacAddress(macAddress)
+                            if (existing != null) {
+                                deviceDao.updateConnectionStatus(existing.id, true)
+                            } else {
+                                val device =
+                                    Device(
+                                        name = event.device.name ?: "Balance Board",
+                                        macAddress = macAddress,
+                                        isConnected = true,
+                                    )
+                                deviceDao.insertDevice(device.toEntity())
+                            }
                         }
 
                         is ScanEvent.Error -> {

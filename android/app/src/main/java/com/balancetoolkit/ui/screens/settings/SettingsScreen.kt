@@ -329,6 +329,7 @@ private fun SettingsScreenContent(
             Spacer(modifier = Modifier.height(32.dp))
 
             // About Section
+            /* Commented until the project is officially launched
             Text(
                 text = stringResource(R.string.about),
                 style = MaterialTheme.typography.titleMedium,
@@ -355,6 +356,7 @@ private fun SettingsScreenContent(
                 icon = Icons.AutoMirrored.Filled.ExitToApp,
                 onClick = onSourceCodeClick,
             )
+            */
         }
     }
 }

@@ -9,12 +9,18 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import com.balancetoolkit.data.PreferenceKeys
+import com.balancetoolkit.data.local.dao.DeviceDao
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,6 +58,7 @@ class BluetoothScanManager
         private val context: Context,
         private val bluetoothAdapter: BluetoothAdapter?,
         private val sharedPreferences: SharedPreferences,
+        private val deviceDao: DeviceDao,
     ) : ScanAndConnect.Listener {
         companion object {
             private const val TAG = "BluetoothScanManager"
@@ -59,6 +66,7 @@ class BluetoothScanManager
 
         private var scanAndConnect: ScanAndConnect? = null
         private var isReceiverRegistered = false
+        private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         private val _isScanning = MutableStateFlow(false)
         val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
@@ -167,10 +175,12 @@ class BluetoothScanManager
         }
 
         override fun onDeviceConnected(device: BluetoothDevice) {
+            updateDeviceConnectionStatus(device.address, isConnected = true)
             _events.tryEmit(ScanEvent.Log("Device connected: ${device.address}"))
         }
 
         override fun onDeviceDisconnected(device: BluetoothDevice) {
+            updateDeviceConnectionStatus(device.address, isConnected = false)
             _events.tryEmit(ScanEvent.Log("Device disconnected: ${device.address}"))
         }
 
@@ -195,5 +205,24 @@ class BluetoothScanManager
 
         fun cleanup() {
             stopScanning()
+            managerScope.cancel()
+        }
+
+        private fun updateDeviceConnectionStatus(
+            macAddress: String?,
+            isConnected: Boolean,
+        ) {
+            if (macAddress.isNullOrBlank()) return
+
+            managerScope.launch {
+                runCatching {
+                    val existing = deviceDao.getDeviceByMacAddress(macAddress)
+                    if (existing != null) {
+                        deviceDao.updateConnectionStatus(existing.id, isConnected)
+                    }
+                }.onFailure { error ->
+                    Log.w(TAG, "Failed to update connection status for $macAddress", error)
+                }
+            }
         }
     }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -239,44 +241,53 @@ private fun UsersScreenContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // User Carousel
-            if (uiState.users.isNotEmpty()) {
-                UserCarousel(
-                    users = uiState.users,
-                    selectedIndex = uiState.selectedUserIndex,
-                    onUserSelected = onUserSelected,
-                )
-            }
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(320.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                // User Carousel
+                if (uiState.users.isNotEmpty()) {
+                    UserCarousel(
+                        users = uiState.users,
+                        selectedIndex = uiState.selectedUserIndex,
+                        onUserSelected = onUserSelected,
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // User Details Card
-            uiState.selectedUser?.let { user ->
-                UserDetailsCard(
-                    user = user,
-                    isEditing = uiState.isEditing,
-                    onEditClick = onEditClick,
-                    onSaveClick = onSaveClick,
-                    onCancelClick = onCancelClick,
-                    onDelete = onDeleteUser,
-                    onNameChange = onEditNameChange,
-                    onAgeChange = onEditAgeChange,
-                    onGenderChange = onEditGenderChange,
-                    onHeightChange = onEditHeightChange,
-                    onWeightChange = onEditWeightChange,
-                    onDominantHandChange = onEditDominantHandChange,
-                    onColorChange = { color -> onEditColorChange(color.toArgb().toUInt().toLong()) },
-                    onWeightButtonClick = onWeightButtonClick,
-                    editName = editFormState.name,
-                    editAge = editFormState.age,
-                    editGender = editFormState.gender,
-                    editHeight = editFormState.height,
-                    editWeight = editFormState.weight,
-                    editDominantHand = editFormState.dominantHand,
-                    editColor = Color(editFormState.color.toInt()),
-                    canDelete = !user.isDefaultUser,
-                    canEditName = !user.isDefaultUser,
-                )
+                // User Details Card
+                uiState.selectedUser?.let { user ->
+                    UserDetailsCard(
+                        user = user,
+                        isEditing = uiState.isEditing,
+                        onEditClick = onEditClick,
+                        onSaveClick = onSaveClick,
+                        onCancelClick = onCancelClick,
+                        onDelete = onDeleteUser,
+                        onNameChange = onEditNameChange,
+                        onAgeChange = onEditAgeChange,
+                        onGenderChange = onEditGenderChange,
+                        onHeightChange = onEditHeightChange,
+                        onWeightChange = onEditWeightChange,
+                        onDominantHandChange = onEditDominantHandChange,
+                        onColorChange = { color -> onEditColorChange(color.toArgb().toUInt().toLong()) },
+                        onWeightButtonClick = onWeightButtonClick,
+                        editName = editFormState.name,
+                        editAge = editFormState.age,
+                        editGender = editFormState.gender,
+                        editHeight = editFormState.height,
+                        editWeight = editFormState.weight,
+                        editDominantHand = editFormState.dominantHand,
+                        editColor = Color(editFormState.color.toInt()),
+                        canDelete = !user.isDefaultUser,
+                        canEditName = !user.isDefaultUser,
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -311,22 +322,27 @@ private fun UserCarousel(
     val pageSpacing = 8.dp
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        HorizontalPager(
-            state = pagerState,
-            pageSpacing = pageSpacing,
-            pageSize = PageSize.Fixed(pageWidth),
-            contentPadding = PaddingValues(horizontal = pageWidth / 2 + pageSpacing / 2),
-            key = { users[it].id },
-        ) { page ->
-            val user = users[page]
-            UserCard(
-                name = user.name,
-                isSelected = page == selectedIndex,
-                updateDate = user.updatedAt,
-                avatarBackgroundColor = user.avatarBackgroundColor,
-                avatarIconColor = user.avatarIconColor,
-                onClick = { onUserSelected(page) },
-            )
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val sidePadding = ((maxWidth - pageWidth) / 2).coerceAtLeast(0.dp)
+
+            HorizontalPager(
+                modifier = Modifier.fillMaxWidth(),
+                state = pagerState,
+                pageSpacing = pageSpacing,
+                pageSize = PageSize.Fixed(pageWidth),
+                contentPadding = PaddingValues(horizontal = sidePadding),
+                key = { users[it].id },
+            ) { page ->
+                val user = users[page]
+                UserCard(
+                    name = user.name,
+                    isSelected = page == selectedIndex,
+                    updateDate = user.updatedAt,
+                    avatarBackgroundColor = user.avatarBackgroundColor,
+                    avatarIconColor = user.avatarIconColor,
+                    onClick = { onUserSelected(page) },
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

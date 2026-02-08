@@ -12,7 +12,7 @@ interface BalanceBoardConnectionManager {
      * @param listener The listener to receive sensor data callbacks
      * @return true if connection was started successfully
      */
-    fun start(listener: BalanceBoardListener): Boolean
+    suspend fun start(listener: BalanceBoardListener): Boolean
 
     /**
      * Stop the current connection.

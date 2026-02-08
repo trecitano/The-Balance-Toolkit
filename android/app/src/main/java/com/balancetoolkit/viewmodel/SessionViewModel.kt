@@ -20,6 +20,8 @@ import com.balancetoolkit.session.SessionUser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -156,6 +158,10 @@ class SessionViewModel
         val uiState: StateFlow<SessionUiState> = _uiState.asStateFlow()
 
         private var sessionFileWriter: SessionFileWriter? = null
+        private var sessionStartJob: Job? = null
+        private var sessionWriteJob: Job? = null
+        private var sessionWriteChannel: Channel<SensorReading>? = null
+        private var sessionLifecycleToken: Long = 0L
         private var currentUserId: String? = null
         private var latestSelectedUserId: String? = null
         private var activeSessionUserId: String? = null
@@ -290,6 +296,9 @@ class SessionViewModel
         fun startSession() {
             if (_uiState.value.isRecording) return
 
+            sessionLifecycleToken += 1
+            val sessionToken = sessionLifecycleToken
+
             // Lock selected user for the duration of this recording.
             activeSessionUserId = latestSelectedUserId ?: currentUserId ?: userSelectionRepository.getSelectedUserId()
 
@@ -325,8 +334,15 @@ class SessionViewModel
                 )
             }
 
+            sessionStartJob?.cancel()
+            sessionWriteChannel?.close()
+            sessionWriteChannel = null
+            sessionWriteJob?.cancel()
+            sessionWriteJob = null
+
             // Initialize file writer, then start connection
-            viewModelScope.launch(Dispatchers.IO) {
+            sessionStartJob =
+                viewModelScope.launch(Dispatchers.IO) {
                 val writer =
                     SessionFileWriter(
                         context = context,
@@ -337,20 +353,60 @@ class SessionViewModel
                     )
 
                 val result = writer.initialize()
+                if (!isSessionTokenValid(sessionToken)) {
+                    writer.close()
+                    return@launch
+                }
+
                 if (result.isSuccess) {
                     sessionFileWriter = writer
+                    val writeChannel = Channel<SensorReading>(capacity = Channel.UNLIMITED)
+                    sessionWriteChannel = writeChannel
+                    sessionWriteJob =
+                        viewModelScope.launch(Dispatchers.IO) {
+                            for (reading in writeChannel) {
+                                writer.writeReading(reading)
+                            }
+                        }
+
                     _uiState.update { it.copy(isWritingToFile = true) }
                     addLogMessage("Session file writer initialized: $sessionId")
+
+                    if (!isSessionTokenValid(sessionToken)) {
+                        writeChannel.close()
+                        sessionWriteJob?.join()
+                        sessionWriteJob = null
+                        sessionWriteChannel = null
+                        writer.close()
+                        sessionFileWriter = null
+                        _uiState.update { it.copy(isWritingToFile = false) }
+                        return@launch
+                    }
 
                     // Start connection only after file writer is ready
                     val started = connectionManager.start(sensorDataListener)
                     if (!started) {
                         addLogMessage("ERROR: Failed to start board connection")
-                        _uiState.update { it.copy(isRecording = false, isPlaying = false) }
+                        writeChannel.close()
+                        sessionWriteJob?.join()
+                        sessionWriteJob = null
+                        sessionWriteChannel = null
+                        writer.close()
+                        sessionFileWriter = null
+                        _uiState.update { it.copy(isRecording = false, isPlaying = false, isWritingToFile = false) }
+                    } else if (!isSessionTokenValid(sessionToken)) {
+                        connectionManager.stop()
+                        writeChannel.close()
+                        sessionWriteJob?.join()
+                        sessionWriteJob = null
+                        sessionWriteChannel = null
+                        writer.close()
+                        sessionFileWriter = null
+                        _uiState.update { it.copy(isWritingToFile = false) }
                     }
                 } else {
                     addLogMessage("Failed to initialize file writer: ${result.exceptionOrNull()?.message}")
-                    _uiState.update { it.copy(isRecording = false, isPlaying = false) }
+                    _uiState.update { it.copy(isRecording = false, isPlaying = false, isWritingToFile = false) }
                 }
             }
         }
@@ -359,11 +415,23 @@ class SessionViewModel
          * Stop the current recording session.
          */
         fun stopSession() {
+            sessionLifecycleToken += 1
+            sessionStartJob?.cancel()
+            sessionStartJob = null
+
             connectionManager.stop()
 
             // Finalize file writing
             viewModelScope.launch(Dispatchers.IO) {
-                sessionFileWriter?.let { writer ->
+                sessionWriteChannel?.close()
+                sessionWriteChannel = null
+                sessionWriteJob?.join()
+                sessionWriteJob = null
+
+                val writer = sessionFileWriter
+                sessionFileWriter = null
+
+                writer?.let {
                     // Load user data for the configuration file
                     val userId = activeSessionUserId ?: currentUserId
                     val user =
@@ -411,8 +479,7 @@ class SessionViewModel
                         addLogMessage("Failed to save session: ${error.message}")
                     }
 
-                    writer.close()
-                    sessionFileWriter = null
+                    it.close()
                 }
 
                 _uiState.update { it.copy(isWritingToFile = false) }
@@ -475,10 +542,8 @@ class SessionViewModel
             lastReadingTimestampMs = currentTimeMs
 
             // Always write reading to file (no throttling for data capture)
-            sessionFileWriter?.let { writer ->
-                viewModelScope.launch(Dispatchers.IO) {
-                    writer.writeReading(reading)
-                }
+            sessionWriteChannel?.let { channel ->
+                channel.trySend(reading)
             }
 
             // Check if we should compute derived metrics (every 50ms)
@@ -955,5 +1020,10 @@ class SessionViewModel
         override fun onCleared() {
             super.onCleared()
             stopSession()
+        }
+
+        private fun isSessionTokenValid(expectedToken: Long): Boolean {
+            val state = _uiState.value
+            return sessionLifecycleToken == expectedToken && state.isRecording
         }
     }
