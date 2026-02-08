@@ -3,6 +3,7 @@ package com.balancetoolkit.ui.screens.users
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,32 +27,40 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.balancetoolkit.R
 import com.balancetoolkit.data.model.DominantHand
@@ -88,6 +97,7 @@ fun UsersScreen(
         uiState = uiState,
         editFormState = editFormState,
         onSearchQueryChange = viewModel::onSearchQueryChange,
+        onSearchResultSelected = viewModel::onSearchResultSelected,
         onAddUserClick = viewModel::showAddUserDialog,
         onUserSelected = viewModel::onUserSelected,
         onDeleteUser = { uiState.selectedUser?.let { viewModel.deleteUser(it.id) } },
@@ -138,6 +148,7 @@ private fun UsersScreenContent(
     uiState: UsersUiState,
     editFormState: EditUserFormState,
     onSearchQueryChange: (String) -> Unit,
+    onSearchResultSelected: (String) -> Unit,
     onAddUserClick: () -> Unit,
     onUserSelected: (Int) -> Unit,
     onDeleteUser: () -> Unit,
@@ -157,6 +168,9 @@ private fun UsersScreenContent(
     TrackPerformance("UsersScreen")
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
+    val density = LocalDensity.current
+    val isSearchDropdownExpanded = remember { mutableStateOf(false) }
+    val searchFieldSize = remember { mutableStateOf(IntSize.Zero) }
 
     Column(
         modifier =
@@ -168,6 +182,7 @@ private fun UsersScreenContent(
                     indication = null,
                 ) {
                     focusManager.clearFocus()
+                    isSearchDropdownExpanded.value = false
                 },
     ) {
         AppHeader()
@@ -214,30 +229,129 @@ private fun UsersScreenContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Search Bar
-            OutlinedTextField(
-                value = uiState.searchQuery,
-                onValueChange = onSearchQueryChange,
+            Box(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .semantics { contentDescription = "Search users" },
-                placeholder = { Text(stringResource(R.string.search_placeholder)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                    )
-                },
-                shape = RoundedCornerShape(8.dp),
-                colors =
-                    OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = CardBackground,
-                        focusedContainerColor = CardBackground,
-                    ),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-            )
+                        .zIndex(1f),
+            ) {
+                OutlinedTextField(
+                    value = uiState.searchQuery,
+                    onValueChange = {
+                        onSearchQueryChange(it)
+                        isSearchDropdownExpanded.value = it.isNotBlank()
+                    },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .onGloballyPositioned { coordinates ->
+                                searchFieldSize.value = coordinates.size
+                            }
+                            .semantics { contentDescription = "Search users" },
+                    placeholder = { Text(stringResource(R.string.search_placeholder)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                        )
+                    },
+                    trailingIcon = {
+                        if (uiState.searchQuery.isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    onSearchQueryChange("")
+                                    isSearchDropdownExpanded.value = false
+                                },
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.close),
+                                )
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            unfocusedContainerColor = CardBackground,
+                            focusedContainerColor = CardBackground,
+                        ),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions =
+                        KeyboardActions(
+                            onSearch = {
+                                focusManager.clearFocus()
+                                isSearchDropdownExpanded.value = false
+                            },
+                        ),
+                )
+
+                if (uiState.searchQuery.isNotBlank() && isSearchDropdownExpanded.value) {
+                    val verticalGapPx = with(density) { 4.dp.roundToPx() }
+
+                    Layout(
+                        modifier = Modifier.fillMaxWidth(),
+                        content = {
+                            Surface(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .animateContentSize(),
+                                shape = RoundedCornerShape(8.dp),
+                                color = CardBackground,
+                                tonalElevation = 4.dp,
+                                shadowElevation = 2.dp,
+                            ) {
+                                Column {
+                                    if (uiState.searchMatches.isEmpty()) {
+                                        Text(
+                                            text = stringResource(R.string.search_no_matches),
+                                            modifier =
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                    } else {
+                                        uiState.searchMatches.forEach { user ->
+                                            Text(
+                                                text = user.name,
+                                                modifier =
+                                                    Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable {
+                                                            onSearchResultSelected(user.id)
+                                                            isSearchDropdownExpanded.value = false
+                                                            focusManager.clearFocus()
+                                                        }.padding(horizontal = 16.dp, vertical = 12.dp),
+                                                style = MaterialTheme.typography.bodyLarge,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    ) { measurables, constraints ->
+                        val menuPlaceables =
+                            measurables.map {
+                                it.measure(
+                                    constraints.copy(
+                                        minWidth = constraints.maxWidth,
+                                        minHeight = 0,
+                                    ),
+                                )
+                            }
+
+                        layout(constraints.maxWidth, 0) {
+                            val yOffset = searchFieldSize.value.height + verticalGapPx
+                            menuPlaceables.forEach { placeable ->
+                                placeable.placeRelative(0, yOffset)
+                            }
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -250,9 +364,9 @@ private fun UsersScreenContent(
                 }
             } else {
                 // User Carousel
-                if (uiState.users.isNotEmpty()) {
+                if (uiState.allUsers.isNotEmpty()) {
                     UserCarousel(
-                        users = uiState.users,
+                        users = uiState.allUsers,
                         selectedIndex = uiState.selectedUserIndex,
                         onUserSelected = onUserSelected,
                     )
@@ -412,6 +526,7 @@ private fun UsersScreenPreview() {
                 ),
             editFormState = EditUserFormState(),
             onSearchQueryChange = {},
+            onSearchResultSelected = {},
             onAddUserClick = {},
             onUserSelected = {},
             onDeleteUser = {},

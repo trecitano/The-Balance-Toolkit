@@ -40,7 +40,8 @@
     <string name="default_user_name">Default User</string>
     <string name="add_new_user">Add new user</string>
     <string name="add_user">Add User</string>
-    <string name="search_placeholder">Search by name or ID…</string>
+    <string name="search_placeholder">Search by name…</string>
+    <string name="search_no_matches">No matching users</string>
     <string name="name">Name</string>
     <string name="name_required">Name *</string>
     <string name="enter_name">Enter name</string>

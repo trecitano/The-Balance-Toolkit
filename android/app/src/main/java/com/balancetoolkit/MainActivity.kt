@@ -59,7 +59,7 @@ fun TheBalanceToolkitApp() {
                 NavigationBarItemDefaults.colors(
                     indicatorColor = Color.Black,
                     selectedIconColor = Color.White,
-                    selectedTextColor = Color.White,
+                    selectedTextColor = Color.Black.copy(alpha = 0.7f),
                     unselectedIconColor = Color.Black.copy(alpha = 0.7f),
                     unselectedTextColor = Color.Black.copy(alpha = 0.7f),
                 ),
@@ -67,7 +67,7 @@ fun TheBalanceToolkitApp() {
                 NavigationRailItemDefaults.colors(
                     indicatorColor = Color.Black,
                     selectedIconColor = Color.White,
-                    selectedTextColor = Color.White,
+                    selectedTextColor = Color.Black.copy(alpha = 0.7f),
                     unselectedIconColor = Color.Black.copy(alpha = 0.7f),
                     unselectedTextColor = Color.Black.copy(alpha = 0.7f),
                 ),
