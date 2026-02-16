@@ -27,7 +27,6 @@ object UserColors {
             ColorOption("#9C27B0", Color(0xFF9C27B0)), // Purple
             ColorOption("#FF9800", Color(0xFFFF9800)), // Orange
             ColorOption("#00BCD4", Color(0xFF00BCD4)), // Cyan
-            ColorOption("#E91E63", Color(0xFFE91E63)), // Pink
         )
 
     /**
