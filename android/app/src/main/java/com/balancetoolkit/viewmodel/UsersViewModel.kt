@@ -1,11 +1,15 @@
 package com.balancetoolkit.viewmodel
 
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.balancetoolkit.bluetooth.BalanceBoardConnectionManager
 import com.balancetoolkit.bluetooth.SimpleWeightListener
+import com.balancetoolkit.data.HeightUnit
+import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.Result
 import com.balancetoolkit.data.UserSelectionRepository
+import com.balancetoolkit.data.WeightUnit
 import com.balancetoolkit.data.local.dao.UserDao
 import com.balancetoolkit.data.local.entity.toEntity
 import com.balancetoolkit.data.local.entity.toUser
@@ -95,7 +99,13 @@ class UsersViewModel
         private val userDao: UserDao,
         private val userSelectionRepository: UserSelectionRepository,
         private val connectionManager: BalanceBoardConnectionManager,
+        private val sharedPreferences: SharedPreferences,
     ) : ViewModel() {
+        val heightUnit: HeightUnit
+            get() = HeightUnit.fromString(sharedPreferences.getString(PreferenceKeys.HEIGHT_UNIT, null))
+
+        val weightUnit: WeightUnit
+            get() = WeightUnit.fromString(sharedPreferences.getString(PreferenceKeys.WEIGHT_UNIT, null))
         private val _uiState = MutableStateFlow(UsersUiState(isLoading = true))
         val uiState: StateFlow<UsersUiState> = _uiState.asStateFlow()
 
@@ -210,7 +220,13 @@ class UsersViewModel
 
         fun showAddUserDialog() {
             val userCount = _uiState.value.allUsers.size
-            _addUserFormState.value = AddUserFormState(name = "User $userCount", color = UserColors.randomHex())
+            _addUserFormState.value =
+                AddUserFormState(
+                    name = "User $userCount",
+                    color = UserColors.randomHex(),
+                    height = heightUnit.fromMetric(170),
+                    weight = weightUnit.fromMetric(70),
+                )
             _uiState.update { it.copy(showAddUserDialog = true) }
         }
 
@@ -259,8 +275,8 @@ class UsersViewModel
                                 name = formState.name,
                                 age = formState.age.toIntOrNull() ?: 25,
                                 gender = formState.gender,
-                                height = formState.height.toIntOrNull() ?: 170,
-                                weight = formState.weight.toIntOrNull() ?: 70,
+                                height = heightUnit.toMetricCm(formState.height),
+                                weight = weightUnit.toMetricKg(formState.weight),
                                 dominantHand = formState.dominantHand,
                                 color = formState.color,
                                 updatedAt =
@@ -271,6 +287,7 @@ class UsersViewModel
                                 avatarIconColor = iconColor,
                             )
                         userDao.insertUser(newUser.toEntity())
+                        userSelectionRepository.setSelectedUserId(newUser.id)
                         Result.Success(newUser)
                     }.getOrElse { e ->
                         Result.Error(e.message ?: "Failed to add user", e)
@@ -295,10 +312,34 @@ class UsersViewModel
                 return
             }
 
+            val currentState = _uiState.value
+            val usersBeforeDelete = currentState.allUsers
+            val remainingUsers = usersBeforeDelete.filterNot { it.id == userId }
+            val deletedUserIndex = usersBeforeDelete.indexOfFirst { it.id == userId }
+            val selectedUserId = currentState.selectedUser?.id ?: userSelectionRepository.getSelectedUserId()
+
+            val nextSelectedUserId =
+                when {
+                    remainingUsers.isEmpty() -> null
+                    selectedUserId != null && selectedUserId != userId && remainingUsers.any { it.id == selectedUserId } -> selectedUserId
+                    else -> {
+                        val fallbackIndex =
+                            if (deletedUserIndex >= 0) {
+                                deletedUserIndex.coerceAtMost(remainingUsers.lastIndex)
+                            } else {
+                                currentState.selectedUserIndex.coerceAtMost(remainingUsers.lastIndex)
+                            }
+                        remainingUsers[fallbackIndex].id
+                    }
+                }
+
             viewModelScope.launch {
                 val result =
                     runCatching {
                         userDao.deleteUserById(userId)
+                        if (nextSelectedUserId != null) {
+                            userSelectionRepository.setSelectedUserId(nextSelectedUserId)
+                        }
                         Result.Success(Unit)
                     }.getOrElse { e ->
                         Result.Error(e.message ?: "Failed to delete user", e)
@@ -336,8 +377,8 @@ class UsersViewModel
                     name = user.name,
                     age = user.age.toString(),
                     gender = user.gender,
-                    height = user.height.toString(),
-                    weight = user.weight.toString(),
+                    height = heightUnit.fromMetric(user.height),
+                    weight = weightUnit.fromMetric(user.weight),
                     dominantHand = user.dominantHand,
                     color = colorLong,
                 )
@@ -362,8 +403,8 @@ class UsersViewModel
                                 name = if (user.isDefaultUser) user.name else formState.name,
                                 age = formState.age.toIntOrNull() ?: user.age,
                                 gender = formState.gender,
-                                height = formState.height.toIntOrNull() ?: user.height,
-                                weight = formState.weight.toIntOrNull() ?: user.weight,
+                                height = heightUnit.toMetricCm(formState.height, user.height),
+                                weight = weightUnit.toMetricKg(formState.weight, user.weight),
                                 dominantHand = formState.dominantHand,
                                 color = formState.colorHex,
                                 updatedAt =
@@ -451,7 +492,7 @@ class UsersViewModel
 
         fun acceptWeight() {
             val weight = _uiState.value.liveWeight ?: return
-            val formattedWeight = "%.2f".format(weight)
+            val formattedWeight = "%.2f".format(weightUnit.convertFromMetric(weight))
             when (_uiState.value.weightMeasureTarget) {
                 WeightMeasureTarget.EDIT_USER -> {
                     _editUserFormState.update { it.copy(weight = formattedWeight) }

@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -56,7 +58,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -249,6 +250,8 @@ private fun DevicesScreenContent(
 ) {
     TrackPerformance("DevicesScreen")
     val scrollState = rememberScrollState()
+    val shouldScrollContent =
+        uiState.isLoading || uiState.devices.isNotEmpty() || (!uiState.isMockMode && uiState.scanLogs.isNotEmpty())
 
     Column(
         modifier =
@@ -263,7 +266,7 @@ private fun DevicesScreenContent(
                 Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .verticalScroll(scrollState)
+                    .then(if (shouldScrollContent) Modifier.verticalScroll(scrollState) else Modifier)
                     .padding(16.dp),
         ) {
             // Title and Scan Button Row
@@ -362,18 +365,21 @@ private fun DevicesScreenContent(
 @Composable
 private fun EmptyDevicesState(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(32.dp),
         ) {
-            // Balance board illustration using text
-            Text(
-                text = "\u2696\uFE0F",
-                fontSize = 64.sp,
-                modifier = Modifier.padding(bottom = 16.dp),
+            Image(
+                painter = painterResource(id = R.drawable.wbb_top_bold),
+                contentDescription = null,
+                modifier =
+                    Modifier
+                        .width(120.dp)
+                        .height(80.dp)
+                        .padding(bottom = 16.dp),
             )
 
             Text(

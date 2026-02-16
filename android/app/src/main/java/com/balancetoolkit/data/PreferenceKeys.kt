@@ -21,6 +21,21 @@ enum class HeightUnit(
     FEET("ft"),
     ;
 
+    fun fromMetric(cm: Int): String =
+        when (this) {
+            CENTIMETERS -> cm.toString()
+            FEET -> "%.1f".format(cm / 30.48)
+        }
+
+    fun toMetricCm(
+        value: String,
+        fallback: Int = 170,
+    ): Int =
+        when (this) {
+            CENTIMETERS -> value.toDoubleOrNull()?.toInt() ?: fallback
+            FEET -> ((value.toDoubleOrNull() ?: (fallback / 30.48)) * 30.48).toInt()
+        }
+
     companion object {
         fun fromString(value: String?): HeightUnit = entries.find { it.name == value } ?: CENTIMETERS
     }
@@ -32,6 +47,27 @@ enum class WeightUnit(
     KILOGRAMS("kg"),
     POUNDS("lbs"),
     ;
+
+    fun fromMetric(kg: Int): String =
+        when (this) {
+            KILOGRAMS -> kg.toString()
+            POUNDS -> "%.0f".format(kg * 2.20462)
+        }
+
+    fun convertFromMetric(kg: Float): Float =
+        when (this) {
+            KILOGRAMS -> kg
+            POUNDS -> kg * 2.20462f
+        }
+
+    fun toMetricKg(
+        value: String,
+        fallback: Int = 70,
+    ): Int =
+        when (this) {
+            KILOGRAMS -> value.toDoubleOrNull()?.toInt() ?: fallback
+            POUNDS -> ((value.toDoubleOrNull() ?: (fallback * 2.20462)) / 2.20462).toInt()
+        }
 
     companion object {
         fun fromString(value: String?): WeightUnit = entries.find { it.name == value } ?: KILOGRAMS
