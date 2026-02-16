@@ -1,8 +1,11 @@
 package com.balancetoolkit.viewmodel
 
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.UserSelectionRepository
+import com.balancetoolkit.data.WeightUnit
 import com.balancetoolkit.data.local.dao.DeviceDao
 import com.balancetoolkit.data.local.dao.UserDao
 import com.balancetoolkit.data.local.entity.toDevice
@@ -34,9 +37,13 @@ class HomeViewModel
         private val userDao: UserDao,
         private val deviceDao: DeviceDao,
         private val userSelectionRepository: UserSelectionRepository,
+        private val sharedPreferences: SharedPreferences,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(HomeUiState())
         val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+        val weightUnit: WeightUnit
+            get() = WeightUnit.fromString(sharedPreferences.getString(PreferenceKeys.WEIGHT_UNIT, null))
 
         init {
             loadHomeData()

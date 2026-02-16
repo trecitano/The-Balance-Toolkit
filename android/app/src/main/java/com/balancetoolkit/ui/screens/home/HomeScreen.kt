@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -42,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
+import com.balancetoolkit.data.WeightUnit
 import com.balancetoolkit.data.model.User
 import com.balancetoolkit.ui.components.AppHeader
 import com.balancetoolkit.ui.theme.BackgroundGray
@@ -69,9 +71,11 @@ fun HomeScreen(
     onNavigateToSession: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val weightUnit = viewModel.weightUnit
 
     HomeScreenContent(
         uiState = uiState,
+        weightUnit = weightUnit,
         modifier = modifier,
         onNavigateToUsers = onNavigateToUsers,
         onNavigateToDevices = onNavigateToDevices,
@@ -82,6 +86,7 @@ fun HomeScreen(
 @Composable
 private fun HomeScreenContent(
     uiState: HomeUiState,
+    weightUnit: WeightUnit = WeightUnit.KILOGRAMS,
     modifier: Modifier = Modifier,
     onNavigateToUsers: () -> Unit = {},
     onNavigateToDevices: () -> Unit = {},
@@ -109,6 +114,7 @@ private fun HomeScreenContent(
             // Select User Card (first)
             SelectUserCard(
                 selectedUser = uiState.selectedUser,
+                weightUnit = weightUnit,
                 onNavigateToUsers = onNavigateToUsers,
             )
 
@@ -165,13 +171,11 @@ private fun ConnectionStatusIndicator(
                     .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Status dot
-            Box(
-                modifier =
-                    Modifier
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(statusColor),
+            Icon(
+                painter = painterResource(id = R.drawable.wbb_top_bold),
+                contentDescription = null,
+                tint = statusColor,
+                modifier = Modifier.size(32.dp),
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -185,7 +189,7 @@ private fun ConnectionStatusIndicator(
 
             Text(
                 text = stringResource(R.string.go_to_devices),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = PrimaryBlue,
             )
         }
@@ -195,6 +199,7 @@ private fun ConnectionStatusIndicator(
 @Composable
 private fun SelectUserCard(
     selectedUser: User?,
+    weightUnit: WeightUnit,
     onNavigateToUsers: () -> Unit,
 ) {
     Card(
@@ -243,12 +248,23 @@ private fun SelectUserCard(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    Text(
-                        text = selectedUser.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
+                    Column(
                         modifier = Modifier.weight(1f),
-                    )
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = selectedUser.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        Text(
+                            text =
+                                "${stringResource(R.string.age)}: ${selectedUser.age} ${stringResource(R.string.years)} • " +
+                                    "${stringResource(R.string.weight)}: ${weightUnit.fromMetric(selectedUser.weight)} ${weightUnit.label}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextGray,
+                        )
+                    }
 
                     TextButton(onClick = onNavigateToUsers) {
                         Text(
@@ -357,6 +373,7 @@ private fun HomeScreenPreviewNoUser() {
                     boardStatus = BoardSelectionStatus.NoBoardConnected,
                     isLoading = false,
                 ),
+            weightUnit = WeightUnit.KILOGRAMS,
         )
     }
 }
@@ -378,6 +395,7 @@ private fun HomeScreenPreviewWithUser() {
                     selectedBoardName = "Wii Board A",
                     isLoading = false,
                 ),
+            weightUnit = WeightUnit.KILOGRAMS,
         )
     }
 }

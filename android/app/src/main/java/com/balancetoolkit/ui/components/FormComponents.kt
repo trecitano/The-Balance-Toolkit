@@ -3,6 +3,7 @@ package com.balancetoolkit.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -178,10 +180,11 @@ fun WeightFieldWithButton(
     onValueChange: (String) -> Unit,
     onWeightButtonClick: () -> Unit,
     modifier: Modifier = Modifier,
+    label: String = stringResource(R.string.weight_kg),
 ) {
     Column(modifier = modifier) {
         Text(
-            text = stringResource(R.string.weight_kg),
+            text = label,
             style = MaterialTheme.typography.bodyMedium,
             color = TextGray,
         )
@@ -224,6 +227,7 @@ private fun ColorPickerRowInternal(
             modifier
                 .fillMaxWidth()
                 .border(1.dp, borderColor, fieldShape)
+                .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,

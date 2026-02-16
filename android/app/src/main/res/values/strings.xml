@@ -17,7 +17,7 @@
     <string name="settings">Settings</string>
 
     <!-- Home Screen -->
-    <string name="board_connected_select_board">Board connected. Select a board in Devices.</string>
+    <string name="board_connected_select_board">Board connected.\nSelect a board in Devices.</string>
     <string name="board_selected">Selected board: %1$s</string>
     <string name="board">Board</string>
     <string name="no_board_connected">No Board Connected</string>
@@ -100,7 +100,7 @@
     <string name="weight_measure">Weight Measure</string>
     <string name="live_reading">Live reading</string>
     <string name="no_board_connected_warning">No board connected. Connect a board in the Devices page.</string>
-    <string name="no_board_selected_warning">Board connected. Select a board in Devices.</string>
+    <string name="no_board_selected_warning">Board connected.\nSelect a board in Devices.</string>
     <string name="tare">Tare</string>
     <string name="accept">Accept</string>
 

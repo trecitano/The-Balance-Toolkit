@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -29,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +38,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
+import com.balancetoolkit.data.HeightUnit
+import com.balancetoolkit.data.WeightUnit
 import com.balancetoolkit.data.model.DominantHand
 import com.balancetoolkit.data.model.Gender
 import com.balancetoolkit.data.model.User
@@ -97,6 +96,8 @@ fun UserDetailsCard(
     editWeight: String,
     editDominantHand: DominantHand,
     editColor: Color,
+    heightUnit: HeightUnit,
+    weightUnit: WeightUnit,
     modifier: Modifier = Modifier,
     canDelete: Boolean = true,
     canEditName: Boolean = true,
@@ -117,6 +118,21 @@ fun UserDetailsCard(
                 isEditing = isEditing,
                 editColor = editColor,
             )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            if (isEditing) {
+                UserDetailsActionBar(
+                    onSaveClick = onSaveClick,
+                    onCancelClick = onCancelClick,
+                )
+            } else {
+                BottomActions(
+                    canDelete = canDelete,
+                    onEditClick = onEditClick,
+                    onDeleteClick = onDelete,
+                )
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -163,15 +179,15 @@ fun UserDetailsCard(
                             LabeledTextField(
                                 value = editHeight,
                                 onValueChange = onHeightChange,
-                                label = stringResource(R.string.height_cm),
+                                label = "${stringResource(R.string.height)} (${heightUnit.label})",
                                 keyboardType = KeyboardType.Number,
                                 modifier = fieldModifier,
                             )
                         } else {
                             ReadOnlyFieldWithBorder(
-                                value = user.height.toString(),
+                                value = heightUnit.fromMetric(user.height),
                                 label = stringResource(R.string.height),
-                                suffix = "cm",
+                                suffix = heightUnit.label,
                                 modifier = fieldModifier,
                             )
                         }
@@ -183,12 +199,13 @@ fun UserDetailsCard(
                         value = editWeight,
                         onValueChange = onWeightChange,
                         onWeightButtonClick = onWeightButtonClick,
+                        label = "${stringResource(R.string.weight)} (${weightUnit.label})",
                     )
                 } else {
                     ReadOnlyFieldWithBorder(
-                        value = user.weight.toString(),
+                        value = weightUnit.fromMetric(user.weight),
                         label = stringResource(R.string.weight),
-                        suffix = "kg",
+                        suffix = weightUnit.label,
                     )
                 }
             }
@@ -251,20 +268,6 @@ fun UserDetailsCard(
                 ReadOnlyColorField(color = selectedColor)
             }
 
-            if (isEditing) {
-                Spacer(modifier = Modifier.height(24.dp))
-                UserDetailsActionBar(
-                    onSaveClick = onSaveClick,
-                    onCancelClick = onCancelClick,
-                )
-            } else {
-                Spacer(modifier = Modifier.height(20.dp))
-                BottomActions(
-                    canDelete = canDelete,
-                    onEditClick = onEditClick,
-                    onDeleteClick = onDelete,
-                )
-            }
         }
     }
 }
@@ -418,34 +421,26 @@ private fun BottomActions(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(onClick = onEditClick) {
-            Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = null,
-                tint = PrimaryBlue,
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = stringResource(R.string.edit),
-                color = PrimaryBlue,
-            )
+        OutlinedButton(
+            onClick = onEditClick,
+            modifier = if (canDelete) Modifier.weight(1f) else Modifier.fillMaxWidth(),
+            shape = actionButtonShape,
+            border = BorderStroke(1.dp, BorderGray),
+        ) {
+            Text(text = stringResource(R.string.edit))
         }
 
         if (canDelete) {
-            TextButton(onClick = onDeleteClick) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    tint = ErrorRed,
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = stringResource(R.string.delete_user_action),
-                    color = ErrorRed,
-                )
+            Button(
+                onClick = onDeleteClick,
+                modifier = Modifier.weight(1f),
+                shape = actionButtonShape,
+                colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
+            ) {
+                Text(text = stringResource(R.string.delete_user_action))
             }
         }
     }

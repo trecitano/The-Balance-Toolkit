@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -53,8 +54,6 @@ import com.balancetoolkit.ui.theme.CardBackground
 import com.balancetoolkit.ui.theme.ErrorRed
 import com.balancetoolkit.ui.theme.PrimaryBlue
 import com.balancetoolkit.ui.theme.PrimaryBlueBackground
-import com.balancetoolkit.ui.theme.StatusConnected
-import com.balancetoolkit.ui.theme.TextDarkGray
 import com.balancetoolkit.ui.theme.TextGray
 
 // Pre-defined shapes for reuse
@@ -62,8 +61,9 @@ private val cardShape = RoundedCornerShape(12.dp)
 private val userCardShape = RoundedCornerShape(16.dp)
 private val selectedBorder = BorderStroke(2.dp, PrimaryBlue)
 private val unselectedBorder = BorderStroke(1.dp, BorderGray)
-private val deviceIconShape = RoundedCornerShape(8.dp)
-private val deviceIconGridShape = RoundedCornerShape(2.dp)
+private val boardConnectedColor = Color(0xFF4CAF50)
+private val boardAttentionColor = Color(0xFFF57C00)
+private val boardDisconnectedColor = Color(0xFF9E9E9E)
 
 @Composable
 fun UserCard(
@@ -189,6 +189,13 @@ fun DeviceCard(
             if (device.isSelected) selectedBorder else null
         }
 
+    val boardStatusColor =
+        when {
+            device.isSelected -> boardConnectedColor
+            device.isConnected -> boardAttentionColor
+            else -> boardDisconnectedColor
+        }
+
     Card(
         modifier =
             modifier
@@ -206,7 +213,7 @@ fun DeviceCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Device Icon
-            DeviceIcon()
+            DeviceIcon(tint = boardStatusColor)
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -261,17 +268,11 @@ fun DeviceCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        val statusColor =
-                            when {
-                                device.isSelected -> PrimaryBlue
-                                device.isConnected -> StatusConnected
-                                else -> Color(0xFFBDBDBD)
-                            }
                         Box(
                             modifier =
                                 Modifier
                                     .size(8.dp)
-                                    .background(statusColor, CircleShape),
+                                    .background(boardStatusColor, CircleShape),
                         )
                         Text(
                             text =
@@ -281,7 +282,7 @@ fun DeviceCard(
                                     else -> stringResource(R.string.disconnected)
                                 },
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (device.isSelected) PrimaryBlue else TextGray,
+                            color = if (device.isSelected) boardStatusColor else TextGray,
                         )
                     }
 
@@ -379,46 +380,14 @@ fun DeviceCard(
 }
 
 @Composable
-private fun DeviceIcon() {
-    Box(
-        modifier =
-            Modifier
-                .size(48.dp)
-                .background(PrimaryBlueBackground, deviceIconShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(16.dp)
-                            .background(PrimaryBlue, deviceIconGridShape),
-                )
-                Box(
-                    modifier =
-                        Modifier
-                            .size(16.dp)
-                            .background(PrimaryBlue, deviceIconGridShape),
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(16.dp)
-                            .background(PrimaryBlue, deviceIconGridShape),
-                )
-                Box(
-                    modifier =
-                        Modifier
-                            .size(16.dp)
-                            .background(PrimaryBlue, deviceIconGridShape),
-                )
-            }
-        }
-    }
+private fun DeviceIcon(
+    tint: Color,
+    modifier: Modifier = Modifier,
+) {
+    Icon(
+        painter = painterResource(id = R.drawable.wbb_top_bold),
+        contentDescription = null,
+        tint = tint,
+        modifier = modifier.size(32.dp),
+    )
 }

@@ -63,6 +63,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.balancetoolkit.R
+import com.balancetoolkit.data.HeightUnit
+import com.balancetoolkit.data.WeightUnit
 import com.balancetoolkit.data.model.DominantHand
 import com.balancetoolkit.data.model.Gender
 import com.balancetoolkit.data.model.User
@@ -92,10 +94,14 @@ fun UsersScreen(
     val devicesUiState by devicesViewModel.uiState.collectAsStateWithLifecycle()
 
     val boardStatus = devicesUiState.boardStatus
+    val heightUnit = viewModel.heightUnit
+    val weightUnit = viewModel.weightUnit
 
     UsersScreenContent(
         uiState = uiState,
         editFormState = editFormState,
+        heightUnit = heightUnit,
+        weightUnit = weightUnit,
         onSearchQueryChange = viewModel::onSearchQueryChange,
         onSearchResultSelected = viewModel::onSearchResultSelected,
         onAddUserClick = viewModel::showAddUserDialog,
@@ -128,14 +134,16 @@ fun UsersScreen(
             onWeightButtonClick = { viewModel.showWeightMeasureForAdd(boardStatus) },
             onDismiss = viewModel::hideAddUserDialog,
             onAddUser = viewModel::addUser,
+            heightLabel = "${stringResource(R.string.height)} (${heightUnit.label})",
+            weightLabel = "${stringResource(R.string.weight)} (${weightUnit.label})",
         )
     }
 
     if (uiState.showWeightMeasure) {
         WeightMeasureBottomSheet(
             boardStatus = boardStatus,
-            liveWeight = uiState.liveWeight,
-            weightUnit = "kg",
+            liveWeight = uiState.liveWeight?.let { weightUnit.convertFromMetric(it) },
+            weightUnit = weightUnit.label,
             onAccept = viewModel::acceptWeight,
             onTare = viewModel::tareWeight,
             onDismiss = viewModel::hideWeightMeasure,
@@ -147,6 +155,8 @@ fun UsersScreen(
 private fun UsersScreenContent(
     uiState: UsersUiState,
     editFormState: EditUserFormState,
+    heightUnit: HeightUnit,
+    weightUnit: WeightUnit,
     onSearchQueryChange: (String) -> Unit,
     onSearchResultSelected: (String) -> Unit,
     onAddUserClick: () -> Unit,
@@ -398,6 +408,8 @@ private fun UsersScreenContent(
                         editWeight = editFormState.weight,
                         editDominantHand = editFormState.dominantHand,
                         editColor = Color(editFormState.color.toInt()),
+                        heightUnit = heightUnit,
+                        weightUnit = weightUnit,
                         canDelete = !user.isDefaultUser,
                         canEditName = !user.isDefaultUser,
                     )
@@ -530,6 +542,8 @@ private fun UsersScreenPreview() {
                     selectedUserIndex = 0,
                 ),
             editFormState = EditUserFormState(),
+            heightUnit = HeightUnit.CENTIMETERS,
+            weightUnit = WeightUnit.KILOGRAMS,
             onSearchQueryChange = {},
             onSearchResultSelected = {},
             onAddUserClick = {},
