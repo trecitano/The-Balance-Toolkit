@@ -213,7 +213,7 @@ private fun SelectUserCard(
             modifier = Modifier.padding(16.dp),
         ) {
             Text(
-                text = stringResource(R.string.select_user),
+                text = stringResource(R.string.selected_user),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -243,18 +243,12 @@ private fun SelectUserCard(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = selectedUser.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            text = "${selectedUser.age} years, ${selectedUser.weight} kg",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextGray,
-                        )
-                    }
+                    Text(
+                        text = selectedUser.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                    )
 
                     TextButton(onClick = onNavigateToUsers) {
                         Text(

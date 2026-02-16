@@ -2,7 +2,6 @@ package com.balancetoolkit.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -54,9 +53,7 @@ import com.balancetoolkit.ui.theme.CardBackground
 import com.balancetoolkit.ui.theme.ErrorRed
 import com.balancetoolkit.ui.theme.PrimaryBlue
 import com.balancetoolkit.ui.theme.PrimaryBlueBackground
-import com.balancetoolkit.ui.theme.PrimaryBlueDark
 import com.balancetoolkit.ui.theme.StatusConnected
-import com.balancetoolkit.ui.theme.StatusDisconnected
 import com.balancetoolkit.ui.theme.TextDarkGray
 import com.balancetoolkit.ui.theme.TextGray
 
@@ -65,7 +62,6 @@ private val cardShape = RoundedCornerShape(12.dp)
 private val userCardShape = RoundedCornerShape(16.dp)
 private val selectedBorder = BorderStroke(2.dp, PrimaryBlue)
 private val unselectedBorder = BorderStroke(1.dp, BorderGray)
-private val statusBadgeShape = RoundedCornerShape(16.dp)
 private val deviceIconShape = RoundedCornerShape(8.dp)
 private val deviceIconGridShape = RoundedCornerShape(2.dp)
 
@@ -422,47 +418,6 @@ private fun DeviceIcon() {
                             .size(16.dp)
                             .background(PrimaryBlue, deviceIconGridShape),
                 )
-            }
-        }
-    }
-}
-
-@Composable
-fun BoardVisualization(
-    connectedBoards: List<Int>,
-    modifier: Modifier = Modifier,
-) {
-    val totalBoards = 9
-    val boardsPerRow = 3
-
-    Column(
-        modifier =
-            modifier.semantics {
-                contentDescription = "${connectedBoards.size} of $totalBoards boards connected"
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        for (row in 0 until 3) {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                for (col in 0 until boardsPerRow) {
-                    val boardIndex = row * boardsPerRow + col
-                    val isConnected = boardIndex in connectedBoards
-
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(40.dp)
-                                .background(
-                                    if (isConnected) PrimaryBlue else StatusDisconnected,
-                                    RoundedCornerShape(4.dp),
-                                ).border(
-                                    width = 1.dp,
-                                    color = if (isConnected) PrimaryBlueDark else BorderGray,
-                                    shape = RoundedCornerShape(4.dp),
-                                ),
-                    )
-                }
             }
         }
     }

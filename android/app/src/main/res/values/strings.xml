@@ -4,8 +4,6 @@
 
     <!-- General -->
     <string name="welcome">Welcome!</string>
-    <string name="cite">Cite</string>
-    <string name="source_code">Source Code</string>
     <string name="close">Close</string>
     <string name="cancel">Cancel</string>
     <string name="edit">Edit</string>
@@ -14,19 +12,16 @@
     <string name="selected_short">Sel</string>
 
     <!-- Navigation -->
-    <string name="home">Home</string>
     <string name="users">Users</string>
     <string name="devices">Devices</string>
-    <string name="session">Session</string>
     <string name="settings">Settings</string>
 
     <!-- Home Screen -->
-    <string name="board_connected">Board Connected</string>
     <string name="board_connected_select_board">Board connected. Select a board in Devices.</string>
     <string name="board_selected">Selected board: %1$s</string>
     <string name="board">Board</string>
     <string name="no_board_connected">No Board Connected</string>
-    <string name="select_user">Select User</string>
+    <string name="selected_user">Selected User</string>
     <string name="no_user_selected">No user selected</string>
     <string name="start_session">Start Session</string>
     <string name="stop_session">Stop Session</string>
@@ -37,7 +32,6 @@
     <string name="go_to_devices">Devices →</string>
 
     <!-- Users Screen -->
-    <string name="default_user_name">Default User</string>
     <string name="add_new_user">Add new user</string>
     <string name="add_user">Add User</string>
     <string name="search_placeholder">Search by name…</string>
@@ -58,8 +52,6 @@
     <string name="user_body_metrics_section">Body metrics</string>
     <string name="user_preferences_section">Preferences</string>
     <string name="delete_user_action">Delete user</string>
-    <string name="notes">Notes</string>
-    <string name="additional_notes">Additional notes…</string>
     <string name="updated_on">Updated on %1$s</string>
     <string name="user_avatar_description">Avatar for %1$s</string>
 
@@ -68,8 +60,6 @@
     <string name="stop">Stop</string>
     <string name="connected">Connected</string>
     <string name="disconnected">Disconnected</string>
-    <string name="connect">Connect</string>
-    <string name="disconnect">Disconnect</string>
     <string name="selected">Selected</string>
     <string name="deselect">Deselect</string>
     <string name="external_link">External link</string>
@@ -78,10 +68,8 @@
     <string name="host_mac_instructions">You can find it in:</string>
     <string name="host_mac_path">Settings > About Phone > Status > Bluetooth address</string>
     <string name="mac_address">MAC Address</string>
-    <string name="mac_address_placeholder">AA:BB:CC:DD:EE:FF</string>
     <string name="mac_address_invalid">Invalid MAC address format</string>
     <string name="save">Save</string>
-    <string name="edit_mac_address">Edit MAC address</string>
     <string name="host_mac_address">Host MAC Address</string>
     <string name="not_configured">Not configured</string>
     <string name="mock_mode">Mock Mode</string>
@@ -97,18 +85,8 @@
     <string name="more_options">More options</string>
 
     <!-- Session Screen -->
-    <string name="loop_info">Loop %1$d/%2$d</string>
-    <string name="stability">Stability</string>
-    <string name="play">Play</string>
-    <string name="force_kg">Force (Kg)</string>
-    <string name="left_direction">Left (%1$d)</string>
-    <string name="right_direction">Right (%1$d)</string>
-    <string name="front_direction">Front (%1$d)</string>
-    <string name="confidence_ellipse">Confidence ellipse</string>
     <string name="convex_hull">Convex hull</string>
     <string name="fft_amplitude_spectrum">FFT Amplitude Spectrum (Normalized)</string>
-    <string name="amplitude">Amplitude</string>
-    <string name="frequency_hz">Frequency (Hz)</string>
     <string name="dpsi_metrics">DPSI Metrics</string>
     <string name="cop_x_title">copX</string>
     <string name="cop_y_title">copY</string>
@@ -117,8 +95,6 @@
     <string name="back_negative_one">Back (-1)</string>
     <string name="front_positive_one">Front (1)</string>
     <string name="combined">Combined</string>
-    <string name="vcop_m">vCopM</string>
-    <string name="vcop_y">vCopY</string>
 
     <!-- Weight Measure -->
     <string name="weight_measure">Weight Measure</string>
@@ -127,9 +103,6 @@
     <string name="no_board_selected_warning">Board connected. Select a board in Devices.</string>
     <string name="tare">Tare</string>
     <string name="accept">Accept</string>
-
-    <!-- Validation -->
-    <string name="name_required_error">Name is required</string>
 
     <!-- Units -->
     <string name="units">Units</string>
@@ -140,19 +113,16 @@
     <string name="developer">Developer</string>
 
     <!-- About -->
-    <string name="about">About</string>
     <string name="cite_this_project">Cite This Project</string>
     <string name="cite_description">If you use The Balance Toolkit in your research, please cite it using the BibTeX entry below.</string>
     <string name="copy_citation">Copy Citation</string>
     <string name="citation_copied">Citation copied to clipboard</string>
-    <string name="source_code_description">View the source code on GitHub</string>
 
     <!-- Sessions Directory -->
     <string name="sessions_directory">Sessions Directory</string>
     <string name="sessions_directory_description">Configure where session data files are stored</string>
     <string name="storage_permission_required">Storage Permission Required</string>
     <string name="storage_permission_description">Tap to grant permission to write session files to the Documents folder</string>
-    <string name="directory_path">Directory path</string>
     <string name="reset_to_default">Reset to default</string>
     <string name="directory_contents">Directory Contents</string>
     <string name="no_files_found">No files found</string>

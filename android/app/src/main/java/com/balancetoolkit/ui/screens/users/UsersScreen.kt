@@ -415,16 +415,21 @@ private fun UserCarousel(
     selectedIndex: Int,
     onUserSelected: (Int) -> Unit,
 ) {
+    if (users.isEmpty()) return
+
+    val clampedSelectedIndex = selectedIndex.coerceIn(0, users.lastIndex)
+
     val pagerState =
         rememberPagerState(
-            initialPage = selectedIndex.coerceIn(0, users.size - 1),
+            initialPage = clampedSelectedIndex,
             pageCount = { users.size },
         )
 
     // Animate to selected user when selectedIndex changes (from click)
-    LaunchedEffect(selectedIndex) {
-        if (pagerState.currentPage != selectedIndex) {
-            pagerState.animateScrollToPage(selectedIndex)
+    LaunchedEffect(selectedIndex, users.size) {
+        val targetPage = selectedIndex.coerceIn(0, users.lastIndex)
+        if (pagerState.currentPage != targetPage) {
+            pagerState.animateScrollToPage(targetPage)
         }
     }
 
@@ -445,12 +450,12 @@ private fun UserCarousel(
                 pageSpacing = pageSpacing,
                 pageSize = PageSize.Fixed(pageWidth),
                 contentPadding = PaddingValues(horizontal = sidePadding),
-                key = { users[it].id },
+                key = { page -> users.getOrNull(page)?.id ?: page },
             ) { page ->
-                val user = users[page]
+                val user = users.getOrNull(page) ?: return@HorizontalPager
                 UserCard(
                     name = user.name,
-                    isSelected = page == selectedIndex,
+                    isSelected = page == clampedSelectedIndex,
                     updateDate = user.updatedAt,
                     avatarBackgroundColor = user.avatarBackgroundColor,
                     avatarIconColor = user.avatarIconColor,
@@ -464,7 +469,7 @@ private fun UserCarousel(
         // Carousel Indicators
         CarouselIndicators(
             pageCount = users.size,
-            currentPage = selectedIndex,
+            currentPage = clampedSelectedIndex,
         )
     }
 }
