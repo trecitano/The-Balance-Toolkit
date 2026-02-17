@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -40,12 +41,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -513,6 +521,34 @@ private fun SettingsNumberInputItem(
     onValueChange: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var inputValue by rememberSaveable { mutableStateOf(value.toString()) }
+    var isFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+
+    fun commitInputValue() {
+        if (inputValue.isBlank()) {
+            inputValue = value.toString()
+            return
+        }
+
+        val parsed = inputValue.toLongOrNull()
+        if (parsed == null) {
+            inputValue = value.toString()
+            return
+        }
+
+        if (parsed != value) {
+            onValueChange(parsed)
+        }
+        inputValue = parsed.toString()
+    }
+
+    LaunchedEffect(value, isFocused) {
+        if (!isFocused) {
+            inputValue = value.toString()
+        }
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = cardShape,
@@ -528,15 +564,28 @@ private fun SettingsNumberInputItem(
             )
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
-                value = value.toString(),
+                value = inputValue,
                 onValueChange = { input ->
-                    val digitsOnly = input.filter { it.isDigit() }
-                    val parsed = digitsOnly.toLongOrNull() ?: return@OutlinedTextField
-                    onValueChange(parsed)
+                    inputValue = input.filter { it.isDigit() }
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            if (isFocused && !focusState.isFocused) {
+                                commitInputValue()
+                            }
+                            isFocused = focusState.isFocused
+                        },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                keyboardActions =
+                    KeyboardActions(
+                        onDone = {
+                            commitInputValue()
+                            focusManager.clearFocus()
+                        },
+                    ),
                 trailingIcon = {
                     Text(
                         text = unitSuffix,
