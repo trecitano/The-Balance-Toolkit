@@ -153,7 +153,7 @@ private fun SessionScreenContent(
             verticalArrangement = Arrangement.spacedBy(0.dp),
         ) {
             item(key = "device_card") {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 SessionDeviceCard(
                     boardStatus = uiState.boardStatus,
                     deviceName = uiState.deviceName,
@@ -165,12 +165,14 @@ private fun SessionScreenContent(
             // Selected user info
             uiState.selectedUser?.let { user ->
                 item(key = "user_card") {
+                    Spacer(modifier = Modifier.height(8.dp))
                     SelectedUserCard(user = user, onClick = onUserClick)
                 }
             }
 
             item(key = "control_card") {
                 // Session control buttons
+                Spacer(modifier = Modifier.height(8.dp))
                 SessionControlCard(
                     boardStatus = uiState.boardStatus,
                     isRecording = uiState.isRecording,

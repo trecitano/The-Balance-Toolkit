@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.balancetoolkit.bluetooth.BalanceBoardConnectionManager
 import com.balancetoolkit.bluetooth.FullDataListener
 import com.balancetoolkit.bluetooth.SensorReading
+import com.balancetoolkit.data.InterpolationMethod
 import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.UserSelectionRepository
 import com.balancetoolkit.data.local.dao.DeviceDao
@@ -67,6 +68,13 @@ data class AmplitudeSpectrum(
     val amplitudeX: List<Float> = emptyList(),
     val amplitudeY: List<Float> = emptyList(),
     val amplitudeXY: List<Float> = emptyList(),
+)
+
+private data class SessionProcessingSettings(
+    val windowSizeMs: Long,
+    val windowSlideMs: Long,
+    val samplingRate: Long,
+    val interpolation: InterpolationMethod = InterpolationMethod.CUBIC,
 )
 
 data class SessionUiState(
@@ -167,14 +175,11 @@ class SessionViewModel
         private var activeSessionUserId: String? = null
 
         companion object {
-            // Maximum trail length to keep (10 seconds at 100Hz = 1000 points)
-            private const val MAX_TRAIL_LENGTH = 1000
-
-            // Number of samples to average for frequency calculation
-            private const val FREQUENCY_SAMPLE_COUNT = 20
-
-            // Interval for derived metrics (FFT, velocity, DPSI) - 50ms = 20 Hz
-            private const val METRICS_COMPUTE_INTERVAL_MS = 50L
+            private const val MIN_WINDOW_SIZE_MS = 100L
+            private const val MAX_WINDOW_SIZE_MS = 120_000L
+            private const val MIN_WINDOW_SLIDE_MS = 10L
+            private const val MIN_SAMPLING_RATE_HZ = 1L
+            private const val MAX_SAMPLING_RATE_HZ = 500L
         }
 
         // For frequency calculation
@@ -184,10 +189,21 @@ class SessionViewModel
         // For metrics throttling
         private var lastMetricsComputeMs: Long = 0L
 
+        // Session processing settings (snapshotted when session starts)
+        private var activeSessionProcessingSettings =
+            SessionProcessingSettings(
+                windowSizeMs = PreferenceKeys.DEFAULT_SESSION_WINDOW_SIZE_MS,
+                windowSlideMs = PreferenceKeys.DEFAULT_SESSION_WINDOW_SLIDE_MS,
+                samplingRate = PreferenceKeys.DEFAULT_SESSION_SAMPLING_RATE,
+            )
+        private var activeDpsiTrailLengthLimit = calculateMetricTrailLengthLimit(activeSessionProcessingSettings)
+        @Volatile
+        private var activeBaselineWeightKg: Float? = null
+
         // For checkbox debouncing (prevent spurious toggles)
         private var lastConvexHullToggleMs: Long = 0L
         private var lastEllipseToggleMs: Long = 0L
-        private val TOGGLE_DEBOUNCE_MS = 300L
+        private val toggleDebounceMs = 300L
 
         // Cached metrics computation results
         private var cachedVCopX = 0f
@@ -278,6 +294,65 @@ class SessionViewModel
             }
         }
 
+        private fun loadSessionProcessingSettingsSnapshot(): SessionProcessingSettings {
+            val windowSizeMs =
+                sharedPreferences.getLong(
+                    PreferenceKeys.SESSION_WINDOW_SIZE_MS,
+                    PreferenceKeys.DEFAULT_SESSION_WINDOW_SIZE_MS,
+                )
+            val windowSlideMs =
+                sharedPreferences.getLong(
+                    PreferenceKeys.SESSION_WINDOW_SLIDE_MS,
+                    PreferenceKeys.DEFAULT_SESSION_WINDOW_SLIDE_MS,
+                )
+            val samplingRate =
+                sharedPreferences.getLong(
+                    PreferenceKeys.SESSION_SAMPLING_RATE,
+                    PreferenceKeys.DEFAULT_SESSION_SAMPLING_RATE,
+                )
+            val interpolation =
+                InterpolationMethod.fromString(sharedPreferences.getString(PreferenceKeys.SESSION_INTERPOLATION, null))
+
+            return sanitizeSessionProcessingSettings(windowSizeMs, windowSlideMs, samplingRate, interpolation)
+        }
+
+        private fun sanitizeSessionProcessingSettings(
+            windowSizeMs: Long,
+            windowSlideMs: Long,
+            samplingRate: Long,
+            interpolation: InterpolationMethod = InterpolationMethod.CUBIC,
+        ): SessionProcessingSettings {
+            val sanitizedWindowSize = windowSizeMs.coerceIn(MIN_WINDOW_SIZE_MS, MAX_WINDOW_SIZE_MS)
+            val sanitizedWindowSlide = windowSlideMs.coerceIn(MIN_WINDOW_SLIDE_MS, sanitizedWindowSize)
+            val sanitizedSamplingRate = samplingRate.coerceIn(MIN_SAMPLING_RATE_HZ, MAX_SAMPLING_RATE_HZ)
+            return SessionProcessingSettings(
+                windowSizeMs = sanitizedWindowSize,
+                windowSlideMs = sanitizedWindowSlide,
+                samplingRate = sanitizedSamplingRate,
+                interpolation = interpolation,
+            )
+        }
+
+        private fun calculateMetricTrailLengthLimit(settings: SessionProcessingSettings): Int {
+            val pointsPerWindow =
+                (settings.windowSizeMs + settings.windowSlideMs - 1L) / settings.windowSlideMs
+            return maxOf(pointsPerWindow, 1L).toInt()
+        }
+
+        private fun getFrequencySampleCount(settings: SessionProcessingSettings): Int = maxOf(settings.samplingRate, 1L).toInt()
+
+        private suspend fun getBaselineWeightForUser(userId: String?): Float? {
+            if (userId == null) {
+                return null
+            }
+
+            return try {
+                userDao.getUserById(userId)?.weight?.toFloat()
+            } catch (e: Exception) {
+                null
+            }
+        }
+
         private val sensorDataListener =
             FullDataListener(
                 onData = { topLeft, topRight, bottomLeft, bottomRight ->
@@ -301,6 +376,7 @@ class SessionViewModel
 
             // Lock selected user for the duration of this recording.
             activeSessionUserId = latestSelectedUserId ?: currentUserId ?: userSelectionRepository.getSelectedUserId()
+            activeBaselineWeightKg = null
 
             // Reset frequency tracking
             lastReadingTimestampMs = 0L
@@ -319,6 +395,8 @@ class SessionViewModel
             cachedDpsiTrail = emptyList()
             cachedAmplitudeSpectrum = AmplitudeSpectrum()
             cachedConfidenceEllipse = emptyList()
+            activeSessionProcessingSettings = loadSessionProcessingSettingsSnapshot()
+            activeDpsiTrailLengthLimit = calculateMetricTrailLengthLimit(activeSessionProcessingSettings)
 
             val sessionId = SessionFileWriter.generateSessionId()
             val state = _uiState.value
@@ -329,6 +407,17 @@ class SessionViewModel
                     isRecording = true,
                     isPlaying = true,
                     copTrail = emptyList(),
+                    vCopX = 0f,
+                    vCopY = 0f,
+                    vCopXTrail = emptyList(),
+                    vCopYTrail = emptyList(),
+                    dpsiMetrics = DpsiMetrics(),
+                    mlsiTrail = emptyList(),
+                    apsiTrail = emptyList(),
+                    vsiTrail = emptyList(),
+                    dpsiTrail = emptyList(),
+                    amplitudeSpectrum = AmplitudeSpectrum(),
+                    confidenceEllipsePoints = emptyList(),
                     sessionId = sessionId,
                     sessionStartTimeMs = System.currentTimeMillis(),
                 )
@@ -359,6 +448,8 @@ class SessionViewModel
                 }
 
                 if (result.isSuccess) {
+                    activeBaselineWeightKg = getBaselineWeightForUser(activeSessionUserId)
+
                     sessionFileWriter = writer
                     val writeChannel = Channel<SensorReading>(capacity = Channel.UNLIMITED)
                     sessionWriteChannel = writeChannel
@@ -387,6 +478,7 @@ class SessionViewModel
                     val started = connectionManager.start(sensorDataListener)
                     if (!started) {
                         addLogMessage("ERROR: Failed to start board connection")
+                        activeBaselineWeightKg = null
                         writeChannel.close()
                         sessionWriteJob?.join()
                         sessionWriteJob = null
@@ -406,6 +498,7 @@ class SessionViewModel
                     }
                 } else {
                     addLogMessage("Failed to initialize file writer: ${result.exceptionOrNull()?.message}")
+                    activeBaselineWeightKg = null
                     _uiState.update { it.copy(isRecording = false, isPlaying = false, isWritingToFile = false) }
                 }
             }
@@ -467,6 +560,10 @@ class SessionViewModel
                     val configuration =
                         SessionConfiguration(
                             user = sessionUser,
+                            windowSizeMs = activeSessionProcessingSettings.windowSizeMs,
+                            windowSlideMs = activeSessionProcessingSettings.windowSlideMs,
+                            samplingRate = activeSessionProcessingSettings.samplingRate,
+                            interpolation = activeSessionProcessingSettings.interpolation.label,
                             deviceNames = mapOf(state.deviceMacAddress to state.deviceName),
                         )
 
@@ -492,6 +589,7 @@ class SessionViewModel
                 )
             }
 
+            activeBaselineWeightKg = null
             activeSessionUserId = null
             val selectedUserId = latestSelectedUserId
             if (currentUserId != selectedUserId) {
@@ -510,7 +608,7 @@ class SessionViewModel
         /**
          * Update sensor data and calculate derived values.
          * CoP and trail are updated in real-time.
-         * FFT, velocity, and DPSI metrics are throttled to 50ms intervals.
+         * FFT, velocity, and DPSI metrics use the active session processing settings.
          */
         private fun updateSensorData(
             topLeft: Float,
@@ -528,7 +626,7 @@ class SessionViewModel
                     val interval = currentTimeMs - lastReadingTimestampMs
                     if (interval > 0) {
                         recentIntervals.add(interval)
-                        if (recentIntervals.size > FREQUENCY_SAMPLE_COUNT) {
+                        if (recentIntervals.size > getFrequencySampleCount(activeSessionProcessingSettings)) {
                             recentIntervals.removeAt(0)
                         }
                         val avgInterval = recentIntervals.average()
@@ -546,35 +644,38 @@ class SessionViewModel
                 channel.trySend(reading)
             }
 
-            // Check if we should compute derived metrics (every 50ms)
-            val shouldComputeMetrics = currentTimeMs - lastMetricsComputeMs >= METRICS_COMPUTE_INTERVAL_MS
+            // Check if we should compute derived metrics (configured slide interval)
+            val shouldComputeMetrics =
+                currentTimeMs - lastMetricsComputeMs >= activeSessionProcessingSettings.windowSlideMs
 
             // Update UI state - CoP and trail are always real-time
             _uiState.update { state ->
                 // Add current position to trail (real-time)
-                val newTrail = (state.copTrail + cop).takeLast(MAX_TRAIL_LENGTH)
+                val windowStartTimestampMs = cop.timestampMs - activeSessionProcessingSettings.windowSizeMs
+                val newTrail = (state.copTrail + cop).dropWhile { it.timestampMs < windowStartTimestampMs }
 
                 // Compute derived metrics only at throttled intervals
                 if (shouldComputeMetrics) {
                     lastMetricsComputeMs = currentTimeMs
+                    val processingTrail = getProcessingTrail(newTrail, activeSessionProcessingSettings)
 
                     // Calculate velocity metrics
-                    val (vCopX, vCopY, vCopXTrail, vCopYTrail) = calculateVelocityMetrics(newTrail)
+                    val (vCopX, vCopY, vCopXTrail, vCopYTrail) = calculateVelocityMetrics(processingTrail)
                     cachedVCopX = vCopX
                     cachedVCopY = vCopY
                     cachedVCopXTrail = vCopXTrail
                     cachedVCopYTrail = vCopYTrail
 
                     // Calculate DPSI metrics
-                    val dpsiMetrics = calculateDpsiMetrics(newTrail)
+                    val dpsiMetrics = calculateDpsiMetrics(processingTrail, activeBaselineWeightKg)
                     cachedDpsiMetrics = dpsiMetrics
-                    cachedMlsiTrail = (state.mlsiTrail + dpsiMetrics.mlsi).takeLast(MAX_TRAIL_LENGTH)
-                    cachedApsiTrail = (state.apsiTrail + dpsiMetrics.apsi).takeLast(MAX_TRAIL_LENGTH)
-                    cachedVsiTrail = (state.vsiTrail + dpsiMetrics.vsi).takeLast(MAX_TRAIL_LENGTH)
-                    cachedDpsiTrail = (state.dpsiTrail + dpsiMetrics.dpsi).takeLast(MAX_TRAIL_LENGTH)
+                    cachedMlsiTrail = (state.mlsiTrail + dpsiMetrics.mlsi).takeLast(activeDpsiTrailLengthLimit)
+                    cachedApsiTrail = (state.apsiTrail + dpsiMetrics.apsi).takeLast(activeDpsiTrailLengthLimit)
+                    cachedVsiTrail = (state.vsiTrail + dpsiMetrics.vsi).takeLast(activeDpsiTrailLengthLimit)
+                    cachedDpsiTrail = (state.dpsiTrail + dpsiMetrics.dpsi).takeLast(activeDpsiTrailLengthLimit)
 
                     // Calculate FFT amplitude spectrum
-                    cachedAmplitudeSpectrum = computeFftAmplitudeSpectrum(newTrail)
+                    cachedAmplitudeSpectrum = computeFftAmplitudeSpectrum(processingTrail)
 
                     // Generate confidence ellipse (95% confidence)
                     cachedConfidenceEllipse = generateConfidenceEllipsePoints(newTrail)
@@ -611,6 +712,206 @@ class SessionViewModel
                         },
                 )
             }
+        }
+
+        private fun getProcessingTrail(
+            trail: List<CopPosition>,
+            settings: SessionProcessingSettings,
+        ): List<CopPosition> {
+            if (trail.isEmpty()) {
+                return emptyList()
+            }
+
+            val endTimestampMs = trail.last().timestampMs
+            val startTimestampMs = endTimestampMs - settings.windowSizeMs
+            val windowedTrail = trail.filter { it.timestampMs >= startTimestampMs }
+            if (windowedTrail.size < 2) {
+                return windowedTrail
+            }
+
+            val resampledTrail = resampleTrail(windowedTrail, settings.samplingRate, settings.interpolation)
+            return if (resampledTrail.size >= 2) resampledTrail else windowedTrail
+        }
+
+        private fun resampleTrail(
+            trail: List<CopPosition>,
+            samplingRateHz: Long,
+            interpolation: InterpolationMethod,
+        ): List<CopPosition> {
+            if (trail.size < 2 || samplingRateHz <= 0L) {
+                return trail
+            }
+
+            val dtMs = 1000.0 / samplingRateHz.toDouble()
+            if (dtMs <= 0.0) {
+                return trail
+            }
+
+            val startTimeMs = trail.first().timestampMs.toDouble()
+            val endTimeMs = trail.last().timestampMs.toDouble()
+            if (endTimeMs <= startTimeMs) {
+                return trail
+            }
+
+            return when (interpolation) {
+                InterpolationMethod.LINEAR -> resampleLinear(trail, dtMs, startTimeMs, endTimeMs)
+                InterpolationMethod.CUBIC -> resampleCubic(trail, dtMs, startTimeMs, endTimeMs)
+            }
+        }
+
+        private fun resampleLinear(
+            trail: List<CopPosition>,
+            dtMs: Double,
+            startTimeMs: Double,
+            endTimeMs: Double,
+        ): List<CopPosition> {
+            val resampled = mutableListOf<CopPosition>()
+            var targetTimeMs = startTimeMs
+            var segmentStartIndex = 0
+
+            while (targetTimeMs <= endTimeMs) {
+                while (
+                    segmentStartIndex + 1 < trail.size &&
+                    trail[segmentStartIndex + 1].timestampMs.toDouble() < targetTimeMs
+                ) {
+                    segmentStartIndex++
+                }
+
+                val pointA = trail[segmentStartIndex]
+                val pointB = trail[minOf(segmentStartIndex + 1, trail.lastIndex)]
+                val tA = pointA.timestampMs.toDouble()
+                val tB = pointB.timestampMs.toDouble()
+
+                val interpolationRatio =
+                    if (tB > tA) {
+                        ((targetTimeMs - tA) / (tB - tA)).toFloat().coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
+
+                resampled.add(
+                    CopPosition(
+                        x = pointA.x + (pointB.x - pointA.x) * interpolationRatio,
+                        y = pointA.y + (pointB.y - pointA.y) * interpolationRatio,
+                        z = pointA.z + (pointB.z - pointA.z) * interpolationRatio,
+                        timestampMs = targetTimeMs.toLong(),
+                    ),
+                )
+
+                targetTimeMs += dtMs
+            }
+
+            val lastPoint = trail.last()
+            if (resampled.isEmpty() || resampled.last().timestampMs < lastPoint.timestampMs) {
+                resampled.add(lastPoint)
+            }
+
+            return resampled
+        }
+
+        /**
+         * Resample using natural cubic spline interpolation.
+         * Computes separate cubic splines for x, y, and z over time.
+         */
+        private fun resampleCubic(
+            trail: List<CopPosition>,
+            dtMs: Double,
+            startTimeMs: Double,
+            endTimeMs: Double,
+        ): List<CopPosition> {
+            val n = trail.size
+            val t = DoubleArray(n) { trail[it].timestampMs.toDouble() }
+            val xVals = DoubleArray(n) { trail[it].x.toDouble() }
+            val yVals = DoubleArray(n) { trail[it].y.toDouble() }
+            val zVals = DoubleArray(n) { trail[it].z.toDouble() }
+
+            val splineX = buildNaturalCubicSpline(t, xVals)
+            val splineY = buildNaturalCubicSpline(t, yVals)
+            val splineZ = buildNaturalCubicSpline(t, zVals)
+
+            val resampled = mutableListOf<CopPosition>()
+            var targetTimeMs = startTimeMs
+
+            while (targetTimeMs <= endTimeMs) {
+                resampled.add(
+                    CopPosition(
+                        x = evaluateSpline(splineX, t, targetTimeMs).toFloat(),
+                        y = evaluateSpline(splineY, t, targetTimeMs).toFloat(),
+                        z = evaluateSpline(splineZ, t, targetTimeMs).toFloat(),
+                        timestampMs = targetTimeMs.toLong(),
+                    ),
+                )
+                targetTimeMs += dtMs
+            }
+
+            val lastPoint = trail.last()
+            if (resampled.isEmpty() || resampled.last().timestampMs < lastPoint.timestampMs) {
+                resampled.add(lastPoint)
+            }
+
+            return resampled
+        }
+
+        /**
+         * Build natural cubic spline coefficients.
+         * Returns array of [a, b, c, d] coefficients for each segment,
+         * where S_i(t) = a_i + b_i*(t - t_i) + c_i*(t - t_i)^2 + d_i*(t - t_i)^3.
+         */
+        private fun buildNaturalCubicSpline(
+            t: DoubleArray,
+            y: DoubleArray,
+        ): Array<DoubleArray> {
+            val n = t.size - 1
+            if (n < 1) return arrayOf(doubleArrayOf(y[0], 0.0, 0.0, 0.0))
+
+            val h = DoubleArray(n) { i -> t[i + 1] - t[i] }
+            // Solve for c coefficients using tridiagonal system
+            val alpha = DoubleArray(n + 1)
+            for (i in 1 until n) {
+                alpha[i] = (3.0 / h[i]) * (y[i + 1] - y[i]) - (3.0 / h[i - 1]) * (y[i] - y[i - 1])
+            }
+
+            val l = DoubleArray(n + 1)
+            val mu = DoubleArray(n + 1)
+            val z = DoubleArray(n + 1)
+            l[0] = 1.0
+
+            for (i in 1 until n) {
+                l[i] = 2.0 * (t[i + 1] - t[i - 1]) - h[i - 1] * mu[i - 1]
+                mu[i] = h[i] / l[i]
+                z[i] = (alpha[i] - h[i - 1] * z[i - 1]) / l[i]
+            }
+
+            l[n] = 1.0
+            val c = DoubleArray(n + 1)
+            val b = DoubleArray(n)
+            val d = DoubleArray(n)
+
+            for (j in n - 1 downTo 0) {
+                c[j] = z[j] - mu[j] * c[j + 1]
+                b[j] = (y[j + 1] - y[j]) / h[j] - h[j] * (c[j + 1] + 2.0 * c[j]) / 3.0
+                d[j] = (c[j + 1] - c[j]) / (3.0 * h[j])
+            }
+
+            return Array(n) { i -> doubleArrayOf(y[i], b[i], c[i], d[i]) }
+        }
+
+        private fun evaluateSpline(
+            coeffs: Array<DoubleArray>,
+            t: DoubleArray,
+            target: Double,
+        ): Double {
+            // Binary search for the correct segment
+            var lo = 0
+            var hi = coeffs.size - 1
+            while (lo < hi) {
+                val mid = (lo + hi + 1) / 2
+                if (t[mid] <= target) lo = mid else hi = mid - 1
+            }
+            val i = lo
+            val dt = target - t[i]
+            val (a, b, c, d) = coeffs[i]
+            return a + b * dt + c * dt * dt + d * dt * dt * dt
         }
 
         /**
@@ -957,14 +1258,14 @@ class SessionViewModel
 
         fun setConfidenceEllipse(show: Boolean) {
             val now = System.currentTimeMillis()
-            if (now - lastEllipseToggleMs < TOGGLE_DEBOUNCE_MS) return
+            if (now - lastEllipseToggleMs < toggleDebounceMs) return
             lastEllipseToggleMs = now
             _uiState.update { it.copy(showConfidenceEllipse = show) }
         }
 
         fun setConvexHull(show: Boolean) {
             val now = System.currentTimeMillis()
-            if (now - lastConvexHullToggleMs < TOGGLE_DEBOUNCE_MS) return
+            if (now - lastConvexHullToggleMs < toggleDebounceMs) return
             lastConvexHullToggleMs = now
             _uiState.update { it.copy(showConvexHull = show) }
         }
