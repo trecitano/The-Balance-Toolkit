@@ -1154,13 +1154,15 @@ private fun CopPlotCard(
                         val path =
                             Path().apply {
                                 val firstValue = values.first()
+                                val firstClampedValue = firstValue.coerceIn(COP_MIN, COP_MAX)
                                 // Map value from [-1, 1] to [h, 0] (inverted so +1 is at top)
-                                val firstY = ((1f - firstValue) / 2f) * h
+                                val firstY = ((1f - firstClampedValue) / 2f) * h
                                 moveTo(0f, firstY)
 
                                 values.forEachIndexed { index, value ->
                                     val x = (index.toFloat() / (values.size - 1)) * w
-                                    val y = ((1f - value) / 2f) * h
+                                    val clampedValue = value.coerceIn(COP_MIN, COP_MAX)
+                                    val y = ((1f - clampedValue) / 2f) * h
                                     lineTo(x, y)
                                 }
                             }
@@ -1173,8 +1175,9 @@ private fun CopPlotCard(
                         // Draw current position dot
                         if (copTrail.isNotEmpty()) {
                             val lastValue = values.last()
+                            val lastClampedValue = lastValue.coerceIn(COP_MIN, COP_MAX)
                             val lastX = w
-                            val lastY = ((1f - lastValue) / 2f) * h
+                            val lastY = ((1f - lastClampedValue) / 2f) * h
                             drawCircle(
                                 color = lineColor,
                                 radius = 5.dp.toPx(),

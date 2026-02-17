@@ -995,10 +995,10 @@ class SessionViewModel
             val bottomForce = reading.bottomLeft + reading.bottomRight
 
             // CoP X: normalized to [-1, 1] range
-            val copX = (rightForce - leftForce) / totalForce
+            val copX = ((rightForce - leftForce) / totalForce).coerceIn(-1f, 1f)
 
             // CoP Y: normalized to [-1, 1] range
-            val copY = (topForce - bottomForce) / totalForce
+            val copY = ((topForce - bottomForce) / totalForce).coerceIn(-1f, 1f)
 
             return CopPosition(copX, copY, totalForce)
         }
