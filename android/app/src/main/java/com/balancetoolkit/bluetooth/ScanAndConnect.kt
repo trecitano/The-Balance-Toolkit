@@ -35,7 +35,9 @@ class ScanAndConnect(
     sealed class PairingState {
         object Scanning : PairingState()
 
-        object Pairing : PairingState()
+        data class Pairing(
+            val device: BluetoothDevice,
+        ) : PairingState()
 
         data class Paired(
             val device: BluetoothDevice,
@@ -128,7 +130,7 @@ class ScanAndConnect(
 
         when (state) {
             BluetoothDevice.BOND_BONDING -> {
-                listener.onPairingStateChanged(PairingState.Pairing)
+                listener.onPairingStateChanged(PairingState.Pairing(device))
             }
 
             BluetoothDevice.BOND_BONDED -> {
