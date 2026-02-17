@@ -19,6 +19,7 @@
     <!-- Home Screen -->
     <string name="board_connected_select_board">Board connected.\nSelect a board in Devices.</string>
     <string name="board_selected">Selected board: %1$s</string>
+    <string name="board_selected_multiline">Selected board:\n%1$s</string>
     <string name="board">Board</string>
     <string name="no_board_connected">No Board Connected</string>
     <string name="selected_user">Selected User</string>
@@ -57,7 +58,7 @@
 
     <!-- Devices Screen -->
     <string name="scan">Scan</string>
-    <string name="stop">Stop</string>
+    <string name="scanning">Scanning</string>
     <string name="connected">Connected</string>
     <string name="disconnected">Disconnected</string>
     <string name="selected">Selected</string>
@@ -83,6 +84,21 @@
     <string name="bluetooth_permission_required_message">To scan for and connect to Balance Boards, this app needs Bluetooth permissions. Please enable them in Settings.</string>
     <string name="open_settings">Open Settings</string>
     <string name="more_options">More options</string>
+    <string name="done">Done</string>
+    <string name="retry">Retry</string>
+    <string name="pairing_device_name_fallback">your Balance Board</string>
+    <string name="pairing_status_searching_title">Looking for Balance Boards</string>
+    <string name="pairing_status_searching_message">Make sure your board is powered on and nearby.</string>
+    <string name="pairing_status_device_found_title">Balance Board found</string>
+    <string name="pairing_status_device_found_message">Found %1$s. Preparing pairing...</string>
+    <string name="pairing_status_pairing_title">Pairing in progress</string>
+    <string name="pairing_status_pairing_message">Pairing with %1$s.</string>
+    <string name="pairing_status_syncing_title">Synchronizing connection</string>
+    <string name="pairing_status_syncing_message">Finalizing setup for %1$s.</string>
+    <string name="pairing_status_connected_title">Connected</string>
+    <string name="pairing_status_connected_message">%1$s is ready to use.</string>
+    <string name="pairing_status_failed_title">Couldn\'t connect</string>
+    <string name="pairing_status_failed_message">Please confirm your Host MAC address is correct, then try again with your Balance Board powered on and nearby.</string>
 
     <!-- Session Screen -->
     <string name="convex_hull">Convex hull</string>

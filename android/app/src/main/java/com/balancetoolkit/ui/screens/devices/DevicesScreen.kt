@@ -10,9 +10,9 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,20 +24,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -53,7 +57,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -61,8 +64,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.balancetoolkit.R
 import com.balancetoolkit.data.model.Device
 import com.balancetoolkit.ui.components.AppHeader
@@ -75,9 +78,12 @@ import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
 import com.balancetoolkit.util.TrackPerformance
 import com.balancetoolkit.viewmodel.DevicesUiState
 import com.balancetoolkit.viewmodel.DevicesViewModel
+import com.balancetoolkit.viewmodel.PairingStage
+import com.balancetoolkit.viewmodel.PairingUiState
 
 private val scanButtonColor = Color(0xFF424242)
 private val buttonShape = RoundedCornerShape(8.dp)
+private val pairingSuccessColor = Color(0xFF2E7D32)
 
 private val bluetoothPermissions =
     arrayOf(
@@ -94,9 +100,10 @@ fun DevicesScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val bluetoothAdapter = remember {
-        (context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
-    }
+    val bluetoothAdapter =
+        remember {
+            (context.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+        }
 
     // Check if permissions are currently granted
     fun hasBluetoothPermissions(): Boolean =
@@ -106,7 +113,6 @@ fun DevicesScreen(
 
     // Track permission states
     var showSettingsDialog by remember { mutableStateOf(false) }
-    var hasLaunchedInitialRequest by remember { mutableStateOf(false) }
     var waitingForSettingsReturn by remember { mutableStateOf(false) }
 
     // Bluetooth enable launcher - prompts user to turn on Bluetooth
@@ -135,7 +141,6 @@ fun DevicesScreen(
     // Initial permission check on first composition
     LaunchedEffect(Unit) {
         if (!hasBluetoothPermissions()) {
-            hasLaunchedInitialRequest = true
             permissionLauncher.launch(bluetoothPermissions)
         }
     }
@@ -215,6 +220,16 @@ fun DevicesScreen(
         )
     }
 
+    if (uiState.pairingUiState.isVisible) {
+        PairingStatusBottomSheet(
+            pairingUiState = uiState.pairingUiState,
+            onCancel = viewModel::cancelPairingFlow,
+            onRetry = onScanWithPermissionCheck,
+            onDone = viewModel::dismissPairingSheet,
+            onDismissRequest = viewModel::onPairingSheetDismissRequested,
+        )
+    }
+
     // Handle selection toggle
     val onToggleSelection: (String) -> Unit = { deviceId ->
         val device = uiState.devices.find { it.id == deviceId }
@@ -250,8 +265,7 @@ private fun DevicesScreenContent(
 ) {
     TrackPerformance("DevicesScreen")
     val scrollState = rememberScrollState()
-    val shouldScrollContent =
-        uiState.isLoading || uiState.devices.isNotEmpty() || (!uiState.isMockMode && uiState.scanLogs.isNotEmpty())
+    val shouldScrollContent = uiState.isLoading || uiState.devices.isNotEmpty()
 
     Column(
         modifier =
@@ -299,7 +313,7 @@ private fun DevicesScreenContent(
                                 color = Color.White,
                                 strokeWidth = 2.dp,
                             )
-                            Text(stringResource(R.string.stop))
+                            Text(stringResource(R.string.scanning))
                         } else {
                             Text("⋮⋮", modifier = Modifier.padding(end = 4.dp))
                             Text(stringResource(R.string.scan))
@@ -331,12 +345,6 @@ private fun DevicesScreenContent(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-
-            // Show scan logs when scanning in real mode or when there are logs
-            if (!uiState.isMockMode && uiState.scanLogs.isNotEmpty()) {
-                ScanLogsSection(logs = uiState.scanLogs)
-                Spacer(modifier = Modifier.height(16.dp))
-            }
 
             if (uiState.isLoading) {
                 Box(
@@ -510,47 +518,161 @@ private fun DeleteDeviceConfirmDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScanLogsSection(
-    logs: List<String>,
-    modifier: Modifier = Modifier,
+private fun PairingStatusBottomSheet(
+    pairingUiState: PairingUiState,
+    onCancel: () -> Unit,
+    onRetry: () -> Unit,
+    onDone: () -> Unit,
+    onDismissRequest: () -> Unit,
 ) {
-    val listState = rememberLazyListState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val deviceName = pairingUiState.deviceName ?: stringResource(R.string.pairing_device_name_fallback)
 
-    // Auto-scroll to bottom when new logs arrive
-    LaunchedEffect(logs.size) {
-        if (logs.isNotEmpty()) {
-            listState.animateScrollToItem(logs.size - 1)
+    val title =
+        when (pairingUiState.stage) {
+            PairingStage.Idle -> stringResource(R.string.pairing_status_searching_title)
+            PairingStage.Searching -> stringResource(R.string.pairing_status_searching_title)
+            PairingStage.DeviceFound -> stringResource(R.string.pairing_status_device_found_title)
+            PairingStage.Pairing -> stringResource(R.string.pairing_status_pairing_title)
+            PairingStage.Synchronizing -> stringResource(R.string.pairing_status_syncing_title)
+            PairingStage.Connected -> stringResource(R.string.pairing_status_connected_title)
+            PairingStage.Failed -> stringResource(R.string.pairing_status_failed_title)
         }
-    }
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = "Scan Log",
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
+    val message =
+        when (pairingUiState.stage) {
+            PairingStage.Idle,
+            PairingStage.Searching,
+            -> {
+                stringResource(R.string.pairing_status_searching_message)
+            }
 
-        Box(
+            PairingStage.DeviceFound -> {
+                stringResource(R.string.pairing_status_device_found_message, deviceName)
+            }
+
+            PairingStage.Pairing -> {
+                stringResource(R.string.pairing_status_pairing_message, deviceName)
+            }
+
+            PairingStage.Synchronizing -> {
+                stringResource(R.string.pairing_status_syncing_message, deviceName)
+            }
+
+            PairingStage.Connected -> {
+                stringResource(R.string.pairing_status_connected_message, deviceName)
+            }
+
+            PairingStage.Failed -> {
+                pairingUiState.message
+                    ?: stringResource(
+                        R.string.pairing_status_failed_message,
+                    )
+            }
+        }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+    ) {
+        Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
-                    .background(
-                        color = Color(0xFF1E1E1E),
-                        shape = RoundedCornerShape(8.dp),
-                    ).padding(8.dp),
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            LazyColumn(state = listState) {
-                items(logs) { log ->
-                    Text(
-                        text = log,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
-                        color = Color(0xFF00FF00),
-                        modifier = Modifier.padding(vertical = 2.dp),
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            when (pairingUiState.stage) {
+                PairingStage.Connected -> {
+                    Icon(
+                        painter = painterResource(id = R.drawable.wbb_top_bold),
+                        contentDescription = null,
+                        tint = pairingSuccessColor,
+                        modifier = Modifier.size(52.dp),
                     )
+                }
+
+                PairingStage.Failed -> {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = ErrorRed,
+                        modifier = Modifier.size(48.dp),
+                    )
+                }
+
+                else -> {
+                    CircularProgressIndicator(
+                        color = PrimaryBlue,
+                        strokeWidth = 3.dp,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = Color.DarkGray,
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            when {
+                pairingUiState.isInProgress -> {
+                    Button(
+                        onClick = onCancel,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(text = stringResource(R.string.cancel))
+                    }
+                }
+
+                pairingUiState.stage == PairingStage.Failed -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = onDone,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Text(text = stringResource(R.string.done))
+                        }
+
+                        Button(
+                            onClick = onRetry,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Text(text = stringResource(R.string.retry))
+                        }
+                    }
+                }
+
+                else -> {
+                    Button(
+                        onClick = onDone,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(text = stringResource(R.string.done))
+                    }
                 }
             }
         }

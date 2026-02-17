@@ -5,6 +5,7 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -73,7 +74,11 @@ fun AppNavHost(
 
         composable(AppDestination.Users.route) {
             val viewModel: UsersViewModel = hiltViewModel()
-            val devicesViewModel: DevicesViewModel = hiltViewModel()
+            val sharedDevicesViewModelEntry =
+                remember {
+                    navController.getBackStackEntry(AppDestination.Home.route)
+                }
+            val devicesViewModel: DevicesViewModel = hiltViewModel(sharedDevicesViewModelEntry)
             UsersScreen(
                 viewModel = viewModel,
                 devicesViewModel = devicesViewModel,
@@ -82,7 +87,11 @@ fun AppNavHost(
         }
 
         composable(AppDestination.Devices.route) {
-            val viewModel: DevicesViewModel = hiltViewModel()
+            val sharedDevicesViewModelEntry =
+                remember {
+                    navController.getBackStackEntry(AppDestination.Home.route)
+                }
+            val viewModel: DevicesViewModel = hiltViewModel(sharedDevicesViewModelEntry)
             DevicesScreen(
                 viewModel = viewModel,
                 onNavigateToHome = {

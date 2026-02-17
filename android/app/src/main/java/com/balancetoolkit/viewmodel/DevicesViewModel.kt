@@ -26,6 +26,38 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class PairingStage {
+    Idle,
+    Searching,
+    DeviceFound,
+    Pairing,
+    Synchronizing,
+    Connected,
+    Failed,
+}
+
+data class PairingUiState(
+    val isVisible: Boolean = false,
+    val stage: PairingStage = PairingStage.Idle,
+    val deviceName: String? = null,
+    val message: String? = null,
+) {
+    val isInProgress: Boolean
+        get() =
+            when (stage) {
+                PairingStage.Searching,
+                PairingStage.DeviceFound,
+                PairingStage.Pairing,
+                PairingStage.Synchronizing,
+                -> true
+
+                PairingStage.Idle,
+                PairingStage.Connected,
+                PairingStage.Failed,
+                -> false
+            }
+}
+
 data class DevicesUiState(
     val devices: List<Device> = emptyList(),
     val connectedDevices: List<Device> = emptyList(),
@@ -40,7 +72,7 @@ data class DevicesUiState(
     val deviceToDelete: Device? = null,
     val deviceToEdit: Device? = null,
     val isMockMode: Boolean = false,
-    val scanLogs: List<String> = emptyList(),
+    val pairingUiState: PairingUiState = PairingUiState(),
 ) {
     val connectedCount: Int
         get() = devices.count { it.isConnected }
@@ -70,6 +102,7 @@ class DevicesViewModel
         val uiState: StateFlow<DevicesUiState> = _uiState.asStateFlow()
 
         private var scanJob: Job? = null
+        private var pairingCompletionJob: Job? = null
 
         private val preferenceListener =
             SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -93,6 +126,7 @@ class DevicesViewModel
 
         override fun onCleared() {
             super.onCleared()
+            pairingCompletionJob?.cancel()
             sharedPreferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
             bluetoothScanManager.cleanup()
         }
@@ -101,35 +135,123 @@ class DevicesViewModel
             viewModelScope.launch {
                 bluetoothScanManager.events.collect { event ->
                     when (event) {
+                        is ScanEvent.ScanStarted -> {
+                            updatePairingUi(stage = PairingStage.Searching, deviceName = null, message = null)
+                        }
+
+                        is ScanEvent.BalanceBoardFound -> {
+                            if (_uiState.value.pairingUiState.isVisible) {
+                                updatePairingUi(
+                                    stage = PairingStage.DeviceFound,
+                                    deviceName = event.device.name,
+                                    message = null,
+                                )
+                            }
+                        }
+
+                        is ScanEvent.PairingStarted -> {
+                            if (_uiState.value.pairingUiState.isVisible) {
+                                updatePairingUi(
+                                    stage = PairingStage.Pairing,
+                                    deviceName = event.device.name,
+                                    message = null,
+                                )
+                            }
+                        }
+
                         is ScanEvent.PairingSucceeded -> {
+                            cancelPairingCompletion()
+                            if (
+                                _uiState.value.pairingUiState.isVisible &&
+                                _uiState.value.pairingUiState.stage != PairingStage.Connected
+                            ) {
+                                updatePairingUi(
+                                    stage = PairingStage.Synchronizing,
+                                    deviceName = event.device.name,
+                                    message = null,
+                                )
+                            }
+
                             val macAddress = event.device.address
                             val existing = deviceDao.getDeviceByMacAddress(macAddress)
+                            deviceDao.clearAllSelections()
                             if (existing != null) {
                                 deviceDao.updateConnectionStatus(existing.id, true)
+                                deviceDao.updateSelectionStatus(existing.id, true)
                             } else {
                                 val device =
                                     Device(
                                         name = event.device.name ?: "Balance Board",
                                         macAddress = macAddress,
                                         isConnected = true,
+                                        isSelected = true,
                                     )
                                 deviceDao.insertDevice(device.toEntity())
                             }
+
+                            if (
+                                _uiState.value.pairingUiState.isVisible &&
+                                _uiState.value.pairingUiState.stage == PairingStage.Synchronizing
+                            ) {
+                                schedulePairingCompletionFallback(event.device.name)
+                            }
+                        }
+
+                        is ScanEvent.DeviceConnected -> {
+                            cancelPairingCompletion()
+                            if (_uiState.value.pairingUiState.isVisible) {
+                                updatePairingUi(
+                                    stage = PairingStage.Connected,
+                                    deviceName = event.device.name,
+                                    message = null,
+                                )
+                            }
+                        }
+
+                        is ScanEvent.DeviceDisconnected -> {
+                            // No UI pairing transition needed.
+                        }
+
+                        is ScanEvent.DeviceFound -> {
+                            // Device-level discovery updates are not shown in the user UI.
                         }
 
                         is ScanEvent.Error -> {
                             _uiState.update { it.copy(error = event.message) }
+                            if (_uiState.value.pairingUiState.isVisible) {
+                                val shouldShowMacAddressHint =
+                                    _uiState.value.pairingUiState.stage == PairingStage.DeviceFound ||
+                                        _uiState.value.pairingUiState.stage == PairingStage.Pairing ||
+                                        _uiState.value.pairingUiState.stage == PairingStage.Synchronizing
+
+                                updatePairingUi(
+                                    stage = PairingStage.Failed,
+                                    deviceName = _uiState.value.pairingUiState.deviceName,
+                                    message = if (shouldShowMacAddressHint) null else event.message,
+                                )
+                            }
+                            if (_uiState.value.isScanning) {
+                                stopScanning()
+                            }
                         }
 
                         is ScanEvent.PairingFailed -> {
+                            cancelPairingCompletion()
                             _uiState.update { it.copy(error = "Pairing failed: ${event.reason}") }
+                            if (_uiState.value.pairingUiState.isVisible) {
+                                updatePairingUi(
+                                    stage = PairingStage.Failed,
+                                    deviceName = _uiState.value.pairingUiState.deviceName,
+                                    message = null,
+                                )
+                            }
+                            stopScanning()
                         }
 
-                        is ScanEvent.Log -> {
-                            _uiState.update { it.copy(scanLogs = it.scanLogs + event.message) }
+                        is ScanEvent.ScanStopped -> {
+                            cancelPairingCompletion()
                         }
 
-                        else -> { /* Other events not handled in UI */ }
                     }
                 }
             }
@@ -206,7 +328,25 @@ class DevicesViewModel
         private fun stopScanning() {
             scanJob?.cancel()
             scanJob = null
+            cancelPairingCompletion()
             bluetoothScanManager.stopScanning()
+        }
+
+        fun onPairingSheetDismissRequested() {
+            if (_uiState.value.pairingUiState.isInProgress) {
+                stopScanning()
+            }
+            dismissPairingSheet()
+        }
+
+        fun cancelPairingFlow() {
+            stopScanning()
+            dismissPairingSheet()
+        }
+
+        fun dismissPairingSheet() {
+            cancelPairingCompletion()
+            _uiState.update { it.copy(pairingUiState = PairingUiState()) }
         }
 
         private fun loadDevices() {
@@ -244,7 +384,21 @@ class DevicesViewModel
         @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT])
         fun scanForDevices() {
             scanJob?.cancel()
-            _uiState.update { it.copy(scanLogs = emptyList()) }
+            cancelPairingCompletion()
+            _uiState.update {
+                it.copy(
+                    error = null,
+                    pairingUiState =
+                        if (it.isMockMode) {
+                            PairingUiState()
+                        } else {
+                            PairingUiState(
+                                isVisible = true,
+                                stage = PairingStage.Searching,
+                            )
+                        },
+                )
+            }
             scanJob =
                 viewModelScope.launch {
                     if (_uiState.value.isMockMode) {
@@ -252,7 +406,7 @@ class DevicesViewModel
                         _uiState.update { it.copy(isScanning = true) }
                         delay(500) // Brief delay to show scanning state
                         deviceDao.syncMockBoards(mockModeEnabled = true)
-                        _uiState.update { it.copy(isScanning = false) }
+                        _uiState.update { it.copy(isScanning = false, pairingUiState = PairingUiState()) }
                         scanJob = null
                         return@launch
                     }
@@ -263,6 +417,51 @@ class DevicesViewModel
                         scanJob = null
                     }
                 }
+        }
+
+        private fun updatePairingUi(
+            stage: PairingStage,
+            deviceName: String?,
+            message: String?,
+        ) {
+            _uiState.update { state ->
+                state.copy(
+                    pairingUiState =
+                        state.pairingUiState.copy(
+                            isVisible = true,
+                            stage = stage,
+                            deviceName = deviceName ?: state.pairingUiState.deviceName,
+                            message = message,
+                        ),
+                )
+            }
+        }
+
+        private fun schedulePairingCompletionFallback(deviceName: String?) {
+            cancelPairingCompletion()
+            pairingCompletionJob =
+                viewModelScope.launch {
+                    delay(1500)
+                    _uiState.update { state ->
+                        if (state.pairingUiState.stage == PairingStage.Synchronizing) {
+                            state.copy(
+                                pairingUiState =
+                                    state.pairingUiState.copy(
+                                        stage = PairingStage.Connected,
+                                        deviceName = deviceName ?: state.pairingUiState.deviceName,
+                                        message = null,
+                                    ),
+                            )
+                        } else {
+                            state
+                        }
+                    }
+                }
+        }
+
+        private fun cancelPairingCompletion() {
+            pairingCompletionJob?.cancel()
+            pairingCompletionJob = null
         }
 
         fun selectDevice(deviceId: String) {

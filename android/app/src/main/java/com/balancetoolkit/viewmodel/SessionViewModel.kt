@@ -174,6 +174,13 @@ class SessionViewModel
         private var latestSelectedUserId: String? = null
         private var activeSessionUserId: String? = null
 
+        private val preferenceListener =
+            SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                if (key == PreferenceKeys.MOCK_MODE_ENABLED) {
+                    syncMockModeFromPreferences()
+                }
+            }
+
         companion object {
             private const val MIN_WINDOW_SIZE_MS = 100L
             private const val MAX_WINDOW_SIZE_MS = 120_000L
@@ -219,13 +226,17 @@ class SessionViewModel
         private var cachedConfidenceEllipse = emptyList<Pair<Float, Float>>()
 
         init {
-            // Load mock mode setting
-            val isMockMode = sharedPreferences.getBoolean(PreferenceKeys.MOCK_MODE_ENABLED, false)
-            _uiState.update { it.copy(isMockMode = isMockMode) }
+            syncMockModeFromPreferences()
+            sharedPreferences.registerOnSharedPreferenceChangeListener(preferenceListener)
             // Observe selected user
             observeSelectedUser()
             // Observe connected devices
             observeConnectedDevices()
+        }
+
+        private fun syncMockModeFromPreferences() {
+            val isMockMode = sharedPreferences.getBoolean(PreferenceKeys.MOCK_MODE_ENABLED, false)
+            _uiState.update { it.copy(isMockMode = isMockMode) }
         }
 
         private fun observeSelectedUser() {
@@ -1320,6 +1331,7 @@ class SessionViewModel
 
         override fun onCleared() {
             super.onCleared()
+            sharedPreferences.unregisterOnSharedPreferenceChangeListener(preferenceListener)
             stopSession()
         }
 

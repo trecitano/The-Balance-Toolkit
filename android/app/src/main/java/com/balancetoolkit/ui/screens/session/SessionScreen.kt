@@ -299,7 +299,8 @@ private fun SessionDeviceCard(
         when (boardStatus) {
             BoardSelectionStatus.NoBoardConnected -> stringResource(R.string.no_board_connected)
             BoardSelectionStatus.BoardConnectedNotSelected -> stringResource(R.string.board_connected_select_board)
-            BoardSelectionStatus.BoardSelected -> stringResource(R.string.board_selected, deviceName.ifBlank { stringResource(R.string.board) })
+            BoardSelectionStatus.BoardSelected ->
+                stringResource(R.string.board_selected_multiline, deviceName.ifBlank { stringResource(R.string.board) })
         }
     val statusColor =
         when (boardStatus) {

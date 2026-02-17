@@ -25,6 +25,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 sealed class ScanEvent {
+    object ScanStarted : ScanEvent()
+
+    object ScanStopped : ScanEvent()
+
     data class DeviceFound(
         val name: String,
         val address: String,
@@ -38,15 +42,23 @@ sealed class ScanEvent {
         val device: BluetoothDevice,
     ) : ScanEvent()
 
+    data class PairingStarted(
+        val device: BluetoothDevice,
+    ) : ScanEvent()
+
+    data class DeviceConnected(
+        val device: BluetoothDevice,
+    ) : ScanEvent()
+
+    data class DeviceDisconnected(
+        val device: BluetoothDevice,
+    ) : ScanEvent()
+
     data class PairingFailed(
         val reason: String,
     ) : ScanEvent()
 
     data class Error(
-        val message: String,
-    ) : ScanEvent()
-
-    data class Log(
         val message: String,
     ) : ScanEvent()
 }
@@ -114,11 +126,13 @@ class BluetoothScanManager
             // Start discovery
             scanAndConnect?.startScanning()
             _isScanning.value = true
+            _events.tryEmit(ScanEvent.ScanStarted)
 
             return true
         }
 
         fun stopScanning() {
+            val wasScanning = _isScanning.value
             try {
                 bluetoothAdapter?.cancelDiscovery()
             } catch (e: SecurityException) {
@@ -126,6 +140,9 @@ class BluetoothScanManager
             }
             unregisterReceiver()
             _isScanning.value = false
+            if (wasScanning) {
+                _events.tryEmit(ScanEvent.ScanStopped)
+            }
         }
 
         private fun unregisterReceiver() {
@@ -160,7 +177,7 @@ class BluetoothScanManager
                 }
 
                 is ScanAndConnect.PairingState.Pairing -> {
-                    _events.tryEmit(ScanEvent.Log("Pairing in progress..."))
+                    _events.tryEmit(ScanEvent.PairingStarted(state.device))
                 }
 
                 is ScanAndConnect.PairingState.Paired -> {
@@ -176,12 +193,12 @@ class BluetoothScanManager
 
         override fun onDeviceConnected(device: BluetoothDevice) {
             updateDeviceConnectionStatus(device.address, isConnected = true)
-            _events.tryEmit(ScanEvent.Log("Device connected: ${device.address}"))
+            _events.tryEmit(ScanEvent.DeviceConnected(device))
         }
 
         override fun onDeviceDisconnected(device: BluetoothDevice) {
             updateDeviceConnectionStatus(device.address, isConnected = false)
-            _events.tryEmit(ScanEvent.Log("Device disconnected: ${device.address}"))
+            _events.tryEmit(ScanEvent.DeviceDisconnected(device))
         }
 
         override fun onError(message: String) {
@@ -190,7 +207,6 @@ class BluetoothScanManager
 
         override fun onLog(message: String) {
             Log.d(TAG, message)
-            _events.tryEmit(ScanEvent.Log(message))
         }
 
         private fun stopScanningInternal() {
