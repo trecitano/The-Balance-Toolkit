@@ -109,8 +109,15 @@
     <string name="height_unit">Height Unit</string>
     <string name="weight_unit">Weight Unit</string>
 
+    <!-- Session Processing -->
+    <string name="session_processing">Session Processing</string>
+    <string name="window_size_ms">Window Size</string>
+    <string name="window_slide_ms">Window Slide</string>
+    <string name="sampling_rate_hz">Sampling Rate</string>
+    <string name="interpolation">Interpolation</string>
+
     <!-- Developer -->
-    <string name="developer">Developer</string>
+    <string name="developer">Advanced</string>
 
     <!-- About -->
     <string name="cite_this_project">Cite This Project</string>

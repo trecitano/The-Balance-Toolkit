@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -30,6 +31,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -44,6 +46,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -52,6 +55,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.balancetoolkit.R
 import com.balancetoolkit.data.HeightUnit
+import com.balancetoolkit.data.InterpolationMethod
 import com.balancetoolkit.data.WeightUnit
 import com.balancetoolkit.ui.components.AppHeader
 import com.balancetoolkit.ui.components.CiteBottomSheet
@@ -203,6 +207,10 @@ fun SettingsScreen(
         },
         onHeightUnitChanged = viewModel::setHeightUnit,
         onWeightUnitChanged = viewModel::setWeightUnit,
+        onSessionWindowSizeMsChanged = viewModel::setSessionWindowSizeMs,
+        onSessionWindowSlideMsChanged = viewModel::setSessionWindowSlideMs,
+        onSessionSamplingRateChanged = viewModel::setSessionSamplingRate,
+        onSessionInterpolationChanged = viewModel::setSessionInterpolation,
         onCiteClick = viewModel::showCiteBottomSheet,
         onSourceCodeClick = {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com"))
@@ -221,6 +229,10 @@ private fun SettingsScreenContent(
     onRequestStoragePermission: () -> Unit,
     onHeightUnitChanged: (HeightUnit) -> Unit,
     onWeightUnitChanged: (WeightUnit) -> Unit,
+    onSessionWindowSizeMsChanged: (Long) -> Unit,
+    onSessionWindowSlideMsChanged: (Long) -> Unit,
+    onSessionSamplingRateChanged: (Long) -> Unit,
+    onSessionInterpolationChanged: (InterpolationMethod) -> Unit,
     onCiteClick: () -> Unit,
     onSourceCodeClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -304,6 +316,53 @@ private fun SettingsScreenContent(
                 options = WeightUnit.entries.map { it.label },
                 selectedIndex = WeightUnit.entries.indexOf(uiState.weightUnit),
                 onSelectionChanged = { index -> onWeightUnitChanged(WeightUnit.entries[index]) },
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Session Processing Section
+            Text(
+                text = stringResource(R.string.session_processing),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = TextGray,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            SettingsNumberInputItem(
+                title = stringResource(R.string.window_size_ms),
+                value = uiState.sessionWindowSizeMs,
+                unitSuffix = "ms",
+                onValueChange = onSessionWindowSizeMsChanged,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            SettingsNumberInputItem(
+                title = stringResource(R.string.window_slide_ms),
+                value = uiState.sessionWindowSlideMs,
+                unitSuffix = "ms",
+                onValueChange = onSessionWindowSlideMsChanged,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            SettingsNumberInputItem(
+                title = stringResource(R.string.sampling_rate_hz),
+                value = uiState.sessionSamplingRate,
+                unitSuffix = "Hz",
+                onValueChange = onSessionSamplingRateChanged,
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Interpolation Setting
+            SettingsSegmentedItem(
+                title = stringResource(R.string.interpolation),
+                options = InterpolationMethod.entries.map { it.label },
+                selectedIndex = InterpolationMethod.entries.indexOf(uiState.sessionInterpolation),
+                onSelectionChanged = { index -> onSessionInterpolationChanged(InterpolationMethod.entries[index]) },
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -441,6 +500,50 @@ private fun SettingsToggleItem(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsNumberInputItem(
+    title: String,
+    value: Long,
+    unitSuffix: String,
+    onValueChange: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = cardShape,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = value.toString(),
+                onValueChange = { input ->
+                    val digitsOnly = input.filter { it.isDigit() }
+                    val parsed = digitsOnly.toLongOrNull() ?: return@OutlinedTextField
+                    onValueChange(parsed)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                trailingIcon = {
+                    Text(
+                        text = unitSuffix,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGray,
+                    )
+                },
             )
         }
     }
@@ -599,6 +702,10 @@ private fun SettingsScreenPreview() {
             onRequestStoragePermission = {},
             onHeightUnitChanged = {},
             onWeightUnitChanged = {},
+            onSessionWindowSizeMsChanged = {},
+            onSessionWindowSlideMsChanged = {},
+            onSessionSamplingRateChanged = {},
+            onSessionInterpolationChanged = {},
             onCiteClick = {},
             onSourceCodeClick = {},
         )
@@ -620,6 +727,10 @@ private fun SettingsScreenNoMacPreview() {
             onRequestStoragePermission = {},
             onHeightUnitChanged = {},
             onWeightUnitChanged = {},
+            onSessionWindowSizeMsChanged = {},
+            onSessionWindowSlideMsChanged = {},
+            onSessionSamplingRateChanged = {},
+            onSessionInterpolationChanged = {},
             onCiteClick = {},
             onSourceCodeClick = {},
         )

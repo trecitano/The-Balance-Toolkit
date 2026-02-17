@@ -12,6 +12,14 @@ object PreferenceKeys {
     const val SESSIONS_DIRECTORY = "sessions_directory"
     const val HEIGHT_UNIT = "height_unit"
     const val WEIGHT_UNIT = "weight_unit"
+    const val SESSION_WINDOW_SIZE_MS = "session_window_size_ms"
+    const val SESSION_WINDOW_SLIDE_MS = "session_window_slide_ms"
+    const val SESSION_SAMPLING_RATE = "session_sampling_rate"
+    const val SESSION_INTERPOLATION = "session_interpolation"
+
+    const val DEFAULT_SESSION_WINDOW_SIZE_MS = 5000L
+    const val DEFAULT_SESSION_WINDOW_SLIDE_MS = 100L
+    const val DEFAULT_SESSION_SAMPLING_RATE = 100L
 }
 
 enum class HeightUnit(
@@ -77,6 +85,18 @@ enum class WeightUnit(
 /**
  * Mock device IDs for testing mode.
  */
+enum class InterpolationMethod(
+    val label: String,
+) {
+    LINEAR("Linear"),
+    CUBIC("Cubic"),
+    ;
+
+    companion object {
+        fun fromString(value: String?): InterpolationMethod = entries.find { it.name == value } ?: CUBIC
+    }
+}
+
 object MockDeviceIds {
     const val MOCK_BOARD_1 = "mock-board-1"
     const val MOCK_BOARD_2 = "mock-board-2"

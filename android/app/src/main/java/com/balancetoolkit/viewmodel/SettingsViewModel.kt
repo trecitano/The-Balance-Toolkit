@@ -6,6 +6,7 @@ import android.os.Environment
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.balancetoolkit.data.HeightUnit
+import com.balancetoolkit.data.InterpolationMethod
 import com.balancetoolkit.data.PreferenceKeys
 import com.balancetoolkit.data.WeightUnit
 import com.balancetoolkit.data.local.dao.DeviceDao
@@ -30,6 +31,10 @@ data class SettingsUiState(
     val hasStoragePermission: Boolean = false,
     val heightUnit: HeightUnit = HeightUnit.CENTIMETERS,
     val weightUnit: WeightUnit = WeightUnit.KILOGRAMS,
+    val sessionWindowSizeMs: Long = PreferenceKeys.DEFAULT_SESSION_WINDOW_SIZE_MS,
+    val sessionWindowSlideMs: Long = PreferenceKeys.DEFAULT_SESSION_WINDOW_SLIDE_MS,
+    val sessionSamplingRate: Long = PreferenceKeys.DEFAULT_SESSION_SAMPLING_RATE,
+    val sessionInterpolation: InterpolationMethod = InterpolationMethod.CUBIC,
     val appExternalFilesPath: String = "",
 ) {
     val isHostMacConfigured: Boolean
@@ -50,6 +55,14 @@ class SettingsViewModel
         private val deviceDao: DeviceDao,
         @param:ApplicationContext private val context: Context,
     ) : ViewModel() {
+        companion object {
+            private const val MIN_WINDOW_SIZE_MS = 100L
+            private const val MAX_WINDOW_SIZE_MS = 120_000L
+            private const val MIN_WINDOW_SLIDE_MS = 10L
+            private const val MIN_SAMPLING_RATE_HZ = 1L
+            private const val MAX_SAMPLING_RATE_HZ = 500L
+        }
+
         private val _uiState = MutableStateFlow(SettingsUiState())
         val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
@@ -66,7 +79,40 @@ class SettingsViewModel
             val hasStoragePermission = Environment.isExternalStorageManager()
             val heightUnit = HeightUnit.fromString(sharedPreferences.getString(PreferenceKeys.HEIGHT_UNIT, null))
             val weightUnit = WeightUnit.fromString(sharedPreferences.getString(PreferenceKeys.WEIGHT_UNIT, null))
+            val rawWindowSizeMs =
+                sharedPreferences.getLong(
+                    PreferenceKeys.SESSION_WINDOW_SIZE_MS,
+                    PreferenceKeys.DEFAULT_SESSION_WINDOW_SIZE_MS,
+                )
+            val rawWindowSlideMs =
+                sharedPreferences.getLong(
+                    PreferenceKeys.SESSION_WINDOW_SLIDE_MS,
+                    PreferenceKeys.DEFAULT_SESSION_WINDOW_SLIDE_MS,
+                )
+            val rawSamplingRate =
+                sharedPreferences.getLong(
+                    PreferenceKeys.SESSION_SAMPLING_RATE,
+                    PreferenceKeys.DEFAULT_SESSION_SAMPLING_RATE,
+                )
+            val interpolation =
+                InterpolationMethod.fromString(sharedPreferences.getString(PreferenceKeys.SESSION_INTERPOLATION, null))
+            val (windowSizeMs, windowSlideMs, samplingRate) =
+                sanitizeProcessingSettings(rawWindowSizeMs, rawWindowSlideMs, rawSamplingRate)
             val appExternalFilesPath = context.getExternalFilesDir(null)?.absolutePath ?: ""
+
+            if (
+                rawWindowSizeMs != windowSizeMs ||
+                rawWindowSlideMs != windowSlideMs ||
+                rawSamplingRate != samplingRate
+            ) {
+                sharedPreferences
+                    .edit()
+                    .putLong(PreferenceKeys.SESSION_WINDOW_SIZE_MS, windowSizeMs)
+                    .putLong(PreferenceKeys.SESSION_WINDOW_SLIDE_MS, windowSlideMs)
+                    .putLong(PreferenceKeys.SESSION_SAMPLING_RATE, samplingRate)
+                    .apply()
+            }
+
             _uiState.update {
                 it.copy(
                     hostMacAddress = savedMac,
@@ -75,7 +121,47 @@ class SettingsViewModel
                     hasStoragePermission = hasStoragePermission,
                     heightUnit = heightUnit,
                     weightUnit = weightUnit,
+                    sessionWindowSizeMs = windowSizeMs,
+                    sessionWindowSlideMs = windowSlideMs,
+                    sessionSamplingRate = samplingRate,
+                    sessionInterpolation = interpolation,
                     appExternalFilesPath = appExternalFilesPath,
+                )
+            }
+        }
+
+        private fun sanitizeProcessingSettings(
+            windowSizeMs: Long,
+            windowSlideMs: Long,
+            samplingRate: Long,
+        ): Triple<Long, Long, Long> {
+            val sanitizedWindowSizeMs = windowSizeMs.coerceIn(MIN_WINDOW_SIZE_MS, MAX_WINDOW_SIZE_MS)
+            val sanitizedWindowSlideMs =
+                windowSlideMs.coerceIn(
+                    MIN_WINDOW_SLIDE_MS,
+                    sanitizedWindowSizeMs,
+                )
+            val sanitizedSamplingRate = samplingRate.coerceIn(MIN_SAMPLING_RATE_HZ, MAX_SAMPLING_RATE_HZ)
+            return Triple(sanitizedWindowSizeMs, sanitizedWindowSlideMs, sanitizedSamplingRate)
+        }
+
+        private fun persistSessionProcessingSettings(
+            windowSizeMs: Long,
+            windowSlideMs: Long,
+            samplingRate: Long,
+        ) {
+            sharedPreferences
+                .edit()
+                .putLong(PreferenceKeys.SESSION_WINDOW_SIZE_MS, windowSizeMs)
+                .putLong(PreferenceKeys.SESSION_WINDOW_SLIDE_MS, windowSlideMs)
+                .putLong(PreferenceKeys.SESSION_SAMPLING_RATE, samplingRate)
+                .apply()
+
+            _uiState.update {
+                it.copy(
+                    sessionWindowSizeMs = windowSizeMs,
+                    sessionWindowSlideMs = windowSlideMs,
+                    sessionSamplingRate = samplingRate,
                 )
             }
         }
@@ -151,5 +237,43 @@ class SettingsViewModel
         fun setWeightUnit(unit: WeightUnit) {
             sharedPreferences.edit().putString(PreferenceKeys.WEIGHT_UNIT, unit.name).apply()
             _uiState.update { it.copy(weightUnit = unit) }
+        }
+
+        fun setSessionInterpolation(method: InterpolationMethod) {
+            sharedPreferences.edit().putString(PreferenceKeys.SESSION_INTERPOLATION, method.name).apply()
+            _uiState.update { it.copy(sessionInterpolation = method) }
+        }
+
+        fun setSessionWindowSizeMs(windowSizeMs: Long) {
+            val currentState = _uiState.value
+            val (sanitizedWindowSizeMs, sanitizedWindowSlideMs, sanitizedSamplingRate) =
+                sanitizeProcessingSettings(
+                    windowSizeMs = windowSizeMs,
+                    windowSlideMs = currentState.sessionWindowSlideMs,
+                    samplingRate = currentState.sessionSamplingRate,
+                )
+            persistSessionProcessingSettings(sanitizedWindowSizeMs, sanitizedWindowSlideMs, sanitizedSamplingRate)
+        }
+
+        fun setSessionWindowSlideMs(windowSlideMs: Long) {
+            val currentState = _uiState.value
+            val (sanitizedWindowSizeMs, sanitizedWindowSlideMs, sanitizedSamplingRate) =
+                sanitizeProcessingSettings(
+                    windowSizeMs = currentState.sessionWindowSizeMs,
+                    windowSlideMs = windowSlideMs,
+                    samplingRate = currentState.sessionSamplingRate,
+                )
+            persistSessionProcessingSettings(sanitizedWindowSizeMs, sanitizedWindowSlideMs, sanitizedSamplingRate)
+        }
+
+        fun setSessionSamplingRate(samplingRate: Long) {
+            val currentState = _uiState.value
+            val (sanitizedWindowSizeMs, sanitizedWindowSlideMs, sanitizedSamplingRate) =
+                sanitizeProcessingSettings(
+                    windowSizeMs = currentState.sessionWindowSizeMs,
+                    windowSlideMs = currentState.sessionWindowSlideMs,
+                    samplingRate = samplingRate,
+                )
+            persistSessionProcessingSettings(sanitizedWindowSizeMs, sanitizedWindowSlideMs, sanitizedSamplingRate)
         }
     }
