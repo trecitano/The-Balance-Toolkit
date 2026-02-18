@@ -62,13 +62,36 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
     const ro = new ResizeObserver(() => {
       const dpr = Math.max(1, window.devicePixelRatio || 1);
 
-      const w = Math.round(image.clientWidth);
-      const h = Math.round(image.clientHeight);
+      // Calculate actual rendered image size (accounts for object-contain)
+      const { naturalWidth, naturalHeight, clientWidth, clientHeight } = image;
+      if (naturalWidth === 0 || naturalHeight === 0 || clientWidth === 0 || clientHeight === 0) return;
 
-      if (w === 0 || h === 0) return;
+      const naturalRatio = naturalWidth / naturalHeight;
+      const clientRatio = clientWidth / clientHeight;
+
+      let w: number, h: number, offsetX: number, offsetY: number;
+
+      if (naturalRatio > clientRatio) {
+        // Image is wider than container - letterboxed top/bottom
+        w = clientWidth;
+        h = clientWidth / naturalRatio;
+        offsetX = 0;
+        offsetY = (clientHeight - h) / 2;
+      } else {
+        // Image is taller than container - letterboxed left/right
+        h = clientHeight;
+        w = clientHeight * naturalRatio;
+        offsetX = (clientWidth - w) / 2;
+        offsetY = 0;
+      }
+
+      w = Math.round(w);
+      h = Math.round(h);
 
       canvas.style.width = `${w}px`;
       canvas.style.height = `${h}px`;
+      canvas.style.left = `${offsetX}px`;
+      canvas.style.top = `${offsetY}px`;
       canvas.width = Math.max(1, Math.floor(w * dpr));
       canvas.height = Math.max(1, Math.floor(h * dpr));
 
@@ -143,7 +166,7 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
           draggable={false}
           onLoad={scheduleDraw}
         />
-        <canvas className="pointer-events-none absolute inset-0" ref={canvasRef} />
+        <canvas className="pointer-events-none absolute" ref={canvasRef} />
       </div>
 
       {/* Controls + Stability Index */}
