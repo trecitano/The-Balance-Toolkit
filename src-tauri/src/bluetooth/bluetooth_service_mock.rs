@@ -6,7 +6,7 @@ use crate::{NINTENDO_BOARD_ID, utils};
 use anyhow::Result;
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
-use rand::Rng;
+use rand::RngExt;
 use std::string::ToString;
 use std::sync::Mutex;
 use std::time::Duration;

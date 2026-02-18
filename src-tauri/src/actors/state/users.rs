@@ -1,9 +1,9 @@
 use crate::file_system::UserFileSystem;
 use crate::types::User;
 use anyhow::Result;
-use chrono::{DateTime, Utc};
-use rand::Rng;
+use chrono::Utc;
 use std::sync::Arc;
+use rand::RngExt;
 
 pub struct UserState {
     users: Vec<Arc<User>>,
@@ -57,7 +57,7 @@ impl UserState {
             weight: None,
             weight_metric: Some("kg".to_string()),
             dominant_hand: None,
-            color: Some(format!("#{:06x}", rand::rng().gen_range(0..=0xFFFFFF))),
+            color: Some(format!("#{:06x}", rand::rng().random_range(0..=0xFFFFFF))),
             created_at: now,
             updated_at: now,
             is_default: false,
