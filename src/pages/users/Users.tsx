@@ -320,10 +320,10 @@ export default function Users() {
 
   return (
     <div className={"flex h-full flex-col justify-between gap-5"}>
-      <header className="grid grid-cols-8">
+      <header className="grid grid-cols-7">
         <PageTitle>Users</PageTitle>
 
-        <ToolkitButton color="blue" onClick={handleAddUser}>
+        <ToolkitButton color="blue" onClick={handleAddUser} className={"max-w-35"}>
           Create user
         </ToolkitButton>
 

@@ -28,7 +28,7 @@ export default function DeviceRow({
   handleStartEditName,
   handleSaveDeviceName,
   handleIdentifyClick,
-  handleCalibrationClick,
+  //handleCalibrationClick,
   handleUnselectDevice,
   handleRemoveDevice,
   handleSelectDeviceForSession,
@@ -134,6 +134,7 @@ export default function DeviceRow({
         >
           ID
         </ToolkitButton>
+        {/* Feature not available for now.
         <ToolkitButton
           disabled={!device.isConnected}
           type="button"
@@ -144,6 +145,7 @@ export default function DeviceRow({
         >
           Calibrate
         </ToolkitButton>
+        */}
         {!isSelected ? (
           <ToolkitButton
             type="button"

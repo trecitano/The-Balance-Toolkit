@@ -150,12 +150,13 @@ export default function Devices() {
 
   return (
     <div className={"flex h-full flex-col"}>
-      <header className="mb-5 grid grid-cols-8">
+      <header className="mb-5 grid grid-cols-7">
         <PageTitle className={"flex-shrink-0"}>Devices</PageTitle>
 
         <ToolkitButton
           type="button"
           color="grey"
+          className={"max-w-35"}
           onClick={handleScanDevices}
           disabled={scanDevicesMutation.isPending || isScanning}
         >

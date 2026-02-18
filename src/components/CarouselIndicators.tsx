@@ -20,7 +20,7 @@ export default function CarouselIndicators({
       {entries.map((entry, index) => {
         const distance = Math.abs(index - selectedIndex);
 
-        let dotClass = `w-[12px] h-[12px] rounded-full bg-[var(--border)] opacity-50 transition ${onSelect && "cursor-pointer"}`;
+        let dotClass = `size-3 rounded-full bg-[var(--border)] opacity-50 transition ${onSelect && "cursor-pointer"}`;
 
         if (index === selectedIndex) {
           dotClass += " bg-[var(--primary)] opacity-100 scale-125";
