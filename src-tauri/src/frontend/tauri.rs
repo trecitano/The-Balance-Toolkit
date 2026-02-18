@@ -58,24 +58,35 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
                 }
             });
 
-            if let Some(monitor) = app.primary_monitor().unwrap() {
-                let size = monitor.size();
-                let min_width = (size.width as f64 * 0.55) as u32;
-                let min_height = (size.height as f64 * 0.6) as u32;
+            let monitor_dimensions = app
+                .primary_monitor()
+                .ok()
+                .flatten()
+                .map(|monitor| {
+                    let size = monitor.size();
+                    (size.width as f64, size.height as f64)
+                })
+                .or_else(|| {
+                    app.available_monitors()
+                        .ok()
+                        .and_then(|monitors| {
+                            monitors.into_iter().next().map(|monitor| {
+                                let size = monitor.size();
+                                (size.width as f64, size.height as f64)
+                            })
+                        })
+                });
 
-                tauri::WebviewWindowBuilder::new(
-                    app.handle(),
-                    "main",
-                    tauri::WebviewUrl::default(),
-                )
+            let (initial_width, initial_height) = monitor_dimensions
+                .map(|(width, height)| (width * 0.55, height * 0.6))
+                .unwrap_or((800.0, 600.0));
+
+            tauri::WebviewWindowBuilder::new(app.handle(), "main", tauri::WebviewUrl::default())
                 .title("The Balance Toolkit")
                 .resizable(true)
                 .maximizable(true)
-                .inner_size(min_width as f64, min_height as f64)
-                //      .min_inner_size(min_width as f64, min_height as f64)
-                .build()
-                .unwrap();
-            }
+                .inner_size(initial_width, initial_height)
+                .build()?;
 
             Ok(())
         })

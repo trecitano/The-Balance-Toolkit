@@ -1,7 +1,7 @@
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
 use crate::types::MacAddress;
 use chrono::Utc;
-use rand::Rng;
+use rand::{Rng, RngExt};
 use std::thread;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
