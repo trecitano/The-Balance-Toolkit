@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -37,7 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.balancetoolkit.R
@@ -137,7 +140,11 @@ fun LabeledTextField(
     errorMessage: String? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
+    imeAction: ImeAction = ImeAction.Done,
+    onDone: (() -> Unit)? = null,
 ) {
+    val focusManager = LocalFocusManager.current
+
     Column(modifier = modifier) {
         Text(
             text = label,
@@ -158,9 +165,17 @@ fun LabeledTextField(
             shape = fieldShape,
             readOnly = readOnly,
             isError = isError,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = imeAction),
+            keyboardActions =
+                KeyboardActions(
+                    onDone = {
+                        focusManager.clearFocus()
+                        onDone?.invoke()
+                    },
+                ),
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
+            singleLine = true,
             supportingText =
                 if (isError && errorMessage != null) {
                     { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
@@ -179,9 +194,12 @@ fun WeightFieldWithButton(
     value: String,
     onValueChange: (String) -> Unit,
     onWeightButtonClick: () -> Unit,
+    onDone: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     label: String = stringResource(R.string.weight_kg),
 ) {
+    val focusManager = LocalFocusManager.current
+
     Column(modifier = modifier) {
         Text(
             text = label,
@@ -199,7 +217,14 @@ fun WeightFieldWithButton(
                 onValueChange = onValueChange,
                 modifier = Modifier.weight(1f),
                 shape = fieldShape,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                keyboardActions =
+                    KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            onDone?.invoke()
+                        },
+                    ),
                 singleLine = true,
             )
             Button(
