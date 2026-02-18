@@ -37,7 +37,46 @@ xcode-select --install
 
 ### Unix Base Requirements
 
-- TODO!
+For Linux development, install the system dependencies required by Tauri.
+
+Use the command set for your distro:
+
+Debian/Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install libwebkit2gtk-4.1-dev \
+  build-essential \
+  curl \
+  wget \
+  file \
+  libxdo-dev \
+  libssl-dev \
+  libayatana-appindicator3-dev \
+  librsvg2-dev
+```
+
+Arch Linux:
+
+```bash
+sudo pacman -Syu
+sudo pacman -S --needed \
+  webkit2gtk-4.1 \
+  base-devel \
+  curl \
+  wget \
+  file \
+  openssl \
+  appmenu-gtk-module \
+  libappindicator-gtk3 \
+  librsvg \
+  xdotool
+```
+
+If your distro is different, use the equivalent packages from the Tauri Linux prerequisites:
+https://v2.tauri.app/start/prerequisites/
+
+For real Wii Balance Board usage on Linux, also ensure BlueZ is installed and the Bluetooth service is running.
 
 ### Bun
 
