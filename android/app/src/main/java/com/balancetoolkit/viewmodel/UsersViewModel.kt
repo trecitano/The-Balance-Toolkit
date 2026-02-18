@@ -269,14 +269,18 @@ class UsersViewModel
             viewModelScope.launch {
                 val result =
                     runCatching {
+                        val sanitizedName = formState.name.trim()
+                        val parsedAge = formState.age.trim().toIntOrNull() ?: 25
+                        val parsedHeight = heightUnit.toMetricCm(formState.height.trim())
+                        val parsedWeight = weightUnit.toMetricKg(formState.weight.trim())
                         val (bgColor, iconColor) = getAvatarColors(formState.color)
                         val newUser =
                             User(
-                                name = formState.name,
-                                age = formState.age.toIntOrNull() ?: 25,
+                                name = sanitizedName,
+                                age = parsedAge,
                                 gender = formState.gender,
-                                height = heightUnit.toMetricCm(formState.height),
-                                weight = weightUnit.toMetricKg(formState.weight),
+                                height = parsedHeight,
+                                weight = parsedWeight,
                                 dominantHand = formState.dominantHand,
                                 color = formState.color,
                                 updatedAt =
@@ -397,14 +401,18 @@ class UsersViewModel
             viewModelScope.launch {
                 val result =
                     runCatching {
+                        val sanitizedName = formState.name.trim()
+                        val parsedAge = formState.age.trim().toIntOrNull() ?: user.age
+                        val parsedHeight = heightUnit.toMetricCm(formState.height.trim(), user.height)
+                        val parsedWeight = weightUnit.toMetricKg(formState.weight.trim(), user.weight)
                         val (bgColor, iconColor) = getAvatarColors(formState.colorHex)
                         val updatedUser =
                             user.copy(
-                                name = if (user.isDefaultUser) user.name else formState.name,
-                                age = formState.age.toIntOrNull() ?: user.age,
+                                name = if (user.isDefaultUser) user.name else sanitizedName,
+                                age = parsedAge,
                                 gender = formState.gender,
-                                height = heightUnit.toMetricCm(formState.height, user.height),
-                                weight = weightUnit.toMetricKg(formState.weight, user.weight),
+                                height = parsedHeight,
+                                weight = parsedWeight,
                                 dominantHand = formState.dominantHand,
                                 color = formState.colorHex,
                                 updatedAt =
