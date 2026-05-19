@@ -46,6 +46,96 @@ pub fn initialize(mac_address: MacAddress) -> Result<Sender<BalanceBoardCommands
     Ok(tx)
 }
 
+/// Opens and returns (to hold open) the hid-wiimote balance-board input node
+/// for `mac`, so the kernel keeps the board in report mode 0x34. We never read
+/// from it; the open() side effect is the entire point. Best-effort: returns
+/// None (with a warning) if the node can't be found/opened, in which case the
+/// original ~30s reset behaviour remains.
+fn hold_driver_extension_open(mac: MacAddress) -> Option<std::fs::File> {
+    // Only meaningful on Linux (the hid-wiimote driver + sysfs layout). Bail
+    // cheaply elsewhere so non-Linux doesn't run the retry loop or warn.
+    if !cfg!(target_os = "linux") {
+        return None;
+    }
+    let want = format!("{:012x}", mac);
+
+    // The input node is created during hid-wiimote probe (~same time as
+    // hidraw), but allow for a brief device-ordering race.
+    for attempt in 0..10 {
+        if let Some(path) = find_board_event_node(&want) {
+            return match std::fs::File::open(&path) {
+                Ok(file) => {
+                    println!("Holding {path} open so hid-wiimote keeps DRM at 0x34 (KEE).");
+                    Some(file)
+                }
+                Err(e) => {
+                    eprintln!("Could not open {path} ({e}); 30s-reset mitigation inactive.");
+                    None
+                }
+            };
+        }
+        if attempt < 9 {
+            thread::sleep(Duration::from_millis(100));
+        }
+    }
+    eprintln!(
+        "WARNING: balance-board input node for {want} not found; hid-wiimote will \
+         keep resetting the report mode every ~30s (recording still works between resets)."
+    );
+    None
+}
+
+/// Walks sysfs to find the `/dev/input/eventN` belonging to the balance board
+/// whose HID device's `HID_UNIQ` matches `want_norm` (lowercase hex MAC, no
+/// separators). Returns the device-node path. Defensive: skips unreadable
+/// entries rather than aborting the whole search.
+fn find_board_event_node(want_norm: &str) -> Option<String> {
+    const BOARD_INPUT_NAME: &str = "Nintendo Wii Remote Balance Board";
+    let normalize = |s: &str| -> String {
+        s.chars()
+            .filter(|c| c.is_ascii_hexdigit())
+            .flat_map(|c| c.to_lowercase())
+            .collect()
+    };
+
+    for hid in std::fs::read_dir("/sys/bus/hid/devices").ok()?.flatten() {
+        let hid_dir = hid.path();
+        let Ok(uevent) = std::fs::read_to_string(hid_dir.join("uevent")) else {
+            continue;
+        };
+        let mac_matches = uevent
+            .lines()
+            .find_map(|l| l.strip_prefix("HID_UNIQ="))
+            .is_some_and(|u| normalize(u) == want_norm);
+        if !mac_matches {
+            continue;
+        }
+        let Ok(inputs) = std::fs::read_dir(hid_dir.join("input")) else {
+            continue;
+        };
+        for input in inputs.flatten() {
+            let idir = input.path();
+            let name = std::fs::read_to_string(idir.join("name")).unwrap_or_default();
+            if name.trim() != BOARD_INPUT_NAME {
+                continue;
+            }
+            let Ok(children) = std::fs::read_dir(&idir) else {
+                continue;
+            };
+            for child in children.flatten() {
+                let fname = child.file_name();
+                let fname = fname.to_string_lossy();
+                if let Some(num) = fname.strip_prefix("event") {
+                    if !num.is_empty() && num.bytes().all(|b| b.is_ascii_digit()) {
+                        return Some(format!("/dev/input/{fname}"));
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
 fn connect_via_hid(mac_address: MacAddress) -> HidResult<HidDevice> {
     let api = HidApi::new()?;
 
@@ -81,6 +171,17 @@ fn blocking_hid_loop(
     mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>,
 ) -> anyhow::Result<()> {
     let mut buf = [0u8; 32];
+
+    // On Linux the in-kernel hid-wiimote driver re-applies its own data-report
+    // mode after every ~30s UPower battery-poll status report. Unless it thinks
+    // the extension is "in use" it resets the board to mode 0x30 (buttons-only)
+    // and kills our 0x34 hidraw stream. Opening (and merely holding open, never
+    // reading) the driver's balance-board input node runs wiimod_bboard_open()
+    // in the kernel -> sets WIIPROTO_FLAG_EXT_USED -> select_drm() returns
+    // DRM_KEE (report 0x34), which the driver then re-applies after each status
+    // report. Bound here so the fd is held for the whole life of this loop;
+    // no-op (None) on non-Linux.
+    let _ext_keepalive = hold_driver_extension_open(mac_address);
 
     write_to_device(&device, &BOARD_TURN_ON_LED)?;
     let calibration = read_calibration_data(&device)?;
@@ -149,7 +250,7 @@ fn blocking_hid_loop(
                 }
                 Ok(_) => {
                     println!("Timeout?!?!");
-                    write_to_device(&device, &BOARD_START_READING);
+                     //write_to_device(&device, &BOARD_START_READING);
                     /* Timeout, continue */
                 }
                 Err(e) => {
