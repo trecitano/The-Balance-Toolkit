@@ -32,7 +32,6 @@ tokio-util = "0.7.18"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bluer = { version = "0.17.3", features = ["bluetoothd"] }
-evdev = "0.12"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62.2", features = [
