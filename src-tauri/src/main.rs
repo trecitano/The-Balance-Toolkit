@@ -17,6 +17,9 @@ pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    #[cfg(target_os = "linux")]
+    enforce_working_locale();
+
     file_system::initialize_app_dir()?;
 
     // Startup: We initialize a single manager that holds all state, and runs in the background.
@@ -34,4 +37,13 @@ async fn main() -> Result<()> {
 
     frontend::tauri::initialize(manager_command_tx, manager_response_rx);
     Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn enforce_working_locale() {
+    let lang = std::env::var("LANG").unwrap_or_default();
+    if matches!(lang.as_str(), "" | "C" | "POSIX") {
+        // Safety: called before GTK/WebView init; tokio worker threads don't read locale vars
+        unsafe { std::env::set_var("LANG", "en_US.UTF-8") };
+    }
 }
