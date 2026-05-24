@@ -1,46 +1,36 @@
 use anyhow::{Context, Result, anyhow};
 use async_trait::async_trait;
-use tokio::process::Command as TokioCommand;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::mpsc;
-use tokio::time::{Duration, timeout};
 
 use crate::actors::bluetooth_service::{
     BluetoothAdapterInfo, BluetoothHandler, BluetoothPeripheral,
 };
+use crate::bluetooth::macos_io_bluetooth;
 use crate::types::MacAddress;
 
-#[derive(Debug, serde::Deserialize)]
-struct PeripheralOut {
-    id: String,
-    name: String,
-    mac_address: u64,
-    is_paired: bool,
-    is_connected: bool,
+pub struct NativeBluetoothHandler;
+
+/// Signals the dedicated IOBluetooth scan thread to abort. Dropped when the
+/// `scan_and_pair_nintendo` future is dropped (i.e. the Bluetooth actor
+/// cancelled the scan), which is our only chance to run teardown since future
+/// cancellation gives us no async drop.
+struct StopOnDrop(Arc<AtomicBool>);
+
+impl Drop for StopOnDrop {
+    fn drop(&mut self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
 }
 
-// Temporary gigantic hack
-pub static BINARY_PATH: &str = "../macos-wii-balance-pair/target/debug/macos-wii-balance-pair";
-pub struct NativeBluetoothHandler;
 #[async_trait]
 impl BluetoothHandler for NativeBluetoothHandler {
     async fn get_all_bluetooth_adapters_info(&self) -> Result<Vec<Result<BluetoothAdapterInfo>>> {
-        // system-view returns JSON array
-        let mut cmd = TokioCommand::new(&BINARY_PATH);
-        cmd.arg("system-view");
-        let output = timeout(Duration::from_secs(5), cmd.output())
-            .await
-            .map_err(|_| anyhow!("system-view timed out"))??;
-
-        if !output.status.success() {
-            return Err(anyhow!(
-                "system-view failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
-
-        let stdout = String::from_utf8(output.stdout).context("system-view stdout not UTF-8")?;
-        let devices: Vec<PeripheralOut> =
-            serde_json::from_str(&stdout).context("failed to parse system-view JSON")?;
+        let devices =
+            tokio::task::spawn_blocking(macos_io_bluetooth::collect_connected_devices)
+                .await
+                .context("collect_connected_devices thread panicked")?;
 
         let peripherals: Vec<Result<BluetoothPeripheral>> = devices
             .into_iter()
@@ -68,28 +58,34 @@ impl BluetoothHandler for NativeBluetoothHandler {
         &self,
         response_stream: mpsc::Sender<BluetoothPeripheral>,
     ) -> Result<()> {
-        // scan-and-pair prints a single PeripheralOut as JSON on success
-        let mut cmd = TokioCommand::new(&BINARY_PATH);
-        cmd.arg("scan-and-pair");
-        let output = timeout(Duration::from_secs(30), cmd.output())
+        let stop = Arc::new(AtomicBool::new(false));
+        // Held across the await: if the future is cancelled, this drops and
+        // signals the scan thread to stop the inquiry and exit.
+        let _guard = StopOnDrop(stop.clone());
+        let stop_thread = stop.clone();
+
+        let (tx, rx) =
+            std::sync::mpsc::channel::<Result<macos_io_bluetooth::PeripheralOut, String>>();
+
+        std::thread::Builder::new()
+            .name("wii-io-bluetooth-scan".into())
+            .spawn(move || {
+                let res = macos_io_bluetooth::scan_and_pair_blocking(stop_thread);
+                let _ = tx.send(res);
+            })
+            .context("failed to spawn IOBluetooth scan thread")?;
+
+        // Wait for the dedicated thread's result without blocking a tokio
+        // worker. `spawn_blocking` runs to completion even if this future is
+        // cancelled, so `rx.recv()` resolves once the thread reacts to `stop`.
+        let recv_result = tokio::task::spawn_blocking(move || rx.recv())
             .await
-            .map_err(|_| anyhow!("scan-and-pair timed out"))??;
+            .context("scan result join failed")?;
 
-        if !output.status.success() {
-            return Err(anyhow!(
-                "scan-and-pair failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
-        }
-
-        let stdout = String::from_utf8(output.stdout).context("scan-and-pair stdout not UTF-8")?;
-        println!("Stdout!: #{}", stdout);
-        let dev: PeripheralOut = match serde_json::from_str(&stdout) {
-            Ok(d) => d,
-            Err(e) => {
-                println!("Boom {}", e);
-                return Err(anyhow!("Failed to parse device JSON. {}", e));
-            }
+        let dev = match recv_result {
+            Ok(Ok(dev)) => dev,
+            Ok(Err(e)) => return Err(anyhow!("scan-and-pair failed: {e}")),
+            Err(_) => return Ok(()), // thread ended without a result
         };
 
         let peripheral = BluetoothPeripheral {
@@ -106,16 +102,12 @@ impl BluetoothHandler for NativeBluetoothHandler {
 
     async fn remove_device(&self, mac_address: MacAddress) -> Result<()> {
         let mac_str = mac_u64_to_colon(mac_address);
-        let mut cmd = TokioCommand::new(&BINARY_PATH);
-        cmd.arg("remove").arg(&mac_str);
 
-        let status = timeout(Duration::from_secs(15), cmd.status())
+        tokio::task::spawn_blocking(move || macos_io_bluetooth::remove_device_by_mac(&mac_str))
             .await
-            .map_err(|_| anyhow!("remove timed out"))??;
+            .context("remove_device thread panicked")?
+            .map_err(|e| anyhow!("remove failed: {e}"))?;
 
-        if !status.success() {
-            return Err(anyhow!("remove failed with status {:?}", status));
-        }
         Ok(())
     }
 }
