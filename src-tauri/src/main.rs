@@ -39,11 +39,17 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+
+// Need to enforce a backup locale for uPlot, in case the operating sytem doesn't have one defined
 #[cfg(target_os = "linux")]
 fn enforce_working_locale() {
-    let lang = std::env::var("LANG").unwrap_or_default();
-    if matches!(lang.as_str(), "" | "C" | "POSIX") {
-        // Safety: called before GTK/WebView init; tokio worker threads don't read locale vars
-        unsafe { std::env::set_var("LANG", "en_US.UTF-8") };
+    const FALLBACK: &str = "en_US.UTF-8";
+    let needs_fix = |v: &str| matches!(v, "" | "C" | "POSIX");
+    
+    for var in ["LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"] {
+        let val = std::env::var(var).unwrap_or_default();
+        if needs_fix(&val) {
+            unsafe { std::env::set_var(var, FALLBACK) };
+        }
     }
 }

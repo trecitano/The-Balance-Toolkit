@@ -1,0 +1,2 @@
+# Wii Balance Board hidraw permissions.
+SUBSYSTEM=="hidraw", KERNELS=="0005:057E:0306.*", GROUP="input", MODE="0660", TAG+="uaccess"

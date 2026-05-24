@@ -1,4 +1,4 @@
-## System Requirements
+# System Requirements
 
 The app works in Windows, MacOS and Unix distros.
 
@@ -11,7 +11,7 @@ The project is using:
 At the moment of writing, these are the latest versions.
 Later versions of these tools should work.
 
-### Windows Base Requirements
+## Windows
 
 - Windows 10/11
 - PowerShell or Command Prompt with administrator privileges
@@ -24,7 +24,7 @@ Later versions of these tools should work.
 3. Install WebView2:
    - Download from: https://developer.microsoft.com/en-us/microsoft-edge/webview2/
 
-### MacOS Base Requirements
+## MacOS
 
 - macOS 10.15 or later
 - [Homebrew](https://brew.sh/)
@@ -35,7 +35,7 @@ Later versions of these tools should work.
 xcode-select --install
 ```
 
-### Unix Base Requirements
+## Unix
 
 For Linux development, install the system dependencies required by Tauri.
 
@@ -52,6 +52,7 @@ sudo apt install libwebkit2gtk-4.1-dev \
   file \
   libxdo-dev \
   libssl-dev \
+  libudev-dev \
   libayatana-appindicator3-dev \
   librsvg2-dev
 ```
@@ -77,6 +78,21 @@ If your distro is different, use the equivalent packages from the Tauri Linux pr
 https://v2.tauri.app/start/prerequisites/
 
 For real Wii Balance Board usage on Linux, also ensure BlueZ is installed and the Bluetooth service is running.
+
+#### Balance Board hidraw permissions
+
+In linux systems, the user needs to have access to the hidraw device so that the Balance Toolkit can read and send reports.
+To do this, please run the commands below:
+
+```bash
+sudo cp linux/99-nintendo-hidraw.rules /etc/udev/rules.d/
+sudo udevadm control --reload
+sudo usermod -aG input "$USER"
+```
+
+Then **log out and log back in** for the changes to take effect.
+
+# Software Requirements
 
 ### Bun
 
@@ -107,7 +123,22 @@ MacOS:
 brew install cmake
 ```
 
-## Step 3: Verify Installations
+Linux:
+
+- Debian/Ubuntu:
+
+```bash
+sudo apt install cmake
+```
+
+- Arch Linux:
+
+```bash
+sudo pacman -S --needed cmake
+```
+
+
+## Verification
 
 Run these commands to verify your installations:
 
@@ -123,7 +154,7 @@ bun -v
 cmake --version
 ```
 
-## Running the Application
+# Running the Application
 
 Initial setup:
 
