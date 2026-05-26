@@ -94,10 +94,9 @@ impl BluetoothService {
                     response.send(self.scan_cancel_tx.is_some()).unwrap();
                 }
                 BluetoothCommand::RemoveDevice { mac_address } => {
-                    self.bluetooth_implementation
-                        .remove_device(mac_address)
-                        .await
-                        .unwrap();
+                    if let Err(e) = self.bluetooth_implementation.remove_device(mac_address).await {
+                        eprintln!("Warning: remove_device failed for {}: {}", mac_address, e);
+                    }
                 }
             }
         }

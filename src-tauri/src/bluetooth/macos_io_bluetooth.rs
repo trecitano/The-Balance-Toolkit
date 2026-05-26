@@ -261,7 +261,8 @@ unsafe fn remove_device_by_mac_inner(mac_str: &str) -> Result<(), String> {
     }
 
     let Some(dev) = target else {
-        return Err(format!("Device {} not found", mac_str));
+        println!("Device {} not found in paired/recent devices, treating as already removed", mac_str);
+        return Ok(());
     };
 
     let close_status: i32 = unsafe { msg_send![&dev, closeConnection] };
