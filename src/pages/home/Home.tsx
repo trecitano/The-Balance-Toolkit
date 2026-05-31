@@ -1,6 +1,9 @@
 import React, { useRef, useState } from "react";
 import logoLettering from "@/assets/logo/logo-lettering-white.svg";
 import fileIcon from "@/assets/file-icon.svg";
+import userIcon from "@/assets/user-icon.svg";
+import calendarIcon from "@/assets/calendar-icon.svg";
+import activitiesIconUrl from "@/assets/activities-icon.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { useQuery } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
@@ -19,6 +22,22 @@ import underConstructionResources from "@/assets/under-construction-3-grey.svg";
 import { activitiesIcon, devicesIcon, replayIcon } from "@/components/navigation/Navigation.tsx";
 
 const HOME_QUERY_KEY = ["home"];
+
+// Filenames look like "tbt-2026-05-26T14-43-10.settings.json" — pull the
+// embedded timestamp out and render it as a friendly date.
+const formatSessionDate = (fileName: string): string | null => {
+  const match = fileName.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+
+  const [, year, month, day, hour, minute, second] = match.map(Number);
+  const date = new Date(year, month - 1, day, hour, minute, second);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+};
 
 const Home: React.FC = () => {
   const { data, isLoading, error } = useQuery({
@@ -103,6 +122,17 @@ const Header: React.FC = () => {
   );
 };
 
+const SessionLabel: React.FC<{ icon: string; iconClassName?: string; children: React.ReactNode }> = ({
+  icon,
+  iconClassName = "",
+  children,
+}) => (
+  <span className="flex items-center gap-1.5 font-semibold">
+    <img className={`h-4 w-4 object-contain ${iconClassName}`} src={icon} draggable={false} />
+    {children}
+  </span>
+);
+
 // Last Session Card
 const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = ({ sessionDetails }) => {
   if (!sessionDetails) {
@@ -121,37 +151,39 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = (
 
   const user = sessionDetails?.user;
   const activity = sessionDetails?.activity;
+  const fileLocation = String(sessionDetails.fileLocation);
+  const fileName = fileLocation.split(/[\\/]/).pop() ?? fileLocation;
+  const sessionDate = formatSessionDate(fileName);
 
   return (
     <div className="flex h-full flex-col gap-5 p-(--space-sm) text-xs">
       <PageSubtitle>Last session</PageSubtitle>
 
-      <div className={"flex flex-col gap-3"}>
-        <div className={"flex gap-3"}>
-          <p className="font-semibold">User</p>
-          <p>{ user.name }</p>
-        </div>
+      <div className="grid grid-cols-[max-content_1fr] items-center gap-x-4 gap-y-3">
+        <SessionLabel icon={userIcon}>User</SessionLabel>
+        <p className="min-w-0 truncate">{user.name}</p>
 
-        <div className={"flex gap-3"}>
-          <p className="font-semibold">Activity</p>
-          {activity ? (
-            <div>{activity.title}</div>
-          ) : (
-            <div className="text-gray-700">No Activity chosen</div>
-          )}
-        </div>
+        <SessionLabel icon={activitiesIconUrl} iconClassName="invert">Activity</SessionLabel>
+        {activity ? (
+          <p className="min-w-0 truncate">{activity.title}</p>
+        ) : (
+          <p className="text-gray-500 italic">No activity chosen</p>
+        )}
 
-        <div className="mb-2 flex gap-1">
-          <img className="h-4 w-4" src={fileIcon} draggable={false} />
-          <span className="flex font-semibold">File</span>
-        </div>
+        {sessionDate && (
+          <>
+            <SessionLabel icon={calendarIcon}>Date</SessionLabel>
+            <p className="text-gray-700">{sessionDate}</p>
+          </>
+        )}
 
-        <div>
-          <div className="text-gray-700">{sessionDetails.fileLocation}</div>
-        </div>
+        <SessionLabel icon={fileIcon}>File</SessionLabel>
+        <p className="min-w-0 truncate text-gray-700" title={fileLocation}>
+          {fileName}
+        </p>
       </div>
 
-      <div className="mt-4 flex justify-end">
+      <div className="mt-auto flex justify-end">
         <ToolkitButton to="/replay" color={"grey"} iconUrl={replayIcon}>
           {" "}
           Replay →
