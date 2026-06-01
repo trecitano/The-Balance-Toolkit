@@ -43,6 +43,8 @@ windows = { version = "0.62.2", features = [
   "Devices_Bluetooth",
   "Devices_Enumeration",
   "Foundation_Collections",
+  "Win32_Devices_Bluetooth",
+  "Win32_Foundation",
 ] }
 windows-future = "0.3.2"
 windows-collections = "0.3.2"
