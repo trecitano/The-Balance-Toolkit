@@ -62,6 +62,7 @@ export default function Users() {
   const selectedUserId = data?.selectedUserId ?? 0;
   const sessionDevices = data?.sessionDevices ?? [];
   const selectedUserData = users.find((user) => user.id === selectedUserId)!;
+  const displayData = editingUserData ?? selectedUserData;
   const isSearching = searchTerm.trim().length > 0;
   const sortedUsers = [...users].sort((a, b) => {
     if (a.isDefault) return -1;
@@ -477,7 +478,7 @@ export default function Users() {
             <SingleColumn requiredField label="Name:" icon={<img src={personIcon} />}>
               <InputPrimitive
                 required
-                value={editingUserData?.name}
+                value={displayData?.name}
                 onChange={(e) => handleEditUpdate("name", e.target.value)}
                 disabled={!editingUserData}
               />
@@ -487,7 +488,7 @@ export default function Users() {
             <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
               <InputPrimitive
                 type="number"
-                value={editingUserData?.age}
+                value={displayData?.age}
                 onChange={(e) => handleEditUpdate("age", Number(e.target.value))}
                 disabled={!editingUserData}
               />
@@ -497,8 +498,8 @@ export default function Users() {
             <SingleColumn label="Gender:" icon={<img src={sexIcon} />}>
               <SelectPrimitive
                 value={
-                  ["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData?.gender ?? "")
-                    ? (editingUserData?.gender ?? "")
+                  ["Male", "Female", "Non-binary", "Prefer not to say"].includes(displayData?.gender ?? "")
+                    ? (displayData?.gender ?? "")
                     : "N/A"
                 }
                 onChange={(v) => handleEditUpdate("gender", v === "Other" ? "" : v)}
@@ -514,10 +515,10 @@ export default function Users() {
             </SingleColumn>
 
             {/* Custom gender input if "Other" */}
-            {!["Male", "Female", "Non-binary", "Prefer not to say"].includes(editingUserData?.gender ?? "Male") && (
+            {!["Male", "Female", "Non-binary", "Prefer not to say"].includes(displayData?.gender ?? "Male") && (
               <SingleColumn label="Specify Gender:" icon={<img src={sexIcon} alt="" />}>
                 <InputPrimitive
-                  value={editingUserData?.gender ?? ""}
+                  value={displayData?.gender ?? ""}
                   onChange={(e) => handleEditUpdate("gender", e.target.value)}
                   disabled={!editingUserData}
                 />
@@ -529,7 +530,7 @@ export default function Users() {
               <div className="flex gap-3">
                 <InputPrimitive
                   type="number"
-                  value={editingUserData?.height ?? ""}
+                  value={displayData?.height ?? ""}
                   onChange={(e) => {
                     handleEditUpdate("height", Number(e.target.value));
                     if (!editingUserData?.heightMetric) {
@@ -539,7 +540,7 @@ export default function Users() {
                   disabled={!editingUserData}
                 />
                 <SelectPrimitive
-                  value={editingUserData?.heightMetric ?? "cm"}
+                  value={displayData?.heightMetric ?? "cm"}
                   onChange={(v) => handleEditUpdate("heightMetric", v)}
                   options={[
                     { label: "cm", value: "cm" },
@@ -556,7 +557,7 @@ export default function Users() {
                   required
                   type="number"
                   className={"min-w-20"}
-                  value={editingUserData?.weight ?? ""}
+                  value={displayData?.weight ?? ""}
                   onChange={(e) => {
                     handleEditUpdate("weight", Number(e.target.value));
                     if (!editingUserData?.weightMetric) {
@@ -566,7 +567,7 @@ export default function Users() {
                   disabled={!editingUserData}
                 />
                 <SelectPrimitive
-                  value={editingUserData?.weightMetric ?? "kg"}
+                  value={displayData?.weightMetric ?? "kg"}
                   onChange={(v) => handleEditUpdate("weightMetric", v)}
                   options={[
                     { label: "kg", value: "kg" },
@@ -582,7 +583,7 @@ export default function Users() {
             {/* Dominant hand: */}
             <SingleColumn label="Dominant hand:" icon={<img src={handIcon} />}>
               <SelectPrimitive
-                value={editingUserData?.dominantHand ?? ""}
+                value={displayData?.dominantHand ?? ""}
                 onChange={(v) => handleEditUpdate("dominantHand", v as UserType["dominantHand"])}
                 options={[
                   { label: "Right", value: "Right" },
@@ -598,7 +599,7 @@ export default function Users() {
               <div className="relative">
                 <div
                   className="h-8 w-full cursor-pointer rounded-lg border border-gray-300"
-                  style={{ backgroundColor: editingUserData?.color || "#ccc" }}
+                  style={{ backgroundColor: displayData?.color || "#ccc" }}
                   onClick={handleColorClick}
                 />
                 {showColorDropdown && (

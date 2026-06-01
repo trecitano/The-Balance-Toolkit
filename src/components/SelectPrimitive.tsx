@@ -48,10 +48,19 @@ export function SelectPrimitive<T extends React.Key = string>(props: any) {
 
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [dropUp, setDropUp] = useState(false);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const computeDropUp = () => {
+    const btn = buttonRef.current;
+    if (!btn) return false;
+    const rect = btn.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    return spaceBelow < maxHeight + 8 && spaceAbove > spaceBelow;
+  };
 
   const hasOptions = options.length > 0;
   const isDisabled = disabled || !hasOptions;
@@ -92,6 +101,7 @@ export function SelectPrimitive<T extends React.Key = string>(props: any) {
     if (isDisabled) return;
     if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
       e.preventDefault();
+      setDropUp(computeDropUp());
       setActiveIdx(0);
       setOpen(true);
       requestAnimationFrame(() => {
@@ -155,9 +165,12 @@ export function SelectPrimitive<T extends React.Key = string>(props: any) {
             e.preventDefault();
             if (isDisabled) return;
             const willOpen = !open;
+            if (willOpen) {
+              setDropUp(computeDropUp());
+              setActiveIdx(0);
+            }
             setOpen(willOpen);
             if (willOpen) {
-              setActiveIdx(0);
               requestAnimationFrame(() => {
                 listRef.current?.focus();
               });
@@ -189,7 +202,9 @@ export function SelectPrimitive<T extends React.Key = string>(props: any) {
             role="listbox"
             tabIndex={0}
             onKeyDown={onListKeyDown}
-            className="absolute top-full left-0 z-40 mt-1 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg focus:outline-none"
+            className={`absolute ${
+              dropUp ? "bottom-full mb-1" : "top-full mt-1"
+            } left-0 z-40 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg focus:outline-none`}
           >
             <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>
               {/* None option for single select */}
