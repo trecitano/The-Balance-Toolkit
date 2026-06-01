@@ -136,7 +136,10 @@ impl BluetoothService {
                         break;
                     }
 
-                    _ = bluetooth_handler.scan_and_pair_nintendo(response_stream.clone()) => {
+                    result = bluetooth_handler.scan_and_pair_nintendo(response_stream.clone()) => {
+                        if let Err(e) = result {
+                            eprintln!("scan_and_pair_nintendo failed: {e:#}");
+                        }
                         tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
                     }
                 }

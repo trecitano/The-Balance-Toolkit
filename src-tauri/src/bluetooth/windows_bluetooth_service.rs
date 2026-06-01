@@ -3,9 +3,7 @@ use async_trait::async_trait;
 use tokio::sync::mpsc;
 use windows::{
     Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothDevice},
-    Devices::Enumeration::{
-        DeviceInformation, DevicePairingKinds, DevicePairingRequestedEventArgs, DeviceWatcher,
-    },
+    Devices::Enumeration::{DeviceInformation, DeviceWatcher},
     Foundation::TypedEventHandler,
 };
 
@@ -14,12 +12,17 @@ use crate::actors::bluetooth_service::{
     BluetoothAdapterInfo, BluetoothHandler, BluetoothPeripheral, mac_address_to_wii_pin,
 };
 use crate::types::MacAddress;
-use windows::Devices::Enumeration::{
-    DeviceInformationUpdate, DevicePairingResultStatus, DeviceUnpairingResultStatus,
-};
+use windows::Devices::Enumeration::{DeviceInformationUpdate, DeviceUnpairingResultStatus};
 use windows::Foundation::IPropertyValue;
+use windows::Win32::Devices::Bluetooth::{
+    BLUETOOTH_ADDRESS, BLUETOOTH_ADDRESS_0, BLUETOOTH_DEVICE_INFO, BLUETOOTH_FIND_RADIO_PARAMS,
+    BLUETOOTH_SERVICE_ENABLE, BluetoothAuthenticateDevice, BluetoothFindFirstRadio,
+    BluetoothFindRadioClose, BluetoothGetDeviceInfo, BluetoothRemoveDevice,
+    BluetoothSetServiceState,
+};
+use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::core::HSTRING;
-use windows_core::Interface;
+use windows_core::{GUID, Interface};
 
 pub struct NativeBluetoothHandler;
 #[async_trait]
@@ -161,7 +164,11 @@ impl BluetoothHandler for NativeBluetoothHandler {
                 watcher.Start()?;
 
                 if let Some(device_id) = rx.recv().await {
-                    try_pair_with_board(device_id.clone(), pin).await?;
+                    let board_address =
+                        parse_board_address(&device_id.to_string()).ok_or_else(|| {
+                            anyhow!("Could not parse board address from id: {device_id}")
+                        })?;
+                    try_pair_with_board(board_address, pin)?;
                     let bluetooth_device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
                     let peripheral = convert_to_bluetooth_peripheral(bluetooth_device).await?;
                     response_stream.send(peripheral).await.unwrap();
@@ -216,32 +223,81 @@ impl BluetoothHandler for NativeBluetoothHandler {
     }
 }
 
-async fn try_pair_with_board(device_id: HSTRING, pin: [u8; 6]) -> Result<()> {
-    println!("Trying to pair with device {}", device_id);
+fn try_pair_with_board(board_address: u64, pin: [u8; 6]) -> Result<()> {
+    println!("Trying to pair (Win32) with {board_address:012x}, pin bytes {pin:02x?}");
 
-    let device_info = DeviceInformation::CreateFromIdAsync(&device_id)?.await?;
-    let pairing = device_info.Pairing()?.Custom()?;
+    let pin_wide: [u16; 6] = pin.map(|byte| byte as u16);
 
-    pairing.PairingRequested(&TypedEventHandler::new(
-        move |_, args: windows::core::Ref<DevicePairingRequestedEventArgs>| {
-            if let Some(args) = args.as_ref() {
-                let pin_as_u16: [u16; 6] = pin.map(|x| x as u16);
-                args.AcceptWithPin(&HSTRING::from_wide(&pin_as_u16))?;
-            }
-            Ok(())
-        },
-    ))?;
+    unsafe {
+        // We assume a single default adapter, consistent with the rest of this module.
+        let mut radio = HANDLE::default();
+        let find_params = BLUETOOTH_FIND_RADIO_PARAMS {
+            dwSize: size_of::<BLUETOOTH_FIND_RADIO_PARAMS>() as u32,
+        };
+        let radio_find = BluetoothFindFirstRadio(&find_params, &mut radio)?;
 
-    let pairing_result = pairing.PairAsync(DevicePairingKinds::ProvidePin)?.await?;
-    if pairing_result.Status()? == DevicePairingResultStatus::Paired {
-        println!("Successfully paired with device {}!", device_id);
+        let mut device_info = BLUETOOTH_DEVICE_INFO {
+            dwSize: size_of::<BLUETOOTH_DEVICE_INFO>() as u32,
+            Address: BLUETOOTH_ADDRESS {
+                Anonymous: BLUETOOTH_ADDRESS_0 {
+                    ullLong: board_address,
+                },
+            },
+            ..Default::default()
+        };
+
+        let remove_status = BluetoothRemoveDevice(&device_info.Address);
+        println!("BluetoothRemoveDevice returned {remove_status}");
+
+        let info_status = BluetoothGetDeviceInfo(Some(radio), &mut device_info);
+        if info_status != 0 {
+            println!("BluetoothGetDeviceInfo returned {info_status} (continuing anyway)");
+        }
+
+        println!("Authenticating (legacy PIN); blocks until the ceremony finishes...");
+        const ERROR_BUSY: u32 = 170;
+        let mut auth_status =
+            BluetoothAuthenticateDevice(None, Some(radio), &mut device_info, Some(&pin_wide));
+        let mut attempts = 0;
+        while auth_status == ERROR_BUSY && attempts < 10 {
+            attempts += 1;
+            println!("Radio busy (ERROR_BUSY); retrying pairing (attempt {attempts})...");
+            std::thread::sleep(std::time::Duration::from_millis(800));
+            auth_status =
+                BluetoothAuthenticateDevice(None, Some(radio), &mut device_info, Some(&pin_wide));
+        }
+
+        if auth_status != 0 {
+            let _ = BluetoothFindRadioClose(radio_find);
+            let _ = CloseHandle(radio);
+            return Err(anyhow!("Win32 pairing failed with error {auth_status}"));
+        }
+
+        println!("Successfully paired with {board_address:012x}!");
+
+        let _ = BluetoothGetDeviceInfo(Some(radio), &mut device_info);
+        let hid_service = GUID::from_u128(0x00001124_0000_1000_8000_00805f9b34fb);
+        let service_status =
+            BluetoothSetServiceState(Some(radio), &device_info, &hid_service, BLUETOOTH_SERVICE_ENABLE);
+        if service_status != 0 {
+            println!("Warning: enabling the HID service returned {service_status}");
+        } else {
+            println!("HID service enabled; the board should now appear as a HID device.");
+        }
+
+        let _ = BluetoothFindRadioClose(radio_find);
+        let _ = CloseHandle(radio);
         Ok(())
-    } else {
-        Err(anyhow!(
-            "Pairing failed with status: {}",
-            pairing_result.Status()?.0
-        ))
     }
+}
+
+fn parse_board_address(device_id: &str) -> Option<u64> {
+    let mac = device_id.rsplit('-').next()?;
+    let hex: String = mac.chars().filter(|c| *c != ':').collect();
+    if hex.len() != 12 {
+        return None;
+    }
+    u64::from_str_radix(&hex, 16).ok()
 }
 
 fn properties_has_matching_name(
