@@ -89,6 +89,7 @@ fun HostMacAddressDialog(
                 Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
+                    .blockBalanceBoardInput()
                     .semantics { contentDescription = "Host MAC address dialog" },
             shape = dialogShape,
             color = CardBackground,

@@ -64,7 +64,7 @@ fun SessionsDirectoryDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth().blockBalanceBoardInput(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = CardBackground),
         ) {

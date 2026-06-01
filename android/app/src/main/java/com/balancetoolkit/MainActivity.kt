@@ -1,15 +1,17 @@
 package com.balancetoolkit
 
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRailItemDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
@@ -24,6 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.balancetoolkit.ui.components.isBalanceBoardInput
 import com.balancetoolkit.ui.navigation.AppDestination
 import com.balancetoolkit.ui.navigation.AppNavHost
 import com.balancetoolkit.ui.theme.TheBalanceToolkitTheme
@@ -45,6 +48,16 @@ class MainActivity : ComponentActivity() {
                 TheBalanceToolkitApp()
             }
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (isBalanceBoardInput(event.device)) return true
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+        if (isBalanceBoardInput(event.device)) return true
+        return super.dispatchGenericMotionEvent(event)
     }
 }
 

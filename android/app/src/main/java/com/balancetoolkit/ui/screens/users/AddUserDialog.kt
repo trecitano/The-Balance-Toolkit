@@ -44,6 +44,7 @@ import com.balancetoolkit.ui.components.ColorPickerRow
 import com.balancetoolkit.ui.components.EnumDropdown
 import com.balancetoolkit.ui.components.LabeledTextField
 import com.balancetoolkit.ui.components.WeightFieldWithButton
+import com.balancetoolkit.ui.components.blockBalanceBoardInput
 import com.balancetoolkit.ui.theme.BorderGray
 import com.balancetoolkit.ui.theme.CardBackground
 import com.balancetoolkit.ui.theme.PrimaryBlue
@@ -84,6 +85,7 @@ fun AddUserDialog(
                     .fillMaxWidth()
                     .padding(16.dp)
                     .widthIn(max = dialogMaxWidth)
+                    .blockBalanceBoardInput()
                     .semantics { contentDescription = "Add new user dialog" },
             shape = dialogShape,
             color = CardBackground,
