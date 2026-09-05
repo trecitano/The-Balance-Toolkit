@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/toolkit-core",
+  "crates/toolkit-cli",
   "src-tauri",
 ]
 resolver = "2"
