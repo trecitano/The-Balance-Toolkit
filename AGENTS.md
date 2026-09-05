@@ -11,16 +11,16 @@ Use `mise run …` or `mise exec -- …` so commands use the versions in
 | Path | Responsibility |
 |---|---|
 | `crates/toolkit-core/` | Bluetooth, HID, processing, session state, persistence, recording and replay |
-| `crates/toolkit-cli/` | `tbt` arguments, terminal output, orchestration and process exit status |
-| `src-tauri/` | Desktop shell, Tauri commands and event serialization |
-| `src/` | React UI, queries, frame storage and plots |
-| `android/` | Separate Kotlin application; also read `android/AGENTS.md` |
+| `apps/cli/` | `tbt` arguments, terminal output, orchestration and process exit status |
+| `apps/desktop/src-tauri/` | Desktop shell, Tauri commands and event serialization |
+| `apps/desktop/src/` | React UI, queries, frame storage and plots |
+| `apps/android/` | Separate Kotlin application; also read `apps/android/AGENTS.md` |
 | `tests/fixtures/` | Synthetic sensor cases shared with Android and desktop recording examples |
 | `scripts/verify/` | Development diagnostics |
 
 The desktop shell and CLI share the Rust core. Android does not use that core.
 Keep UI/toolkit boundaries explicit; TypeScript command types are currently
-maintained manually in `src/types.ts` and `src/utils/requests.ts`.
+maintained manually in `apps/desktop/src/types.ts` and `apps/desktop/src/utils/requests.ts`.
 
 ## Verification
 

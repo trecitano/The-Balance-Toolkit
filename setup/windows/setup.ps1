@@ -302,4 +302,4 @@ Report
 if ($script:PostNotes.Count -gt 0) { Write-Host ''; foreach ($n in $script:PostNotes) { Warn $n } }
 if ($failed.Count -gt 0) { Write-Host ''; Write-Host "Error: $($failed.Count) item(s) failed. See INSTALL.md for manual steps." -ForegroundColor Red; exit 1 }
 Write-Host ''
-Ok 'Done. Next: bun install; bun run tauri dev'
+Ok 'Done. Next: cd apps/desktop; bun install; bun run tauri dev'

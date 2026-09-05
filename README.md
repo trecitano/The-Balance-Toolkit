@@ -1,7 +1,7 @@
 <table border="0">
   <tr>
     <td width="150" valign="middle" align="center">
-      <img src="src/assets/logo/icon.svg" width="130" alt="The Balance Toolkit logo">
+      <img src="apps/desktop/src/assets/logo/icon.svg" width="130" alt="The Balance Toolkit logo">
     </td>
     <td valign="middle">
       <h1>The Balance Toolkit</h1>
@@ -10,7 +10,7 @@
   </tr>
 </table>
 
-**[Install](INSTALL.md)** &middot; **[Desktop frontend](src/)** &middot; **[Rust core](crates/toolkit-core/)** &middot; **[Headless CLI](crates/toolkit-cli/)** &middot; **[Android](android/)** &middot; **[Python scripts](scripts/)** &middot; **[Ready-to-run apps](https://github.com/trecitano/The-Balance-Toolkit-Apps)**
+**[Install](INSTALL.md)** &middot; **[Desktop app](apps/desktop/)** &middot; **[Headless CLI](apps/cli/)** &middot; **[Android](apps/android/)** &middot; **[Rust core](crates/toolkit-core/)** &middot; **[Python scripts](scripts/)** &middot; **[Ready-to-run apps](https://github.com/trecitano/The-Balance-Toolkit-Apps)**
 
 ---
 
@@ -28,17 +28,16 @@ Watch the full walkthrough on [YouTube](https://youtu.be/_8UwrUgqUao).
 
 ## Repository layout
 
-The Rust core is the heart of the toolkit; the desktop app and the headless CLI are two frontends for it. The Android app is a companion and standalone capture application. The Python scripts consume the streams emitted by either frontend for inspection and integration testing.
+The Rust core is the heart of the toolkit; the desktop app and the headless CLI are two frontends for it. The Android app is a companion and standalone capture application. The Python scripts consume the streams emitted by either frontend for inspection and integration testing. Shippable applications live under `apps/`; shared libraries live under `crates/`.
 
 | Folder | Contents | Guide |
 |---|---|---|
+| [`apps/desktop/`](apps/desktop/) | Desktop app: React, TypeScript and Vite frontend in `src/`, Tauri shell in `src-tauri/` | [Install](INSTALL.md) |
+| [`apps/cli/`](apps/cli/) | `tbt`, the headless command-line frontend (no window, no webview) | [Headless CLI](INSTALL.md#headless-cli-tbt) |
+| [`apps/android/`](apps/android/) | Android application built with Kotlin and Jetpack Compose | [Read](apps/android/README.md) |
 | [`crates/toolkit-core/`](crates/toolkit-core/) | Rust library for Bluetooth, board I/O, session state, processing, recording, replay, TCP, and LSL | [Install](INSTALL.md) |
-| [`crates/toolkit-cli/`](crates/toolkit-cli/) | `tbt`, the headless command-line frontend (no window, no webview) | [Headless CLI](INSTALL.md#headless-cli-tbt) |
-| [`src/`](src/) | Desktop frontend built with React, TypeScript, Vite, and Tauri APIs | [Install](INSTALL.md) |
-| [`src-tauri/`](src-tauri/) | Tauri shell that exposes the Rust core to the desktop frontend | [Install](INSTALL.md) |
-| [`android/`](android/) | Android application built with Kotlin and Jetpack Compose | [Read](android/README.md) |
 | [`scripts/`](scripts/) | Python scripts for inspecting the LSL and TCP data streams | This README |
-| [`public/activities/`](public/activities/) | Activity illustrations and toolkit artwork used by the desktop app | This README |
+| [`apps/desktop/public/activities/`](apps/desktop/public/activities/) | Activity illustrations and toolkit artwork used by the desktop app | This README |
 | [`linux/`](linux/) | Linux udev rules for Wii Balance Board HID access | [Install](INSTALL.md) |
 | [`resources/`](resources/) | Research support files, including expert survey results | This README |
 
@@ -63,13 +62,14 @@ For development without a board or display, follow the
 checks the core, CLI and frontend and exercises isolated mock recording/replay.
 
 1. Install the system dependencies in [`INSTALL.md`](INSTALL.md), including Bun, Rust, CMake, and the platform-specific Tauri prerequisites.
-2. Install frontend dependencies from the repository root.
+2. Install frontend dependencies from the desktop app directory.
 
 ```bash
+cd apps/desktop
 bun install
 ```
 
-3. Run the desktop app in development mode.
+3. Run the desktop app in development mode, from `apps/desktop/`.
 
 ```bash
 bun run tauri dev
@@ -86,7 +86,7 @@ cargo build --release -p toolkit-cli
 ./target/release/tbt session run --tcp  # record every connected board until Ctrl-C
 ```
 
-The Android app in [`android/`](android/) can be opened directly in Android Studio. See [`android/README.md`](android/README.md) for Android setup, build, and validation commands.
+The Android app in [`apps/android/`](apps/android/) can be opened directly in Android Studio. See [`apps/android/README.md`](apps/android/README.md) for Android setup, build, and validation commands.
 
 ## Development commands
 
@@ -103,17 +103,11 @@ The commands below are also available individually. Run them through
 `mise exec --` if your shell does not activate the pinned tools.
 
 ```bash
-# frontend lint
-bun run lint
-
-# frontend build
-bun run build
-
-# desktop app development server
-bun run tauri dev
-
-# desktop app production bundle
-bun run tauri build
+# desktop app (run from apps/desktop/)
+bun run lint          # frontend lint
+bun run build         # frontend build
+bun run tauri dev     # development server
+bun run tauri build   # production bundle
 
 # Rust workspace compile check (core, desktop shell and CLI)
 cargo check --workspace
@@ -123,7 +117,7 @@ cargo run -p toolkit-cli -- --help
 cargo build --release -p toolkit-cli
 ```
 
-Android command-line builds are run from [`android/`](android/):
+Android command-line builds are run from [`apps/android/`](apps/android/):
 
 ```bash
 ./gradlew :app:assembleDebug

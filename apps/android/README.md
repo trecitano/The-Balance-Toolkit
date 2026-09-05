@@ -34,7 +34,7 @@ This app lets you manage users and Wii Balance Board devices, pair/connect over 
 
 1. Open Android Studio.
 2. Select **Open**.
-3. Choose the `android/` directory from this repository.
+3. Choose the `apps/android/` directory from this repository.
 4. Wait for Gradle sync to complete.
 
 ## Run The App In Android Studio
@@ -49,7 +49,7 @@ This app lets you manage users and Wii Balance Board devices, pair/connect over 
 - Rebuild: **Build > Rebuild Project**
 - Clean: **Build > Clean Project**
 
-Optional command-line equivalents (run from `android/`):
+Optional command-line equivalents (run from `apps/android/`):
 
 ```bash
 ./gradlew :app:assembleDebug
@@ -61,7 +61,7 @@ Optional command-line equivalents (run from `android/`):
 
 JVM unit tests cover tare and weight using the same synthetic sensor fixtures as
 the Rust core. No instrumentation tests are committed. Run tests, static checks
-and a debug build from `android/`:
+and a debug build from `apps/android/`:
 
 ```bash
 ./gradlew :app:testDebugUnitTest

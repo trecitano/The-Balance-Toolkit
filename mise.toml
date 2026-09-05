@@ -20,6 +20,7 @@ run = ["cargo fmt --all -- --check", "cargo check --locked -p toolkit-core -p to
 
 [tasks."check:frontend"]
 description = "Lint and build the desktop frontend without launching Tauri"
+dir = "apps/desktop"
 run = ["bun run lint", "bun run build"]
 
 [tasks.test]
@@ -40,32 +41,32 @@ run = "cargo check --locked -p the-balance-toolkitapp"
 
 [tasks."test:android"]
 description = "Run Android JVM fixture tests (requires a JDK and Android SDK, no device)"
-dir = "android"
+dir = "apps/android"
 run = "./gradlew --console=plain :app:testDebugUnitTest"
 
 [tasks."check:android"]
 description = "Lint and build Android (requires a JDK and Android SDK)"
-dir = "android"
+dir = "apps/android"
 run = "./gradlew --console=plain lintKotlin detekt :app:assembleDebug"
 
 # `mise run clean` removes every generated/cached directory. Rerun
-# `./setup.sh` (or `bun install`, `cargo build`, `uv sync`) to restore them.
+# `./setup.sh` (or `bun install` in apps/desktop, `cargo build`, `uv sync`) to restore them.
 [tasks.clean]
-description = "Remove build artifacts and dependency caches (target/, node_modules/, dist/, .venv, gradle)"
+description = "Remove build artifacts and dependency caches (target/, desktop node_modules/ and dist/, .venv, gradle)"
 run = """
 set -eu
 cd "$MISE_PROJECT_ROOT"
 for dir in \
   target \
-  node_modules \
-  dist \
-  dist-ssr \
-  src-tauri/gen/schemas \
+  apps/desktop/node_modules \
+  apps/desktop/dist \
+  apps/desktop/dist-ssr \
+  apps/desktop/src-tauri/gen/schemas \
   scripts/.venv \
-  android/build \
-  android/.gradle \
-  android/app/build \
-  android/app/.cxx; do
+  apps/android/build \
+  apps/android/.gradle \
+  apps/android/app/build \
+  apps/android/app/.cxx; do
   if [ -e "$dir" ]; then
     echo "removing $dir"
     rm -rf "$dir"

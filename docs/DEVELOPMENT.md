@@ -17,7 +17,7 @@ Then, from the repository root:
 
 ```bash
 mise install
-mise exec -- bun install --frozen-lockfile
+(cd apps/desktop && mise exec -- bun install --frozen-lockfile)
 mise run doctor
 mise run verify
 ```
@@ -93,17 +93,17 @@ mise run check:android
 ```
 
 Gradle needs writable wrapper/dependency caches. Missing SDKs, JDKs or dependencies
-are setup failures, not passing tests. See [android/README.md](../android/README.md)
+are setup failures, not passing tests. See [apps/android/README.md](../apps/android/README.md)
 for device setup and app operation.
 
 ## Troubleshooting
 
 - Wrong Rust or Bun version: use `mise exec -- rustc --version` / `mise exec -- bun --version`, then `mise install` if missing.
-- Missing frontend executable: run `mise exec -- bun install --frozen-lockfile`.
+- Missing frontend executable: run `mise exec -- bun install --frozen-lockfile` in `apps/desktop/`.
 - Rust format failures: run `mise exec -- cargo fmt --all`, then review the diff.
 - Build blocked by another Cargo invocation: wait, or set `CARGO_TARGET_DIR` to a separate build directory.
 - Missing Linux native library: run `mise run doctor` and install the development package named in the diagnostic.
-- To inspect backend logs, use `TBT_LOG=debug mise exec -- bun run tauri dev`; `bun run dev` starts only Vite.
+- To inspect backend logs, use `TBT_LOG=debug mise exec -- bun run tauri dev` from `apps/desktop/`; `bun run dev` starts only Vite.
 
 Once dependencies are cached, Cargo tests can also run with `--offline`.
 The first setup and CI dependency installation need network access.

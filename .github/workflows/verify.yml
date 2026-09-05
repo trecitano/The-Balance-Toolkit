@@ -26,6 +26,7 @@ jobs:
         with:
           version: 2026.8.14
       - name: Install locked frontend dependencies
+        working-directory: apps/desktop
         run: mise exec -- bun install --frozen-lockfile
       - name: Verify
         run: mise run verify

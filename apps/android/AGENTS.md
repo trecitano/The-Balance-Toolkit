@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Coding-agent runbook for `android/`. Also read the [root runbook](../AGENTS.md).
+Coding-agent runbook for `apps/android/`. Also read the [root runbook](../../AGENTS.md).
 
 ## Scope
 
@@ -47,7 +47,7 @@ Coding-agent runbook for `android/`. Also read the [root runbook](../AGENTS.md).
 
 ## Build, Lint, and Test Commands
 
-Run from `android/`.
+Run from `apps/android/`.
 
 ```bash
 ./gradlew :app:testDebugUnitTest
