@@ -9,7 +9,7 @@ import {
 } from "./UPlot.tsx";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
-import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
+import { convertNumberToMacAddress } from "@/utils/macAddress.ts";
 import { SessionState, SessionStore } from "@/store/sessionDataStore.tsx";
 import { ProcessedSessionData } from "@/types.ts";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";

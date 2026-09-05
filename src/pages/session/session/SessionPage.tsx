@@ -2,30 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { SessionPanel } from "./SessionPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import { Activity, SessionPanelConfiguration, SessionInformation, SelectedBoard } from "@/types.ts";
+import { SessionPanelConfiguration, SelectedBoard } from "@/types.ts";
 import { sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
 import { listen } from "@tauri-apps/api/event";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 import { BaseOption } from "@/components/SelectPrimitive.tsx";
-
-export const SESSION_QUERY_KEY = ["session_key"];
-export type SessionQueryData = {
-  sessionInformation: SessionInformation;
-  activities: Activity[];
-};
-export const SessionQuery = {
-  queryKey: SESSION_QUERY_KEY,
-  queryFn: async () => {
-    const [sessionInformation, activities] = await Promise.all([
-      commands.session.sessionInfo(),
-      commands.activity.getActivities(),
-    ]);
-
-    return { sessionInformation, activities };
-  },
-};
+import { SESSION_QUERY_KEY, SessionQuery, SessionQueryData } from "@/pages/session/session/sessionQuery.ts";
 
 export default function SessionPage() {
   const { data } = useQuery(SessionQuery);

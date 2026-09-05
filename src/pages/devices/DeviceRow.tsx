@@ -1,9 +1,9 @@
 import { useRef } from "react";
 import { Device } from "@/types";
 import wbbIcon from "@/assets/wbb-top-white.svg";
-import wbbIconBlue from "@/assets/wbb-top-blue.svg";
+import wbbIconBlue from "@/assets/wbb-top-blue.png";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
+import { convertNumberToMacAddress } from "@/utils/macAddress.ts";
 import clsx from "clsx";
 
 interface DeviceRowProps {

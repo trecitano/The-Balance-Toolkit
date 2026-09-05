@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { GeneralSettings, InterpolationOption, interpolationOptions, ProcessingSettings } from "@/types.ts";
 import { open } from "@tauri-apps/plugin-dialog";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
-import { DEVICES_QUERY_KEY } from "@/pages/devices/Devices.tsx";
+import { DEVICES_QUERY_KEY } from "@/pages/devices/devicesQuery.ts";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { Checkbox } from "@/components/Checkbox.tsx";
 import { Modal } from "@/components/Modal.tsx";

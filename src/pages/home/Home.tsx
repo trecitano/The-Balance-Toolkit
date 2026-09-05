@@ -13,7 +13,7 @@ import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import githubIcon from "@/assets/github-icon.svg";
 import wbbIcon from "@/assets/wbb-top-white.svg";
-import wbbIconBlue from "@/assets/wbb-top-blue.svg";
+import wbbIconBlue from "@/assets/wbb-top-blue.png";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import rippleIcon from "@/assets/ripple-icon.svg";
 import underConstructionHelp from "@/assets/under-construction-1-grey.svg";
@@ -44,9 +44,11 @@ const Home: React.FC = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: HOME_QUERY_KEY,
     queryFn: async () => {
-      const activities = await commands.activity.getActivities();
-      const lastSessionDetails = await commands.replay.loadLastSessionDetails();
-      const devices = await commands.devices.fetchDevices();
+      const [activities, lastSessionDetails, devices] = await Promise.all([
+        commands.activity.getActivities(),
+        commands.replay.loadLastSessionDetails(),
+        commands.devices.fetchDevices(),
+      ]);
       return { activities, lastSessionDetails, devices };
     },
   });

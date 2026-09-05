@@ -12,28 +12,7 @@ import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import IdentifyDeviceModal from "@/pages/devices/IdentifyDeviceModal.tsx";
 import ScanningModal from "@/pages/devices/ScanningModal.tsx";
 import CalibrationModal from "@/pages/devices/CalibrationModal.tsx";
-
-export const DEVICES_QUERY_KEY = ["devices"];
-export const DevicesQuery = {
-  queryKey: DEVICES_QUERY_KEY,
-  queryFn: async () => {
-    const [devices, selectedDevicesMacAddress, isScanning] = await Promise.all([
-      commands.devices.fetchDevices(),
-      commands.devices.selectedDevices(),
-      commands.devices.isScanning(),
-    ]);
-    return { devices, selectedDevicesMacAddress, isScanning };
-  },
-};
-
-export const convertNumberToMacAddress = (number: number): string => {
-  return number
-    .toString(16)
-    .toUpperCase()
-    .padStart(12, "0")
-    .match(/.{1,2}/g)!
-    .join(":");
-};
+import { DEVICES_QUERY_KEY, DevicesQuery } from "@/pages/devices/devicesQuery.ts";
 
 export default function Devices() {
   const [foundDevicesCount, setFoundDevicesCount] = useState(0);

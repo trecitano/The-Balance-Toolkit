@@ -4,7 +4,15 @@ import "uplot/dist/uPlot.min.css";
 import { BoardBuffer, SessionStore } from "@/store/sessionDataStore.tsx";
 import { ProcessedSessionData } from "@/types.ts";
 import { Tooltip } from "@/components/Tooltip.tsx";
-import { BLUE_COLOUR, GREEN_COLOUR, RED_COLOUR, YELLOW_COLOUR } from "@/pages/session/UPlot.tsx";
+import {
+  BLUE_COLOUR,
+  forEachFrameInWindow,
+  GREEN_COLOUR,
+  PLOT_PAD_SEC,
+  PLOT_WINDOW_SEC,
+  RED_COLOUR,
+  YELLOW_COLOUR,
+} from "@/pages/session/UPlot.tsx";
 
 interface MetricConfig {
   key: keyof ProcessedSessionData;
@@ -13,9 +21,6 @@ interface MetricConfig {
   enabled: boolean;
   tooltipId: string;
 }
-
-const WINDOW_SEC = 10;
-const PAD_SEC = 1.5;
 
 export function MultiMetricPlot({
   title,
@@ -66,7 +71,7 @@ export function MultiMetricPlot({
         x: {
           range: (_u, _min, max) => {
             const now = max || 0;
-            return [now - WINDOW_SEC, now + PAD_SEC];
+            return [now - PLOT_WINDOW_SEC, now + PLOT_PAD_SEC];
           },
         },
         y: {
@@ -185,30 +190,20 @@ export function MultiMetricPlot({
       (buffer: BoardBuffer<ProcessedSessionData> | undefined) => {
         if (!plotRef.current || !buffer) return;
 
-        // Extract data for all metrics
+        // Only the visible window is mapped; see forEachFrameInWindow.
         const t: number[] = [];
         const mlsi: number[] = [];
         const apsi: number[] = [];
         const vsi: number[] = [];
         const dpsi: number[] = [];
 
-        let t0: number | null = null;
-
-        for (let i = 0; i < buffer.len; i++) {
-          const idx = (buffer.head - (buffer.len - 1 - i) + buffer.frames.length) % buffer.frames.length;
-          const frame = buffer.frames[idx];
-
-          if (frame) {
-            const ts = frame.timestamp / 1000;
-            if (t0 === null) t0 = ts;
-
-            t.push(ts - t0);
-            mlsi.push(frame.mlsi ?? 0);
-            apsi.push(frame.apsi ?? 0);
-            vsi.push(frame.vsi ?? 0);
-            dpsi.push(frame.dpsi ?? 0);
-          }
-        }
+        forEachFrameInWindow(buffer, PLOT_WINDOW_SEC + 2, (frame) => {
+          t.push(frame.timestamp / 1000);
+          mlsi.push(frame.mlsi ?? 0);
+          apsi.push(frame.apsi ?? 0);
+          vsi.push(frame.vsi ?? 0);
+          dpsi.push(frame.dpsi ?? 0);
+        });
 
         plotRef.current.setData([t, mlsi, apsi, vsi, dpsi]);
       },

@@ -1,9 +1,9 @@
 import { Device } from "@/types";
 import bluetoothIcon from "@/assets/bluetooth-connected-icon.svg";
 import rippleIcon from "@/assets/ripple-icon.svg";
-import wbbIconBlue from "@/assets/wbb-top-blue.svg";
+import wbbIconBlue from "@/assets/wbb-top-blue.png";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import { convertNumberToMacAddress } from "@/pages/devices/Devices.tsx";
+import { convertNumberToMacAddress } from "@/utils/macAddress.ts";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import { sessionIcon } from "@/components/navigation/Navigation.tsx";
 

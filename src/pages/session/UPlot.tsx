@@ -8,6 +8,16 @@ import { Tooltip } from "@/components/Tooltip.tsx";
 type DataSelector<T> = (state: SessionState) => BoardBuffer<T> | undefined;
 type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: number[] };
 
+/** Seconds of history the rolling plots show. */
+export const PLOT_WINDOW_SEC = 10;
+/** Padding after the newest point so it is not drawn on the plot edge. */
+export const PLOT_PAD_SEC = 1.5;
+/**
+ * Seconds of history handed to uPlot. Slightly more than the visible window so the line still
+ * enters from the left edge; anything older is never drawn, so it is never mapped either.
+ */
+const PLOT_DATA_SEC = PLOT_WINDOW_SEC + 2;
+
 export const RED_COLOUR = "#ef4444";
 export const BLACK_COLOUR = "#000";
 export const BLUE_COLOUR = "#3b82f6";
@@ -55,24 +65,20 @@ export function UPlot<T>({
     };
   }, []);
 
-  // Subscribe directly to Zustand for updates
+  // Subscribe directly to Zustand for updates. The selector and mapper are captured once, so
+  // a panel that shows a different board must remount this component (key it by board).
   useEffect(() => {
-    // Subscribe for future updates
     const unsub = store.subscribe(
       (state) => dataSelector(state),
       (buffer) => {
-        if (!plotRef || !plotRef.current || buffer === undefined) {
+        if (!plotRef.current || buffer === undefined) {
           return;
         }
 
         const { t, y } = dataMapper(buffer);
         plotRef.current.setData([t, y]);
       },
-      {
-        equalityFn: (a, b) => {
-          return a === b; // Try simple reference equality first
-        },
-      },
+      { equalityFn: (a, b) => a === b },
     );
 
     return () => unsub();
@@ -108,8 +114,7 @@ export function copYPlotSettings(macAddress: number) {
       x: {
         range: (_u, _min, max) => {
           const now = max || 0;
-          const pad = 1.5; // padding to avoid cropping latest point
-          return [now - 10, now + pad];
+          return [now - PLOT_WINDOW_SEC, now + PLOT_PAD_SEC];
         },
       },
       y: { range: [-1, 1] },
@@ -175,10 +180,6 @@ export function copXPlotSettings(macAddress: number) {
   const X_MIN = -1;
   const X_MAX = 1;
 
-  // Vertical domain (time window)
-  const WINDOW_SEC = 10;
-  const PAD_SEC = 1.5;
-
   const uPlotOptions: uPlot.Options = {
     width: 0,
     height: 0,
@@ -192,7 +193,7 @@ export function copXPlotSettings(macAddress: number) {
       x: {
         range: (_u, _min, max) => {
           const now = max || 0;
-          return [now - WINDOW_SEC, now + PAD_SEC];
+          return [now - PLOT_WINDOW_SEC, now + PLOT_PAD_SEC];
         },
         ori: 1,
         dir: -1,
@@ -238,9 +239,6 @@ export function copXPlotSettings(macAddress: number) {
 }
 
 export function standardPlot(color: string) {
-  const WINDOW_SEC = 10;
-  const PAD_SEC = 1.5;
-
   const uPlotOptions: uPlot.Options = {
     width: 0,
     height: 0,
@@ -250,7 +248,7 @@ export function standardPlot(color: string) {
       x: {
         range: (_u, _min, max) => {
           const now = max || 0;
-          return [now - WINDOW_SEC, now + PAD_SEC];
+          return [now - PLOT_WINDOW_SEC, now + PLOT_PAD_SEC];
         },
       },
       y: {
@@ -298,22 +296,45 @@ export function standardPlot(color: string) {
 
 // Helper Functions
 
+/**
+ * Visits the frames from the last `seconds` of a ring buffer, oldest to newest. The buffer
+ * keeps far more history than the plots show (processed data at 10 Hz fills it with minutes),
+ * so walking back from the head and stopping at the window edge keeps each redraw proportional
+ * to what is drawn rather than to the buffer size.
+ */
+export function forEachFrameInWindow<T extends { timestamp: number }>(
+  buf: BoardBuffer<T>,
+  seconds: number,
+  visit: (frame: T) => void,
+) {
+  if (buf.len === 0) return;
+  const cap = buf.frames.length;
+  const newest = buf.frames[buf.head];
+  if (!newest) return;
+
+  const tStart = newest.timestamp - seconds * 1000;
+  let count = 0;
+  for (; count < buf.len; count++) {
+    const f = buf.frames[(buf.head - count + cap) % cap];
+    if (!f || f.timestamp < tStart) break;
+  }
+
+  for (let i = count - 1; i >= 0; i--) {
+    visit(buf.frames[(buf.head - i + cap) % cap] as T);
+  }
+}
+
 export function makeDataMapper<T extends { timestamp: number }>(selector: (data: T) => number) {
   return (buf: BoardBuffer<T>) => {
     const t: number[] = [];
     const y: number[] = [];
-    let t0: number | null = null;
 
-    for (let i = 0; i < buf.len; i++) {
-      const idx = (buf.head - (buf.len - 1 - i) + buf.frames.length) % buf.frames.length;
-      const f = buf.frames[idx];
-      if (f) {
-        const ts = f.timestamp / 1000;
-        if (t0 === null) t0 = ts;
-        t.push(ts - t0);
-        y.push(selector(f));
-      }
-    }
+    // Epoch seconds go straight onto the x scale: its range is relative to the newest point
+    // and the axis labels are hidden, so no per-frame re-basing is needed.
+    forEachFrameInWindow(buf, PLOT_DATA_SEC, (f) => {
+      t.push(f.timestamp / 1000);
+      y.push(selector(f));
+    });
 
     return { t, y };
   };

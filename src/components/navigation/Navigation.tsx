@@ -11,7 +11,7 @@ import Settings from "@/components/modals/SettingsModal.tsx";
 import "./Navigation.css";
 import clsx from "clsx";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { SESSION_QUERY_KEY, SessionQueryData } from "@/pages/session/session/SessionPage.tsx";
+import { SESSION_QUERY_KEY, SessionQueryData } from "@/pages/session/session/sessionQuery.ts";
 
 interface NavigationProps {
   activeView: string;

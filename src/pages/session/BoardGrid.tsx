@@ -30,7 +30,14 @@ export function BoardGrid({
           <p className="text-xl text-gray-400">Choose a board from the panel above to get started.</p>
         </div>
       ) : displayBoards.length === 1 ? (
-        <ComplexBoardPanel boardName={displayBoards[0].name} macAddress={displayBoards[0].macAddress} store={store} />
+        // Keyed by board: the plots inside subscribe once on mount, so switching the displayed
+        // board must remount them rather than re-render them with a new macAddress.
+        <ComplexBoardPanel
+          key={displayBoards[0].macAddress}
+          boardName={displayBoards[0].name}
+          macAddress={displayBoards[0].macAddress}
+          store={store}
+        />
       ) : (
         <div className="grid grid-cols-2 h-full gap-4">
           {displayBoards.map((board) => (
