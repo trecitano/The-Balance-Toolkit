@@ -5,3 +5,72 @@
 bun = "1.4.1"
 rust = "1.98.0"
 uv = "0.12.9"
+
+[tasks.doctor]
+description = "Check the pinned tools and dependencies for verification without hardware"
+run = "bun scripts/verify/doctor.mjs"
+
+[tasks.check]
+description = "Check Rust formatting/compilation and lint/build the desktop frontend"
+depends = ["check:rust", "check:frontend"]
+
+[tasks."check:rust"]
+description = "Check formatting and compile the core and CLI (no webview required)"
+run = ["cargo fmt --all -- --check", "cargo check --locked -p toolkit-core -p toolkit-cli"]
+
+[tasks."check:frontend"]
+description = "Lint and build the desktop frontend without launching Tauri"
+run = ["bun run lint", "bun run build"]
+
+[tasks.test]
+description = "Run deterministic core unit/fixture tests and CLI unit tests"
+run = ["cargo test --locked -p toolkit-core", "cargo test --locked -p toolkit-cli --bin tbt"]
+
+[tasks.smoke]
+description = "Exercise the CLI with isolated mock recordings, replay, and failure checks"
+run = "cargo test --locked -p toolkit-cli --test smoke"
+
+[tasks.verify]
+description = "Run the same hardware-free verification as CI"
+run = ["mise run doctor", "mise run check", "mise run test", "mise run smoke"]
+
+[tasks."check:desktop"]
+description = "Compile the Tauri shell (requires platform Tauri dependencies)"
+run = "cargo check --locked -p the-balance-toolkitapp"
+
+[tasks."test:android"]
+description = "Run Android JVM fixture tests (requires a JDK and Android SDK, no device)"
+dir = "android"
+run = "./gradlew --console=plain :app:testDebugUnitTest"
+
+[tasks."check:android"]
+description = "Lint and build Android (requires a JDK and Android SDK)"
+dir = "android"
+run = "./gradlew --console=plain lintKotlin detekt :app:assembleDebug"
+
+# `mise run clean` removes every generated/cached directory. Rerun
+# `./setup.sh` (or `bun install`, `cargo build`, `uv sync`) to restore them.
+[tasks.clean]
+description = "Remove build artifacts and dependency caches (target/, node_modules/, dist/, .venv, gradle)"
+run = """
+set -eu
+cd "$MISE_PROJECT_ROOT"
+for dir in \
+  target \
+  node_modules \
+  dist \
+  dist-ssr \
+  src-tauri/gen/schemas \
+  scripts/.venv \
+  android/build \
+  android/.gradle \
+  android/app/build \
+  android/app/.cxx; do
+  if [ -e "$dir" ]; then
+    echo "removing $dir"
+    rm -rf "$dir"
+  fi
+done
+find . -name __pycache__ -type d -not -path './.git/*' -prune -exec rm -rf {} +
+echo "clean."
+"""

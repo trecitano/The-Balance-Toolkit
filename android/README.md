@@ -18,16 +18,17 @@ This app lets you manage users and Wii Balance Board devices, pair/connect over 
 - Kotlin + Jetpack Compose (Material 3)
 - Hilt (dependency injection)
 - Room (local persistence)
-- Gradle 9.1.0
-- Android Gradle Plugin 9.0.1
-- Kotlin 2.3.0
-- Compile/target SDK 36, min SDK 33
+- Gradle version: [wrapper configuration](gradle/wrapper/gradle-wrapper.properties)
+- Kotlin, Android plugin and library versions: [version catalog](gradle/libs.versions.toml)
+- SDK levels and bytecode target: [app build configuration](app/build.gradle.kts)
 
 ## Requirements
 
 - Android Studio (latest stable recommended)
 - Android SDK 36 installed
 - A device or emulator running Android 13+ (API 33+)
+- For terminal builds, configure `JAVA_HOME` (CI uses JDK 21) and `ANDROID_HOME`.
+  JVM unit tests need the JDK and SDK but do not need a device or emulator.
 
 ## Android Studio Setup (Recommended)
 
@@ -58,13 +59,20 @@ Optional command-line equivalents (run from `android/`):
 
 ## Validation Checks
 
-This module currently has no committed unit or instrumentation tests.
-
-Use lint/static checks plus a debug build for validation:
+JVM unit tests cover tare and weight using the same synthetic sensor fixtures as
+the Rust core. No instrumentation tests are committed. Run tests, static checks
+and a debug build from `android/`:
 
 ```bash
+./gradlew :app:testDebugUnitTest
 ./gradlew lintKotlin detekt :app:assembleDebug
 ```
+
+From the repository root, use `mise run test:android` and `mise run check:android`.
+See [development verification](../docs/DEVELOPMENT.md) for the CI workflow and
+[fixture documentation](../tests/fixtures/README.md) for coverage. Shared sensor
+fixtures do not imply recording compatibility: Android session-settings JSON
+currently differs from the Rust desktop/CLI format.
 
 ## Permissions And Storage
 

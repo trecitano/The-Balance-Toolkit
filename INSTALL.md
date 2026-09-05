@@ -1,5 +1,9 @@
 # System Requirements
 
+For checks that need no board, display or Bluetooth service, start with
+[Development and verification](docs/DEVELOPMENT.md). The setup checklist below
+also checks dependencies and permissions for physical board operation.
+
 ## Quick setup
 
 The repository ships a setup script that checks every dependency below,
@@ -21,6 +25,13 @@ See [setup/README.md](setup/README.md) for details. The rest of this document
 describes the manual steps the script automates.
 
 The app works in Windows, MacOS and Unix distros.
+
+The repository builds two programs from the same Rust core:
+
+- **The desktop app** (Tauri + React), which needs everything below.
+- **`tbt`, the headless CLI**, which needs only Rust, CMake and, on Linux, the
+  Bluetooth and HID system libraries. It skips Bun, WebView2/WebKitGTK and the
+  other Tauri prerequisites. See [Headless CLI](#headless-cli-tbt).
 
 The project pins its Bun, Rust and uv versions in [`mise.toml`](mise.toml) and
 installs them with [mise](https://mise.jdx.dev), so every platform builds with
@@ -292,6 +303,67 @@ Build for production:
 bun run tauri build
 ```
 
+## Headless CLI (`tbt`)
+
+`tbt` drives the same Bluetooth, recording, replay and streaming code as the
+desktop app from a terminal, with no window and no webview. It shares the
+desktop app's settings, users, activities and board list, so a board paired in
+one shows up in the other.
+
+Requirements: the Rust toolchain from `mise.toml` and CMake (for LSL). On Linux
+also `libudev` (HID access) and D-Bus development libraries. Physical boards need
+BlueZ with the Bluetooth service running and the hidraw udev rule from
+[Balance Board hidraw permissions](#balance-board-hidraw-permissions).
+Bun, WebView2 and the WebKitGTK/GTK packages are not needed. On Debian/Ubuntu:
+
+```bash
+sudo apt install build-essential cmake pkg-config libudev-dev libdbus-1-dev libssl-dev
+```
+
+Build it from the repository root:
+
+```bash
+mise exec -- cargo build --locked --release -p toolkit-cli
+# binary: target/release/tbt
+```
+
+Or run it from the source tree with `mise exec -- cargo run --locked -p toolkit-cli -- <args>`.
+
+Typical use:
+
+```bash
+tbt devices scan                 # pair boards: press the red SYNC button, Ctrl-C when done
+tbt devices list                 # boards and whether they are connected
+tbt devices rename 00:1f:32:aa:bb:cc "Left board"
+
+tbt session run                  # record from every connected board until Ctrl-C
+tbt session run "Left board" --activity eyes-open-close --tcp --lsl
+tbt session run --duration 60 --user 2 --output ~/recordings
+tbt session run --live samples | jq .   # every sample as JSON Lines on stdout
+tbt session last                 # where the last recording went
+
+tbt replay run ~/recordings/tbt-2026-09-05T10-12-00.settings.json --tcp
+
+tbt settings show
+tbt settings set isDemoMode true           # simulated boards, no hardware needed
+tbt settings set processingSettings.windowSizeMs 3000
+tbt activities list
+tbt users list
+```
+
+Every command has `--help`. Add `--json` to list/show commands for
+machine-readable output, and `--log-level debug` (or `TBT_LOG=debug`) to see the
+core's logs.
+
+The application directory defaults to `the-balance-toolkit` inside your
+documents folder, falling back to your home directory on systems without one.
+Set `TBT_APP_DIR` to move it, for example to keep a headless capture machine's
+data on a specific disk:
+
+```bash
+TBT_APP_DIR=/data/balance tbt session run --output /data/balance/recordings
+```
+
 ## Troubleshooting
 
 ### Common Issues
@@ -311,6 +383,13 @@ bun run tauri build
      ```bash
      bun run tauri clean
      bun run dev
+     ```
+
+4. Getting More Logs
+   - The backend logs to stderr. Development builds log at `debug` level, release builds at `info`.
+   - Override the level with the `TBT_LOG` environment variable (`error`, `warn`, `info`, `debug` or `trace`):
+     ```bash
+     TBT_LOG=debug mise exec -- bun run tauri dev
      ```
 
 ## Additional Resources

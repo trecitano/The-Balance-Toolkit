@@ -10,11 +10,11 @@
   </tr>
 </table>
 
-**[Install](INSTALL.md)** &middot; **[Desktop frontend](src/)** &middot; **[Tauri backend](src-tauri/)** &middot; **[Android](android/)** &middot; **[Python scripts](scripts/)** &middot; **[Ready-to-run apps](https://github.com/trecitano/The-Balance-Toolkit-Apps)**
+**[Install](INSTALL.md)** &middot; **[Desktop frontend](src/)** &middot; **[Rust core](crates/toolkit-core/)** &middot; **[Headless CLI](crates/toolkit-cli/)** &middot; **[Android](android/)** &middot; **[Python scripts](scripts/)** &middot; **[Ready-to-run apps](https://github.com/trecitano/The-Balance-Toolkit-Apps)**
 
 ---
 
-This repository holds the source code for **_The Balance Toolkit: Democratizing Balance-Based Interaction Through Open-Source Software for Repurposed Wii Balance Boards_** (CHI PLAY 2026). It contains the cross-platform desktop application, Android application, streaming tools, and platform support files used to reproduce and extend the system described in the paper.
+This repository holds the source code for **_The Balance Toolkit: Democratizing Balance-Based Interaction Through Open-Source Software for Repurposed Wii Balance Boards_** (CHI PLAY 2026). It contains the cross-platform desktop application, a headless command-line tool, the Android application, streaming tools, and platform support files used to reproduce and extend the system described in the paper.
 
 The Balance Toolkit turns an inexpensive consumer Wii Balance Board (WBB) into a research and development platform for balance-based games, rehabilitation, and accessible play. It handles Bluetooth pairing, reads the four force sensors, computes center of pressure (CoP) and posturography metrics, records sessions, replays captured data, and streams live data to games and analysis tools over TCP and Lab Streaming Layer (LSL).
 
@@ -28,12 +28,14 @@ Watch the full walkthrough on [YouTube](https://youtu.be/_8UwrUgqUao).
 
 ## Repository layout
 
-The desktop application is the core of the toolkit. The Android app is a companion and standalone capture application. The Python scripts consume the streams emitted by the desktop app for inspection and integration testing.
+The Rust core is the heart of the toolkit; the desktop app and the headless CLI are two frontends for it. The Android app is a companion and standalone capture application. The Python scripts consume the streams emitted by either frontend for inspection and integration testing.
 
 | Folder | Contents | Guide |
 |---|---|---|
+| [`crates/toolkit-core/`](crates/toolkit-core/) | Rust library for Bluetooth, board I/O, session state, processing, recording, replay, TCP, and LSL | [Install](INSTALL.md) |
+| [`crates/toolkit-cli/`](crates/toolkit-cli/) | `tbt`, the headless command-line frontend (no window, no webview) | [Headless CLI](INSTALL.md#headless-cli-tbt) |
 | [`src/`](src/) | Desktop frontend built with React, TypeScript, Vite, and Tauri APIs | [Install](INSTALL.md) |
-| [`src-tauri/`](src-tauri/) | Rust backend for Bluetooth, session state, processing, recording, replay, TCP, and LSL | [Install](INSTALL.md) |
+| [`src-tauri/`](src-tauri/) | Tauri shell that exposes the Rust core to the desktop frontend | [Install](INSTALL.md) |
 | [`android/`](android/) | Android application built with Kotlin and Jetpack Compose | [Read](android/README.md) |
 | [`scripts/`](scripts/) | Python scripts for inspecting the LSL and TCP data streams | This README |
 | [`public/activities/`](public/activities/) | Activity illustrations and toolkit artwork used by the desktop app | This README |
@@ -45,6 +47,7 @@ Packaged applications and integration examples are published separately in [The 
 ## What the toolkit does
 
 - **Cross-platform desktop app** for Windows, macOS, and Linux, built with Rust, Tauri, React, and TypeScript.
+- **Headless CLI** (`tbt`) that pairs boards, records and replays sessions, and streams over TCP and LSL from a terminal or a server with no display. It shares settings, users and recordings with the desktop app.
 - **Android companion app** for Bluetooth board connection, live sessions, user/device management, and standalone session capture.
 - **Bluetooth connectivity** to Wii Balance Boards, including support for one or two boards in a session.
 - **Data processing pipeline** that computes center of pressure, sway, spatial and stability metrics, and frequency analysis.
@@ -54,6 +57,10 @@ Packaged applications and integration examples are published separately in [The 
 - **Python stream inspection tools** for validating TCP and LSL output during development.
 
 ## Quick start
+
+For development without a board or display, follow the
+[verification quick start](docs/DEVELOPMENT.md#first-setup). `mise run verify`
+checks the core, CLI and frontend and exercises isolated mock recording/replay.
 
 1. Install the system dependencies in [`INSTALL.md`](INSTALL.md), including Bun, Rust, CMake, and the platform-specific Tauri prerequisites.
 2. Install frontend dependencies from the repository root.
@@ -71,11 +78,29 @@ bun run tauri dev
 4. Add a Wii Balance Board under the **Devices** menu, then add it to a session under the **Session** menu.
 5. Toggle **TCP** or **LSL** streaming on, start recording, and consume the live stream from Python, Unity, or another client.
 
+Prefer a terminal? Build the headless CLI instead and record with two commands:
+
+```bash
+cargo build --release -p toolkit-cli
+./target/release/tbt devices scan       # press the board's SYNC button, Ctrl-C when paired
+./target/release/tbt session run --tcp  # record every connected board until Ctrl-C
+```
+
 The Android app in [`android/`](android/) can be opened directly in Android Studio. See [`android/README.md`](android/README.md) for Android setup, build, and validation commands.
 
 ## Development commands
 
 Run these from the repository root unless noted otherwise.
+
+Use [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full workflow and pass criteria:
+
+```bash
+mise run doctor
+mise run verify
+```
+
+The commands below are also available individually. Run them through
+`mise exec --` if your shell does not activate the pinned tools.
 
 ```bash
 # frontend lint
@@ -90,8 +115,12 @@ bun run tauri dev
 # desktop app production bundle
 bun run tauri build
 
-# Rust backend compile check
-cargo check --manifest-path src-tauri/Cargo.toml
+# Rust workspace compile check (core, desktop shell and CLI)
+cargo check --workspace
+
+# headless CLI
+cargo run -p toolkit-cli -- --help
+cargo build --release -p toolkit-cli
 ```
 
 Android command-line builds are run from [`android/`](android/):
@@ -103,7 +132,13 @@ Android command-line builds are run from [`android/`](android/):
 
 ## Data stream reference
 
-The toolkit exposes raw and processed streams at 100 Hz. By default, TCP binds to `localhost:11223` for raw data and `localhost:11224` for processed data. LSL uses the default stream name `the-balance-toolkit` and publishes two suffixed streams:
+Both Rust frontends expose raw and processed streams. Raw acquisition targets
+about 100 Hz; processed results follow `windowSlideMs` (100 ms by default, about
+10 results/second). `samplingRate` controls interpolation within the processing
+window. LSL currently advertises a hardcoded nominal 100 Hz for both streams,
+which does not describe the processed publication cadence. By default, TCP binds
+to `localhost:11223` for raw data and `localhost:11224` for processed data. LSL uses
+the default stream name `the-balance-toolkit` and publishes two suffixed streams:
 
 - **`the-balance-toolkit_basic`** (8 channels): `timestamp`, `mac_address`, `top_right`, `bottom_right`, `top_left`, `bottom_left`, `cop_x`, `cop_y`.
 - **`the-balance-toolkit_complex`** (9 channels): `timestamp`, `mac_address`, `v_cop_x`, `v_cop_y`, `stability_index`, `dpsi_mlsi`, `dpsi_apsi`, `dpsi_vsi`, `dpsi_overall`.
@@ -143,7 +178,7 @@ DOI to be added on publication.
 
 ## License
 
-The Tauri backend crate declares an MIT license. See the paper and repository licensing terms before redistributing applications or research materials.
+The Rust crates declare an MIT license. See the paper and repository licensing terms before redistributing applications or research materials.
 
 ---
 

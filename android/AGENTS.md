@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Coding-agent runbook for `/home/asler/Developer/The-Balance-Toolkit/android`.
+Coding-agent runbook for `android/`. Also read the [root runbook](../AGENTS.md).
 
 ## Scope
 
@@ -10,12 +10,10 @@ Coding-agent runbook for `/home/asler/Developer/The-Balance-Toolkit/android`.
 
 ## Project Snapshot
 
-- Build system: Gradle 9.1.0 (`gradle/wrapper/gradle-wrapper.properties`)
-- Android Gradle Plugin: 9.0.1
-- Kotlin: 2.3.0
-- Compile/target SDK: 36
-- Min SDK: 33
-- Java/Kotlin target: 11
+- Gradle version: `gradle/wrapper/gradle-wrapper.properties`
+- Plugin/library versions: `gradle/libs.versions.toml`
+- SDK levels and bytecode target: `app/build.gradle.kts`
+- Set `JAVA_HOME` and `ANDROID_HOME` for terminal builds; CI uses JDK 21.
 - DI: Hilt
 - Persistence: Room
 - UI: Compose Material3 + adaptive navigation suite
@@ -44,45 +42,33 @@ Coding-agent runbook for `/home/asler/Developer/The-Balance-Toolkit/android`.
 - Session output writes both:
   - raw CSV (`*-raw.csv`)
   - session config JSON (`*.settings.json`)
-- `SessionConfiguration` is intentionally aligned with the desktop/Tauri format; keep field names stable.
+- `SessionConfiguration` currently differs from the Rust recording format (field naming, user IDs, duration and file mappings). Preserve existing Android files until an explicit migration is implemented; do not assume Rust replay can load them.
+- Tare and total-weight examples are shared with Rust in `../tests/fixtures/sensors.json`. `TareManagerTest` loads this exact resource; do not copy it into the Android tree.
 
 ## Build, Lint, and Test Commands
 
 Run from `android/`.
 
 ```bash
-./gradlew :app:assembleDebug
-./gradlew :app:assembleRelease
-./gradlew :app:build
-./gradlew check
-./gradlew detekt
-./gradlew lintKotlin
-./gradlew formatKotlin
-./gradlew test
 ./gradlew :app:testDebugUnitTest
-./gradlew :app:connectedDebugAndroidTest
-./gradlew :app:tasks --all
+./gradlew lintKotlin detekt :app:assembleDebug
 ```
 
-Single test commands:
+Run the shared fixture tests alone:
 
 ```bash
-./gradlew :app:testDebugUnitTest --tests "com.balancetoolkit.SomeTest"
-./gradlew :app:testDebugUnitTest --tests "com.balancetoolkit.SomeTest.someMethod"
-./gradlew :app:testDebugUnitTest --tests "*SomeTest*"
-
-./gradlew :app:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=com.balancetoolkit.SomeInstrumentedTest#methodName
+./gradlew :app:testDebugUnitTest --tests "com.balancetoolkit.bluetooth.TareManagerTest"
 ```
 
 Current status:
 
-- `app/src/test` and `app/src/androidTest` are currently empty (no committed tests yet).
+- JVM tests cover tare/weight behavior. No instrumentation tests are committed.
+- From the repository root, `mise run test:android` and `mise run check:android` invoke the corresponding checks.
 
 ## Validation Workflow for Agents
 
 1. Run the smallest relevant checks first (targeted test or lint task).
-2. For Kotlin/Compose changes with no tests, run at least:
+2. Run `./gradlew :app:testDebugUnitTest` and, for Kotlin/Compose changes, at least:
    - `./gradlew lintKotlin detekt :app:assembleDebug`
 3. For broader confidence, run:
    - `./gradlew :app:build`
