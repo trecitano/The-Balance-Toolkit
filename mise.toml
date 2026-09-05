@@ -1,0 +1,7 @@
+# Project toolchain, managed by mise (https://mise.jdx.dev).
+# `./setup.sh` installs mise and runs `mise install`; these are the versions
+# every platform builds with. Bump them here and rerun `mise install`.
+[tools]
+bun = "1.4.1"
+rust = "1.98.0"
+uv = "0.12.9"

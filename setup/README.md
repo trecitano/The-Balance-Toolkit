@@ -1,0 +1,83 @@
+# Setup scripts
+
+One entry point checks every development dependency for The Balance Toolkit,
+reports what is installed and what is missing, and offers a checklist of the
+missing items to install. The checklist has two sections: **Required** items
+are ticked by default, **Optional** items (end-to-end test tooling, the Python
+streaming clients, Unity Hub) are listed unticked.
+
+```bash
+./setup.sh              # Linux and macOS (also works from Git Bash on Windows)
+./setup.sh --check      # report only, exit 1 if a required item is missing
+./setup.sh --yes        # install the default selection without prompting
+./setup.sh --all        # install everything missing, including optional items
+```
+
+Windows, from PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File setup.ps1          # same flags: -Check, -Yes, -All
+```
+
+In the checklist use ↑/↓ (or j/k) to move, space to toggle, `a`/`n` to select
+all/none, enter to install the selection and `q` to quit without installing.
+Run as your normal user; sudo (or winget/UAC on Windows) is requested where
+needed. Bun and Rust are pinned in `../mise.toml` and installed by mise; the script
+installs mise, runs `mise install`, and prints the `mise activate` line to add
+to your shell. An outdated Bun or Rust shows up as "missing or outdated" and
+`mise install` fetches the pinned version.
+
+## Layout
+
+| Path | Purpose |
+| --- | --- |
+| `../setup.sh`, `../setup.ps1` | Root forwarders to the scripts below. |
+| `setup.sh` | Entry point: detects the platform, runs the checks, shows the checklist, installs. |
+| `lib/common.sh` | Dependency registry, output helpers, and checks shared by all Unix platforms. |
+| `lib/checkbox.sh` | Interactive checkbox picker (bash 3.2 compatible for macOS). |
+| `ubuntu/deps.sh` | Debian/Ubuntu (apt) dependency list. |
+| `archlinux/deps.sh` | Arch Linux (pacman) dependency list. |
+| `archlinux/install-webkit-webdriver.sh` | Builds `WebKitWebDriver` from source on Arch; also reachable as `./setup.sh webdriver`. |
+| `macos/deps.sh` | macOS (Xcode CLT, Homebrew) dependency list. |
+| `windows/setup.ps1` | Windows equivalent of the whole flow, installing through winget. |
+
+Platform detection uses `uname` and `/etc/os-release` (`ID` and `ID_LIKE`), so
+Arch and Debian derivatives are routed to the matching module.
+
+## What is checked
+
+| Item | Ubuntu | Arch | macOS | Windows |
+| --- | --- | --- | --- | --- |
+| Tauri system libraries | apt | pacman | Xcode CLT | VS C++ Build Tools, WebView2 |
+| CMake (liblsl) | apt | pacman | brew | winget |
+| mise | curl | pacman | brew | winget |
+| Bun, Rust, uv pinned in `mise.toml` | `mise install` | `mise install` | `mise install` | `mise install` |
+| Homebrew | | | ✔ | |
+| BlueZ + `bluetooth.service` | ✔ | ✔ | | |
+| Balance Board hidraw udev rule | ✔ | ✔ | | |
+| User in `input` group | ✔ | ✔ | | |
+| `tauri-driver` (optional) | ✔ | ✔ | ✔ | ✔ |
+| Platform WebDriver (optional) | `webkit2gtk-driver` | source build | n/a | `msedgedriver` (manual) |
+| Python streaming clients, `scripts/` (optional) | `uv sync` | `uv sync` | `uv sync` | `uv sync` |
+| Unity Hub (optional) | Unity apt repo | AUR (`paru`/`yay`) | brew cask | winget |
+
+The toolchain row installs `uv` too; the Python clients row runs `uv sync
+--locked` in `scripts/`, which downloads the Python pinned in
+`scripts/.python-version` if needed. The Unity Hub row installs only the Hub;
+Unity Editors are installed from inside the Hub, since the version depends on
+the Unity project.
+
+## Adding a dependency
+
+Add a check function and an install function to the platform module (or to
+`lib/common.sh` if shared), then register them:
+
+```bash
+dep_add <id> '<label>' <check_fn> <install_fn> [required|optional]
+```
+
+The kind decides which section of the checklist the item appears in and
+whether it is ticked by default. A check returns 0 when satisfied and may set
+`DETAIL` to a short note (version, path, or reason). Install functions can call `post_note '...'` to print a
+reminder at the end (for example, "log out and back in"). On Windows, add a
+matching `Check-*`/`Install-*` pair and a row in `$Deps` in `windows/setup.ps1`.
