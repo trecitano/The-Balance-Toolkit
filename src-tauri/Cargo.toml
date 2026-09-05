@@ -7,28 +7,28 @@ license = "MIT"
 edition = "2024"
 
 [build-dependencies]
-tauri-build = { version = "2.6.2", features = [] }
+tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
-anyhow = "1.0.102"
-async-trait = "0.1.89"
-chrono = { version = "0.4.44", features = ["serde"] }
+anyhow = "1.0.104"
+async-trait = "0.1.92"
+chrono = { version = "0.4.45", features = ["serde"] }
 csv = "1.4.0"
 dirs = "6.0.0"
-futures = "0.3.32"
-hidapi = "2.6.4"
+futures = "0.3.34"
+hidapi = "2.6.7"
 lsl = { git = "https://github.com/labstreaminglayer/liblsl-rust.git", rev = "afa1d251674591c11ebc06070de60914b6dafccf" }
 once_cell = "1.21.4"
-rand = "0.10.1"
+rand = "0.10.2"
 rustfft = "6.4.1"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-tauri = { version = "2.11.2", features = ["unstable"] }
-tauri-plugin-dialog = "2.7.1"
-tauri-plugin-fs = "2.5.1"
-tauri-plugin-opener = "2.5.4"
-tokio = { version = "1.52.3", features = ["time", "rt", "macros", "net", "process"] }
-tokio-util = "0.7.18"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tauri = { version = "2.11.5", features = ["unstable"] }
+tauri-plugin-dialog = "2.7.3"
+tauri-plugin-fs = "2.5.2"
+tauri-plugin-opener = "2.5.5"
+tokio = { version = "1.53.1", features = ["time", "rt", "macros", "net", "process"] }
+tokio-util = "0.7.19"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
@@ -36,7 +36,7 @@ objc2-foundation = "0.3"
 objc2-io-bluetooth = "0.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-bluer = { version = "0.17.3", features = ["bluetoothd"] }
+bluer = { version = "0.17.4", features = ["bluetoothd"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62.2", features = [
