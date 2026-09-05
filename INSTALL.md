@@ -283,14 +283,14 @@ which WebKitWebDriver   # Linux only
 
 Initial setup:
 
-the desktop app lives in `apps/desktop/`. Install its frontend dependencies with:
+the desktop app lives in `apps/gui/`. Install its frontend dependencies with:
 
 ```bash
-cd apps/desktop
+cd apps/gui
 bun install
 ```
 
-This is only required the first time. After this, it is possible to run the scripts that exist in `apps/desktop/package.json`. The commands below run from `apps/desktop/`.
+This is only required the first time. After this, it is possible to run the scripts that exist in `apps/gui/package.json`. The commands below run from `apps/gui/`.
 
 Development mode:
 
@@ -380,7 +380,7 @@ TBT_APP_DIR=/data/balance tbt session run --output /data/balance/recordings
 
 3. Build Issues
    - Check that all dependencies are installed
-   - Try cleaning and rebuilding, from `apps/desktop/`:
+   - Try cleaning and rebuilding, from `apps/gui/`:
      ```bash
      bun run tauri clean
      bun run dev
@@ -390,7 +390,7 @@ TBT_APP_DIR=/data/balance tbt session run --output /data/balance/recordings
    - The backend logs to stderr. Development builds log at `debug` level, release builds at `info`.
    - Override the level with the `TBT_LOG` environment variable (`error`, `warn`, `info`, `debug` or `trace`):
      ```bash
-     cd apps/desktop && TBT_LOG=debug mise exec -- bun run tauri dev
+     cd apps/gui && TBT_LOG=debug mise exec -- bun run tauri dev
      ```
 
 ## Additional Resources

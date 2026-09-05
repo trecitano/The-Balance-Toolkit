@@ -1,7 +1,7 @@
 <table border="0">
   <tr>
     <td width="150" valign="middle" align="center">
-      <img src="apps/desktop/src/assets/logo/icon.svg" width="130" alt="The Balance Toolkit logo">
+      <img src="apps/gui/src/assets/logo/icon.svg" width="130" alt="The Balance Toolkit logo">
     </td>
     <td valign="middle">
       <h1>The Balance Toolkit</h1>
@@ -10,7 +10,7 @@
   </tr>
 </table>
 
-**[Install](INSTALL.md)** &middot; **[Desktop app](apps/desktop/)** &middot; **[Headless CLI](apps/cli/)** &middot; **[Android](apps/android/)** &middot; **[Rust core](crates/toolkit-core/)** &middot; **[Python scripts](scripts/)** &middot; **[Ready-to-run apps](https://github.com/trecitano/The-Balance-Toolkit-Apps)**
+**[Install](INSTALL.md)** &middot; **[Desktop GUI](apps/gui/)** &middot; **[Headless CLI](apps/cli/)** &middot; **[Android](apps/android/)** &middot; **[Rust core](crates/toolkit-core/)** &middot; **[Python scripts](scripts/)** &middot; **[Ready-to-run apps](https://github.com/trecitano/The-Balance-Toolkit-Apps)**
 
 ---
 
@@ -32,12 +32,12 @@ The Rust core is the heart of the toolkit; the desktop app and the headless CLI 
 
 | Folder | Contents | Guide |
 |---|---|---|
-| [`apps/desktop/`](apps/desktop/) | Desktop app: React, TypeScript and Vite frontend in `src/`, Tauri shell in `src-tauri/` | [Install](INSTALL.md) |
+| [`apps/gui/`](apps/gui/) | Desktop GUI app: React, TypeScript and Vite frontend in `src/`, Tauri shell in `src-tauri/` | [Install](INSTALL.md) |
 | [`apps/cli/`](apps/cli/) | `tbt`, the headless command-line frontend (no window, no webview) | [Headless CLI](INSTALL.md#headless-cli-tbt) |
 | [`apps/android/`](apps/android/) | Android application built with Kotlin and Jetpack Compose | [Read](apps/android/README.md) |
 | [`crates/toolkit-core/`](crates/toolkit-core/) | Rust library for Bluetooth, board I/O, session state, processing, recording, replay, TCP, and LSL | [Install](INSTALL.md) |
 | [`scripts/`](scripts/) | Python scripts for inspecting the LSL and TCP data streams | This README |
-| [`apps/desktop/public/activities/`](apps/desktop/public/activities/) | Activity illustrations and toolkit artwork used by the desktop app | This README |
+| [`apps/gui/public/activities/`](apps/gui/public/activities/) | Activity illustrations and toolkit artwork used by the desktop app | This README |
 | [`linux/`](linux/) | Linux udev rules for Wii Balance Board HID access | [Install](INSTALL.md) |
 | [`resources/`](resources/) | Research support files, including expert survey results | This README |
 
@@ -65,11 +65,11 @@ checks the core, CLI and frontend and exercises isolated mock recording/replay.
 2. Install frontend dependencies from the desktop app directory.
 
 ```bash
-cd apps/desktop
+cd apps/gui
 bun install
 ```
 
-3. Run the desktop app in development mode, from `apps/desktop/`.
+3. Run the desktop app in development mode, from `apps/gui/`.
 
 ```bash
 bun run tauri dev
@@ -103,7 +103,7 @@ The commands below are also available individually. Run them through
 `mise exec --` if your shell does not activate the pinned tools.
 
 ```bash
-# desktop app (run from apps/desktop/)
+# desktop app (run from apps/gui/)
 bun run lint          # frontend lint
 bun run build         # frontend build
 bun run tauri dev     # development server
