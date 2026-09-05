@@ -1,0 +1,49 @@
+[package]
+name = "toolkit-core"
+description = "Bluetooth, board I/O, processing, recording, replay and streaming for the Wii Balance Board. Shared by the desktop app and the headless CLI."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+anyhow.workspace = true
+async-trait = "0.1.92"
+chrono = { version = "0.4.45", features = ["serde"] }
+csv = "1.4.0"
+dirs = "6.0.0"
+futures = "0.3.34"
+hidapi = "2.6.7"
+log.workspace = true
+lsl = { git = "https://github.com/labstreaminglayer/liblsl-rust.git", rev = "afa1d251674591c11ebc06070de60914b6dafccf" }
+once_cell = "1.21.4"
+rand = "0.10.2"
+rustfft = "6.4.1"
+serde = { workspace = true, features = ["rc"] }
+serde_json.workspace = true
+tokio = { workspace = true, features = ["fs", "sync"] }
+tokio-util = "0.7.19"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-io-bluetooth = "0.3"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+bluer = { version = "0.17.4", features = ["bluetoothd"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.62.2", features = [
+  "Devices_Bluetooth",
+  "Devices_Enumeration",
+  "Foundation_Collections",
+  "Win32_Devices_Bluetooth",
+  "Win32_Foundation",
+] }
+windows-future = "0.3.2"
+windows-collections = "0.3.2"
+windows-core = "0.62.2"

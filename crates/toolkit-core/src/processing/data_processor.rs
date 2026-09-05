@@ -4,11 +4,17 @@ use chrono::{DateTime, TimeDelta, Utc};
 use rustfft::{FftPlanner, num_complex::Complex};
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
+use std::sync::Arc;
 use std::thread;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::error::TrySendError;
 
 use crate::types::MacAddress;
+
+#[cfg(test)]
+#[path = "data_processor_tests.rs"]
+mod tests;
 
 #[derive(Debug, Clone)]
 struct CenterOfPressurePoint {
@@ -108,7 +114,7 @@ pub fn initialize(
         move || match data_process_loop(rx, observers, mac_address, settings) {
             Ok(_) => (),
             Err(e) => {
-                println!("Error in data processing loop: {:?}", e);
+                log::info!("Error in data processing loop: {:?}", e);
             }
         },
     );
@@ -122,7 +128,7 @@ fn data_process_loop(
     mac_address: MacAddress,
     settings: ProcessingSettings,
 ) -> Result<()> {
-    println!("Data processing execution start. Settings: {:#?}", settings);
+    log::info!("Data processing execution start. Settings: {:#?}", settings);
     let mut buffer: Vec<CenterOfPressurePoint> = Vec::with_capacity(200);
 
     let window_size = std::time::Duration::from_millis(settings.window_size_ms);
@@ -132,27 +138,20 @@ fn data_process_loop(
     let dt_ms = (1_000.0 / sr_hz).max(1.0).round();
     let sampling_size_time_delta = TimeDelta::milliseconds(dt_ms as i64);
 
-    let cop_calculation_x_value = settings.balance_board_x_size / 2.0;
-    let cop_calculation_y_value = settings.balance_board_y_size / 2.0;
-
     // FFT plans and the Hann window are reused across iterations.
     let mut spectrum_state = SpectrumState::default();
     // Sleep until a fixed deadline so the slide cadence does not drift by the processing time.
     let mut next_tick = std::time::Instant::now();
+    let mut warned_about_drops = false;
 
     loop {
         while let Ok(item) = rx.try_recv() {
             match item {
                 BalanceBoardOutput::Raw(data) => {
-                    let cop = balance_board_reading_to_cop(
-                        data,
-                        cop_calculation_x_value,
-                        cop_calculation_y_value,
-                    );
-                    buffer.push(cop);
+                    buffer.push(balance_board_reading_to_cop(data));
                 }
                 BalanceBoardOutput::Processed(_) => {
-                    panic!()
+                    log::warn!("Data processor received already-processed data; ignoring it.");
                 }
             }
         }
@@ -173,19 +172,19 @@ fn data_process_loop(
 
         let points = match settings.interpolation {
             InterpolationSetting::Linear => linear_interpolation(
-                &window_slice,
+                window_slice,
                 start_time,
                 end_time,
                 &sampling_size_time_delta,
             ),
             InterpolationSetting::Cubic => cubic_interpolation(
-                &window_slice,
+                window_slice,
                 start_time,
                 end_time,
                 &sampling_size_time_delta,
             ),
             InterpolationSetting::Polynomial => polynomial_interpolation(
-                &window_slice,
+                window_slice,
                 start_time,
                 end_time,
                 &sampling_size_time_delta,
@@ -198,7 +197,7 @@ fn data_process_loop(
         let amplitude_spectrum = compute_fft_amplitude_spectrum(&points, 2.0, &mut spectrum_state);
         let dpsi_metrics = calculate_dpsi_metrics(&points, settings.baseline_weight);
 
-        let result = ProcessedBoardData {
+        let result = Arc::new(ProcessedBoardData {
             timestamp: end_time,
             mac_address,
             sway_metrics: sway_calculation,
@@ -206,12 +205,23 @@ fn data_process_loop(
             area_metrics: area_calculation,
             amplitude_spectrum,
             dpsi_metrics,
-        };
+        });
 
         observers.retain(|observer| {
-            observer
-                .try_send(BalanceBoardOutput::Processed(result.clone()))
-                .is_ok()
+            match observer.try_send(BalanceBoardOutput::Processed(Arc::clone(&result))) {
+                Ok(()) => true,
+                // Momentarily behind: skip this window for that consumer rather than evicting it.
+                Err(TrySendError::Full(_)) => {
+                    if !warned_about_drops {
+                        warned_about_drops = true;
+                        log::warn!(
+                            "A processed data consumer is falling behind; dropping windows for it."
+                        );
+                    }
+                    true
+                }
+                Err(TrySendError::Closed(_)) => false,
+            }
         });
 
         if observers.is_empty() {
@@ -228,15 +238,11 @@ fn data_process_loop(
         }
     }
 
-    println!("Data processing execution complete.");
+    log::info!("Data processing execution complete.");
     Ok(())
 }
 
-fn balance_board_reading_to_cop(
-    data: BalanceBoardCalibratedReading,
-    x_value: f32,
-    y_value: f32,
-) -> CenterOfPressurePoint {
+fn balance_board_reading_to_cop(data: BalanceBoardCalibratedReading) -> CenterOfPressurePoint {
     let total_force = data.top_right + data.bottom_right + data.top_left + data.bottom_left;
 
     if total_force.abs() < 0.1 {
@@ -842,12 +848,6 @@ fn chi_square_quantile_2df(p: f32) -> Option<f32> {
 // ============================================================================
 
 #[derive(Serialize, Debug, Clone)]
-pub struct FrequencySpectrum {
-    pub freqs_hz: Vec<f32>,
-    pub psd_xy: Vec<f32>, // summed x+y one-sided PSD (mm^2/Hz)
-}
-
-#[derive(Serialize, Debug, Clone)]
 pub struct AmplitudeSpectrum {
     pub freqs_hz: Vec<f32>,
     pub amplitude_x: Vec<f32>,  // Amplitude in mm for X direction
@@ -942,7 +942,7 @@ fn compute_fft_amplitude_spectrum(
 
         // One-sided amplitude scaling. For even N, Nyquist is k == N/2.
         // For odd N there is no Nyquist bin, so only DC uses 1/N.
-        let is_nyquist = n % 2 == 0 && k == n / 2;
+        let is_nyquist = n.is_multiple_of(2) && k == n / 2;
         let scale = if k == 0 || is_nyquist {
             1.0 / n as f32
         } else {

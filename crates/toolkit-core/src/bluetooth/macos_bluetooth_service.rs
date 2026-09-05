@@ -10,6 +10,7 @@ use crate::actors::bluetooth_service::{
 use crate::bluetooth::macos_io_bluetooth;
 use crate::types::MacAddress;
 
+#[derive(Default)]
 pub struct NativeBluetoothHandler;
 
 /// Signals the dedicated IOBluetooth scan thread to abort. Dropped when the
@@ -27,10 +28,9 @@ impl Drop for StopOnDrop {
 #[async_trait]
 impl BluetoothHandler for NativeBluetoothHandler {
     async fn get_all_bluetooth_adapters_info(&self) -> Result<Vec<Result<BluetoothAdapterInfo>>> {
-        let devices =
-            tokio::task::spawn_blocking(macos_io_bluetooth::collect_connected_devices)
-                .await
-                .context("collect_connected_devices thread panicked")?;
+        let devices = tokio::task::spawn_blocking(macos_io_bluetooth::collect_connected_devices)
+            .await
+            .context("collect_connected_devices thread panicked")?;
 
         let peripherals: Vec<Result<BluetoothPeripheral>> = devices
             .into_iter()

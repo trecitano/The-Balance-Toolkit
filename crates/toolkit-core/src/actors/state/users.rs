@@ -2,8 +2,8 @@ use crate::file_system::UserFileSystem;
 use crate::types::User;
 use anyhow::Result;
 use chrono::Utc;
-use std::sync::Arc;
 use rand::RngExt;
+use std::sync::Arc;
 
 pub struct UserState {
     users: Vec<Arc<User>>,
@@ -90,7 +90,7 @@ impl UserState {
     }
 }
 
-fn create_new_unique_id(users: &Vec<Arc<User>>) -> usize {
+fn create_new_unique_id(users: &[Arc<User>]) -> usize {
     let mut base_number = users.len();
 
     loop {

@@ -24,6 +24,7 @@ use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::core::HSTRING;
 use windows_core::{GUID, Interface};
 
+#[derive(Default)]
 pub struct NativeBluetoothHandler;
 #[async_trait]
 impl BluetoothHandler for NativeBluetoothHandler {
@@ -116,14 +117,14 @@ impl BluetoothHandler for NativeBluetoothHandler {
                         let device_name = device_info.Name().unwrap();
                         let device_properties = device_info.Properties()?;
 
-                        println!("Found device {}, {}", device_id, device_name);
+                        log::info!("Found device {}, {}", device_id, device_name);
 
                         let device_name_matches = device_name == NINTENDO_BOARD_ID;
                         let properties_matches =
                             properties_has_matching_name(&device_properties, NINTENDO_BOARD_ID);
 
                         if device_name_matches || properties_matches {
-                            println!("Found the balance (in an add)! Pairing...");
+                            log::info!("Found the balance (in an add)! Pairing...");
                             let _ = watcher.as_ref().unwrap().Stop();
                             added_tx.try_send(device_id).unwrap();
                         }
@@ -147,7 +148,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
                             properties_has_matching_name(&properties, NINTENDO_BOARD_ID);
 
                         if properties_matches {
-                            println!("Found the balance (in an update)! Pairing...");
+                            log::info!("Found the balance (in an update)! Pairing...");
                             let _ = watcher.as_ref().unwrap().Stop();
                             updated_tx.try_send(device_id).unwrap();
                         }
@@ -160,7 +161,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
                 watcher.Updated(&updated)?;
 
                 // Start the watcher
-                println!("Starting device watcher...");
+                log::info!("Starting device watcher...");
                 watcher.Start()?;
 
                 if let Some(device_id) = rx.recv().await {
@@ -209,7 +210,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
 
                 return match unpair_result.Status()? {
                     DeviceUnpairingResultStatus::Unpaired => {
-                        println!("Device successfully unpaired");
+                        log::info!("Device successfully unpaired");
                         Ok(())
                     }
                     _ => Err(anyhow!(
@@ -224,7 +225,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
 }
 
 fn try_pair_with_board(board_address: u64, pin: [u8; 6]) -> Result<()> {
-    println!("Trying to pair (Win32) with {board_address:012x}, pin bytes {pin:02x?}");
+    log::info!("Trying to pair (Win32) with {board_address:012x}, pin bytes {pin:02x?}");
 
     let pin_wide: [u16; 6] = pin.map(|byte| byte as u16);
 
@@ -247,21 +248,21 @@ fn try_pair_with_board(board_address: u64, pin: [u8; 6]) -> Result<()> {
         };
 
         let remove_status = BluetoothRemoveDevice(&device_info.Address);
-        println!("BluetoothRemoveDevice returned {remove_status}");
+        log::info!("BluetoothRemoveDevice returned {remove_status}");
 
         let info_status = BluetoothGetDeviceInfo(Some(radio), &mut device_info);
         if info_status != 0 {
-            println!("BluetoothGetDeviceInfo returned {info_status} (continuing anyway)");
+            log::info!("BluetoothGetDeviceInfo returned {info_status} (continuing anyway)");
         }
 
-        println!("Authenticating (legacy PIN); blocks until the ceremony finishes...");
+        log::info!("Authenticating (legacy PIN); blocks until the ceremony finishes...");
         const ERROR_BUSY: u32 = 170;
         let mut auth_status =
             BluetoothAuthenticateDevice(None, Some(radio), &mut device_info, Some(&pin_wide));
         let mut attempts = 0;
         while auth_status == ERROR_BUSY && attempts < 10 {
             attempts += 1;
-            println!("Radio busy (ERROR_BUSY); retrying pairing (attempt {attempts})...");
+            log::info!("Radio busy (ERROR_BUSY); retrying pairing (attempt {attempts})...");
             std::thread::sleep(std::time::Duration::from_millis(800));
             auth_status =
                 BluetoothAuthenticateDevice(None, Some(radio), &mut device_info, Some(&pin_wide));
@@ -273,16 +274,20 @@ fn try_pair_with_board(board_address: u64, pin: [u8; 6]) -> Result<()> {
             return Err(anyhow!("Win32 pairing failed with error {auth_status}"));
         }
 
-        println!("Successfully paired with {board_address:012x}!");
+        log::info!("Successfully paired with {board_address:012x}!");
 
         let _ = BluetoothGetDeviceInfo(Some(radio), &mut device_info);
         let hid_service = GUID::from_u128(0x00001124_0000_1000_8000_00805f9b34fb);
-        let service_status =
-            BluetoothSetServiceState(Some(radio), &device_info, &hid_service, BLUETOOTH_SERVICE_ENABLE);
+        let service_status = BluetoothSetServiceState(
+            Some(radio),
+            &device_info,
+            &hid_service,
+            BLUETOOTH_SERVICE_ENABLE,
+        );
         if service_status != 0 {
-            println!("Warning: enabling the HID service returned {service_status}");
+            log::info!("Warning: enabling the HID service returned {service_status}");
         } else {
-            println!("HID service enabled; the board should now appear as a HID device.");
+            log::info!("HID service enabled; the board should now appear as a HID device.");
         }
 
         let _ = BluetoothFindRadioClose(radio_find);

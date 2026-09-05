@@ -18,7 +18,7 @@ pub fn initialize(
 
     thread::spawn(move || {
         if let Err(e) = blocking_file_reading_loop(mac_address, rx, file_path) {
-            eprintln!("Error in Board Hid File Reader: {:?}", e);
+            log::error!("Error in Board Hid File Reader: {:?}", e);
         }
     });
 
@@ -43,7 +43,7 @@ fn blocking_file_reading_loop(
     let mut prev_time: Option<DateTime<Utc>> = None;
     let mut tx: Option<Sender<BalanceBoardCalibratedReading>> = None;
 
-    println!("FILE!! HID Loop started.: #{:#?}", file_path);
+    log::info!("File replay loop started for {}", file_path.display());
     loop {
         match control_rx.try_recv() {
             Ok(command) => match command {
@@ -66,7 +66,7 @@ fn blocking_file_reading_loop(
             },
             Err(mpsc::error::TryRecvError::Empty) => {}
             Err(mpsc::error::TryRecvError::Disconnected) => {
-                println!("HID File Reader disconnected. Shutting down.");
+                log::info!("HID File Reader disconnected. Shutting down.");
                 break;
             }
         }
@@ -94,24 +94,24 @@ fn blocking_file_reading_loop(
 
                         // Try sending (non-async, so use blocking_send if needed)
                         if sender.blocking_send(reading).is_err() {
-                            println!("Error sending file reading, stopping replay.");
+                            log::info!("Replay consumer went away, stopping replay.");
                             rdr = None;
                             tx = None;
                             prev_time = None;
+                        } else {
+                            prev_time = Some(record.timestamp);
                         }
-
-                        prev_time = Some(record.timestamp);
                         continue;
                     }
                     Err(e) => {
-                        println!("CSV parse error: {:?}", e);
+                        log::info!("CSV parse error: {:?}", e);
                         rdr = None;
                         tx = None;
                         prev_time = None;
                     }
                 }
             } else {
-                println!("File replay finished.");
+                log::info!("File replay finished.");
                 rdr = None;
                 tx = None;
                 prev_time = None;
@@ -122,6 +122,6 @@ fn blocking_file_reading_loop(
         thread::sleep(Duration::from_millis(200));
     }
 
-    println!("File reading complete HID loop terminated.");
+    log::info!("File reading complete HID loop terminated.");
     Ok(())
 }

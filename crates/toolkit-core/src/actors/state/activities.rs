@@ -8,10 +8,10 @@ use std::string::ToString;
 pub struct Activity {
     pub id: String,
     pub title: String,
-    static_image: String,
+    pub static_image: String,
     pub timeline_blocks: Vec<TimelineBlock>,
-    boards_required: i32,
-    description: String,
+    pub boards_required: i32,
+    pub description: String,
     pub loops: i32,
 }
 
@@ -25,7 +25,7 @@ impl Activity {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TimelineBlock {
-    title: String,
+    pub title: String,
     pub id: String,
     pub duration: i32,
 }
@@ -50,7 +50,7 @@ impl ActivityState {
     }
 
     pub fn update_activity(&mut self, activity: Activity) -> Result<()> {
-        println!("Updating activity: {:?}", activity);
+        log::info!("Updating activity: {:?}", activity);
         let index = self
             .activities
             .iter()

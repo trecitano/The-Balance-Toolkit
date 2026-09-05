@@ -1,0 +1,9 @@
+[
+  {"name":"equal load","reading":[20,20,20,20],"tare":[0,0,0,0],"expected":[20,20,20,20],"weight":80,"cop":[0,0]},
+  {"name":"right load","reading":[30,30,10,10],"tare":[0,0,0,0],"expected":[30,30,10,10],"weight":80,"cop":[0.5,0]},
+  {"name":"top load","reading":[30,10,30,10],"tare":[0,0,0,0],"expected":[30,10,30,10],"weight":80,"cop":[0,0.5]},
+  {"name":"empty board","reading":[0,0,0,0],"tare":[0,0,0,0],"expected":[0,0,0,0],"weight":0,"cop":[0,0]},
+  {"name":"sensor offsets","reading":[21,22,23,24],"tare":[1,2,3,4],"expected":[20,20,20,20],"weight":80,"cop":[0,0]},
+  {"name":"tare removes load","reading":[10,20,30,40],"tare":[10,20,30,40],"expected":[0,0,0,0],"weight":0,"cop":[0,0]},
+  {"name":"unloading after tare","reading":[0,0,0,0],"tare":[1,2,3,4],"expected":[-1,-2,-3,-4],"weight":-10,"cop":[-0.4,-0.2]}
+]

@@ -4096,33 +4096,15 @@ name = "the-balance-toolkitapp"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
- "bluer",
- "chrono",
- "csv",
- "dirs",
- "futures",
- "hidapi",
- "lsl",
- "objc2",
- "objc2-foundation",
- "objc2-io-bluetooth",
- "once_cell",
- "rand",
- "rustfft",
+ "log",
  "serde",
- "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
  "tauri-plugin-opener",
  "tokio",
- "tokio-util",
- "windows 0.62.2",
- "windows-collections 0.3.2",
- "windows-core 0.62.2",
- "windows-future 0.3.2",
+ "toolkit-core",
 ]
 
 [[package]]
@@ -4390,6 +4372,36 @@ name = "toml_writer"
 version = "1.1.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d56353a2a665ad0f41a421187180aab746c8c325620617ad883a99a1cbe66d2"
+
+[[package]]
+name = "toolkit-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bluer",
+ "chrono",
+ "csv",
+ "dirs",
+ "futures",
+ "hidapi",
+ "log",
+ "lsl",
+ "objc2",
+ "objc2-foundation",
+ "objc2-io-bluetooth",
+ "once_cell",
+ "rand",
+ "rustfft",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "windows 0.62.2",
+ "windows-collections 0.3.2",
+ "windows-core 0.62.2",
+ "windows-future 0.3.2",
+]
 
 [[package]]
 name = "tower"

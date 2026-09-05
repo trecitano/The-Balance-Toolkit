@@ -1,0 +1,30 @@
+{
+  "user": {
+    "id": 1,
+    "name": "Fixture User",
+    "age": null,
+    "gender": null,
+    "height": null,
+    "heightMetric": null,
+    "weight": 80.0,
+    "weightMetric": "kg",
+    "dominantHand": null,
+    "color": null,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "updatedAt": "2024-01-01T00:00:00Z",
+    "isDefault": true
+  },
+  "window_size_ms": 5000,
+  "window_slide_ms": 100,
+  "sampling_rate": 100,
+  "interpolation": "Linear",
+  "device_names": {"61566765235700": "Fixture Board"},
+  "device_file_mappings": {
+    "61566765235700": {
+      "raw_file_name": "fixture-raw.csv",
+      "processed_file_name": "fixture-processed.csv"
+    }
+  },
+  "activity": null,
+  "session_stats": {"boardSamplingRate": 100.0, "duration": {"secs": 1, "nanos": 0}}
+}

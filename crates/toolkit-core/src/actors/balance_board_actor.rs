@@ -8,6 +8,7 @@ use processing::board_hid_reader;
 use processing::board_hid_reader_mock;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
@@ -30,10 +31,13 @@ pub enum BalanceBoardCommands {
     FinishRecording,
 }
 
-#[derive(Serialize, Debug, Clone)]
+/// One sample flowing through the session pipeline. Processed results carry several
+/// vectors (polygons, spectrum), so they are shared behind an `Arc`: every observer gets a
+/// pointer bump instead of a deep copy.
+#[derive(Debug, Clone)]
 pub enum BalanceBoardOutput {
     Raw(BalanceBoardCalibratedReading),
-    Processed(ProcessedBoardData),
+    Processed(Arc<ProcessedBoardData>),
 }
 
 impl BalanceBoardOutput {
@@ -160,35 +164,25 @@ async fn balance_board_actor_loop(
     mut rx: Receiver<BoardAction>,
     board_hid_tx: Sender<BalanceBoardCommands>,
 ) {
-    loop {
-        tokio::select! {
-            // Received an action from the manager
-            Some(action) = rx.recv() => {
-                match action {
-                    BoardAction::Tare => {
-                        board_hid_tx.send(BalanceBoardCommands::ApplyTare).await.unwrap();
-                    }
-                    BoardAction::TurnOnLed => {
-                        board_hid_tx.send(BalanceBoardCommands::TurnOnLed).await.unwrap();
-                    },
-                    BoardAction::TurnOffLed => {
-                        board_hid_tx.send(BalanceBoardCommands::TurnOffLed).await.unwrap();
-                    },
-                    BoardAction::StartRecording(raw_data_tx) => {
-                        board_hid_tx.send(BalanceBoardCommands::StartRecording(raw_data_tx)).await.unwrap();
-                    },
-                    BoardAction::StopRecording => {
-                        println!("Stopping the recording");
-                        // This closes the channel from the balance board side,
-                        // which closes all of the subsequent pipeline channels
-                        board_hid_tx.send(BalanceBoardCommands::FinishRecording).await.unwrap();
-                    },
-                }
-            },
-            else => {
-                // Channels closed
-                break;
+    while let Some(action) = rx.recv().await {
+        let command = match action {
+            BoardAction::Tare => BalanceBoardCommands::ApplyTare,
+            BoardAction::TurnOnLed => BalanceBoardCommands::TurnOnLed,
+            BoardAction::TurnOffLed => BalanceBoardCommands::TurnOffLed,
+            BoardAction::StartRecording(raw_data_tx) => {
+                BalanceBoardCommands::StartRecording(raw_data_tx)
             }
+            BoardAction::StopRecording => {
+                log::info!("Stopping the recording");
+                // This closes the channel from the balance board side,
+                // which closes all of the subsequent pipeline channels
+                BalanceBoardCommands::FinishRecording
+            }
+        };
+
+        if board_hid_tx.send(command).await.is_err() {
+            log::error!("Board reader thread has stopped; shutting down its actor.");
+            break;
         }
     }
 }

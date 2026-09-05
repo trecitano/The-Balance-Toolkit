@@ -1,7 +1,7 @@
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
 use crate::types::MacAddress;
-use chrono::Utc;
-use rand::{Rng, RngExt};
+use chrono::{DateTime, Utc};
+use rand::{RngExt, SeedableRng, rngs::StdRng};
 use std::thread;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
@@ -11,7 +11,7 @@ pub fn initialize(mac_address: MacAddress) -> anyhow::Result<Sender<BalanceBoard
 
     thread::spawn(move || {
         if let Err(e) = mock_hid_loop(rx, mac_address) {
-            eprintln!("Error in Board Hid Reader Mock: {:?}", e);
+            log::error!("Error in Board Hid Reader Mock: {:?}", e);
         }
     });
 
@@ -33,17 +33,13 @@ fn mock_hid_loop(
         bottom_left: 0.0,
     };
     let mut generator: Option<MockBoardGen> = None;
-    let mut rng = rand::rng();
 
-    println!("Mock HID loop starting.");
-
-    let lower_base_rng_value = rng.random_range(10.0..40.0);
-    let higher_base_rng_value = rng.random_range(lower_base_rng_value..lower_base_rng_value + 10.0);
+    log::info!("Mock HID loop starting.");
 
     loop {
         match hid_control_rx.try_recv() {
             Ok(command) => {
-                println!("blocking hid: Got command: {:?}", command);
+                log::debug!("Mock HID loop: got command {:?}", command);
                 match command {
                     BalanceBoardCommands::TurnOnLed => { /* No Action */ }
                     BalanceBoardCommands::TurnOffLed => { /* No Action */ }
@@ -51,12 +47,12 @@ fn mock_hid_loop(
                         update_tare = true;
                     }
                     BalanceBoardCommands::StartRecording(tx) => {
-                        println!("Mock Board {} is starting the session!", mac_address);
+                        log::info!("Mock Board {} is starting the session!", mac_address);
                         tx_channel = Some(tx);
                         generator = Some(MockBoardGen::new_random(mac_address));
                     }
                     BalanceBoardCommands::FinishRecording => {
-                        println!("Mock Board {} has stopped the session.", mac_address);
+                        log::info!("Mock Board {} has stopped the session.", mac_address);
                         tx_channel = None;
                         generator = None;
                     }
@@ -65,7 +61,7 @@ fn mock_hid_loop(
             Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ }
             Err(mpsc::error::TryRecvError::Disconnected) => {
                 // The async part has shut down. We must exit.
-                println!("HID Mock Reader disconnected. Shutting down.");
+                log::info!("HID Mock Reader disconnected. Shutting down.");
                 break;
             }
         }
@@ -96,7 +92,7 @@ fn mock_hid_loop(
         }
     }
 
-    println!("Mock HID loop terminated.");
+    log::info!("Mock HID loop terminated.");
     Ok(())
 }
 
@@ -117,9 +113,15 @@ pub struct MockBoardGen {
 
 impl MockBoardGen {
     pub fn new_random(mac: MacAddress) -> Self {
-        // Use same rand API you're already using
-        let mut rng = rand::rng();
+        Self::from_rng(mac, &mut rand::rng())
+    }
 
+    /// Repeatable board parameters for fixtures and tests. Use `sample_at` to control time.
+    pub fn seeded(mac: MacAddress, seed: u64) -> Self {
+        Self::from_rng(mac, &mut StdRng::seed_from_u64(seed))
+    }
+
+    fn from_rng(mac: MacAddress, rng: &mut impl rand::Rng) -> Self {
         // Choose radii inside support polygon
         let rx_frac = rng.random_range(0.35f32..0.65);
         let ry_frac = rng.random_range(0.35f32..0.70);
@@ -151,7 +153,16 @@ impl MockBoardGen {
     }
 
     pub fn next(&self) -> BalanceBoardCalibratedReading {
-        let t = self.start.elapsed().as_secs_f32();
+        self.sample_at(self.start.elapsed(), Utc::now())
+    }
+
+    /// Sample at an explicit elapsed time and timestamp, without sleeping or reading a clock.
+    pub fn sample_at(
+        &self,
+        elapsed: std::time::Duration,
+        timestamp: DateTime<Utc>,
+    ) -> BalanceBoardCalibratedReading {
+        let t = elapsed.as_secs_f32();
         let phase = self.phase0 + self.omega * t;
 
         // CCW path: x = cos, y = sin
@@ -164,7 +175,7 @@ impl MockBoardGen {
         let (top_right, bottom_right, top_left, bottom_left) = reading_from_cop(x, y, total_force);
 
         BalanceBoardCalibratedReading {
-            timestamp: Utc::now(),
+            timestamp,
             mac_address: self.mac,
             top_right,
             bottom_right,

@@ -10,17 +10,46 @@ use bluer::{AdapterEvent, Device, DeviceEvent, DeviceProperty, Session};
 use futures::future::join_all;
 use futures::stream::StreamExt;
 use std::time::{Duration, Instant};
-use tokio::sync::mpsc;
+use tokio::sync::{Mutex, mpsc};
 
-pub struct NativeBluetoothHandler;
+#[derive(Default)]
+pub struct NativeBluetoothHandler {
+    /// A BlueZ session is a D-Bus connection plus a background task, which is far too
+    /// expensive to set up for every device query. One is kept for the life of the handler
+    /// and re-created only if it stops working.
+    session: Mutex<Option<Session>>,
+}
+
+impl NativeBluetoothHandler {
+    async fn session(&self) -> Result<Session> {
+        let mut guard = self.session.lock().await;
+        if let Some(session) = guard.as_ref() {
+            return Ok(session.clone());
+        }
+        let session = Session::new().await?;
+        *guard = Some(session.clone());
+        Ok(session)
+    }
+
+    async fn reset_session(&self) {
+        *self.session.lock().await = None;
+    }
+}
+
 #[async_trait]
 impl BluetoothHandler for NativeBluetoothHandler {
     async fn get_all_bluetooth_adapters_info(&self) -> Result<Vec<Result<BluetoothAdapterInfo>>> {
-        // Create a BlueZ session
-        let session = Session::new().await?;
+        let session = self.session().await?;
 
         // Get all available Bluetooth adapters
-        let adapter_names = session.adapter_names().await?;
+        let adapter_names = match session.adapter_names().await {
+            Ok(names) => names,
+            Err(e) => {
+                // The daemon may have restarted under us; start fresh next time.
+                self.reset_session().await;
+                return Err(e.into());
+            }
+        };
 
         // Create futures for each adapter to collect information
         let session_ref = &session;
@@ -76,11 +105,9 @@ impl BluetoothHandler for NativeBluetoothHandler {
         &self,
         response_stream: mpsc::Sender<BluetoothPeripheral>,
     ) -> Result<()> {
-        let session = Session::new().await?;
+        let session = self.session().await?;
 
         let adapter = session.default_adapter().await?;
-
-        // Set up discovery filter
 
         let mut events = adapter.discover_devices().await?;
 
@@ -91,7 +118,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
         while let Some(event) = events.next().await {
             // Check if we've exceeded the timeout
             if start_time.elapsed() > timeout {
-                println!("Discovery timeout reached");
+                log::info!("Discovery timeout reached");
                 break;
             }
 
@@ -101,20 +128,13 @@ impl BluetoothHandler for NativeBluetoothHandler {
                     Ok(device) => {
                         // Get device name
                         if let Ok(Some(name)) = device.name().await {
-                            // println!("Discovered device: {} ({})", name, addr);
+                            // log::info!("Discovered device: {} ({})", name, addr);
 
                             if name == NINTENDO_BOARD_ID {
-                                println!("Found Nintendo balance board! Attempting to pair...");
+                                log::info!("Found Nintendo balance board! Attempting to pair...");
 
-                                // Stop discovery before pairing
-                                //adapter.stop_discovery().await?;
-
-                                // Check if device is already paired
-                                if let Ok(paired) = device.is_paired().await {
-                                    if paired {
-                                        println!("Device is already paired");
-                                        //         return Ok(());
-                                    }
+                                if device.is_paired().await.unwrap_or(false) {
+                                    log::info!("Device is already paired");
                                 }
 
                                 // Register for pairing events
@@ -122,79 +142,69 @@ impl BluetoothHandler for NativeBluetoothHandler {
 
                                 // Process the device events (logging)
                                 let _handle = tokio::spawn(async move {
-                                    println!("Lets potato time!");
                                     while let Some(event) = device_events.next().await {
                                         match event {
                                             DeviceEvent::PropertyChanged(
                                                 DeviceProperty::Paired(paired),
                                             ) => {
                                                 if paired {
-                                                    println!("!!! Device successfully paired!");
+                                                    log::info!("Device successfully paired!");
                                                 }
                                             }
                                             DeviceEvent::PropertyChanged(prop) => {
-                                                println!("!!! Property changed: {:?}", prop);
-                                            }
-                                            _ => {
-                                                println!("!!! {:?}", event);
+                                                log::debug!("Device property changed: {:?}", prop);
                                             }
                                         }
                                     }
                                 });
 
                                 // Set the device to connectable and pairable
-                                println!("Trusting device");
+                                log::info!("Trusting device");
                                 device.set_trusted(true).await?;
 
                                 // Attempt to pair
                                 if !device.is_paired().await? {
-                                    println!("Starting pairing...");
+                                    log::info!("Starting pairing...");
                                     let pair_fut = device.pair();
 
                                     match pair_fut.await {
-                                        Ok(_) => println!("Pairing successful!"),
-                                        Err(e) => println!("Pairing failed: {}", e),
+                                        Ok(_) => log::info!("Pairing successful!"),
+                                        Err(e) => log::info!("Pairing failed: {}", e),
                                     }
                                 }
 
                                 // Try to connect after pairing
                                 if device.is_paired().await.unwrap_or(false) {
-                                    println!("Connecting to the device...");
+                                    log::info!("Connecting to the device...");
                                     if let Err(e) = device.connect().await {
-                                        println!("Failed to connect: {}", e);
+                                        log::info!("Failed to connect: {}", e);
                                     } else {
-                                        let mac_1 = convert_address_to_u64(device.address().0);
-                                        let mac_2 = to_u64_le(device.address().0);
                                         let peripheral =
                                             convert_to_bluetooth_peripheral(device).await?;
-                                        response_stream.send(peripheral).await.unwrap();
-                                        println!("Successfully connected to the device!");
+                                        let _ = response_stream.send(peripheral).await;
+                                        log::info!("Successfully connected to the device!");
                                     }
                                     return Ok(());
                                 } else {
-                                    println!("The potato");
+                                    log::info!(
+                                        "Pairing did not complete; will retry on the next scan."
+                                    );
                                 }
                             }
                         }
                     }
                     Err(e) => {
-                        println!("Error accessing device {}: {}", addr, e);
+                        log::info!("Error accessing device {}: {}", addr, e);
                     }
                 }
             }
-        }
-
-        // Stop discovery when done
-        if adapter.is_discovering().await? {
-            println!("Still discovering!");
-            //adapter.stop_discovery().await?;
         }
 
         Ok(())
     }
 
     async fn remove_device(&self, mac_address: MacAddress) -> Result<()> {
-        let session = Session::new().await?;
+        let session = self.session().await?;
 
         // Get all adapters to search for the device
         let adapter_names = session.adapter_names().await?;
@@ -210,35 +220,29 @@ impl BluetoothHandler for NativeBluetoothHandler {
                 let device_mac = convert_address_to_u64(device.address().0);
 
                 if device_mac == mac_address {
-                    println!("Found device to remove: {}", device_addr);
+                    log::info!("Found device to remove: {}", device_addr);
 
                     // First disconnect if connected
                     if device.is_connected().await.unwrap_or(false) {
-                        println!("Disconnecting device...");
+                        log::info!("Disconnecting device...");
                         if let Err(e) = device.disconnect().await {
-                            println!("Warning: Failed to disconnect device: {}", e);
+                            log::info!("Warning: Failed to disconnect device: {}", e);
                             // Continue with removal even if disconnect fails
                         }
                     }
 
-                    // Remove pairing if paired
-                    if device.is_paired().await.unwrap_or(false) {
-                        println!("Removing device pairing...");
-                        // In BlueZ, we remove the device entirely which also unpairs it
-                    }
-
-                    // Remove the device from the adapter
-                    println!("Removing device from adapter...");
+                    // Removing the device from the adapter also drops its pairing.
+                    log::info!("Removing device from adapter...");
                     adapter.remove_device(device_addr).await?;
 
-                    println!("Device successfully removed");
+                    log::info!("Device successfully removed");
                     return Ok(());
                 }
             }
         }
 
         // Device not found - this is not necessarily an error
-        println!("Device with MAC address {:012x} not found", mac_address);
+        log::info!("Device with MAC address {:012x} not found", mac_address);
         Ok(())
     }
 }
@@ -271,14 +275,4 @@ fn convert_address_to_u64(mac_address: [u8; 6]) -> MacAddress {
         | ((b[3] as u64) << 16)
         | ((b[4] as u64) << 8)
         | (b[5] as u64)
-}
-
-pub fn to_u64_le(mac_address: [u8; 6]) -> u64 {
-    let b = mac_address;
-    (b[0] as u64)
-        | ((b[1] as u64) << 8)
-        | ((b[2] as u64) << 16)
-        | ((b[3] as u64) << 24)
-        | ((b[4] as u64) << 32)
-        | ((b[5] as u64) << 40)
 }

@@ -5,7 +5,7 @@ use chrono::Utc;
 use hidapi::HidError::HidApiError;
 use hidapi::{HidApi, HidDevice, HidResult};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 
@@ -65,11 +65,11 @@ fn hold_driver_extension_open(mac: MacAddress) -> Option<std::fs::File> {
         if let Some(path) = find_board_event_node(&want) {
             return match std::fs::File::open(&path) {
                 Ok(file) => {
-                    println!("Holding {path} open so hid-wiimote keeps DRM at 0x34 (KEE).");
+                    log::info!("Holding {path} open so hid-wiimote keeps DRM at 0x34 (KEE).");
                     Some(file)
                 }
                 Err(e) => {
-                    eprintln!("Could not open {path} ({e}); 30s-reset mitigation inactive.");
+                    log::error!("Could not open {path} ({e}); 30s-reset mitigation inactive.");
                     None
                 }
             };
@@ -78,7 +78,7 @@ fn hold_driver_extension_open(mac: MacAddress) -> Option<std::fs::File> {
             thread::sleep(Duration::from_millis(100));
         }
     }
-    eprintln!(
+    log::error!(
         "WARNING: balance-board input node for {want} not found; hid-wiimote will \
          keep resetting the report mode every ~30s (recording still works between resets)."
     );
@@ -125,10 +125,11 @@ fn find_board_event_node(want_norm: &str) -> Option<String> {
             for child in children.flatten() {
                 let fname = child.file_name();
                 let fname = fname.to_string_lossy();
-                if let Some(num) = fname.strip_prefix("event") {
-                    if !num.is_empty() && num.bytes().all(|b| b.is_ascii_digit()) {
-                        return Some(format!("/dev/input/{fname}"));
-                    }
+                if let Some(num) = fname.strip_prefix("event")
+                    && !num.is_empty()
+                    && num.bytes().all(|b| b.is_ascii_digit())
+                {
+                    return Some(format!("/dev/input/{fname}"));
                 }
             }
         }
@@ -143,12 +144,13 @@ fn connect_via_hid(mac_address: MacAddress) -> HidResult<HidDevice> {
     // If the mac address is "00:23:31:87:B1:16", its serial number is "00233187B116".
     // Note: We must convert the mac address from u64 to the serial number format.
     let serial_number = format!("{:012x}", mac_address);
-    println!("Connecting to {:?}", api.device_list()
-        .map(|device| { device.serial_number()})
-        .map(|option| { option.unwrap_or("")})
-        .collect::<Vec<_>>());
+    log::debug!(
+        "Looking for HID serial {serial_number} among {:?}",
+        api.device_list()
+            .map(|device| device.serial_number().unwrap_or(""))
+            .collect::<Vec<_>>()
+    );
     let normalized_serial = serial_number.replace(":", "").to_lowercase();
-    println!("Tentative: {}", normalized_serial);
     let balance_board_info = api
         .device_list()
         .find(|device| {
@@ -201,7 +203,7 @@ fn blocking_hid_loop(
                 Err(mpsc::error::TryRecvError::Empty) => None,
                 Err(mpsc::error::TryRecvError::Disconnected) => {
                     // The async part has shut down. We must exit.
-                    println!("HID Loop: Control channel disconnected. Shutting down.");
+                    log::info!("HID Loop: Control channel disconnected. Shutting down.");
                     break;
                 }
             }
@@ -209,14 +211,14 @@ fn blocking_hid_loop(
             match hid_control_rx.blocking_recv() {
                 Some(command) => Some(command),
                 None => {
-                    println!("HID Loop: Control channel disconnected. Shutting down.");
+                    log::info!("HID Loop: Control channel disconnected. Shutting down.");
                     break;
                 }
             }
         };
 
         if let Some(command) = command {
-            println!("blocking hid: Got command: {:?}", command);
+            log::debug!("HID loop: got command {:?}", command);
             match command {
                 BalanceBoardCommands::TurnOnLed => {
                     write_to_device(&device, &BOARD_TURN_ON_LED)?;
@@ -264,19 +266,18 @@ fn blocking_hid_loop(
                     }
                 }
                 Ok(_) => {
-                    println!("Timeout?!?!");
-                     //write_to_device(&device, &BOARD_START_READING);
-                    /* Timeout, continue */
+                    // Read timeout with no data; keep polling.
+                    log::debug!("HID read timed out without data");
                 }
                 Err(e) => {
-                    eprintln!("Error reading from HID device: {}", e);
+                    log::error!("Error reading from HID device: {}", e);
                     break;
                 }
             }
         }
     }
     let _ = write_to_device(&device, &BOARD_STOP_READING);
-    println!("Blocking HID loop terminated.");
+    log::info!("Blocking HID loop terminated.");
     Ok(())
 }
 
@@ -311,12 +312,7 @@ fn read_calibration_data(device: &HidDevice) -> anyhow::Result<BalanceBoardCalib
             continue;
         }
 
-        println!("Reading is: {:?}", buf);
-        for byte in buf {
-            // Print each byte as a 2-digit lowercase hex number, followed by a space
-            print!("{:02x} ", byte);
-        }
-        println!();
+        log::debug!("Calibration packet: {}", hex_dump(&buf));
 
         let packet_data_size = ((buf[3] >> 4) + 1) as usize;
         let error_code = buf[3] & 0x0F;
@@ -340,36 +336,24 @@ fn read_calibration_data(device: &HidDevice) -> anyhow::Result<BalanceBoardCalib
     BalanceBoardCalibrationData::from_bytes(calibration_buf)
 }
 
+fn hex_dump(bytes: &[u8]) -> String {
+    bytes
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 pub fn write_to_device(device: &HidDevice, data: &[u8]) -> HidResult<usize> {
-    print!("DEVICE_WRITE: ");
-    for b in data {
-        print!("{:02x} ", b);
-    }
-    println!();
+    log::debug!("DEVICE_WRITE: {}", hex_dump(data));
     device.write(data)
 }
 
 pub fn read_from_device(device: &HidDevice, buf: &mut [u8]) -> HidResult<usize> {
     let result = device.read_timeout(buf, 500);
-
-    match &result {
-        Ok(len) => {
-            if *len > 0 {
-                /*
-                print!("DEVICE_READ: ");
-                for b in buf {
-                    print!("{:02x} ", b);
-                }
-                println!();
-
-                 */
-            }
-        }
-        Err(e) => {
-            println!("Read failed: {:?}", e);
-        }
+    if let Err(e) = &result {
+        log::warn!("HID read failed: {:?}", e);
     }
-
     result
 }
 

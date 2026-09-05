@@ -228,7 +228,6 @@ pub struct FrontendCalibrationReadingInput {
     pub top_right: f32,
     pub bottom_left: f32,
     pub bottom_right: f32,
-    pub total_weight: f32,
 }
 
 #[derive(Debug, Clone, Deserialize)]

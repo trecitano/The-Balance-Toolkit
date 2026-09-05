@@ -79,8 +79,11 @@ unsafe fn collect_connected_devices_inner() -> Vec<PeripheralOut> {
 unsafe fn peripheral_out_from_device(dev: &IOBluetoothDevice) -> PeripheralOut {
     let id = unsafe { id_from_device(dev) };
     let name = unsafe { dev.name() }.to_string();
-    let mac_address =
-        parse_mac_to_u64(unsafe { dev.addressString() }.map(|s| s.to_string()).as_deref());
+    let mac_address = parse_mac_to_u64(
+        unsafe { dev.addressString() }
+            .map(|s| s.to_string())
+            .as_deref(),
+    );
     let is_paired = unsafe { dev.isPaired() };
     let is_connected = unsafe { dev.isConnected() };
 
@@ -210,8 +213,7 @@ unsafe fn scan_and_pair_inner(stop: Arc<AtomicBool>) -> Result<PeripheralOut, St
         // `pair` / `_pair_delegate` drop here, deterministically, while
         // `inquiry` and `delegate` are still alive.
     }
-    let _: () =
-        unsafe { msg_send![&*inquiry, setDelegate: core::ptr::null_mut::<AnyObject>()] };
+    let _: () = unsafe { msg_send![&*inquiry, setDelegate: core::ptr::null_mut::<AnyObject>()] };
 
     outcome
 }
@@ -261,13 +263,16 @@ unsafe fn remove_device_by_mac_inner(mac_str: &str) -> Result<(), String> {
     }
 
     let Some(dev) = target else {
-        println!("Device {} not found in paired/recent devices, treating as already removed", mac_str);
+        log::info!(
+            "Device {} not found in paired/recent devices, treating as already removed",
+            mac_str
+        );
         return Ok(());
     };
 
     let close_status: i32 = unsafe { msg_send![&dev, closeConnection] };
     if close_status != 0 {
-        eprintln!("Warning: closeConnection returned {}", close_status);
+        log::error!("Warning: closeConnection returned {}", close_status);
     }
 
     let _: () = unsafe { msg_send![&dev, remove] };
@@ -282,7 +287,12 @@ pub struct DeviceInquiryDelegateIvars {
     // Keeps the in-flight pair + its delegate alive for the duration of the
     // scan. Replaces the original `std::mem::forget`, which leaked one of each
     // per scan attempt now that this runs in a long-lived process.
-    held: RefCell<Option<(Retained<IOBluetoothDevicePair>, Retained<DevicePairDelegate>)>>,
+    held: RefCell<
+        Option<(
+            Retained<IOBluetoothDevicePair>,
+            Retained<DevicePairDelegate>,
+        )>,
+    >,
 }
 
 define_class!(

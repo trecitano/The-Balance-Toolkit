@@ -1,12 +1,33 @@
 [workspace]
 members = [
+  "crates/toolkit-core",
   "src-tauri",
 ]
 resolver = "2"
 
+# Every crate in the workspace builds the desktop app or the headless CLI; the GUI is the
+# default target so `cargo build` / `cargo check` from the root behave as before.
+default-members = ["src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["The Balance Toolkit contributors"]
+repository = "https://github.com/trecitano/The-Balance-Toolkit"
+
+# Versions shared by more than one crate live here so they cannot drift apart.
+[workspace.dependencies]
+toolkit-core = { path = "crates/toolkit-core" }
+anyhow = "1.0.104"
+log = "0.4.34"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tokio = { version = "1.53.1", features = ["time", "rt", "macros", "net", "process"] }
+
 [profile.release]
 codegen-units = 1 # Allows LLVM to perform better optimization.
 lto = true # Enables link-time-optimizations.
-opt-level = 3 # Prioritizes small binary size. Use `3` if you prefer speed.
+opt-level = 3 # Prioritizes speed. Use `s` or `z` if you prefer a small binary.
 panic = "abort" # Higher performance by disabling panic handlers.
 strip = true # Ensures debug symbols are removed.

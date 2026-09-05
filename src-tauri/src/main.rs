@@ -1,51 +1,31 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod actors;
-mod bluetooth;
-mod file_system;
 mod frontend;
-mod processing;
-mod types;
-mod utils;
 
-use crate::actors::toolkit_service::ConnectionManager;
 use anyhow::Result;
-use tokio::sync::mpsc;
-
-pub static NINTENDO_BOARD_ID: &str = "Nintendo RVL-WBC-01";
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    toolkit_core::init_logging(toolkit_core::default_log_level());
+
     #[cfg(target_os = "linux")]
     enforce_working_locale();
 
-    file_system::initialize_app_dir()?;
-
-    // Startup: We initialize a single manager that holds all state, and runs in the background.
-    // The architecture of the app is that the commandline or web/tauri send messages to this manager,
-    // and the manager responds via a oneshot channel.
-    let (manager_response_tx, manager_response_rx) = mpsc::channel(100);
-    let manager = ConnectionManager::new(manager_response_tx)?;
-    let manager_command_tx = manager.get_sender_channel();
-    tokio::spawn(async move {
-        if let Err(e) = manager.run().await {
-            eprintln!("Error running connection manager: {}", e);
-            panic!();
-        }
-    });
+    // Startup: a single manager holds all state and runs in the background. The Tauri
+    // commands send it messages and it replies over oneshot channels; see `toolkit_core`.
+    let (manager_command_tx, manager_response_rx) = toolkit_core::start_manager()?;
 
     frontend::tauri::initialize(manager_command_tx, manager_response_rx);
     Ok(())
 }
-
 
 // Need to enforce a backup locale for uPlot, in case the operating sytem doesn't have one defined
 #[cfg(target_os = "linux")]
 fn enforce_working_locale() {
     const FALLBACK: &str = "en_US.UTF-8";
     let needs_fix = |v: &str| matches!(v, "" | "C" | "POSIX");
-    
+
     for var in ["LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"] {
         let val = std::env::var(var).unwrap_or_default();
         if needs_fix(&val) {

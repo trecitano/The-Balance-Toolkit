@@ -18,7 +18,7 @@ use tokio::sync::{mpsc, oneshot};
 #[derive(Debug)]
 pub enum BluetoothCommand {
     GetNintendoDevices {
-        response: oneshot::Sender<Vec<BluetoothPeripheral>>,
+        response: oneshot::Sender<Result<Vec<BluetoothPeripheral>>>,
     },
     StartScanAndPair {
         response_stream: mpsc::Sender<BluetoothPeripheral>,
@@ -69,48 +69,54 @@ impl BluetoothService {
     }
 
     pub async fn run(mut self) {
-        println!("Bluetooth Manager started.");
+        log::info!("Bluetooth Manager started.");
 
         while let Some(command) = self.bluetooth_rx.recv().await {
             match command {
                 BluetoothCommand::GetNintendoDevices { response } => {
-                    let result = Self::get_nintendo_devices(&self.bluetooth_implementation)
-                        .await
-                        .unwrap();
-                    response.send(result).unwrap();
+                    // Errors are handed back to the caller rather than turned into an empty
+                    // list: an empty list would read as "every board disconnected".
+                    let result = Self::get_nintendo_devices(&self.bluetooth_implementation).await;
+                    let _ = response.send(result);
                 }
                 BluetoothCommand::StartScanAndPair {
                     response_stream,
                     response,
                 } => {
-                    self.start_scan(response_stream).await.unwrap();
-                    response.send(()).unwrap();
+                    if let Err(e) = self.start_scan(response_stream).await {
+                        log::error!("Failed to start Bluetooth scan: {e:#}");
+                    }
+                    let _ = response.send(());
                 }
                 BluetoothCommand::StopScan { response } => {
                     self.scan_cancel_tx = None;
-                    response.send(()).unwrap();
+                    let _ = response.send(());
                 }
                 BluetoothCommand::IsScanning { response } => {
-                    response.send(self.scan_cancel_tx.is_some()).unwrap();
+                    let _ = response.send(self.scan_cancel_tx.is_some());
                 }
                 BluetoothCommand::RemoveDevice { mac_address } => {
-                    if let Err(e) = self.bluetooth_implementation.remove_device(mac_address).await {
-                        eprintln!("Warning: remove_device failed for {}: {}", mac_address, e);
+                    if let Err(e) = self
+                        .bluetooth_implementation
+                        .remove_device(mac_address)
+                        .await
+                    {
+                        log::warn!("remove_device failed for {}: {}", mac_address, e);
                     }
                 }
             }
         }
 
-        println!("Bluetooth Manager stopped.");
+        log::info!("Bluetooth Manager stopped.");
     }
 
     fn create_bluetooth_handler(is_demo_mode: bool) -> Arc<dyn BluetoothHandler> {
         if is_demo_mode {
-            println!("Starting Mock Bluetooth handler.");
+            log::info!("Starting Mock Bluetooth handler.");
             Arc::new(MockBluetoothHandler {})
         } else {
-            println!("Starting Native Bluetooth handler.");
-            Arc::new(NativeBluetoothHandler {})
+            log::info!("Starting Native Bluetooth handler.");
+            Arc::new(NativeBluetoothHandler::default())
         }
     }
 
@@ -119,7 +125,7 @@ impl BluetoothService {
         response_stream: mpsc::Sender<BluetoothPeripheral>,
     ) -> Result<()> {
         if self.scan_cancel_tx.is_some() {
-            println!("Scan is already in progress.");
+            log::info!("Scan is already in progress.");
             return Ok(());
         }
 
@@ -128,24 +134,24 @@ impl BluetoothService {
         let bluetooth_handler = self.bluetooth_implementation.clone();
 
         tokio::spawn(async move {
-            println!("Scanning for devices in background...");
+            log::info!("Scanning for devices in background...");
             loop {
                 tokio::select! {
                     _ = &mut cancel_rx => {
-                        println!("Scan cancelled.");
+                        log::info!("Scan cancelled.");
                         break;
                     }
 
                     result = bluetooth_handler.scan_and_pair_nintendo(response_stream.clone()) => {
                         if let Err(e) = result {
-                            eprintln!("scan_and_pair_nintendo failed: {e:#}");
+                            log::error!("scan_and_pair_nintendo failed: {e:#}");
                         }
                         tokio::time::sleep(tokio::time::Duration::from_millis(1500)).await;
                     }
                 }
             }
 
-            println!("Exiting background scan task.");
+            log::info!("Exiting background scan task.");
         });
 
         Ok(())
@@ -155,7 +161,7 @@ impl BluetoothService {
         bluetooth_handler: &Arc<dyn BluetoothHandler>,
     ) -> Result<Vec<BluetoothPeripheral>> {
         let adapter_info = bluetooth_handler.get_all_bluetooth_adapters_info().await?;
-        Ok(BluetoothService::filter_nintendo_devices(Ok(adapter_info)).await?)
+        BluetoothService::filter_nintendo_devices(Ok(adapter_info)).await
     }
 
     pub async fn filter_nintendo_devices(
@@ -181,6 +187,9 @@ impl BluetoothService {
     }
 }
 
+/// The Wii pairing PIN is the adapter's MAC address in reverse byte order. Only the Windows
+/// pairing flow needs it; the other platforms pair through the OS Bluetooth stack.
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub fn mac_address_to_wii_pin(mac_address: [u8; 6]) -> [u8; 6] {
     let mut pin = [0u8; 6];
 
@@ -197,6 +206,8 @@ pub struct BluetoothAdapterInfo {
     pub id: String,
     pub name: String,
     pub mac_address: MacAddress,
+    /// Reported by every platform for diagnostics; not consulted when filtering devices.
+    #[allow(dead_code)]
     pub is_active: bool,
     pub devices: Vec<Result<BluetoothPeripheral>>,
 }

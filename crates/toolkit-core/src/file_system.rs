@@ -21,30 +21,6 @@ impl UserFileSystem {
         Ok(users)
     }
 
-    pub fn add_user(new_user: User) -> Result<()> {
-        let mut users: Vec<User> = FileStore::load_with_default(Path::new(USERS_FILE))?;
-        users.push(new_user);
-        FileStore::save(Path::new(USERS_FILE), &users)
-    }
-
-    pub fn update_user(mut updated_user: User) -> Result<()> {
-        let mut users = Self::get_users()?;
-
-        users.retain(|user| user.name != updated_user.name);
-        updated_user.updated_at = Utc::now();
-        users.push(updated_user);
-
-        FileStore::save(Path::new(USERS_FILE), &users)
-    }
-
-    pub fn remove_user(user_name: String) -> Result<()> {
-        let mut users = Self::get_users()?;
-
-        users.retain(|user| user.name != user_name);
-
-        save_into_file(Path::new(USERS_FILE), &users)
-    }
-
     pub fn save(users: &Vec<Arc<User>>) -> Result<()> {
         FileStore::save(Path::new(USERS_FILE), users)
     }
@@ -116,13 +92,13 @@ impl DeviceFileSystem {
         Self::save(&devices)
     }
 
-    pub fn update_file_system_boards(devices: &Vec<NintendoDevice>) -> Result<()> {
+    pub fn update_file_system_boards(devices: &[NintendoDevice]) -> Result<()> {
         // Check if we really need to update the file system.
         // If the boards in the file system and in our argument are the same, we return.
         let file_system_devices = Self::get_stored_devices()?;
 
         let mut sorted_file_system = file_system_devices.clone();
-        let mut sorted_devices = devices.clone();
+        let mut sorted_devices = devices.to_vec();
         sorted_file_system.sort();
         sorted_devices.sort();
 
@@ -133,7 +109,7 @@ impl DeviceFileSystem {
         Self::save(devices)
     }
 
-    fn save(devices: &Vec<NintendoDevice>) -> Result<()> {
+    fn save(devices: &[NintendoDevice]) -> Result<()> {
         let file_system_devices: Vec<FileSystemNintendoDevice> =
             devices.iter().map(|device| device.into()).collect();
 
@@ -219,13 +195,13 @@ impl ExistingSessionFileSystem {
             }
         }
 
-        println!("latest: #{:#?}", latest);
+        log::debug!("Latest session file: {:?}", latest);
 
         if let Some((_, file_path)) = latest {
             match Self::load(&file_path) {
                 Ok(session) => return Some((file_path.to_string_lossy().to_string(), session)),
                 Err(e) => {
-                    println!("Failed to load session file: {}", e);
+                    log::info!("Failed to load session file: {}", e);
                 }
             }
         };
@@ -346,30 +322,23 @@ pub fn initialize_app_dir() -> Result<()> {
     Ok(())
 }
 
-fn app_dir_file(file_name: &Path) -> Result<File> {
-    let file_path = app_dir().join(file_name);
-
-    let file = File::create(file_path)
-        .with_context(|| format!("Failed to open file: {}", file_name.to_string_lossy()))?;
-    Ok(file)
-}
-
+/// Directory holding users, devices, settings, activities and (by default) sessions.
+///
+/// `TBT_APP_DIR` overrides the location outright, which lets a headless machine or a test
+/// keep its data away from the user's documents. Otherwise it is `the-balance-toolkit` inside
+/// the documents folder, falling back to the home directory on systems without one (a
+/// server without `xdg-user-dirs`, for example).
 pub fn app_dir() -> PathBuf {
+    if let Some(dir) = std::env::var_os("TBT_APP_DIR").filter(|dir| !dir.is_empty()) {
+        return PathBuf::from(dir);
+    }
     dirs::document_dir()
+        .or_else(dirs::home_dir)
         .map(|path| path.join("the-balance-toolkit"))
-        .expect("Could not access dir file")
+        .expect("Could not determine the application directory; set TBT_APP_DIR")
 }
 
 pub fn session_dir() -> PathBuf {
     let app_dir = app_dir();
     app_dir.join("sessions")
-}
-
-fn save_into_file<T: Serialize>(file_name: &Path, data: T) -> anyhow::Result<()> {
-    let file = app_dir_file(file_name)?;
-
-    serde_json::to_writer_pretty(file, &data)
-        .with_context(|| format!("Failed to save file: {}", file_name.to_string_lossy()))?;
-
-    Ok(())
 }

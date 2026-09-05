@@ -5,7 +5,7 @@ use crate::file_system::ExistingSessionFileSystem;
 use crate::processing::data_processor::InterpolationSetting;
 use crate::types::{MacAddress, User};
 use crate::utils;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -36,7 +36,7 @@ pub fn initialize(
         )
         .await
         {
-            eprintln!("Error in file writer: {:?}", e);
+            log::error!("Error in file writer: {:?}", e);
         }
     });
 
@@ -72,7 +72,7 @@ async fn main_file_writer_loop(
 
         device_tx_map.insert(device_mac, tx);
 
-        println!("Starting file writer for device: {}", device_mac);
+        log::info!("Starting file writer for device: {}", device_mac);
 
         let handle = tokio::spawn(async move {
             file_write_loop(
@@ -83,7 +83,6 @@ async fn main_file_writer_loop(
                 observe_processed_data,
             )
             .await
-            .unwrap()
         });
         join_handles.push(handle);
     }
@@ -95,17 +94,12 @@ async fn main_file_writer_loop(
         }
     }
 
-    println!("File writer stopped receiving events, waiting for child tasks to complete.");
+    log::info!("File writer stopped receiving events, waiting for child tasks to complete.");
     // Drop the child file writer channels
     device_tx_map.clear();
     let mut first_device_metrics = SessionStats::default();
     for handle in join_handles {
-        match handle.await {
-            Ok(stats) => {
-                first_device_metrics = stats;
-            }
-            _ => eprintln!("File writer failed."),
-        }
+        first_device_metrics = handle.await.context("File writer task failed")??;
     }
 
     // Update the session settings file with the session data.
@@ -118,7 +112,7 @@ async fn main_file_writer_loop(
     )
     .await?;
 
-    println!("Main File writer execution complete.");
+    log::info!("Main File writer execution complete.");
 
     Ok(())
 }
@@ -166,7 +160,7 @@ pub struct SessionConfigurationFileFormat {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionStats {
-    board_sampling_rate: f64,
+    pub board_sampling_rate: f64,
     pub duration: Duration,
 }
 
@@ -217,7 +211,7 @@ async fn file_write_loop(
     // Create a file to optionally store the raw values;
     let mut raw_values_file = if observe_raw_data {
         let file_path = output_directory.join(&file_mapping.raw_file_name);
-        println!("WRITING TO RAW FILE ${:?}", file_path);
+        log::info!("WRITING TO RAW FILE ${:?}", file_path);
         let mut file = BufWriter::new(create_file(file_path).await?);
         file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n")
             .await?;
@@ -315,7 +309,7 @@ async fn file_write_loop(
     }
 
     let duration = start.elapsed();
-    println!("File writer execution complete.");
+    log::info!("File writer execution complete.");
     Ok(SessionStats {
         board_sampling_rate: raw_events_written as f64 / duration.as_secs_f64(),
         duration,
