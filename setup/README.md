@@ -7,17 +7,22 @@ are ticked by default, **Optional** items (end-to-end test tooling, the Python
 streaming clients, Unity Hub) are listed unticked.
 
 ```bash
-./setup.sh              # Linux and macOS (also works from Git Bash on Windows)
-./setup.sh --check      # report only, exit 1 if a required item is missing
-./setup.sh --yes        # install the default selection without prompting
-./setup.sh --all        # install everything missing, including optional items
+setup/setup.sh              # Linux and macOS (also works from Git Bash on Windows)
+setup/setup.sh --check      # report only, exit 1 if a required item is missing
+setup/setup.sh --yes        # install the default selection without prompting
+setup/setup.sh --all        # install everything missing, including optional items
 ```
 
 Windows, from PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File setup.ps1          # same flags: -Check, -Yes, -All
+powershell -ExecutionPolicy Bypass -File setup\setup.ps1    # same flags: -Check, -Yes, -All
 ```
+
+Once mise is installed, `mise run setup` runs the right script for the current
+platform and forwards any arguments (`mise run setup -- --check`). The scripts
+are what bootstrap mise in the first place, so the direct invocations above are
+for a fresh machine.
 
 In the checklist use ↑/↓ (or j/k) to move, space to toggle, `a`/`n` to select
 all/none, enter to install the selection and `q` to quit without installing.
@@ -31,15 +36,14 @@ to your shell. An outdated Bun or Rust shows up as "missing or outdated" and
 
 | Path | Purpose |
 | --- | --- |
-| `../setup.sh`, `../setup.ps1` | Root forwarders to the scripts below. |
-| `setup.sh` | Entry point: detects the platform, runs the checks, shows the checklist, installs. |
+| `setup.sh` | Unix entry point: detects the platform, runs the checks, shows the checklist, installs. Forwards to `setup.ps1` under Git Bash. |
+| `setup.ps1` | Windows equivalent of the whole flow, installing through winget. |
 | `lib/common.sh` | Dependency registry, output helpers, and checks shared by all Unix platforms. |
 | `lib/checkbox.sh` | Interactive checkbox picker (bash 3.2 compatible for macOS). |
 | `ubuntu/deps.sh` | Debian/Ubuntu (apt) dependency list. |
 | `archlinux/deps.sh` | Arch Linux (pacman) dependency list. |
-| `archlinux/install-webkit-webdriver.sh` | Builds `WebKitWebDriver` from source on Arch; also reachable as `./setup.sh webdriver`. |
+| `archlinux/install-webkit-webdriver.sh` | Builds `WebKitWebDriver` from source on Arch; also reachable as `setup/setup.sh webdriver`. |
 | `macos/deps.sh` | macOS (Xcode CLT, Homebrew) dependency list. |
-| `windows/setup.ps1` | Windows equivalent of the whole flow, installing through winget. |
 
 Platform detection uses `uname` and `/etc/os-release` (`ID` and `ID_LIKE`), so
 Arch and Debian derivatives are routed to the matching module.
@@ -80,4 +84,4 @@ The kind decides which section of the checklist the item appears in and
 whether it is ticked by default. A check returns 0 when satisfied and may set
 `DETAIL` to a short note (version, path, or reason). Install functions can call `post_note '...'` to print a
 reminder at the end (for example, "log out and back in"). On Windows, add a
-matching `Check-*`/`Install-*` pair and a row in `$Deps` in `windows/setup.ps1`.
+matching `Check-*`/`Install-*` pair and a row in `$Deps` in `setup.ps1`.

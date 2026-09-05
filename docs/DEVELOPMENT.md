@@ -29,7 +29,7 @@ dependencies. Rust commands in the verification tasks use `--locked`.
 
 `doctor` checks the active tool versions, native build prerequisites and installed
 frontend executables. It does not install packages, start Bluetooth or change
-group membership. `./setup.sh --check` is the broader desktop/hardware setup
+group membership. `mise run setup -- --check` is the broader desktop/hardware setup
 check and can fail on machines that can still run this verification profile.
 
 ## Commands and success criteria

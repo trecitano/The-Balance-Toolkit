@@ -11,7 +11,7 @@ export SETUP_ROOT REPO_ROOT
 
 usage() {
   printf '%s\n' \
-    'Usage: setup/setup.sh [OPTIONS]' \
+    'Usage: setup/setup.sh [OPTIONS]        (or: mise run setup -- [OPTIONS])' \
     '       setup/setup.sh webdriver [OPTIONS]   (Arch only: build WebKitWebDriver)' \
     '' \
     'Check the development dependencies for The Balance Toolkit and install the' \
@@ -76,7 +76,7 @@ if [[ $platform == windows ]]; then
   [[ $mode == check ]] && ps_args+=(-Check)
   [[ $mode == yes ]] && ps_args+=(-Yes)
   [[ $select_optional == true ]] && ps_args+=(-All)
-  exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$SETUP_ROOT/windows/setup.ps1" "${ps_args[@]}"
+  exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$SETUP_ROOT/setup.ps1" "${ps_args[@]}"
 fi
 
 # shellcheck disable=SC1091

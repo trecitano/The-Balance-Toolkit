@@ -4,7 +4,8 @@
 .DESCRIPTION
   Checks every dependency and offers a checklist of the missing ones (all
   ticked by default) to install with winget. Run from a normal PowerShell:
-    powershell -ExecutionPolicy Bypass -File setup\windows\setup.ps1
+    powershell -ExecutionPolicy Bypass -File setup\setup.ps1
+  or, once mise is installed, from any platform: mise run setup
 .PARAMETER Check
   Only report what is installed and what is missing.
 .PARAMETER Yes
@@ -19,7 +20,7 @@ param(
   [switch]$All
 )
 $ErrorActionPreference = 'Stop'
-$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
+$RepoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 
 function Info($m) { Write-Host "==> $m" -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "  [OK] $m" -ForegroundColor Green }

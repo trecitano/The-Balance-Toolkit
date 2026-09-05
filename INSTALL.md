@@ -13,13 +13,16 @@ items (end-to-end test tooling, the Python streaming clients in `scripts/`,
 Unity Hub) are listed unticked:
 
 ```bash
-./setup.sh            # Ubuntu/Debian, Arch Linux, macOS
-./setup.sh --check    # only report
+setup/setup.sh            # Ubuntu/Debian, Arch Linux, macOS
+setup/setup.sh --check    # only report
 ```
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File setup.ps1    # Windows
+powershell -ExecutionPolicy Bypass -File setup\setup.ps1    # Windows
 ```
+
+Once mise is installed, `mise run setup` (and `mise run setup -- --check`)
+runs the matching script on every platform.
 
 See [setup/README.md](setup/README.md) for details. The rest of this document
 describes the manual steps the script automates.
@@ -230,12 +233,12 @@ sudo apt install webkit2gtk-driver
   repository installer as your normal user from the repository root:
 
 ```bash
-./setup.sh webdriver
+setup/setup.sh webdriver
 ```
 
 The entry point detects your distro and invokes
 `setup/archlinux/install-webkit-webdriver.sh` on Arch Linux or a distro declaring
-Arch compatibility. It is also offered as an optional item in the `./setup.sh`
+Arch compatibility. It is also offered as an optional item in the `setup/setup.sh`
 checklist. See [setup/README.md](setup/README.md) for the setup directory structure.
 
 The Arch script installs build dependencies using `sudo pacman`, detects your installed
@@ -246,7 +249,7 @@ Rerun it after updating `webkit2gtk-4.1`.
 
 Use `--build-only` to build without installing the binary, and
 `--skip-dependencies` if the build dependencies are already installed. See
-`./setup.sh webdriver --help` for details. The script is adapted from this
+`setup/setup.sh webdriver --help` for details. The script is adapted from this
 [Arch WebKitWebDriver guide](https://gist.github.com/jamesmeneghello/37fc7988ec94edc962969ade428cd710).
 
 Windows needs `msedgedriver.exe` matching the installed Edge version, on the

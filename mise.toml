@@ -1,10 +1,17 @@
 # Project toolchain, managed by mise (https://mise.jdx.dev).
-# `./setup.sh` installs mise and runs `mise install`; these are the versions
+# `setup/setup.sh` (or `setup/setup.ps1`) installs mise and runs `mise install`; these are the versions
 # every platform builds with. Bump them here and rerun `mise install`.
 [tools]
 bun = "1.4.1"
 rust = "1.98.0"
 uv = "0.12.9"
+
+# One command for every platform: bash on Linux/macOS/Git Bash, PowerShell on Windows.
+# Extra arguments are forwarded, e.g. `mise run setup -- --check`.
+[tasks.setup]
+description = "Check the development dependencies and offer to install the missing ones"
+run = "bash setup/setup.sh"
+run_windows = "powershell -NoProfile -ExecutionPolicy Bypass -File setup/setup.ps1"
 
 [tasks.doctor]
 description = "Check the pinned tools and dependencies for verification without hardware"
@@ -50,7 +57,7 @@ dir = "apps/android"
 run = "./gradlew --console=plain lintKotlin detekt :app:assembleDebug"
 
 # `mise run clean` removes every generated/cached directory. Rerun
-# `./setup.sh` (or `bun install` in apps/gui, `cargo build`, `uv sync`) to restore them.
+# `mise run setup` (or `bun install` in apps/gui, `cargo build`, `uv sync`) to restore them.
 [tasks.clean]
 description = "Remove build artifacts and dependency caches (target/, desktop node_modules/ and dist/, .venv, gradle)"
 run = """

@@ -6,7 +6,7 @@ set -Eeuo pipefail
 
 usage() {
   printf '%s\n' \
-    'Usage: ./setup.sh webdriver [OPTIONS]' \
+    'Usage: setup/setup.sh webdriver [OPTIONS]' \
     '' \
     'Build WebKitWebDriver for the installed Arch Linux webkit2gtk-4.1 version.' \
     'Uses the default compiler (honoring CC/CXX) and all CPUs reported by nproc.' \
