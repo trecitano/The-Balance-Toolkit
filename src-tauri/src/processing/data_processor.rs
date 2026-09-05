@@ -135,6 +135,11 @@ fn data_process_loop(
     let cop_calculation_x_value = settings.balance_board_x_size / 2.0;
     let cop_calculation_y_value = settings.balance_board_y_size / 2.0;
 
+    // FFT plans and the Hann window are reused across iterations.
+    let mut spectrum_state = SpectrumState::default();
+    // Sleep until a fixed deadline so the slide cadence does not drift by the processing time.
+    let mut next_tick = std::time::Instant::now();
+
     loop {
         while let Ok(item) = rx.try_recv() {
             match item {
@@ -190,7 +195,7 @@ fn data_process_loop(
         let sway_calculation = calculate_basic_sway_metrics(&points);
         let stability_index = calculate_stability_index(&points);
         let area_calculation = calculate_area_metrics(&points);
-        let amplitude_spectrum = compute_fft_amplitude_spectrum(&points, 2.0);
+        let amplitude_spectrum = compute_fft_amplitude_spectrum(&points, 2.0, &mut spectrum_state);
         let dpsi_metrics = calculate_dpsi_metrics(&points, settings.baseline_weight);
 
         let result = ProcessedBoardData {
@@ -213,7 +218,14 @@ fn data_process_loop(
             break;
         }
 
-        thread::sleep(window_slide_size);
+        next_tick += window_slide_size;
+        let now = std::time::Instant::now();
+        if next_tick > now {
+            thread::sleep(next_tick - now);
+        } else {
+            // Processing overran the slide interval; resynchronise instead of catching up.
+            next_tick = now;
+        }
     }
 
     println!("Data processing execution complete.");
@@ -396,29 +408,34 @@ fn find_nearby_points(
     points: &[CenterOfPressurePoint],
     target_time: DateTime<Utc>,
     max_points: usize,
-) -> Vec<CenterOfPressurePoint> {
+) -> &[CenterOfPressurePoint] {
     if points.is_empty() {
-        return Vec::new();
+        return points;
     }
 
-    // Find the closest point
-    let mut closest_idx = 0;
-    let mut min_diff = (points[0].timestamp - target_time).num_milliseconds().abs();
-
-    for (i, point) in points.iter().enumerate().skip(1) {
-        let diff = (point.timestamp - target_time).num_milliseconds().abs();
-        if diff < min_diff {
-            min_diff = diff;
-            closest_idx = i;
-        }
-    }
+    // Points are in arrival order, so the closest one is adjacent to the insertion point.
+    let upper = points.partition_point(|p| p.timestamp < target_time);
+    let closest_idx = if upper == 0 {
+        0
+    } else if upper >= points.len() {
+        points.len() - 1
+    } else {
+        let before = (target_time - points[upper - 1].timestamp)
+            .num_milliseconds()
+            .abs();
+        let after = (points[upper].timestamp - target_time)
+            .num_milliseconds()
+            .abs();
+        // On a tie the linear scan kept the earlier point.
+        if after < before { upper } else { upper - 1 }
+    };
 
     // Collect points around the closest point
     let half = max_points / 2;
     let start_idx = closest_idx.saturating_sub(half);
     let end_idx = (closest_idx + half + 1).min(points.len());
 
-    points[start_idx..end_idx].to_vec()
+    &points[start_idx..end_idx]
 }
 
 fn find_interpolation_points(
@@ -429,12 +446,15 @@ fn find_interpolation_points(
         return None;
     }
 
-    for i in 0..points.len() - 1 {
-        if points[i].timestamp <= target_time && points[i + 1].timestamp >= target_time {
-            return Some((&points[i], &points[i + 1]));
-        }
+    // First point at or after the target; the bracketing pair is (idx - 1, idx).
+    let idx = points.partition_point(|p| p.timestamp < target_time);
+    if idx == 0 {
+        return (points[0].timestamp == target_time).then(|| (&points[0], &points[1]));
     }
-    None
+    if idx >= points.len() {
+        return None;
+    }
+    Some((&points[idx - 1], &points[idx]))
 }
 
 struct CubicSpline {
@@ -486,13 +506,9 @@ fn create_cubic_spline(x: &[f32], y: &[f32]) -> CubicSpline {
 }
 
 fn evaluate_cubic_spline(spline: &CubicSpline, x_points: &[f32], x: f32) -> f32 {
-    let mut i = 0;
-    for j in 0..x_points.len() - 1 {
-        if x >= x_points[j] && x <= x_points[j + 1] {
-            i = j;
-            break;
-        }
-    }
+    // Segment i satisfies x_points[i] <= x <= x_points[i + 1]; clamp outside the knots.
+    let upper = x_points.partition_point(|&p| p < x);
+    let i = upper.saturating_sub(1).min(spline.b.len() - 1);
 
     let dx = x - x_points[i];
     spline.a[i] + spline.b[i] * dx + spline.c[i] * dx * dx + spline.d[i] * dx * dx * dx
@@ -839,9 +855,32 @@ pub struct AmplitudeSpectrum {
     pub amplitude_xy: Vec<f32>, // Combined amplitude (sqrt(x^2 + y^2))
 }
 
+/// Reusable FFT state: `rustfft` planning is far more expensive than a 500-point transform,
+/// and the Hann window only depends on the window length.
+#[derive(Default)]
+struct SpectrumState {
+    planner: Option<FftPlanner<f32>>,
+    window: Vec<f32>,
+    coherent_gain: f32,
+}
+
+impl SpectrumState {
+    fn window_for(&mut self, n: usize) -> (&[f32], f32) {
+        if self.window.len() != n {
+            self.window.clear();
+            self.window
+                .extend((0..n).map(|i| 0.5 - 0.5 * (2.0 * PI * i as f32 / (n as f32 - 1.0)).cos()));
+            // Coherent gain of the window (0.5 for Hann), used to correct amplitudes.
+            self.coherent_gain = self.window.iter().sum::<f32>() / n as f32;
+        }
+        (&self.window, self.coherent_gain)
+    }
+}
+
 fn compute_fft_amplitude_spectrum(
     points: &[CenterOfPressurePoint],
     max_hz: f32,
+    state: &mut SpectrumState,
 ) -> Option<AmplitudeSpectrum> {
     if points.len() < 8 {
         return None;
@@ -851,9 +890,6 @@ fn compute_fft_amplitude_spectrum(
     let n = points.len();
     let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n as f32;
     let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n as f32;
-
-    let mut x: Vec<f32> = points.iter().map(|p| p.x - mean_x).collect();
-    let mut y: Vec<f32> = points.iter().map(|p| p.y - mean_y).collect();
 
     // Assume uniform sampling after interpolation
     let dt = (points[1].timestamp - points[0].timestamp)
@@ -867,24 +903,23 @@ fn compute_fft_amplitude_spectrum(
 
     let fs = 1.0 / dt; // Sampling frequency in Hz
 
-    // Apply Hann window and correct amplitude by coherent gain
-    let mut window = Vec::with_capacity(n);
-    for i in 0..n {
-        let w = 0.5 - 0.5 * (2.0 * PI * i as f32 / (n as f32 - 1.0)).cos();
-        window.push(w);
-        x[i] *= w;
-        y[i] *= w;
-    }
-    let coherent_gain = window.iter().sum::<f32>() / n as f32; // = 0.5 for Hann
+    let fft = state
+        .planner
+        .get_or_insert_with(FftPlanner::new)
+        .plan_fft_forward(n);
+    let (window, coherent_gain) = state.window_for(n);
 
-    // Prepare FFT
-    let mut planner = FftPlanner::new();
-    let fft = planner.plan_fft_forward(n);
-
-    // Convert to complex and apply FFT
-    let mut x_complex: Vec<Complex<f32>> = x.iter().map(|&val| Complex::new(val, 0.0)).collect();
-
-    let mut y_complex: Vec<Complex<f32>> = y.iter().map(|&val| Complex::new(val, 0.0)).collect();
+    // Demean, apply the Hann window, and convert to complex in one pass
+    let mut x_complex: Vec<Complex<f32>> = points
+        .iter()
+        .zip(window)
+        .map(|(p, &w)| Complex::new((p.x - mean_x) * w, 0.0))
+        .collect();
+    let mut y_complex: Vec<Complex<f32>> = points
+        .iter()
+        .zip(window)
+        .map(|(p, &w)| Complex::new((p.y - mean_y) * w, 0.0))
+        .collect();
 
     fft.process(&mut x_complex);
     fft.process(&mut y_complex);

@@ -164,6 +164,7 @@ pub enum ToolkitCommand {
     },
     StartSession {
         frontend_channel: Sender<BalanceBoardOutput>,
+        response: oneshot::Sender<()>,
     },
     StopSession {
         response: oneshot::Sender<()>,
@@ -192,6 +193,7 @@ pub enum ToolkitCommand {
     },
     StartReplay {
         frontend_channel: Sender<BalanceBoardOutput>,
+        response: oneshot::Sender<()>,
     },
     StopReplay {
         response: oneshot::Sender<()>,
@@ -557,7 +559,10 @@ impl ConnectionManager {
 
                     response.send(()).unwrap();
                 }
-                ToolkitCommand::StartSession { frontend_channel } => {
+                ToolkitCommand::StartSession {
+                    frontend_channel,
+                    response,
+                } => {
                     let cancellation_token = CancellationToken::new();
                     self.session_settings.cancel_token = Some(cancellation_token.clone());
                     self.session_settings.session_start_time = Some(Utc::now());
@@ -609,6 +614,10 @@ impl ConnectionManager {
                             }
                         });
                     }
+
+                    // Reply only once the session state is updated, so a refetch triggered by the
+                    // frontend after this command returns already sees the session as ongoing.
+                    response.send(()).unwrap();
                 }
                 ToolkitCommand::StopSession { response } => {
                     if let Some(token) = self.session_settings.cancel_token.take() {
@@ -768,7 +777,10 @@ impl ConnectionManager {
 
                     response.send(()).unwrap();
                 }
-                ToolkitCommand::StartReplay { frontend_channel } => {
+                ToolkitCommand::StartReplay {
+                    frontend_channel,
+                    response,
+                } => {
                     if let Some(settings) = self.replay_settings.as_mut() {
                         start_session(
                             frontend_channel,
@@ -802,6 +814,8 @@ impl ConnectionManager {
                             }
                         });
                     }
+
+                    response.send(()).unwrap();
                 }
                 ToolkitCommand::StopReplay { response } => {
                     if let Some(settings) = self.replay_settings.as_mut() {

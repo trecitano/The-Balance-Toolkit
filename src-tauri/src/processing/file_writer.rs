@@ -13,7 +13,7 @@ use std::io;
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::fs::{File, OpenOptions};
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncWriteExt, BufWriter};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::Instant;
@@ -200,6 +200,10 @@ async fn write_session_settings_to_disk(
     Ok(())
 }
 
+/// How often buffered CSV rows are flushed to disk. Bounds the data lost on a crash
+/// (the release profile aborts on panic) without paying a syscall per sample.
+const FLUSH_INTERVAL: Duration = Duration::from_millis(250);
+
 async fn file_write_loop(
     mut rx: Receiver<BalanceBoardOutput>,
     output_directory: PathBuf,
@@ -214,7 +218,7 @@ async fn file_write_loop(
     let mut raw_values_file = if observe_raw_data {
         let file_path = output_directory.join(&file_mapping.raw_file_name);
         println!("WRITING TO RAW FILE ${:?}", file_path);
-        let mut file = create_file(file_path).await?;
+        let mut file = BufWriter::new(create_file(file_path).await?);
         file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n")
             .await?;
         Some(file)
@@ -225,7 +229,7 @@ async fn file_write_loop(
     // Create a file to optionally store the processed values;
     let mut processed_values_file = if observe_processed_data {
         let file_path = output_directory.join(&file_mapping.processed_file_name);
-        let mut file = create_file(file_path).await?;
+        let mut file = BufWriter::new(create_file(file_path).await?);
         file.write_all(b"timestamp,vcopx,vcopy,stability_index,mlsi,apsi,vsi,dpsi\n")
             .await?;
         Some(file)
@@ -233,60 +237,81 @@ async fn file_write_loop(
         None
     };
 
-    while let Some(data) = rx.recv().await {
-        match data {
-            BalanceBoardOutput::Raw(data) => {
-                if let Some(ref mut file) = raw_values_file {
-                    raw_events_written += 1;
-                    let csv_line = format!(
-                        "{},{},{},{},{}\n",
-                        data.timestamp
-                            .to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
-                        data.top_right,
-                        data.bottom_right,
-                        data.top_left,
-                        data.bottom_left
-                    );
+    let mut flush_interval = tokio::time::interval(FLUSH_INTERVAL);
+    flush_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
-                    file.write_all(csv_line.as_bytes()).await?;
-                    file.flush().await?;
+    loop {
+        tokio::select! {
+            received = rx.recv() => {
+                let Some(data) = received else { break };
+                match data {
+                    BalanceBoardOutput::Raw(data) => {
+                        if let Some(ref mut file) = raw_values_file {
+                            raw_events_written += 1;
+                            let csv_line = format!(
+                                "{},{},{},{},{}\n",
+                                data.timestamp
+                                    .to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
+                                data.top_right,
+                                data.bottom_right,
+                                data.top_left,
+                                data.bottom_left
+                            );
+
+                            file.write_all(csv_line.as_bytes()).await?;
+                        }
+                    }
+                    BalanceBoardOutput::Processed(data) => {
+                        if let Some(ref mut file) = processed_values_file {
+                            let csv_line = format!(
+                                "{},{},{},{},{},{},{},{}\n",
+                                data.timestamp
+                                    .to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
+                                data.sway_metrics
+                                    .as_ref()
+                                    .map_or(String::new(), |v| v.v_cop_x.to_string()),
+                                data.sway_metrics
+                                    .as_ref()
+                                    .map_or(String::new(), |v| v.v_cop_y.to_string()),
+                                data.stability_index
+                                    .as_ref()
+                                    .map_or(String::new(), |v| v.to_string()),
+                                data.dpsi_metrics
+                                    .as_ref()
+                                    .map_or(String::new(), |d| d.mlsi.to_string()),
+                                data.dpsi_metrics
+                                    .as_ref()
+                                    .map_or(String::new(), |d| d.apsi.to_string()),
+                                data.dpsi_metrics
+                                    .as_ref()
+                                    .map_or(String::new(), |d| d.vsi.to_string()),
+                                data.dpsi_metrics
+                                    .as_ref()
+                                    .map_or(String::new(), |d| d.dpsi.to_string()),
+                            );
+
+                            file.write_all(csv_line.as_bytes()).await?;
+                        }
+                    }
                 }
             }
-            BalanceBoardOutput::Processed(data) => {
+            _ = flush_interval.tick() => {
+                if let Some(ref mut file) = raw_values_file {
+                    file.flush().await?;
+                }
                 if let Some(ref mut file) = processed_values_file {
-                    let csv_line = format!(
-                        "{},{},{},{},{},{},{},{}\n",
-                        data.timestamp
-                            .to_rfc3339_opts(chrono::SecondsFormat::Micros, true),
-                        data.sway_metrics
-                            .as_ref()
-                            .map_or(String::new(), |v| v.v_cop_x.to_string()),
-                        data.sway_metrics
-                            .as_ref()
-                            .map_or(String::new(), |v| v.v_cop_y.to_string()),
-                        data.stability_index
-                            .as_ref()
-                            .map_or(String::new(), |v| v.to_string()),
-                        data.dpsi_metrics
-                            .as_ref()
-                            .map_or(String::new(), |d| d.mlsi.to_string()),
-                        data.dpsi_metrics
-                            .as_ref()
-                            .map_or(String::new(), |d| d.apsi.to_string()),
-                        data.dpsi_metrics
-                            .as_ref()
-                            .map_or(String::new(), |d| d.vsi.to_string()),
-                        data.dpsi_metrics
-                            .as_ref()
-                            .map_or(String::new(), |d| d.dpsi.to_string()),
-                    );
-
-                    // Write and flush
-                    file.write_all(csv_line.as_bytes()).await?;
                     file.flush().await?;
                 }
             }
         }
+    }
+
+    // Push whatever is still buffered before reporting completion.
+    if let Some(ref mut file) = raw_values_file {
+        file.flush().await?;
+    }
+    if let Some(ref mut file) = processed_values_file {
+        file.flush().await?;
     }
 
     let duration = start.elapsed();

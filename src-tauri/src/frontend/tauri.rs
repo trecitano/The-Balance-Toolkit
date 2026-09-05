@@ -67,14 +67,12 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
                     (size.width as f64, size.height as f64)
                 })
                 .or_else(|| {
-                    app.available_monitors()
-                        .ok()
-                        .and_then(|monitors| {
-                            monitors.into_iter().next().map(|monitor| {
-                                let size = monitor.size();
-                                (size.width as f64, size.height as f64)
-                            })
+                    app.available_monitors().ok().and_then(|monitors| {
+                        monitors.into_iter().next().map(|monitor| {
+                            let size = monitor.size();
+                            (size.width as f64, size.height as f64)
                         })
+                    })
                 });
 
             let (initial_width, initial_height) = monitor_dimensions
@@ -801,14 +799,17 @@ async fn session_start_session(
 
     // When we receive a balance board reading, we send it to the frontend.
     let balance_board_tx = initialize_frontend_handler(session_channel).await;
+    let (response_tx, response_rx) = oneshot::channel();
     let command = ToolkitCommand::StartSession {
         frontend_channel: balance_board_tx,
+        response: response_tx,
     };
     state
         .manager_tx
         .send(command)
         .await
         .map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< session_start_session.\n");
     Ok(())
@@ -895,14 +896,17 @@ async fn replay_start_replay(
     println!(">> replay_start_replay");
 
     let balance_board_tx = initialize_frontend_handler(session_channel).await;
+    let (response_tx, response_rx) = oneshot::channel();
     let command = ToolkitCommand::StartReplay {
         frontend_channel: balance_board_tx,
+        response: response_tx,
     };
     state
         .manager_tx
         .send(command)
         .await
         .map_err(|e| e.to_string())?;
+    response_rx.await.map_err(|e| e.to_string())?;
 
     println!("<< replay_start_replay.\n");
     Ok(())

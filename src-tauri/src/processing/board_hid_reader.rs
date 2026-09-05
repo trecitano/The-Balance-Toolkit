@@ -192,34 +192,49 @@ fn blocking_hid_loop(
     let mut tare_value: BalanceBoardCalibratedReading = BalanceBoardCalibratedReading::default();
 
     loop {
-        match hid_control_rx.try_recv() {
-            Ok(command) => {
-                println!("blocking hid: Got command: {:?}", command);
-                match command {
-                    BalanceBoardCommands::TurnOnLed => {
-                        write_to_device(&device, &BOARD_TURN_ON_LED)?;
-                    }
-                    BalanceBoardCommands::TurnOffLed => {
-                        write_to_device(&device, &BOARD_TURN_OFF_LED)?;
-                    }
-                    BalanceBoardCommands::ApplyTare => {
-                        update_tare = true;
-                    }
-                    BalanceBoardCommands::StartRecording(tx) => {
-                        tx_channel = Some(tx);
-                        write_to_device(&device, &BOARD_START_READING)?;
-                    }
-                    BalanceBoardCommands::FinishRecording => {
-                        tx_channel = None;
-                        write_to_device(&device, &BOARD_STOP_READING)?;
-                    }
+        // While recording, the blocking device read below paces this loop, so commands are
+        // only polled. While idle there is nothing to read from the board, so block on the
+        // control channel instead of spinning on `try_recv` at 100% of a core.
+        let command = if tx_channel.is_some() {
+            match hid_control_rx.try_recv() {
+                Ok(command) => Some(command),
+                Err(mpsc::error::TryRecvError::Empty) => None,
+                Err(mpsc::error::TryRecvError::Disconnected) => {
+                    // The async part has shut down. We must exit.
+                    println!("HID Loop: Control channel disconnected. Shutting down.");
+                    break;
                 }
             }
-            Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ }
-            Err(mpsc::error::TryRecvError::Disconnected) => {
-                // The async part has shut down. We must exit.
-                println!("HID Loop: Control channel disconnected. Shutting down.");
-                break;
+        } else {
+            match hid_control_rx.blocking_recv() {
+                Some(command) => Some(command),
+                None => {
+                    println!("HID Loop: Control channel disconnected. Shutting down.");
+                    break;
+                }
+            }
+        };
+
+        if let Some(command) = command {
+            println!("blocking hid: Got command: {:?}", command);
+            match command {
+                BalanceBoardCommands::TurnOnLed => {
+                    write_to_device(&device, &BOARD_TURN_ON_LED)?;
+                }
+                BalanceBoardCommands::TurnOffLed => {
+                    write_to_device(&device, &BOARD_TURN_OFF_LED)?;
+                }
+                BalanceBoardCommands::ApplyTare => {
+                    update_tare = true;
+                }
+                BalanceBoardCommands::StartRecording(tx) => {
+                    tx_channel = Some(tx);
+                    write_to_device(&device, &BOARD_START_READING)?;
+                }
+                BalanceBoardCommands::FinishRecording => {
+                    tx_channel = None;
+                    write_to_device(&device, &BOARD_STOP_READING)?;
+                }
             }
         }
 
