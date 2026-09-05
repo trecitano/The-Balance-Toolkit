@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import {
+  BalanceBoardEvent,
   RawBalanceBoardEvent,
   ProcessedBoardEvent,
   ProcessedSessionData,
@@ -21,6 +22,8 @@ export type SessionState = {
   processedSingleFrameSessionData: Record<string, ProcessedSingleFrameSessionData>;
 
   actions: {
+    /** Apply a batch of events in a single store update, so subscribers fire once per batch. */
+    pushFrames: (frames: BalanceBoardEvent[]) => void;
     pushRawFrame: (f: RawBalanceBoardEvent) => void;
     pushProcessedFrame: (f: ProcessedBoardEvent) => void;
     clear: () => void;
@@ -45,62 +48,79 @@ function updateBuffer<T>(oldBuffer: BoardBuffer<T>, frame: T): BoardBuffer<T> {
 
 function createSessionDataStore() {
   return create(
-    subscribeWithSelector<SessionState>((set) => ({
-      rawSessionData: {},
-      processedSessionData: {},
-      processedSingleFrameSessionData: {},
+    subscribeWithSelector<SessionState>((set) => {
+      // Events arrive at ~100 Hz per board, but the display only changes 60 times a second.
+      // Applying a whole animation frame's worth of events in one `set` means every plot
+      // subscriber fires (and redraws) once per frame instead of once per event.
+      const pushFrames = (frames: BalanceBoardEvent[]) => {
+        if (frames.length === 0) return;
 
-      actions: {
-        pushRawFrame: (f) =>
-          set((state) => {
-            const oldBuffer = state.rawSessionData[f.macAddress] || createEmptyBuffer<RawBalanceBoardEvent>();
-            const newBuffer = updateBuffer(oldBuffer, f);
+        set((state) => {
+          let rawSessionData = state.rawSessionData;
+          let processedSessionData = state.processedSessionData;
+          let processedSingleFrameSessionData = state.processedSingleFrameSessionData;
+          let rawChanged = false;
+          let processedChanged = false;
 
-            return {
-              rawSessionData: {
-                ...state.rawSessionData,
-                [f.macAddress]: newBuffer,
-              },
-            };
-          }),
+          for (const f of frames) {
+            if (f.event === "raw") {
+              if (!rawChanged) {
+                rawSessionData = { ...rawSessionData };
+                rawChanged = true;
+              }
+              const oldBuffer = rawSessionData[f.macAddress] || createEmptyBuffer<RawBalanceBoardEvent>();
+              rawSessionData[f.macAddress] = updateBuffer(oldBuffer, f);
+            } else if (f.event === "processed") {
+              if (!processedChanged) {
+                processedSessionData = { ...processedSessionData };
+                processedSingleFrameSessionData = { ...processedSingleFrameSessionData };
+                processedChanged = true;
+              }
+              const sessionData: ProcessedSessionData = {
+                timestamp: f.timestamp,
+                vCopX: f.vCopX,
+                vCopY: f.vCopY,
+                mlsi: f.mlsi,
+                apsi: f.apsi,
+                vsi: f.vsi,
+                dpsi: f.dpsi,
+              };
+              const singleFrameData: ProcessedSingleFrameSessionData = {
+                confidenceEllipsePolygon: f.confidenceEllipsePolygon,
+                convexHullPolygon: f.convexHullPolygon,
+                stabilityIndex: f.stabilityIndex,
+                amplitudeSpectrum: f.amplitudeSpectrum,
+              };
 
-        pushProcessedFrame: (f) =>
-          set((state) => {
-            const sessionData: ProcessedSessionData = {
-              timestamp: f.timestamp,
-              vCopX: f.vCopX,
-              vCopY: f.vCopY,
-              mlsi: f.mlsi,
-              apsi: f.apsi,
-              vsi: f.vsi,
-              dpsi: f.dpsi,
-            };
-            const singleFrameData: ProcessedSingleFrameSessionData = {
-              confidenceEllipsePolygon: f.confidenceEllipsePolygon,
-              convexHullPolygon: f.convexHullPolygon,
-              stabilityIndex: f.stabilityIndex,
-              amplitudeSpectrum: f.amplitudeSpectrum,
-            };
+              const oldSessionBuffer = processedSessionData[f.macAddress] || createEmptyBuffer<ProcessedSessionData>();
+              processedSessionData[f.macAddress] = updateBuffer(oldSessionBuffer, sessionData);
+              processedSingleFrameSessionData[f.macAddress] = singleFrameData;
+            }
+          }
 
-            const oldSessionBuffer =
-              state.processedSessionData[f.macAddress] || createEmptyBuffer<ProcessedSessionData>();
-            const newSessionBuffer = updateBuffer(oldSessionBuffer, sessionData);
+          const next: Partial<SessionState> = {};
+          if (rawChanged) next.rawSessionData = rawSessionData;
+          if (processedChanged) {
+            next.processedSessionData = processedSessionData;
+            next.processedSingleFrameSessionData = processedSingleFrameSessionData;
+          }
+          return next;
+        });
+      };
 
-            return {
-              processedSessionData: {
-                ...state.processedSessionData,
-                [f.macAddress]: newSessionBuffer,
-              },
-              processedSingleFrameSessionData: {
-                ...state.processedSingleFrameSessionData,
-                [f.macAddress]: singleFrameData,
-              },
-            };
-          }),
+      return {
+        rawSessionData: {},
+        processedSessionData: {},
+        processedSingleFrameSessionData: {},
 
-        clear: () => set({ rawSessionData: {}, processedSessionData: {}, processedSingleFrameSessionData: {} }),
-      },
-    })),
+        actions: {
+          pushFrames,
+          pushRawFrame: (f) => pushFrames([f]),
+          pushProcessedFrame: (f) => pushFrames([f]),
+          clear: () => set({ rawSessionData: {}, processedSessionData: {}, processedSingleFrameSessionData: {} }),
+        },
+      };
+    }),
   );
 }
 

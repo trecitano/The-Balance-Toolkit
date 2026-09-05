@@ -9,8 +9,7 @@ type ChannelCommands = {
 };
 
 type ChannelActions = {
-  pushRawFrame: (f: RawBalanceBoardEvent) => void;
-  pushProcessedFrame: (f: ProcessedBoardEvent) => void;
+  pushFrames: (frames: BalanceBoardEvent[]) => void;
   clear: () => void;
 };
 
@@ -19,42 +18,67 @@ class BalanceBoardChannelManager {
   private readonly commands: ChannelCommands;
   private readonly actions: ChannelActions;
 
+  // Events received since the last animation frame. They are applied to the store in one
+  // batch per frame, so plots redraw at most once per frame rather than once per event.
+  private pending: BalanceBoardEvent[] = [];
+  private flushHandle: number | null = null;
+
   constructor(commands: ChannelCommands, actions: ChannelActions) {
     this.commands = commands;
     this.actions = actions;
   }
 
+  private enqueue(msg: BalanceBoardEvent) {
+    this.pending.push(msg);
+    if (this.flushHandle !== null) return;
+
+    this.flushHandle = requestAnimationFrame(() => {
+      this.flushHandle = null;
+      const batch = this.pending;
+      this.pending = [];
+      this.actions.pushFrames(batch);
+    });
+  }
+
+  private discardPending() {
+    if (this.flushHandle !== null) {
+      cancelAnimationFrame(this.flushHandle);
+      this.flushHandle = null;
+    }
+    this.pending = [];
+  }
+
   async start() {
-    const { pushRawFrame, pushProcessedFrame } = this.actions;
+    this.discardPending();
     this.actions.clear();
 
-    this.channel = new Channel<RawBalanceBoardEvent | ProcessedBoardEvent>();
-    this.channel.onmessage = (msg) => {
-      requestAnimationFrame(() => {
-        if (msg.event === "raw") {
-          pushRawFrame(msg as RawBalanceBoardEvent);
-        } else if (msg.event === "processed") {
-          pushProcessedFrame(msg as ProcessedBoardEvent);
-        }
-      });
+    const channel = new Channel<RawBalanceBoardEvent | ProcessedBoardEvent>();
+    channel.onmessage = (msg) => {
+      // Ignore late messages from a channel that has already been stopped.
+      if (this.channel !== channel) return;
+      if (msg.event === "raw" || msg.event === "processed") {
+        this.enqueue(msg);
+      }
     };
+    this.channel = channel;
 
     try {
-      await this.commands.start(this.channel);
+      await this.commands.start(channel);
     } catch (e) {
       console.error("Failed to start session", e);
     }
   }
 
   async stop() {
+    this.channel = null;
+    this.discardPending();
+
     try {
       await this.commands.stop();
       this.actions.clear();
     } catch (e) {
       console.warn("Failed to stop session", e);
     }
-
-    this.channel = null;
   }
 }
 

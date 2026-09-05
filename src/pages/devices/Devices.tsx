@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listen } from "@tauri-apps/api/event";
 import bluetoothDisconnectedIcon from "@/assets/bluetooth-disconnected-icon.svg";
@@ -38,8 +38,19 @@ export const convertNumberToMacAddress = (number: number): string => {
 export default function Devices() {
   const [foundDevicesCount, setFoundDevicesCount] = useState(0);
   const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
-  const unlistenRef = useRef<(() => void) | null>(null);
   const queryClient = useQueryClient();
+
+  // Boards found while scanning. One listener per mount, removed on unmount; previously a new
+  // listener was added on every scan and never removed.
+  useEffect(() => {
+    const unlistenPromise = listen<Device>("new_board", () => {
+      setFoundDevicesCount((prev) => prev + 1);
+      queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
+    });
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, [queryClient]);
   const [showIdentifyModal, setShowIdentifyModal] = useState<Device | null>(null);
   const [showCalibrationModal, setShowCalibrationModal] = useState<Device | null>(null);
 
@@ -77,11 +88,8 @@ export default function Devices() {
 
   const scanDevicesMutation = useMutation({
     mutationFn: commands.devices.scanDevices,
-    onSuccess: async () => {
-      unlistenRef.current = await listen<Device>("new_board", (_) => {
-        setFoundDevicesCount((prev) => prev + 1);
-        queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
-      });
+    onSuccess: () => {
+      setFoundDevicesCount(0);
       queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
     },
     onError: (error) => console.error("Failed to start device scan:", error),
@@ -90,7 +98,6 @@ export default function Devices() {
   const cancelScanMutation = useMutation({
     mutationFn: commands.devices.cancelScanDevices,
     onSuccess: () => {
-      unlistenRef.current?.();
       setFoundDevicesCount(0);
       queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
     },
@@ -166,7 +173,10 @@ export default function Devices() {
 
       <div className="flex h-full min-h-0 gap-5">
         <ToolkitContainer className="h-full grow p-10">
-          <div className={"mask-vertical-scroll flex h-full flex-col gap-4 overflow-y-auto"} onScroll={handleGradientDevicesScroll}>
+          <div
+            className={"mask-vertical-scroll flex h-full flex-col gap-4 overflow-y-auto"}
+            onScroll={handleGradientDevicesScroll}
+          >
             {noDevices && (
               <div className="flex h-full flex-col items-center justify-center p-8 text-center">
                 <img src={bluetoothDisconnectedIcon} alt="No devices found" className="mb-6 h-20 w-20 opacity-50" />

@@ -35,8 +35,6 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
   const [showConfidenceEllipse, setShowConfidenceEllipse] = useState(true);
   const [showConvexHull, setShowConvexHull] = useState(true);
 
-  const [forceKg, setForceKg] = useState<number | null>(null);
-
   // Refs to avoid re-render on every frame
   const rawRef = useRef<BoardBuffer<RawBalanceBoardEvent> | undefined>(undefined);
   const polyRef = useRef<ProcessedSingleFrameSessionData | undefined>(undefined);
@@ -46,6 +44,8 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
   const rafRef = useRef<number | null>(null);
 
   const scheduleDraw = useCallback(() => {
+    // One draw per animation frame, however many store updates arrive in between.
+    if (rafRef.current != null) return;
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
       draw(canvasRef.current, rawRef.current, polyRef.current, showCERef.current, showHullRef.current);
@@ -114,13 +114,6 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
       (s) => s.rawSessionData?.[macAddress],
       (buf) => {
         rawRef.current = buf;
-
-        if (buf) {
-          const lastRawFrame = buf.frames[buf.head];
-          const forceKg = lastRawFrame?.weight;
-          setForceKg(forceKg ?? null);
-        }
-
         scheduleDraw();
       },
       { equalityFn: (a, b) => a === b },
@@ -149,10 +142,14 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
     scheduleDraw();
   }, [showConfidenceEllipse, showConvexHull, scheduleDraw]);
 
-  // Clean raf
+  // Clean raf. Reset the ref too: under StrictMode the effect is torn down and re-run on the
+  // same instance, and a stale id would make scheduleDraw think a frame is still pending.
   useEffect(() => {
     return () => {
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current != null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
   }, []);
 
@@ -195,10 +192,7 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
           </label>
         </div>
 
-        <div className="inset-(--secondary) rounded-lg bg-(--light-accent) py-2 text-center text-gray-700">
-          <p>Force (Kg)</p>
-          <p className="font-semibold">{forceKg !== null ? forceKg.toFixed(2) : "—"}</p>
-        </div>
+        <ForceReadout macAddress={macAddress} store={store} />
       </div>
 
       <StabilityBarGauge
@@ -208,6 +202,38 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
         height={150}
         tooltipId={"session_stability_index"}
       />
+    </div>
+  );
+}
+
+/**
+ * The force text is the only React state driven by raw frames. Keeping it in its own
+ * component means each update re-renders this small element rather than the whole overlay,
+ * and skipping updates whose displayed text is unchanged avoids renders entirely.
+ */
+function ForceReadout({ macAddress, store }: { macAddress: number; store: SessionStore }) {
+  const [forceText, setForceText] = useState<string | null>(null);
+  const forceTextRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    return store.subscribe(
+      (s) => s.rawSessionData?.[macAddress],
+      (buf) => {
+        const weight = buf ? buf.frames[buf.head]?.weight : undefined;
+        const next = weight != null ? weight.toFixed(2) : null;
+        if (next !== forceTextRef.current) {
+          forceTextRef.current = next;
+          setForceText(next);
+        }
+      },
+      { equalityFn: (a, b) => a === b },
+    );
+  }, [macAddress, store]);
+
+  return (
+    <div className="inset-(--secondary) rounded-lg bg-(--light-accent) py-2 text-center text-gray-700">
+      <p>Force (Kg)</p>
+      <p className="font-semibold">{forceText ?? "—"}</p>
     </div>
   );
 }

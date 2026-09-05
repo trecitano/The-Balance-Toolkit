@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SessionPanel } from "./SessionPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
@@ -30,7 +30,16 @@ export const SessionQuery = {
 export default function SessionPage() {
   const { data } = useQuery(SessionQuery);
   const queryClient = useQueryClient();
-  const sessionOverListener = useRef<(() => void) | null>(null);
+
+  // Backend session events. Registered in an effect so each mount adds exactly one listener
+  // and removes it on unmount.
+  useEffect(() => {
+    const refetch = () => queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+    const unlistenPromises = [listen<void>("session_started", refetch), listen<void>("session_completed", refetch)];
+    return () => {
+      unlistenPromises.forEach((promise) => promise.then((unlisten) => unlisten()));
+    };
+  }, [queryClient]);
 
   const updateSession = useMutation({
     mutationFn: (newState: SessionPanelConfiguration) => commands.session.updateSession(newState),
@@ -44,7 +53,7 @@ export default function SessionPage() {
           ...old,
           sessionInformation: {
             ...old.sessionInformation,
-            sessionConfiguration: {
+            core: {
               ...old.sessionInformation.core,
               ...next,
             },
@@ -54,7 +63,12 @@ export default function SessionPage() {
 
       return { previous };
     },
-    onSuccess: () => {
+    onError: (_error, _next, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(SESSION_QUERY_KEY, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
     },
   });
@@ -90,14 +104,6 @@ export default function SessionPage() {
   const chosenActivity = activities.find((a) => a.id === sessionInformation?.core.activityId);
   const canStartSession = selectedBoards.length > 0;
   const hasOngoingSession = sessionInformation?.hasOngoingSession ?? false;
-
-  if (sessionOverListener.current == null) {
-    listen<void>("session_completed", (_) => {
-      queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
-    }).then((unlisten) => {
-      sessionOverListener.current = unlisten;
-    });
-  }
 
   return (
     <div className="flex h-full flex-col gap-5">

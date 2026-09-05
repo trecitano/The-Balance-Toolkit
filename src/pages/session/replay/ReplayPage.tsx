@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ReplayPanel } from "./ReplayPanel.tsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import { SelectedBoard, SessionPanelConfiguration } from "@/types.ts";
+import { ReplayConfiguration, SelectedBoard, SessionPanelConfiguration } from "@/types.ts";
 import { replayChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useReplayDataStore } from "@/store/sessionDataStore.tsx";
@@ -13,6 +13,7 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { BaseOption } from "@/components/SelectPrimitive.tsx";
 
 const REPLAY_QUERY_KEY = ["replay_key"];
+type ReplayQueryData = { replayInformation: ReplayConfiguration };
 export const ReplayQuery = {
   queryKey: REPLAY_QUERY_KEY,
   queryFn: async () => {
@@ -24,14 +25,43 @@ export const ReplayQuery = {
 
 export default function ReplayPage() {
   const { data } = useQuery(ReplayQuery);
-  const replayOverListener = useRef<(() => void) | null>(null);
   const replayInformation = data?.replayInformation ?? null;
 
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    const refetch = () => queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
+    const unlistenPromise = listen<void>("replay_completed", refetch);
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, [queryClient]);
+
   const updateReplay = useMutation({
     mutationFn: (newState: SessionPanelConfiguration) => commands.replay.updateReplay(newState),
-    onSuccess: () => {
+    onMutate: async (next) => {
+      await queryClient.cancelQueries({ queryKey: REPLAY_QUERY_KEY });
+      const previous = queryClient.getQueryData<ReplayQueryData>(REPLAY_QUERY_KEY);
+
+      queryClient.setQueryData(REPLAY_QUERY_KEY, (old: ReplayQueryData | undefined) => {
+        if (!old?.replayInformation) return old;
+        return {
+          ...old,
+          replayInformation: {
+            ...old.replayInformation,
+            core: { ...old.replayInformation.core, ...next },
+          },
+        };
+      });
+
+      return { previous };
+    },
+    onError: (_error, _next, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(REPLAY_QUERY_KEY, context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
     },
   });
@@ -75,15 +105,6 @@ export default function ReplayPage() {
   const hasOngoingSession = replayInformation?.hasOngoingSession ?? false;
   const devices = replayInformation?.devices ?? [];
   const replayIsSelected = !!replayInformation?.filePath;
-
-  if (replayOverListener.current == null) {
-    listen<void>("replay_completed", (_) => {
-      //stopTimeline();
-      queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
-    }).then((unlisten) => {
-      replayOverListener.current = unlisten;
-    });
-  }
 
   const pickSessionFile = async (defaultPath?: string | null) => {
     const selected = await open({

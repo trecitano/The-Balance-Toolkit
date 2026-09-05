@@ -103,11 +103,13 @@ export function MultiMetricPlot({
       hooks: {
         draw: [
           (u) => {
-            // Draw circles for the last point of each visible series
+            // Draw circles for the last point of each visible series. Visibility is read from
+            // uPlot itself: this hook captures the initial `metrics` array, which goes stale as
+            // soon as a metric is toggled.
             metrics.forEach((metric, i) => {
-              if (!metric.enabled) return;
-
               const seriesIdx = i + 1; // +1 because series[0] is time
+              if (!u.series[seriesIdx]?.show) return;
+
               const dataSeries = u.data[seriesIdx] as number[];
               const timeSeries = u.data[0] as number[];
 

@@ -88,8 +88,11 @@ function Settings({ isOpen, onClose }: SettingsProps) {
 
   const saveChanges = async () => {
     if (tempSettings) {
+      await commands.settings.setSettings(tempSettings);
+      // Refresh the cached settings too, otherwise the next open shows the pre-save values and
+      // saving again from that state would silently revert this change.
       await Promise.all([
-        commands.settings.setSettings(tempSettings),
+        queryClient.invalidateQueries({ queryKey: SETTINGS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY }),
       ]);
       onClose();

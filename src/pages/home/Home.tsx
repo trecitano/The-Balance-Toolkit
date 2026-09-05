@@ -24,13 +24,14 @@ import { activitiesIcon, devicesIcon, replayIcon } from "@/components/navigation
 const HOME_QUERY_KEY = ["home"];
 
 // Filenames look like "tbt-2026-05-26T14-43-10.settings.json" — pull the
-// embedded timestamp out and render it as a friendly date.
+// embedded timestamp out and render it as a friendly date. The backend names
+// sessions with UTC time, so parse it as UTC before formatting in local time.
 const formatSessionDate = (fileName: string): string | null => {
   const match = fileName.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})/);
   if (!match) return null;
 
   const [, year, month, day, hour, minute, second] = match.map(Number);
-  const date = new Date(year, month - 1, day, hour, minute, second);
+  const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
   if (Number.isNaN(date.getTime())) return null;
 
   return new Intl.DateTimeFormat(undefined, {
@@ -163,7 +164,9 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = (
         <SessionLabel icon={userIcon}>User</SessionLabel>
         <p className="min-w-0 truncate">{user.name}</p>
 
-        <SessionLabel icon={activitiesIconUrl} iconClassName="invert">Activity</SessionLabel>
+        <SessionLabel icon={activitiesIconUrl} iconClassName="invert">
+          Activity
+        </SessionLabel>
         {activity ? (
           <p className="min-w-0 truncate">{activity.title}</p>
         ) : (
@@ -212,7 +215,7 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
   };
 
   return (
-    <div className="flex h-full flex-col p-(--space-sm) min-h-66">
+    <div className="flex h-full min-h-66 flex-col p-(--space-sm)">
       <PageSubtitle>Activities</PageSubtitle>
 
       <div className="flex-1">
