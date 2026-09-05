@@ -8,12 +8,6 @@ plugins {
     alias(libs.plugins.kotlinter)
 }
 
-detekt {
-    buildUponDefaultConfig = true
-    parallel = true
-    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
-}
-
 kotlinter {
     reporters = arrayOf("checkstyle", "plain")
 }

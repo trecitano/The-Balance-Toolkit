@@ -204,6 +204,7 @@ class SessionViewModel
                 samplingRate = PreferenceKeys.DEFAULT_SESSION_SAMPLING_RATE,
             )
         private var activeDpsiTrailLengthLimit = calculateMetricTrailLengthLimit(activeSessionProcessingSettings)
+
         @Volatile
         private var activeBaselineWeightKg: Float? = null
 
@@ -443,76 +444,76 @@ class SessionViewModel
             // Initialize file writer, then start connection
             sessionStartJob =
                 viewModelScope.launch(Dispatchers.IO) {
-                val writer =
-                    SessionFileWriter(
-                        context = context,
-                        outputDirectory = getSessionsDirectory(),
-                        sessionId = sessionId,
-                        deviceName = state.deviceName,
-                        deviceMacAddress = state.deviceMacAddress,
-                    )
+                    val writer =
+                        SessionFileWriter(
+                            context = context,
+                            outputDirectory = getSessionsDirectory(),
+                            sessionId = sessionId,
+                            deviceName = state.deviceName,
+                            deviceMacAddress = state.deviceMacAddress,
+                        )
 
-                val result = writer.initialize()
-                if (!isSessionTokenValid(sessionToken)) {
-                    writer.close()
-                    return@launch
-                }
-
-                if (result.isSuccess) {
-                    activeBaselineWeightKg = getBaselineWeightForUser(activeSessionUserId)
-
-                    sessionFileWriter = writer
-                    val writeChannel = Channel<SensorReading>(capacity = Channel.UNLIMITED)
-                    sessionWriteChannel = writeChannel
-                    sessionWriteJob =
-                        viewModelScope.launch(Dispatchers.IO) {
-                            for (reading in writeChannel) {
-                                writer.writeReading(reading)
-                            }
-                        }
-
-                    _uiState.update { it.copy(isWritingToFile = true) }
-                    addLogMessage("Session file writer initialized: $sessionId")
-
+                    val result = writer.initialize()
                     if (!isSessionTokenValid(sessionToken)) {
-                        writeChannel.close()
-                        sessionWriteJob?.join()
-                        sessionWriteJob = null
-                        sessionWriteChannel = null
                         writer.close()
-                        sessionFileWriter = null
-                        _uiState.update { it.copy(isWritingToFile = false) }
                         return@launch
                     }
 
-                    // Start connection only after file writer is ready
-                    val started = connectionManager.start(sensorDataListener)
-                    if (!started) {
-                        addLogMessage("ERROR: Failed to start board connection")
+                    if (result.isSuccess) {
+                        activeBaselineWeightKg = getBaselineWeightForUser(activeSessionUserId)
+
+                        sessionFileWriter = writer
+                        val writeChannel = Channel<SensorReading>(capacity = Channel.UNLIMITED)
+                        sessionWriteChannel = writeChannel
+                        sessionWriteJob =
+                            viewModelScope.launch(Dispatchers.IO) {
+                                for (reading in writeChannel) {
+                                    writer.writeReading(reading)
+                                }
+                            }
+
+                        _uiState.update { it.copy(isWritingToFile = true) }
+                        addLogMessage("Session file writer initialized: $sessionId")
+
+                        if (!isSessionTokenValid(sessionToken)) {
+                            writeChannel.close()
+                            sessionWriteJob?.join()
+                            sessionWriteJob = null
+                            sessionWriteChannel = null
+                            writer.close()
+                            sessionFileWriter = null
+                            _uiState.update { it.copy(isWritingToFile = false) }
+                            return@launch
+                        }
+
+                        // Start connection only after file writer is ready
+                        val started = connectionManager.start(sensorDataListener)
+                        if (!started) {
+                            addLogMessage("ERROR: Failed to start board connection")
+                            activeBaselineWeightKg = null
+                            writeChannel.close()
+                            sessionWriteJob?.join()
+                            sessionWriteJob = null
+                            sessionWriteChannel = null
+                            writer.close()
+                            sessionFileWriter = null
+                            _uiState.update { it.copy(isRecording = false, isPlaying = false, isWritingToFile = false) }
+                        } else if (!isSessionTokenValid(sessionToken)) {
+                            connectionManager.stop()
+                            writeChannel.close()
+                            sessionWriteJob?.join()
+                            sessionWriteJob = null
+                            sessionWriteChannel = null
+                            writer.close()
+                            sessionFileWriter = null
+                            _uiState.update { it.copy(isWritingToFile = false) }
+                        }
+                    } else {
+                        addLogMessage("Failed to initialize file writer: ${result.exceptionOrNull()?.message}")
                         activeBaselineWeightKg = null
-                        writeChannel.close()
-                        sessionWriteJob?.join()
-                        sessionWriteJob = null
-                        sessionWriteChannel = null
-                        writer.close()
-                        sessionFileWriter = null
                         _uiState.update { it.copy(isRecording = false, isPlaying = false, isWritingToFile = false) }
-                    } else if (!isSessionTokenValid(sessionToken)) {
-                        connectionManager.stop()
-                        writeChannel.close()
-                        sessionWriteJob?.join()
-                        sessionWriteJob = null
-                        sessionWriteChannel = null
-                        writer.close()
-                        sessionFileWriter = null
-                        _uiState.update { it.copy(isWritingToFile = false) }
                     }
-                } else {
-                    addLogMessage("Failed to initialize file writer: ${result.exceptionOrNull()?.message}")
-                    activeBaselineWeightKg = null
-                    _uiState.update { it.copy(isRecording = false, isPlaying = false, isWritingToFile = false) }
                 }
-            }
         }
 
         /**

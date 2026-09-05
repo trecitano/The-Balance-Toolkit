@@ -1,8 +1,8 @@
 package com.balancetoolkit.ui.screens.users
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -149,7 +149,6 @@ fun UserDetailsCard(
                         label = stringResource(R.string.name),
                     )
                 }
-
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -267,7 +266,6 @@ fun UserDetailsCard(
             } else {
                 ReadOnlyColorField(color = selectedColor)
             }
-
         }
     }
 }

@@ -297,10 +297,17 @@ private fun SessionDeviceCard(
 ) {
     val statusText =
         when (boardStatus) {
-            BoardSelectionStatus.NoBoardConnected -> stringResource(R.string.no_board_connected)
-            BoardSelectionStatus.BoardConnectedNotSelected -> stringResource(R.string.board_connected_select_board)
-            BoardSelectionStatus.BoardSelected ->
+            BoardSelectionStatus.NoBoardConnected -> {
+                stringResource(R.string.no_board_connected)
+            }
+
+            BoardSelectionStatus.BoardConnectedNotSelected -> {
+                stringResource(R.string.board_connected_select_board)
+            }
+
+            BoardSelectionStatus.BoardSelected -> {
                 stringResource(R.string.board_selected_multiline, deviceName.ifBlank { stringResource(R.string.board) })
+            }
         }
     val statusColor =
         when (boardStatus) {
@@ -436,9 +443,20 @@ private fun SessionControlCard(
                     Text(
                         text =
                             when (boardStatus) {
-                                BoardSelectionStatus.NoBoardConnected -> stringResource(R.string.no_board_connected)
-                                BoardSelectionStatus.BoardConnectedNotSelected -> stringResource(R.string.board_connected_select_board)
-                                BoardSelectionStatus.BoardSelected -> stringResource(R.string.board_selected, stringResource(R.string.board))
+                                BoardSelectionStatus.NoBoardConnected -> {
+                                    stringResource(R.string.no_board_connected)
+                                }
+
+                                BoardSelectionStatus.BoardConnectedNotSelected -> {
+                                    stringResource(R.string.board_connected_select_board)
+                                }
+
+                                BoardSelectionStatus.BoardSelected -> {
+                                    stringResource(
+                                        R.string.board_selected,
+                                        stringResource(R.string.board),
+                                    )
+                                }
                             },
                         fontWeight = FontWeight.Medium,
                     )

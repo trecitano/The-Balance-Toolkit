@@ -251,7 +251,6 @@ class DevicesViewModel
                         is ScanEvent.ScanStopped -> {
                             cancelPairingCompletion()
                         }
-
                     }
                 }
             }

@@ -45,9 +45,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -58,8 +58,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.balancetoolkit.R
 import com.balancetoolkit.data.HeightUnit
@@ -396,6 +396,7 @@ private fun SettingsScreenContent(
             Spacer(modifier = Modifier.height(32.dp))
 
             // About Section
+
             /* Commented until the project is officially launched
             Text(
                 text = stringResource(R.string.about),
@@ -423,7 +424,7 @@ private fun SettingsScreenContent(
                 icon = Icons.AutoMirrored.Filled.ExitToApp,
                 onClick = onSourceCodeClick,
             )
-            */
+             */
         }
     }
 }

@@ -1,8 +1,8 @@
 package com.balancetoolkit.data.local.dao
 
 import com.balancetoolkit.data.MockDeviceIds
-import com.balancetoolkit.data.model.Device
 import com.balancetoolkit.data.local.entity.toEntity
+import com.balancetoolkit.data.model.Device
 
 suspend fun DeviceDao.syncMockBoards(mockModeEnabled: Boolean) {
     if (!mockModeEnabled) {

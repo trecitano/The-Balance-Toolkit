@@ -66,6 +66,17 @@ android {
     buildFeatures {
         compose = true
     }
+    sourceSets.getByName("test").resources.srcDir("../../tests/fixtures")
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    parallel = true
+    config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+}
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    jvmTarget = android.compileOptions.targetCompatibility.toString()
 }
 
 dependencies {
@@ -99,4 +110,5 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
+    testImplementation("junit:junit:4.13.2")
 }

@@ -157,28 +157,27 @@ class UsersViewModel
                     userSelectionRepository.selectedUserId,
                 ) { users, selectedUserId ->
                     users to (selectedUserId ?: DEFAULT_USER_ID)
-                }
-                    .catch { e ->
-                        _uiState.update {
-                            it.copy(isLoading = false, error = e.message ?: "Failed to load users")
-                        }
-                    }.collect { (users, savedUserId) ->
-                        _uiState.update { state ->
-                            // Try to find the saved user, otherwise use the default user
-                            val savedIndex =
-                                users.indexOfFirst { it.id == savedUserId }.takeIf { it >= 0 }
-                                    ?: users.indexOfFirst { it.id == DEFAULT_USER_ID }.takeIf { it >= 0 }
-                                    ?: 0
-                            val selectedIndex = savedIndex.coerceIn(0, (users.size - 1).coerceAtLeast(0))
-                            state.copy(
-                                allUsers = users,
-                                selectedUser = users.getOrNull(selectedIndex),
-                                selectedUserIndex = selectedIndex,
-                                isLoading = false,
-                                error = null,
-                            )
-                        }
+                }.catch { e ->
+                    _uiState.update {
+                        it.copy(isLoading = false, error = e.message ?: "Failed to load users")
                     }
+                }.collect { (users, savedUserId) ->
+                    _uiState.update { state ->
+                        // Try to find the saved user, otherwise use the default user
+                        val savedIndex =
+                            users.indexOfFirst { it.id == savedUserId }.takeIf { it >= 0 }
+                                ?: users.indexOfFirst { it.id == DEFAULT_USER_ID }.takeIf { it >= 0 }
+                                ?: 0
+                        val selectedIndex = savedIndex.coerceIn(0, (users.size - 1).coerceAtLeast(0))
+                        state.copy(
+                            allUsers = users,
+                            selectedUser = users.getOrNull(selectedIndex),
+                            selectedUserIndex = selectedIndex,
+                            isLoading = false,
+                            error = null,
+                        )
+                    }
+                }
             }
         }
 
@@ -324,8 +323,14 @@ class UsersViewModel
 
             val nextSelectedUserId =
                 when {
-                    remainingUsers.isEmpty() -> null
-                    selectedUserId != null && selectedUserId != userId && remainingUsers.any { it.id == selectedUserId } -> selectedUserId
+                    remainingUsers.isEmpty() -> {
+                        null
+                    }
+
+                    selectedUserId != null && selectedUserId != userId && remainingUsers.any { it.id == selectedUserId } -> {
+                        selectedUserId
+                    }
+
                     else -> {
                         val fallbackIndex =
                             if (deletedUserIndex >= 0) {

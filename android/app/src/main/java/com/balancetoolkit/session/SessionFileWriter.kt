@@ -151,7 +151,8 @@ class SessionFileWriter(
         withContext(Dispatchers.IO) {
             writerMutex.withLock {
                 try {
-                    val writer = rawDataWriter ?: return@withLock Result.failure(IllegalStateException("Session file writer is not initialized"))
+                    val writer =
+                        rawDataWriter ?: return@withLock Result.failure(IllegalStateException("Session file writer is not initialized"))
                     val timestamp = getCurrentTimestamp()
                     val line = "$timestamp,${reading.topRight},${reading.bottomRight},${reading.topLeft},${reading.bottomLeft}\n"
                     writer.write(line)
@@ -253,9 +254,7 @@ class SessionFileWriter(
     /**
      * Gets the current timestamp in RFC3339 format with microsecond precision.
      */
-    private fun getCurrentTimestamp(): String {
-        return timestampFormatter.format(Date())
-    }
+    private fun getCurrentTimestamp(): String = timestampFormatter.format(Date())
 
     private fun resolveOutputMode(): OutputMode {
         if (outputDirectory.startsWith("content://")) {
@@ -279,11 +278,10 @@ class SessionFileWriter(
         parentDocumentUri: Uri,
         mimeType: String,
         displayName: String,
-    ): Uri {
-        return DocumentsContract
+    ): Uri =
+        DocumentsContract
             .createDocument(context.contentResolver, parentDocumentUri, mimeType, displayName)
             ?: throw IllegalStateException("Failed to create SAF document: $displayName")
-    }
 
     private fun openBufferedWriter(uri: Uri): BufferedWriter {
         val outputStream =
