@@ -82,10 +82,20 @@ compatibility only. Cross-platform recording import requires a separate migratio
 
 ## Android environment
 
-Install a JDK (CI uses JDK 21), Android SDK platform 36 and its build tools.
+Install a JDK (JDK 25 is supported), Android SDK platform 36 and its build tools.
 Set `JAVA_HOME` and `ANDROID_HOME`, or configure the SDK through Android Studio.
 Use the committed Gradle wrapper. The Java target in the app build file is a
 bytecode target, not the version of Java required to run Gradle.
+
+Detekt is pinned to `2.0.0-alpha.6`, which supports JDK 25. This is a prerelease
+build tool; its plugin ID and rule configuration use the Detekt 2 format.
+JDK 21 is not required as a workaround for the older Detekt compiler.
+See the [upstream compatibility table](https://detekt.dev/docs/introduction/compatibility/).
+
+The Android static checks currently report 21 source findings: broad exception
+catches and unused parameters. `check:android` fails on these findings. Review
+the generated `apps/android/app/build/reports/detekt/detekt.html` report when
+addressing them; `test:android` runs JVM tests separately.
 
 ```bash
 mise run test:android

@@ -75,8 +75,8 @@ detekt {
     config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
 }
 
-tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
-    jvmTarget = android.compileOptions.targetCompatibility.toString()
+tasks.withType<dev.detekt.gradle.Detekt>().configureEach {
+    jvmTarget.set(android.compileOptions.targetCompatibility.toString())
 }
 
 dependencies {

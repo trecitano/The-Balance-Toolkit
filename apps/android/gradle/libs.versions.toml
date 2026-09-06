@@ -4,7 +4,7 @@ kotlin = "2.3.0"
 ksp = "2.3.4"
 hilt = "2.59"
 room = "2.8.4"
-detekt = "1.23.8"
+detekt = "2.0.0-alpha.6"
 kotlinter = "5.4.0"
 kotlinxSerialization = "1.10.0"
 coreKtx = "1.17.0"
@@ -42,5 +42,5 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
 kotlinter = { id = "org.jmailen.kotlinter", version.ref = "kotlinter" }

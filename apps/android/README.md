@@ -27,7 +27,7 @@ This app lets you manage users and Wii Balance Board devices, pair/connect over 
 - Android Studio (latest stable recommended)
 - Android SDK 36 installed
 - A device or emulator running Android 13+ (API 33+)
-- For terminal builds, configure `JAVA_HOME` (CI uses JDK 21) and `ANDROID_HOME`.
+- For terminal builds, configure `JAVA_HOME` (JDK 25 is supported) and `ANDROID_HOME`.
   JVM unit tests need the JDK and SDK but do not need a device or emulator.
 
 ## Android Studio Setup (Recommended)
@@ -69,7 +69,9 @@ and a debug build from `apps/android/`:
 ```
 
 From the repository root, use `mise run test:android` and `mise run check:android`.
-See [development verification](../../docs/DEVELOPMENT.md) for the CI workflow and
+Detekt uses a pinned 2.0 alpha for JDK 25 compatibility. It currently reports
+source findings, so the static-check command is not yet a passing gate.
+See [development verification](../../docs/DEVELOPMENT.md) for the verification workflow and
 [fixture documentation](../../tests/fixtures/README.md) for coverage. Shared sensor
 fixtures do not imply recording compatibility: Android session-settings JSON
 currently differs from the Rust desktop/CLI format.

@@ -13,7 +13,7 @@ Coding-agent runbook for `apps/android/`. Also read the [root runbook](../../AGE
 - Gradle version: `gradle/wrapper/gradle-wrapper.properties`
 - Plugin/library versions: `gradle/libs.versions.toml`
 - SDK levels and bytecode target: `app/build.gradle.kts`
-- Set `JAVA_HOME` and `ANDROID_HOME` for terminal builds; CI uses JDK 21.
+- Set `JAVA_HOME` and `ANDROID_HOME` for terminal builds; the tooling supports JDK 25.
 - DI: Hilt
 - Persistence: Room
 - UI: Compose Material3 + adaptive navigation suite
@@ -63,6 +63,7 @@ Run the shared fixture tests alone:
 Current status:
 
 - JVM tests cover tare/weight behavior. No instrumentation tests are committed.
+- Detekt runs on JDK 25 using the pinned 2.0 alpha. It currently reports source findings; see the [development guide](../../docs/DEVELOPMENT.md#android-environment). Do not treat a failed analysis as a passing check.
 - From the repository root, `mise run test:android` and `mise run check:android` invoke the corresponding checks.
 
 ## Validation Workflow for Agents
