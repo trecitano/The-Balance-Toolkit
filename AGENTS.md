@@ -34,7 +34,7 @@ Run from the repository root. All commands below are noninteractive.
 | Tauri bridge | `mise run check:rust`, `mise run check:desktop`, `mise run check:frontend` |
 | Shared sensor fixtures | `mise run test` and `mise run test:android` |
 | Android | `mise run test:android` and `mise run check:android` |
-| Full default CI profile | `mise run verify` |
+| Full default verification profile | `mise run verify` |
 
 `verify` covers the core, CLI and frontend without a board, display or Bluetooth
 service. The Tauri shell and Android have separate checks with native SDK

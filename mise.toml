@@ -39,7 +39,7 @@ description = "Exercise the CLI with isolated mock recordings, replay, and failu
 run = "cargo test --locked -p toolkit-cli --test smoke"
 
 [tasks.verify]
-description = "Run the same hardware-free verification as CI"
+description = "Run the complete hardware-free verification profile"
 run = ["mise run doctor", "mise run check", "mise run test", "mise run smoke"]
 
 [tasks."check:desktop"]

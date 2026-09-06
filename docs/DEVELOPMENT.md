@@ -44,10 +44,10 @@ check and can fail on machines that can still run this verification profile.
 | `mise run test:android` | Android JVM tests, including the shared sensor fixtures; no emulator needed |
 | `mise run check:android` | Android lint, Detekt and debug APK build |
 
-The [CI workflow](../.github/workflows/verify.yml) invokes `mise run verify` on
-Linux and runs `mise run test:android` in a separate Android SDK environment.
-Native desktop packaging and physical Bluetooth tests are not covered by these
-jobs. Existing frontend lint warnings remain visible but are not fatal; TypeScript
+These commands run locally; no CI workflow is currently present. Android JVM
+tests run separately because they require an Android SDK environment. Native
+desktop packaging and physical Bluetooth tests are not covered by `verify`.
+Existing frontend lint warnings remain visible but are not fatal; TypeScript
 errors and build failures are fatal.
 
 For a focused test, use its actual name, for example:
@@ -116,4 +116,4 @@ for device setup and app operation.
 - To inspect backend logs, use `TBT_LOG=debug mise exec -- bun run tauri dev` from `apps/tauri/`; `bun run dev` starts only Vite.
 
 Once dependencies are cached, Cargo tests can also run with `--offline`.
-The first setup and CI dependency installation need network access.
+The first setup and dependency installation need network access.
