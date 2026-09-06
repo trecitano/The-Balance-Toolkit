@@ -69,8 +69,8 @@ and a debug build from `apps/android/`:
 ```
 
 From the repository root, use `mise run test:android` and `mise run check:android`.
-See [development verification](../docs/DEVELOPMENT.md) for the CI workflow and
-[fixture documentation](../tests/fixtures/README.md) for coverage. Shared sensor
+See [development verification](../../docs/DEVELOPMENT.md) for the CI workflow and
+[fixture documentation](../../tests/fixtures/README.md) for coverage. Shared sensor
 fixtures do not imply recording compatibility: Android session-settings JSON
 currently differs from the Rust desktop/CLI format.
 

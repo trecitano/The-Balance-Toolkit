@@ -66,7 +66,7 @@ android {
     buildFeatures {
         compose = true
     }
-    sourceSets.getByName("test").resources.srcDir("../../tests/fixtures")
+    sourceSets.getByName("test").resources.directories.add("../../../tests/fixtures")
 }
 
 detekt {

@@ -43,7 +43,7 @@ Coding-agent runbook for `apps/android/`. Also read the [root runbook](../../AGE
   - raw CSV (`*-raw.csv`)
   - session config JSON (`*.settings.json`)
 - `SessionConfiguration` currently differs from the Rust recording format (field naming, user IDs, duration and file mappings). Preserve existing Android files until an explicit migration is implemented; do not assume Rust replay can load them.
-- Tare and total-weight examples are shared with Rust in `../tests/fixtures/sensors.json`. `TareManagerTest` loads this exact resource; do not copy it into the Android tree.
+- Tare and total-weight examples are shared with Rust in `../../tests/fixtures/sensors.json`. `TareManagerTest` loads this exact resource; do not copy it into the Android tree.
 
 ## Build, Lint, and Test Commands
 
