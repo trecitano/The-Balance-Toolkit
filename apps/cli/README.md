@@ -17,10 +17,28 @@ mise exec -- cargo run --locked -p toolkit-cli -- --help     # or run from sourc
 
 System requirements are in [INSTALL.md](../../INSTALL.md#headless-cli-tbt).
 
+## Interactive dashboard
+
+`tbt` on its own (or `tbt tui`) opens a full-screen dashboard over the same core.
+It has four tabs, switched with `1`-`4`, `Tab` or the arrow keys:
+
+| Tab | What it does |
+|---|---|
+| Boards | Paired boards and their status. `s` scans for new boards, `Space` picks boards for the session, `i` blinks, `t` tares, `n` renames, `f` forgets |
+| Session | The next recording: user, activity, duration, tare, TCP/LSL streams, output directory and analysis settings. `r` records; while recording, each board shows its weight, centre of pressure with a trail, stability index and DPSI |
+| Replay | Recordings in the session directory. `Enter` replays one through the processing pipeline and the streams; `T`/`L` toggle them |
+| Settings | Every shared setting. `Enter` toggles a switch or edits a value, saved for the desktop app too |
+
+`?` shows the keys, `s` or `Esc` stops a running session or replay, `q` quits.
+The core's log messages appear in the pane at the bottom instead of stderr;
+`--log-level` and `TBT_LOG` still choose how much is shown. The dashboard needs a
+terminal: in scripts, use the commands below.
+
 ## Commands
 
 | Command | What it does |
 |---|---|
+| `tbt tui` | The interactive dashboard described above (also the default without a command) |
 | `tbt devices list` | Known boards and whether each is connected now |
 | `tbt devices scan [--timeout S]` | Pair boards (press the SYNC button); Ctrl-C to stop |
 | `tbt devices rename BOARD NAME` | Name a board; names appear in file names and the desktop app |

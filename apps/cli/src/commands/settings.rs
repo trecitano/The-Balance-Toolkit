@@ -46,21 +46,7 @@ async fn show(toolkit: &Toolkit, json: bool) -> Result<()> {
 
 async fn set(toolkit: &Toolkit, key: &str, raw: String) -> Result<()> {
     let settings = toolkit.settings().await?;
-    let mut document = serde_json::to_value(&settings)?;
-    let target = locate(&mut document, key)?;
-
-    let mut value: Value = serde_json::from_str(&raw).unwrap_or(Value::String(raw.clone()));
-    // `tbt settings set lslStreamName 42` should still store text, not a number.
-    if target.is_string() && !value.is_string() {
-        value = Value::String(raw.clone());
-    }
-    if target.is_object() {
-        bail!("'{key}' is a group of settings; set one of its members (see `tbt settings show`).");
-    }
-    *target = value;
-
-    let updated: GeneralSettings = serde_json::from_value(document)
-        .with_context(|| format!("'{raw}' is not a valid value for {key}"))?;
+    let updated = apply_setting(&settings, key, &raw)?;
     toolkit
         .request(|response| ToolkitCommand::SaveSettings {
             settings: updated,
@@ -70,13 +56,37 @@ async fn set(toolkit: &Toolkit, key: &str, raw: String) -> Result<()> {
         .context("The settings could not be saved (details in the log above)")?;
 
     let saved = toolkit.settings().await?;
-    let shown = flatten(&serde_json::to_value(&saved)?)
+    println!("{key} = {}", setting_value(&saved, key)?);
+    Ok(())
+}
+
+/// Returns `settings` with the dotted `key` set to `raw`, parsed the way `tbt settings set`
+/// parses it: JSON first, plain text as the fallback, and text kept as text.
+pub fn apply_setting(settings: &GeneralSettings, key: &str, raw: &str) -> Result<GeneralSettings> {
+    let mut document = serde_json::to_value(settings)?;
+    let target = locate(&mut document, key)?;
+
+    let mut value: Value = serde_json::from_str(raw).unwrap_or(Value::String(raw.to_string()));
+    // `tbt settings set lslStreamName 42` should still store text, not a number.
+    if target.is_string() && !value.is_string() {
+        value = Value::String(raw.to_string());
+    }
+    if target.is_object() {
+        bail!("'{key}' is a group of settings; set one of its members (see `tbt settings show`).");
+    }
+    *target = value;
+
+    serde_json::from_value(document)
+        .with_context(|| format!("'{raw}' is not a valid value for {key}"))
+}
+
+/// The value of one dotted `key`, formatted as `tbt settings show` prints it.
+pub fn setting_value(settings: &GeneralSettings, key: &str) -> Result<String> {
+    Ok(flatten(&serde_json::to_value(settings)?)
         .into_iter()
         .find(|(k, _)| k == key)
         .map(|(_, v)| v)
-        .unwrap_or_default();
-    println!("{key} = {shown}");
-    Ok(())
+        .unwrap_or_default())
 }
 
 async fn path(toolkit: &Toolkit) -> Result<()> {
@@ -99,7 +109,7 @@ async fn path(toolkit: &Toolkit) -> Result<()> {
 }
 
 /// `{"a": {"b": 1}}` becomes `[("a.b", "1")]`. Strings lose their quotes.
-fn flatten(value: &Value) -> Vec<(String, String)> {
+pub fn flatten(value: &Value) -> Vec<(String, String)> {
     fn walk(prefix: &str, value: &Value, out: &mut Vec<(String, String)>) {
         match value {
             Value::Object(map) => {

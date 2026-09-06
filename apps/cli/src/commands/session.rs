@@ -8,6 +8,7 @@ use toolkit_core::actors::balance_board_actor::BalanceBoardOutput;
 use toolkit_core::actors::state::activities::Activity;
 use toolkit_core::file_system::ExistingSessionFileSystem;
 use toolkit_core::processing::data_processor::InterpolationSetting;
+use toolkit_core::processing::file_writer::SessionConfigurationFileFormat;
 use toolkit_core::types::{
     FrontendCoreSession, FrontendSessionInformation, GeneralSettings, MacAddress, NintendoDevice,
 };
@@ -569,43 +570,63 @@ impl RecordingWatch {
         }
     }
 
+    /// How long a finished run may take to finalise its files before it is reported as a
+    /// failure.
+    pub const TIMEOUT: Duration = Duration::from_secs(10);
+
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+
+    pub fn directory(&self) -> &Path {
+        &self.directory
+    }
+
+    /// The finalised recording of this run, once the file writer has rewritten its settings
+    /// file with the session statistics.
+    pub fn finalised(&self) -> Option<(String, SessionConfigurationFileFormat)> {
+        let (path, session) = ExistingSessionFileSystem::load_latest_session_file(&self.directory)?;
+        let boards: BTreeSet<MacAddress> = session.device_names.keys().copied().collect();
+        let done = self.previous.as_deref() != Some(path.as_str())
+            && boards == self.boards
+            && session.session_stats.duration > Duration::ZERO;
+        done.then_some((path, session))
+    }
+
+    /// `Saved <path>` followed by one line per board with its raw and processed file names.
+    pub fn describe(path: &str, session: &SessionConfigurationFileFormat) -> Vec<String> {
+        let mut lines = vec![format!("Saved {path}")];
+        let mut names: Vec<(&MacAddress, &String)> = session.device_names.iter().collect();
+        names.sort_by(|a, b| a.1.cmp(b.1));
+        for (mac_address, name) in names {
+            if let Some(files) = session.device_file_mappings.get(mac_address) {
+                lines.push(format!(
+                    "  {name}: {} / {}",
+                    files.raw_file_name, files.processed_file_name
+                ));
+            }
+        }
+        lines
+    }
+
     pub async fn wait_and_report(&self) -> Result<()> {
         if !self.enabled {
             eprintln!("Recording to disk is disabled in the settings; no files were written.");
             return Ok(());
         }
-        let timeout = Duration::from_secs(10);
         let started = Instant::now();
         loop {
-            if let Some((path, session)) =
-                ExistingSessionFileSystem::load_latest_session_file(&self.directory)
-                && self.previous.as_deref() != Some(path.as_str())
-                && session
-                    .device_names
-                    .keys()
-                    .copied()
-                    .collect::<BTreeSet<_>>()
-                    == self.boards
-                && session.session_stats.duration > Duration::ZERO
-            {
-                eprintln!("Saved {path}");
-                let mut names: Vec<(&MacAddress, &String)> = session.device_names.iter().collect();
-                names.sort_by(|a, b| a.1.cmp(b.1));
-                for (mac_address, name) in names {
-                    if let Some(files) = session.device_file_mappings.get(mac_address) {
-                        eprintln!(
-                            "  {name}: {} / {}",
-                            files.raw_file_name, files.processed_file_name
-                        );
-                    }
+            if let Some((path, session)) = self.finalised() {
+                for line in Self::describe(&path, &session) {
+                    eprintln!("{line}");
                 }
                 return Ok(());
             }
-            if started.elapsed() > timeout {
+            if started.elapsed() > Self::TIMEOUT {
                 bail!(
                     "The recording in {} was not finalised within {}s; its files may be incomplete.",
                     self.directory.display(),
-                    timeout.as_secs()
+                    Self::TIMEOUT.as_secs()
                 );
             }
             tokio::time::sleep(Duration::from_millis(200)).await;
