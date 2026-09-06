@@ -114,7 +114,7 @@ pub fn initialize(
         move || match data_process_loop(rx, observers, mac_address, settings) {
             Ok(_) => (),
             Err(e) => {
-                log::info!("Error in data processing loop: {:?}", e);
+                log::error!("Error in data processing loop: {:?}", e);
             }
         },
     );
@@ -128,7 +128,7 @@ fn data_process_loop(
     mac_address: MacAddress,
     settings: ProcessingSettings,
 ) -> Result<()> {
-    log::info!("Data processing execution start. Settings: {:#?}", settings);
+    log::debug!("Data processing execution start. Settings: {:#?}", settings);
     let mut buffer: Vec<CenterOfPressurePoint> = Vec::with_capacity(200);
 
     let window_size = std::time::Duration::from_millis(settings.window_size_ms);
@@ -238,7 +238,7 @@ fn data_process_loop(
         }
     }
 
-    log::info!("Data processing execution complete.");
+    log::debug!("Data processing execution complete.");
     Ok(())
 }
 

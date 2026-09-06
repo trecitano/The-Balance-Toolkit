@@ -30,13 +30,13 @@ pub fn initialize(
             match data {
                 BalanceBoardOutput::Raw(_) => {
                     if raw_tx.send(data).await.is_err() {
-                        log::error!("raw stream task closed; stopping dispatch");
+                        log::warn!("raw stream task closed; stopping dispatch");
                         break;
                     }
                 }
                 BalanceBoardOutput::Processed(_) => {
                     if processed_tx.send(data).await.is_err() {
-                        log::error!("processed stream task closed; stopping dispatch");
+                        log::warn!("processed stream task closed; stopping dispatch");
                         break;
                     }
                 }
@@ -54,7 +54,7 @@ pub fn initialize(
             }
         }
 
-        log::info!("TCP handler complete.");
+        log::debug!("TCP handler complete.");
     });
 
     tx
@@ -68,7 +68,7 @@ async fn tcp_server_loop(
     mut rx: Receiver<BalanceBoardOutput>,
     tcp_bind_address: String,
 ) -> anyhow::Result<()> {
-    log::info!("TCP server starting. (Binding to: {})", tcp_bind_address);
+    log::debug!("TCP server starting. (Binding to: {})", tcp_bind_address);
 
     let listener = TcpListener::bind(&tcp_bind_address).await?;
     log::info!("TCP server listening on: {}", tcp_bind_address);
@@ -118,7 +118,7 @@ async fn tcp_server_loop(
     // session. Leaving this task running kept the port bound for the life of the process.
     accept_task.abort();
 
-    log::info!(
+    log::debug!(
         "TCP server execution complete. (Was binding to: {})",
         tcp_bind_address
     );

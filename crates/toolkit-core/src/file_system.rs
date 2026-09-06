@@ -201,7 +201,7 @@ impl ExistingSessionFileSystem {
             match Self::load(&file_path) {
                 Ok(session) => return Some((file_path.to_string_lossy().to_string(), session)),
                 Err(e) => {
-                    log::info!("Failed to load session file: {}", e);
+                    log::warn!("Failed to load session file: {}", e);
                 }
             }
         };

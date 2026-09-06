@@ -72,7 +72,7 @@ async fn main_file_writer_loop(
 
         device_tx_map.insert(device_mac, tx);
 
-        log::info!("Starting file writer for device: {}", device_mac);
+        log::debug!("Starting file writer for device: {}", device_mac);
 
         let handle = tokio::spawn(async move {
             file_write_loop(
@@ -94,7 +94,7 @@ async fn main_file_writer_loop(
         }
     }
 
-    log::info!("File writer stopped receiving events, waiting for child tasks to complete.");
+    log::debug!("File writer stopped receiving events, waiting for child tasks to complete.");
     // Drop the child file writer channels
     device_tx_map.clear();
     let mut first_device_metrics = SessionStats::default();
@@ -112,7 +112,7 @@ async fn main_file_writer_loop(
     )
     .await?;
 
-    log::info!("Main File writer execution complete.");
+    log::debug!("Main File writer execution complete.");
 
     Ok(())
 }
@@ -211,7 +211,7 @@ async fn file_write_loop(
     // Create a file to optionally store the raw values;
     let mut raw_values_file = if observe_raw_data {
         let file_path = output_directory.join(&file_mapping.raw_file_name);
-        log::info!("WRITING TO RAW FILE ${:?}", file_path);
+        log::info!("Writing raw data to {}", file_path.display());
         let mut file = BufWriter::new(create_file(file_path).await?);
         file.write_all(b"timestamp,top_right,bottom_right,top_left,bottom_left\n")
             .await?;
@@ -309,7 +309,7 @@ async fn file_write_loop(
     }
 
     let duration = start.elapsed();
-    log::info!("File writer execution complete.");
+    log::debug!("File writer execution complete.");
     Ok(SessionStats {
         board_sampling_rate: raw_events_written as f64 / duration.as_secs_f64(),
         duration,

@@ -69,7 +69,7 @@ impl BluetoothService {
     }
 
     pub async fn run(mut self) {
-        log::info!("Bluetooth Manager started.");
+        log::debug!("Bluetooth Manager started.");
 
         while let Some(command) = self.bluetooth_rx.recv().await {
             match command {
@@ -107,15 +107,15 @@ impl BluetoothService {
             }
         }
 
-        log::info!("Bluetooth Manager stopped.");
+        log::debug!("Bluetooth Manager stopped.");
     }
 
     fn create_bluetooth_handler(is_demo_mode: bool) -> Arc<dyn BluetoothHandler> {
         if is_demo_mode {
-            log::info!("Starting Mock Bluetooth handler.");
+            log::debug!("Starting Mock Bluetooth handler.");
             Arc::new(MockBluetoothHandler {})
         } else {
-            log::info!("Starting Native Bluetooth handler.");
+            log::debug!("Starting Native Bluetooth handler.");
             Arc::new(NativeBluetoothHandler::default())
         }
     }
@@ -125,7 +125,7 @@ impl BluetoothService {
         response_stream: mpsc::Sender<BluetoothPeripheral>,
     ) -> Result<()> {
         if self.scan_cancel_tx.is_some() {
-            log::info!("Scan is already in progress.");
+            log::debug!("Scan is already in progress.");
             return Ok(());
         }
 
@@ -151,7 +151,7 @@ impl BluetoothService {
                 }
             }
 
-            log::info!("Exiting background scan task.");
+            log::debug!("Exiting background scan task.");
         });
 
         Ok(())

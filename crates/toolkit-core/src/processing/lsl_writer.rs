@@ -17,7 +17,7 @@ pub struct LslConnectionSettings {
 pub fn initialize(settings: LslConnectionSettings) -> Sender<BalanceBoardOutput> {
     let (main_tx, mut rx) = mpsc::channel(100);
     thread::spawn(move || {
-        log::info!("LSL handler start.");
+        log::debug!("LSL handler start.");
 
         let mut join_handles = Vec::new();
 
@@ -40,13 +40,13 @@ pub fn initialize(settings: LslConnectionSettings) -> Sender<BalanceBoardOutput>
             match data {
                 BalanceBoardOutput::Raw(data) => {
                     if raw_tx.blocking_send(data).is_err() {
-                        log::error!("raw stream thread closed; stopping dispatch");
+                        log::warn!("raw stream thread closed; stopping dispatch");
                         break;
                     }
                 }
                 BalanceBoardOutput::Processed(data) => {
                     if processed_tx.blocking_send(data).is_err() {
-                        log::error!("processed stream thread closed; stopping dispatch");
+                        log::warn!("processed stream thread closed; stopping dispatch");
                         break;
                     }
                 }
@@ -64,7 +64,7 @@ pub fn initialize(settings: LslConnectionSettings) -> Sender<BalanceBoardOutput>
             }
         }
 
-        log::info!("LSL handler complete.");
+        log::debug!("LSL handler complete.");
     });
 
     main_tx
@@ -74,7 +74,7 @@ fn lsl_stream_loop_raw(
     mut rx: Receiver<BalanceBoardCalibratedReading>,
     settings: LslConnectionSettings,
 ) -> Result<()> {
-    log::info!("LSL raw writer execution start.");
+    log::debug!("LSL raw writer execution start.");
     let stream_name = format!("{}_basic", settings.stream_name);
     let source_id = format!("{}_basic", settings.source_id);
 
@@ -137,7 +137,7 @@ fn lsl_stream_loop_raw(
         outlet.push_sample(&sample)?;
     }
 
-    log::info!("LSL raw writer execution complete.");
+    log::debug!("LSL raw writer execution complete.");
     Ok(())
 }
 
@@ -145,7 +145,7 @@ fn lsl_stream_loop_processed(
     mut rx: Receiver<Arc<ProcessedBoardData>>,
     settings: LslConnectionSettings,
 ) -> Result<()> {
-    log::info!("LSL processed writer execution start.");
+    log::debug!("LSL processed writer execution start.");
     let stream_name = format!("{}_complex", settings.stream_name);
     let source_id = format!("{}_complex", settings.source_id);
 
@@ -221,6 +221,6 @@ fn lsl_stream_loop_processed(
         outlet.push_sample(&sample.to_vec())?;
     }
 
-    log::info!("LSL processed writer execution complete.");
+    log::debug!("LSL processed writer execution complete.");
     Ok(())
 }

@@ -173,7 +173,7 @@ async fn balance_board_actor_loop(
                 BalanceBoardCommands::StartRecording(raw_data_tx)
             }
             BoardAction::StopRecording => {
-                log::info!("Stopping the recording");
+                log::debug!("Stopping the recording");
                 // This closes the channel from the balance board side,
                 // which closes all of the subsequent pipeline channels
                 BalanceBoardCommands::FinishRecording

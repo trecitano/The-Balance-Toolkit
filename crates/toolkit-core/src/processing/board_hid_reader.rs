@@ -65,11 +65,11 @@ fn hold_driver_extension_open(mac: MacAddress) -> Option<std::fs::File> {
         if let Some(path) = find_board_event_node(&want) {
             return match std::fs::File::open(&path) {
                 Ok(file) => {
-                    log::info!("Holding {path} open so hid-wiimote keeps DRM at 0x34 (KEE).");
+                    log::debug!("Holding {path} open so hid-wiimote keeps DRM at 0x34 (KEE).");
                     Some(file)
                 }
                 Err(e) => {
-                    log::error!("Could not open {path} ({e}); 30s-reset mitigation inactive.");
+                    log::warn!("Could not open {path} ({e}); 30s-reset mitigation inactive.");
                     None
                 }
             };
@@ -78,8 +78,8 @@ fn hold_driver_extension_open(mac: MacAddress) -> Option<std::fs::File> {
             thread::sleep(Duration::from_millis(100));
         }
     }
-    log::error!(
-        "WARNING: balance-board input node for {want} not found; hid-wiimote will \
+    log::warn!(
+        "Balance-board input node for {want} not found; hid-wiimote will \
          keep resetting the report mode every ~30s (recording still works between resets)."
     );
     None
@@ -203,7 +203,7 @@ fn blocking_hid_loop(
                 Err(mpsc::error::TryRecvError::Empty) => None,
                 Err(mpsc::error::TryRecvError::Disconnected) => {
                     // The async part has shut down. We must exit.
-                    log::info!("HID Loop: Control channel disconnected. Shutting down.");
+                    log::debug!("HID Loop: Control channel disconnected. Shutting down.");
                     break;
                 }
             }
@@ -211,7 +211,7 @@ fn blocking_hid_loop(
             match hid_control_rx.blocking_recv() {
                 Some(command) => Some(command),
                 None => {
-                    log::info!("HID Loop: Control channel disconnected. Shutting down.");
+                    log::debug!("HID Loop: Control channel disconnected. Shutting down.");
                     break;
                 }
             }
@@ -267,7 +267,7 @@ fn blocking_hid_loop(
                 }
                 Ok(_) => {
                     // Read timeout with no data; keep polling.
-                    log::debug!("HID read timed out without data");
+                    log::trace!("HID read timed out without data");
                 }
                 Err(e) => {
                     log::error!("Error reading from HID device: {}", e);
@@ -277,7 +277,7 @@ fn blocking_hid_loop(
         }
     }
     let _ = write_to_device(&device, &BOARD_STOP_READING);
-    log::info!("Blocking HID loop terminated.");
+    log::debug!("Blocking HID loop terminated.");
     Ok(())
 }
 
@@ -345,7 +345,7 @@ fn hex_dump(bytes: &[u8]) -> String {
 }
 
 pub fn write_to_device(device: &HidDevice, data: &[u8]) -> HidResult<usize> {
-    log::debug!("DEVICE_WRITE: {}", hex_dump(data));
+    log::trace!("DEVICE_WRITE: {}", hex_dump(data));
     device.write(data)
 }
 

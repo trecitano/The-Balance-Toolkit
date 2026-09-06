@@ -66,7 +66,7 @@ fn blocking_file_reading_loop(
             },
             Err(mpsc::error::TryRecvError::Empty) => {}
             Err(mpsc::error::TryRecvError::Disconnected) => {
-                log::info!("HID File Reader disconnected. Shutting down.");
+                log::debug!("HID File Reader disconnected. Shutting down.");
                 break;
             }
         }
@@ -94,7 +94,7 @@ fn blocking_file_reading_loop(
 
                         // Try sending (non-async, so use blocking_send if needed)
                         if sender.blocking_send(reading).is_err() {
-                            log::info!("Replay consumer went away, stopping replay.");
+                            log::debug!("Replay consumer went away, stopping replay.");
                             rdr = None;
                             tx = None;
                             prev_time = None;
@@ -104,7 +104,7 @@ fn blocking_file_reading_loop(
                         continue;
                     }
                     Err(e) => {
-                        log::info!("CSV parse error: {:?}", e);
+                        log::warn!("CSV parse error: {:?}", e);
                         rdr = None;
                         tx = None;
                         prev_time = None;
@@ -122,6 +122,6 @@ fn blocking_file_reading_loop(
         thread::sleep(Duration::from_millis(200));
     }
 
-    log::info!("File reading complete HID loop terminated.");
+    log::debug!("File reading complete HID loop terminated.");
     Ok(())
 }

@@ -50,7 +50,7 @@ impl ActivityState {
     }
 
     pub fn update_activity(&mut self, activity: Activity) -> Result<()> {
-        log::info!("Updating activity: {:?}", activity);
+        log::debug!("Updating activity: {:?}", activity);
         let index = self
             .activities
             .iter()

@@ -329,7 +329,7 @@ impl ConnectionManager {
     }
 
     pub async fn run(mut self) -> Result<()> {
-        log::info!("Balance Walker Service started.");
+        log::info!("Toolkit service started.");
 
         while let Some(command) = self.rx.recv().await {
             // A failing command must not take the whole manager (and with it every board
@@ -339,7 +339,7 @@ impl ConnectionManager {
             }
         }
 
-        log::info!("Balance Walker Service stopped.");
+        log::info!("Toolkit service stopped.");
         Ok(())
     }
 
@@ -400,7 +400,7 @@ impl ConnectionManager {
                         let weight =
                             data.top_left + data.top_right + data.bottom_left + data.bottom_right;
                         if frontend_channel.send(weight as f64).await.is_err() {
-                            log::info!("Weight measurement channel is closed, stopping recording");
+                            log::debug!("Weight measurement channel is closed, stopping recording");
                             let _ = board_clone.send(BoardAction::StopRecording).await;
                             break;
                         }
@@ -630,7 +630,7 @@ impl ConnectionManager {
                     let duration = activity.get_total_duration_ms() as u64;
                     let response_tx = self.response_tx.clone();
                     tokio::spawn(async move {
-                        log::info!("Going to sleep for {duration}");
+                        log::debug!("Going to sleep for {duration}");
                         tokio::select! {
                             _ = tokio::time::sleep(Duration::from_millis(duration)) => {
                                 log::info!("Activity duration ended, stopping session...");
@@ -640,7 +640,7 @@ impl ConnectionManager {
                                 let _ = response_tx.send(ToolkitResponse::SessionCompleted).await;
                             }
                             _ = cancellation_token.cancelled() => {
-                                log::info!("Session cancelled manually, auto-stop task exiting.");
+                                log::debug!("Session cancelled manually, auto-stop task exiting.");
                                 let _ = response_tx.send(ToolkitResponse::SessionCompleted).await;
                             }
                         }
@@ -831,7 +831,7 @@ impl ConnectionManager {
                                 let _ = response_tx.send(ToolkitResponse::ReplayCompleted).await;
                             }
                             _ = cancellation_token.cancelled() => {
-                                log::info!("Replay cancelled manually, auto-stop task exiting.");
+                                log::debug!("Replay cancelled manually, auto-stop task exiting.");
                                 let _ = response_tx.send(ToolkitResponse::ReplayCompleted).await;
                             }
                         }
@@ -1018,7 +1018,7 @@ impl ConnectionManager {
 
     async fn connect(&mut self, mac_address: MacAddress) -> Result<()> {
         if self.all_connections.contains_key(&mac_address) {
-            log::info!("Device {:?} is already connected.", mac_address);
+            log::debug!("Device {:?} is already connected.", mac_address);
             return Ok(());
         }
 
@@ -1033,11 +1033,10 @@ impl ConnectionManager {
             Err(e) => {
                 let manager_tx = self.get_sender_channel();
                 tokio::spawn(async move {
-                    log::info!(
-                        "Failed to connect to device {:?}: {}. Trying again in 1 second..  {:#?}",
+                    log::warn!(
+                        "Failed to connect to device {:?}: {}. Trying again in 1 second.",
                         mac_address,
-                        e,
-                        Utc::now()
+                        e
                     );
                     tokio::time::sleep(Duration::from_secs(1)).await;
                     // We use the BoardSystemView because it only tries to connect if the device actually exists in the bluetooth view.
@@ -1082,7 +1081,7 @@ impl ConnectionManager {
         let board = match self.all_connections.get(&mac_address) {
             Some(board) => board,
             None => {
-                log::error!(
+                log::warn!(
                     "Attempted to identify a non-existent device: {:?}",
                     mac_address
                 );
@@ -1121,8 +1120,8 @@ impl ConnectionManager {
         let board = match self.all_connections.get(&mac_address) {
             Some(board) => board,
             None => {
-                log::error!(
-                    "Attempted to identify a non-existent device: {:?}",
+                log::warn!(
+                    "Attempted to send an action to a device that is not connected: {:?}",
                     mac_address
                 );
                 return;
@@ -1223,7 +1222,7 @@ impl ConnectionManager {
         let board = match self.all_connections.get(&mac_address) {
             Some(board) => board.clone(),
             None => {
-                log::error!(
+                log::warn!(
                     "Cannot start calibration stream: device {} not connected",
                     mac_address
                 );
@@ -1253,19 +1252,19 @@ impl ConnectionManager {
             loop {
                 tokio::select! {
                     _ = cancel_token.cancelled() => {
-                        log::info!("Calibration stream cancelled for device {}", mac_address);
+                        log::debug!("Calibration stream cancelled for device {}", mac_address);
                         let _ = board_clone.send(BoardAction::StopRecording).await;
                         break;
                     }
                     Some(reading) = raw_data_rx.recv() => {
                         if frontend_channel.send(reading).await.is_err() {
-                            log::info!("Frontend channel closed, stopping calibration stream");
+                            log::debug!("Frontend channel closed, stopping calibration stream");
                             let _ = board_clone.send(BoardAction::StopRecording).await;
                             break;
                         }
                     }
                     else => {
-                        log::info!("Raw data channel closed");
+                        log::debug!("Raw data channel closed");
                         break;
                     }
                 }

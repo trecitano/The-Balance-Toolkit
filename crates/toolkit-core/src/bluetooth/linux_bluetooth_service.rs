@@ -118,7 +118,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
         while let Some(event) = events.next().await {
             // Check if we've exceeded the timeout
             if start_time.elapsed() > timeout {
-                log::info!("Discovery timeout reached");
+                log::debug!("Discovery timeout reached");
                 break;
             }
 
@@ -134,7 +134,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
                                 log::info!("Found Nintendo balance board! Attempting to pair...");
 
                                 if device.is_paired().await.unwrap_or(false) {
-                                    log::info!("Device is already paired");
+                                    log::debug!("Device is already paired");
                                 }
 
                                 // Register for pairing events
@@ -159,25 +159,25 @@ impl BluetoothHandler for NativeBluetoothHandler {
                                 });
 
                                 // Set the device to connectable and pairable
-                                log::info!("Trusting device");
+                                log::debug!("Trusting device");
                                 device.set_trusted(true).await?;
 
                                 // Attempt to pair
                                 if !device.is_paired().await? {
-                                    log::info!("Starting pairing...");
+                                    log::debug!("Starting pairing...");
                                     let pair_fut = device.pair();
 
                                     match pair_fut.await {
-                                        Ok(_) => log::info!("Pairing successful!"),
-                                        Err(e) => log::info!("Pairing failed: {}", e),
+                                        Ok(_) => log::debug!("Pairing successful!"),
+                                        Err(e) => log::warn!("Pairing failed: {}", e),
                                     }
                                 }
 
                                 // Try to connect after pairing
                                 if device.is_paired().await.unwrap_or(false) {
-                                    log::info!("Connecting to the device...");
+                                    log::debug!("Connecting to the device...");
                                     if let Err(e) = device.connect().await {
-                                        log::info!("Failed to connect: {}", e);
+                                        log::warn!("Failed to connect: {}", e);
                                     } else {
                                         let peripheral =
                                             convert_to_bluetooth_peripheral(device).await?;
@@ -186,7 +186,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
                                     }
                                     return Ok(());
                                 } else {
-                                    log::info!(
+                                    log::warn!(
                                         "Pairing did not complete; will retry on the next scan."
                                     );
                                 }
@@ -194,7 +194,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
                         }
                     }
                     Err(e) => {
-                        log::info!("Error accessing device {}: {}", addr, e);
+                        log::warn!("Error accessing device {}: {}", addr, e);
                     }
                 }
             }
@@ -220,19 +220,19 @@ impl BluetoothHandler for NativeBluetoothHandler {
                 let device_mac = convert_address_to_u64(device.address().0);
 
                 if device_mac == mac_address {
-                    log::info!("Found device to remove: {}", device_addr);
+                    log::debug!("Found device to remove: {}", device_addr);
 
                     // First disconnect if connected
                     if device.is_connected().await.unwrap_or(false) {
-                        log::info!("Disconnecting device...");
+                        log::debug!("Disconnecting device...");
                         if let Err(e) = device.disconnect().await {
-                            log::info!("Warning: Failed to disconnect device: {}", e);
+                            log::warn!("Failed to disconnect device: {}", e);
                             // Continue with removal even if disconnect fails
                         }
                     }
 
                     // Removing the device from the adapter also drops its pairing.
-                    log::info!("Removing device from adapter...");
+                    log::debug!("Removing device from adapter...");
                     adapter.remove_device(device_addr).await?;
 
                     log::info!("Device successfully removed");
@@ -242,7 +242,7 @@ impl BluetoothHandler for NativeBluetoothHandler {
         }
 
         // Device not found - this is not necessarily an error
-        log::info!("Device with MAC address {:012x} not found", mac_address);
+        log::warn!("Device with MAC address {:012x} not found", mac_address);
         Ok(())
     }
 }

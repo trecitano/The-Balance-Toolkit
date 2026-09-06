@@ -34,7 +34,7 @@ fn mock_hid_loop(
     };
     let mut generator: Option<MockBoardGen> = None;
 
-    log::info!("Mock HID loop starting.");
+    log::debug!("Mock HID loop starting.");
 
     loop {
         match hid_control_rx.try_recv() {
@@ -61,7 +61,7 @@ fn mock_hid_loop(
             Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ }
             Err(mpsc::error::TryRecvError::Disconnected) => {
                 // The async part has shut down. We must exit.
-                log::info!("HID Mock Reader disconnected. Shutting down.");
+                log::debug!("HID Mock Reader disconnected. Shutting down.");
                 break;
             }
         }
@@ -92,7 +92,7 @@ fn mock_hid_loop(
         }
     }
 
-    log::info!("Mock HID loop terminated.");
+    log::debug!("Mock HID loop terminated.");
     Ok(())
 }
 

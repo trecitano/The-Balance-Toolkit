@@ -263,7 +263,7 @@ unsafe fn remove_device_by_mac_inner(mac_str: &str) -> Result<(), String> {
     }
 
     let Some(dev) = target else {
-        log::info!(
+        log::debug!(
             "Device {} not found in paired/recent devices, treating as already removed",
             mac_str
         );
@@ -272,7 +272,7 @@ unsafe fn remove_device_by_mac_inner(mac_str: &str) -> Result<(), String> {
 
     let close_status: i32 = unsafe { msg_send![&dev, closeConnection] };
     if close_status != 0 {
-        log::error!("Warning: closeConnection returned {}", close_status);
+        log::warn!("closeConnection returned {}", close_status);
     }
 
     let _: () = unsafe { msg_send![&dev, remove] };
