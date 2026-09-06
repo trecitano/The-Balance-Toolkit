@@ -158,7 +158,7 @@ async fn settings_set_settings(
     settings: GeneralSettings,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    log::debug!(">> settings_set_settings: {:?}", settings);
+    log::debug!(">> settings_set_settings");
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::SaveSettings {
@@ -189,7 +189,6 @@ async fn user_page_information(state: State<'_, AppState>) -> Result<UserPageInf
         .map_err(|e| e.to_string())?;
     let response = rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< user_page_information: {:#?}", response);
     Ok(response)
 }
 
@@ -222,13 +221,12 @@ async fn user_create(state: State<'_, AppState>) -> Result<User, String> {
         .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< user_create {:#?}\n", result);
     Ok(result.as_ref().clone())
 }
 
 #[tauri::command(async)]
 async fn user_update(user: User, state: State<'_, AppState>) -> Result<(), String> {
-    log::debug!(">> user_update: {:?}", user);
+    log::debug!(">> user_update: {}", user.id);
 
     let (response_tx, response_rx) = oneshot::channel();
     let command = ToolkitCommand::UpdateUser {
@@ -242,7 +240,6 @@ async fn user_update(user: User, state: State<'_, AppState>) -> Result<(), Strin
         .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< user_update:\n");
     Ok(())
 }
 
@@ -262,7 +259,6 @@ async fn user_delete(user_id: usize, state: State<'_, AppState>) -> Result<(), S
         .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< user_delete:\n");
     Ok(())
 }
 
@@ -297,7 +293,6 @@ async fn user_measure_weight(
         .await
         .map_err(|e| e.to_string())?;
 
-    log::debug!("<< user_measure_weight_return.\n");
     Ok(())
 }
 
@@ -321,7 +316,6 @@ async fn devices_fetch_all_devices(
 
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_fetch_all_devices: {:?}\n", result);
     Ok(result)
 }
 
@@ -356,7 +350,6 @@ async fn devices_scan_without_timeout(state: State<'_, AppState>) -> Result<(), 
         .map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_scan_without_timeout: Scan started in background.\n");
     Ok(())
 }
 
@@ -373,7 +366,6 @@ async fn devices_cancel_scan(state: State<'_, AppState>) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< cancel_scan\n");
     Ok(())
 }
 
@@ -390,7 +382,6 @@ async fn devices_is_scanning(state: State<'_, AppState>) -> Result<bool, String>
         .map_err(|e| e.to_string())?;
     let is_scanning = rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< is_scanning: {}\n", is_scanning);
     Ok(is_scanning)
 }
 
@@ -408,7 +399,6 @@ async fn devices_remove_device(
         .await
         .map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_remove_device\n");
     Ok(())
 }
 
@@ -434,7 +424,6 @@ async fn devices_update_device_name(
         .await
         .map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_update_device_name\n");
     Ok(())
 }
 
@@ -452,7 +441,6 @@ async fn devices_identify_device(
         .await
         .map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_identify_device: Identify command sent.\n");
     Ok(())
 }
 
@@ -473,7 +461,6 @@ async fn devices_tare_device(
         .await
         .map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_tare_device: Tare command sent.\n");
     Ok(())
 }
 
@@ -534,7 +521,6 @@ async fn devices_start_calibration_stream(
         .await
         .map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_start_calibration_stream: Stream started\n");
     Ok(())
 }
 
@@ -552,7 +538,6 @@ async fn devices_stop_calibration_stream(
         .await
         .map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_stop_calibration_stream: Stream stopped\n");
     Ok(())
 }
 
@@ -582,10 +567,7 @@ async fn devices_submit_calibration(
         .send(command)
         .await
         .map_err(|e| e.to_string())?;
-    let result = response_rx.await.map_err(|e| e.to_string())?;
-
-    log::debug!("<< devices_submit_calibration: {:?}\n", result);
-    result
+    response_rx.await.map_err(|e| e.to_string())?
 }
 
 #[tauri::command(async)]
@@ -602,7 +584,6 @@ async fn devices_select_device(
         .await
         .map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_select_device: \n");
     Ok(())
 }
 
@@ -620,7 +601,6 @@ async fn devices_unselect_device(
         .await
         .map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_deselect_device: Tare command sent.\n");
     Ok(())
 }
 
@@ -639,7 +619,6 @@ async fn devices_get_selected_devices(
         .map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< devices_get_selected_devices. {:?}\n", result);
     Ok(result)
 }
 
@@ -663,7 +642,6 @@ async fn session_information(
         .map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< session_information. {:?}", result);
     Ok(result)
 }
 
@@ -672,10 +650,7 @@ async fn session_update_session_configuration(
     configuration: FrontendCoreSession,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    log::debug!(
-        ">> session_update_session_configuration: {:#?}",
-        configuration
-    );
+    log::debug!(">> session_update_session_configuration");
 
     let (tx, rx) = oneshot::channel();
     let command = ToolkitCommand::UpdateSessionInformation {
@@ -689,7 +664,6 @@ async fn session_update_session_configuration(
         .map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< session_update_session_configuration.\n");
     Ok(())
 }
 
@@ -710,7 +684,6 @@ async fn session_activity_state(
         .map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< session_activity_state. {:#?}\n", result);
     Ok(result)
 }
 
@@ -727,7 +700,6 @@ async fn session_tare_devices(state: State<'_, AppState>) -> Result<(), String> 
         .map_err(|e| e.to_string())?;
     rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< session_tare_devices.\n");
     Ok(())
 }
 
@@ -786,7 +758,6 @@ async fn session_start_session(
         .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< session_start_session.\n");
     Ok(())
 }
 
@@ -805,7 +776,6 @@ async fn session_stop_session(state: State<'_, AppState>) -> Result<(), String> 
         .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< session_stop_session.\n");
     Ok(())
 }
 
@@ -895,7 +865,6 @@ async fn replay_start_replay(
         .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< replay_start_replay.\n");
     Ok(())
 }
 
@@ -914,7 +883,6 @@ async fn replay_stop_replay(state: State<'_, AppState>) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< replay_stop_replay.\n");
     Ok(())
 }
 
@@ -935,7 +903,6 @@ async fn replay_information(
         .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< replay_information. {:#?}\n", result);
     Ok(result)
 }
 
@@ -958,7 +925,6 @@ async fn replay_update(
         .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< replay_update.\n");
     Ok(())
 }
 
@@ -978,7 +944,6 @@ async fn replay_load_file(file_path: PathBuf, state: State<'_, AppState>) -> Res
         .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< replay_load_file.\n");
     Ok(())
 }
 
@@ -997,7 +962,6 @@ async fn replay_clear_replay(state: State<'_, AppState>) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< replay_clear_replay.\n");
     Ok(())
 }
 
@@ -1016,7 +980,6 @@ async fn replay_load_last_session_info(
         .map_err(|e| e.to_string())?;
     let result = rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< replay_load_last_session_info: {:#?}\n", result);
     Ok(result)
 }
 
@@ -1041,7 +1004,6 @@ async fn activity_get_available_time_blocks(
         .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< activity_get_available_time_blocks. {:#?}", result);
     Ok(result)
 }
 
@@ -1060,7 +1022,6 @@ async fn activity_get_activities(state: State<'_, AppState>) -> Result<Vec<Activ
         .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< activity_get_activities. {:?}", result);
     Ok(result)
 }
 
@@ -1083,7 +1044,6 @@ async fn activity_get_activity(
         .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< activity_get_activity.\n");
     Ok(result)
 }
 
@@ -1106,7 +1066,6 @@ async fn activity_update_activity(
         .map_err(|e| e.to_string())?;
     response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< activity_update_activity.\n");
     Ok(())
 }
 
@@ -1129,6 +1088,5 @@ async fn activity_reset_activity_to_default(
         .map_err(|e| e.to_string())?;
     let result = response_rx.await.map_err(|e| e.to_string())?;
 
-    log::debug!("<< activity_reset_activity_to_default.\n");
     Ok(result)
 }
