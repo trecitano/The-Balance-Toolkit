@@ -2,13 +2,13 @@
 members = [
   "crates/toolkit-core",
   "apps/cli",
-  "apps/gui/src-tauri",
+  "apps/tauri/src-tauri",
 ]
 resolver = "2"
 
 # Every crate in the workspace builds the desktop app or the headless CLI; the GUI is the
 # default target so `cargo build` / `cargo check` from the root behave as before.
-default-members = ["apps/gui/src-tauri"]
+default-members = ["apps/tauri/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"

@@ -17,7 +17,7 @@ Then, from the repository root:
 
 ```bash
 mise install
-(cd apps/gui && mise exec -- bun install --frozen-lockfile)
+(cd apps/tauri && mise exec -- bun install --frozen-lockfile)
 mise run doctor
 mise run verify
 ```
@@ -99,11 +99,11 @@ for device setup and app operation.
 ## Troubleshooting
 
 - Wrong Rust or Bun version: use `mise exec -- rustc --version` / `mise exec -- bun --version`, then `mise install` if missing.
-- Missing frontend executable: run `mise exec -- bun install --frozen-lockfile` in `apps/gui/`.
+- Missing frontend executable: run `mise exec -- bun install --frozen-lockfile` in `apps/tauri/`.
 - Rust format failures: run `mise exec -- cargo fmt --all`, then review the diff.
 - Build blocked by another Cargo invocation: wait, or set `CARGO_TARGET_DIR` to a separate build directory.
 - Missing Linux native library: run `mise run doctor` and install the development package named in the diagnostic.
-- To inspect backend logs, use `TBT_LOG=debug mise exec -- bun run tauri dev` from `apps/gui/`; `bun run dev` starts only Vite.
+- To inspect backend logs, use `TBT_LOG=debug mise exec -- bun run tauri dev` from `apps/tauri/`; `bun run dev` starts only Vite.
 
 Once dependencies are cached, Cargo tests can also run with `--offline`.
 The first setup and CI dependency installation need network access.

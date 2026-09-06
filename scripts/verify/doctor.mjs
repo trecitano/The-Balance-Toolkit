@@ -36,7 +36,7 @@ if (process.platform === "linux") {
 }
 
 for (const tool of ["tsc", "vite", "oxlint"]) {
-  check(tool, existsSync(`${root}/apps/gui/node_modules/.bin/${tool}`), "frontend dependency; install with mise exec -- bun install --frozen-lockfile in apps/gui");
+  check(tool, existsSync(`${root}/apps/tauri/node_modules/.bin/${tool}`), "frontend dependency; install with mise exec -- bun install --frozen-lockfile in apps/tauri");
 }
 
 console.log("This profile needs no Bluetooth service, board, display, Android SDK, or administrator privileges.");

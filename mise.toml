@@ -27,7 +27,7 @@ run = ["cargo fmt --all -- --check", "cargo check --locked -p toolkit-core -p to
 
 [tasks."check:frontend"]
 description = "Lint and build the desktop frontend without launching Tauri"
-dir = "apps/gui"
+dir = "apps/tauri"
 run = ["bun run lint", "bun run build"]
 
 [tasks.test]
@@ -57,7 +57,7 @@ dir = "apps/android"
 run = "./gradlew --console=plain lintKotlin detekt :app:assembleDebug"
 
 # `mise run clean` removes every generated/cached directory. Rerun
-# `mise run setup` (or `bun install` in apps/gui, `cargo build`, `uv sync`) to restore them.
+# `mise run setup` (or `bun install` in apps/tauri, `cargo build`, `uv sync`) to restore them.
 [tasks.clean]
 description = "Remove build artifacts and dependency caches (target/, desktop node_modules/ and dist/, .venv, gradle)"
 run = """
@@ -65,10 +65,10 @@ set -eu
 cd "$MISE_PROJECT_ROOT"
 for dir in \
   target \
-  apps/gui/node_modules \
-  apps/gui/dist \
-  apps/gui/dist-ssr \
-  apps/gui/src-tauri/gen/schemas \
+  apps/tauri/node_modules \
+  apps/tauri/dist \
+  apps/tauri/dist-ssr \
+  apps/tauri/src-tauri/gen/schemas \
   scripts/.venv \
   apps/android/build \
   apps/android/.gradle \
