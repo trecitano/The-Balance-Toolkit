@@ -1,5 +1,6 @@
 use crate::processing;
 use crate::processing::board_hid_file_reader;
+use crate::processing::board_reader::ReaderFailure;
 use crate::processing::data_processor::ProcessedBoardData;
 use crate::types::MacAddress;
 use anyhow::Result;
@@ -139,16 +140,18 @@ pub enum BoardConnectionMode {
 
 /// Starts the reader for one board and returns the channel used to drive it. Dropping
 /// every sender shuts the reader down; `StopRecording` closes the recording channel,
-/// which in turn closes every pipeline channel downstream of it.
+/// which in turn closes every pipeline channel downstream of it. A reader that dies on
+/// its own (the board stopped answering) reports through `failure_tx` instead.
 pub fn initialize(
     mac_address: MacAddress,
     mode: BoardConnectionMode,
+    failure_tx: Option<Sender<ReaderFailure>>,
 ) -> Result<Sender<BoardAction>> {
     match mode {
-        BoardConnectionMode::Real => board_hid_reader::initialize(mac_address),
-        BoardConnectionMode::Demo => board_hid_reader_mock::initialize(mac_address),
+        BoardConnectionMode::Real => board_hid_reader::initialize(mac_address, failure_tx),
+        BoardConnectionMode::Demo => board_hid_reader_mock::initialize(mac_address, failure_tx),
         BoardConnectionMode::ReadFromFile(file_path) => {
-            board_hid_file_reader::initialize(mac_address, file_path)
+            board_hid_file_reader::initialize(mac_address, file_path, failure_tx)
         }
     }
 }

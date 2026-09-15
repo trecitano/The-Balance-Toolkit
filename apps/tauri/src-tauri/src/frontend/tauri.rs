@@ -34,6 +34,9 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<T
                         ToolkitResponse::NewDeviceFound(device) => {
                             app_handle.emit("new_board", device).unwrap()
                         }
+                        ToolkitResponse::BoardDisconnected(device) => {
+                            app_handle.emit("board_disconnected", device).unwrap()
+                        }
                         ToolkitResponse::SessionCompleted => {
                             app_handle.emit("session_completed", ()).unwrap()
                         }

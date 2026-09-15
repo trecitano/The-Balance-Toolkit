@@ -1,6 +1,6 @@
 use crate::file_system::UserFileSystem;
 use crate::types::User;
-use anyhow::Result;
+use anyhow::{Result, anyhow, bail};
 use chrono::Utc;
 use rand::RngExt;
 use std::sync::Arc;
@@ -28,20 +28,26 @@ impl UserState {
         Ok(Self { users })
     }
 
-    pub fn get_default_user(&self) -> Arc<User> {
-        self.users.iter().find(|u| u.is_default).unwrap().clone()
+    /// `new` guarantees a default user and `delete_user` refuses to remove it, so this
+    /// only fails if the users file was edited by hand while the toolkit was running.
+    pub fn get_default_user(&self) -> Result<Arc<User>> {
+        self.users
+            .iter()
+            .find(|u| u.is_default)
+            .cloned()
+            .ok_or_else(|| anyhow!("The default user is missing"))
     }
 
     pub fn get_users(&self) -> Vec<Arc<User>> {
         self.users.clone()
     }
 
-    pub fn get_user(&self, user_id: usize) -> Arc<User> {
+    pub fn get_user(&self, user_id: usize) -> Result<Arc<User>> {
         self.users
             .iter()
             .find(|user| user.id == user_id)
             .cloned()
-            .unwrap()
+            .ok_or_else(|| anyhow!("Unknown user: {user_id}"))
     }
 
     pub fn create_user(&mut self) -> Result<Arc<User>> {
@@ -79,7 +85,11 @@ impl UserState {
         self.save()
     }
 
+    /// The default user is the fallback for every session, so it cannot be deleted.
     pub fn delete_user(&mut self, user_id: usize) -> Result<()> {
+        if self.users.iter().any(|u| u.id == user_id && u.is_default) {
+            bail!("The default user cannot be deleted");
+        }
         self.users.retain(|user| user.id != user_id);
 
         self.save()

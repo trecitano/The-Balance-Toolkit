@@ -1,5 +1,5 @@
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BoardAction};
-use crate::processing::board_reader::{self, Sample, SampleSource};
+use crate::processing::board_reader::{self, ReaderFailure, Sample, SampleSource};
 use crate::types::MacAddress;
 use chrono::{DateTime, Utc};
 use rand::{RngExt, SeedableRng, rngs::StdRng};
@@ -10,7 +10,10 @@ use tokio::sync::mpsc::Sender;
 /// Interval between generated samples, roughly the board's real rate.
 const SAMPLE_INTERVAL: Duration = Duration::from_millis(10);
 
-pub fn initialize(mac_address: MacAddress) -> anyhow::Result<Sender<BoardAction>> {
+pub fn initialize(
+    mac_address: MacAddress,
+    failure_tx: Option<Sender<ReaderFailure>>,
+) -> anyhow::Result<Sender<BoardAction>> {
     board_reader::spawn(
         "board-mock",
         mac_address,
@@ -18,6 +21,7 @@ pub fn initialize(mac_address: MacAddress) -> anyhow::Result<Sender<BoardAction>
             mac_address,
             generator: None,
         },
+        failure_tx,
     )
 }
 
