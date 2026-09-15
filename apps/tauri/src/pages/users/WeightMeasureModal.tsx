@@ -3,7 +3,7 @@ import { ToolkitButton } from "@/components/ToolkitButton";
 import { SingleColumn } from "@/components/SingleColumn";
 import { SelectPrimitive } from "@/components/SelectPrimitive";
 
-import { devicesIcon } from "@/components/navigation/Navigation.tsx"
+import { devicesIcon } from "@/components/navigation/Navigation.tsx";
 interface WeightMeasureModalProps {
   open: boolean;
   onClose: () => void;
@@ -20,19 +20,19 @@ interface WeightMeasureModalProps {
 }
 
 export default function WeightMeasureModal({
-                              open,
-                              onClose,
-                              liveWeight,
-                              weightMetric,
-                              sessionDevices,
-                              selectedDeviceMac,
-                              isMeasuring,
-                              onDeviceSelect,
-                              onTare,
-                              onStart,
-                              onStop,
-                              onSave,
-                            }: WeightMeasureModalProps) {
+  open,
+  onClose,
+  liveWeight,
+  weightMetric,
+  sessionDevices,
+  selectedDeviceMac,
+  isMeasuring,
+  onDeviceSelect,
+  onTare,
+  onStart,
+  onStop,
+  onSave,
+}: WeightMeasureModalProps) {
   const hasDevices = sessionDevices.length > 0;
   const hasSelectedDevice = !!selectedDeviceMac;
 
@@ -50,20 +50,14 @@ export default function WeightMeasureModal({
 
       {!hasDevices ? (
         <div>
-          <p className="mb-7 text-lg text-gray-400">
-            Connect to a board in the Devices page!
-          </p>
+          <p className="mb-7 text-lg text-gray-400">Connect to a board in the Devices page!</p>
           <ToolkitButton to="/devices" color="blue" iconUrl={devicesIcon}>
             Devices →
           </ToolkitButton>
         </div>
       ) : (
         <>
-          <SingleColumn
-            className="mb-10 items-center"
-            label="Select a Device"
-            backgroundType="transparent"
-          >
+          <SingleColumn className="mb-10 items-center" label="Select a Device" backgroundType="transparent">
             <SelectPrimitive<number>
               value={selectedDeviceMac ?? 0}
               onChange={onDeviceSelect}
@@ -76,27 +70,15 @@ export default function WeightMeasureModal({
           </SingleColumn>
 
           <div className="flex justify-center gap-6">
-            <ToolkitButton
-              disabled={!hasSelectedDevice}
-              color="grey"
-              onClick={onTare}
-            >
+            <ToolkitButton disabled={!hasSelectedDevice} color="grey" onClick={onTare}>
               Tare
             </ToolkitButton>
 
-            <ToolkitButton
-              disabled={!hasSelectedDevice}
-              color="grey"
-              onClick={isMeasuring ? onStop : onStart}
-            >
+            <ToolkitButton disabled={!hasSelectedDevice} color="grey" onClick={isMeasuring ? onStop : onStart}>
               {isMeasuring ? "Stop" : "Start"}
             </ToolkitButton>
 
-            <ToolkitButton
-              disabled={!hasSelectedDevice || isMeasuring}
-              color="blue"
-              onClick={onSave}
-            >
+            <ToolkitButton disabled={!hasSelectedDevice || isMeasuring} color="blue" onClick={onSave}>
               Save
             </ToolkitButton>
           </div>

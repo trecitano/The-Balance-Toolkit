@@ -39,7 +39,7 @@ export function BoardGrid({
           store={store}
         />
       ) : (
-        <div className="grid grid-cols-2 h-full gap-4">
+        <div className="grid h-full grid-cols-2 gap-4">
           {displayBoards.map((board) => (
             <SimpleBoardPanel
               key={board.macAddress}

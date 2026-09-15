@@ -42,12 +42,7 @@ type ResizeState = {
 
 type InteractionState = DragState | ResizeState | null;
 
-export default function ActivityTimeline({
-                                           blocks,
-                                           editable = false,
-                                           onChange,
-                                           onBlockSelect,
-                                         }: ActivityTimelineProps) {
+export default function ActivityTimeline({ blocks, editable = false, onChange, onBlockSelect }: ActivityTimelineProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [interaction, setInteraction] = useState<InteractionState>(null);
   const [editingDurationIdx, setEditingDurationIdx] = useState<number | null>(null);
@@ -203,7 +198,11 @@ export default function ActivityTimeline({
   return (
     <div
       ref={containerRef}
-      className={clsx("flex flex-col flex-1 min-h-0", !editable && "opacity-75", isDragging && editable && "cursor-grabbing")}
+      className={clsx(
+        "flex flex-col flex-1 min-h-0",
+        !editable && "opacity-75",
+        isDragging && editable && "cursor-grabbing",
+      )}
     >
       <div className={clsx("flex flex-1 min-h-0", editable && "gap-1")}>
         {blocks.map((block, idx) => (
@@ -213,10 +212,12 @@ export default function ActivityTimeline({
             )}
 
             <div
-              className={clsx("timeline-block relative select-none flex-1 ",
+              className={clsx(
+                "timeline-block relative select-none flex-1 ",
                 !editable ? "pointer-events-none" : "pointer-events-auto",
                 draggedIdx === idx ? "z-20 opacity-20" : "z-10",
-                editable && "transition-colors hover:bg-gray-50")}
+                editable && "transition-colors hover:bg-gray-50",
+              )}
               data-block-id={idx}
               onMouseDown={(e) => handleBlockMouseDown(idx, e)}
               onClick={() => onBlockSelect?.(block)}
@@ -274,7 +275,9 @@ export default function ActivityTimeline({
         )}
 
         {/* Drag preview */}
-        {editable && isDragging && interaction &&
+        {editable &&
+          isDragging &&
+          interaction &&
           (() => {
             const block = blocks[interaction.blockIdx];
             if (!block) return null;

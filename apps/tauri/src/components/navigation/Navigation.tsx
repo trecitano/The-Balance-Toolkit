@@ -42,23 +42,14 @@ interface MenuItemProps {
   onClick: () => void;
 }
 
-function MenuItem({
-                    id,
-                    label,
-                    icon,
-                    isActive = false,
-                    isDisabled = false,
-                    onClick,
-                  }: MenuItemProps) {
+function MenuItem({ id, label, icon, isActive = false, isDisabled = false, onClick }: MenuItemProps) {
   return (
     <button
       className={clsx(
         "menu-item flex flex-col items-center",
         id,
         isActive && "active",
-        isDisabled
-          ? "disabled cursor-not-allowed opacity-65"
-          : "cursor-pointer group"
+        isDisabled ? "disabled cursor-not-allowed opacity-65" : "cursor-pointer group",
       )}
       onClick={onClick}
       disabled={isDisabled}
@@ -70,8 +61,8 @@ function MenuItem({
           !isActive && "scale-50",
           isActive && "bg-(--red-dark) rounded-xl p-2",
           !isActive &&
-          !isDisabled &&
-          "group-hover:bg-(--red-dark) group-hover:rounded-xl group-hover:p-2 group-hover:scale-100"
+            !isDisabled &&
+            "group-hover:bg-(--red-dark) group-hover:rounded-xl group-hover:p-2 group-hover:scale-100",
         )}
       >
         <img src={icon} className={"object-contain"} />
@@ -117,7 +108,7 @@ function Navigation({ activeView, onViewChange }: NavigationProps) {
           />
         ))}
       </div>
-      <div className="flex flex-col mb-8">
+      <div className="mb-8 flex flex-col">
         {/* Settings */}
         <MenuItem
           id="settings"

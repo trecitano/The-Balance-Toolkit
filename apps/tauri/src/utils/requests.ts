@@ -54,8 +54,11 @@ export const commands = {
       invoke<void>("devices_start_calibration_stream", { calibrationChannel, macAddress }),
     stopCalibrationStream: async (macAddress: number) =>
       invoke<void>("devices_stop_calibration_stream", { macAddress }),
-    submitCalibration: async (macAddress: number, weightKg: number, readings: { position: string; reading: CalibrationReading }[]) =>
-      invoke<void>("devices_submit_calibration", { macAddress, weightKg, readings }),
+    submitCalibration: async (
+      macAddress: number,
+      weightKg: number,
+      readings: { position: string; reading: CalibrationReading }[],
+    ) => invoke<void>("devices_submit_calibration", { macAddress, weightKg, readings }),
   },
 
   session: {

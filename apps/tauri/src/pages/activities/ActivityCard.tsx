@@ -13,9 +13,7 @@ interface ActivityCardProps {
 }
 
 export default function ActivityCard({ activity, onOpen }: ActivityCardProps) {
-  const [currentImageSrc, setCurrentImageSrc] = useState<string>(
-    activity.staticImage
-  );
+  const [currentImageSrc, setCurrentImageSrc] = useState<string>(activity.staticImage);
   const [isHovering, setIsHovering] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const imageIndexRef = useRef<number>(0);
@@ -31,8 +29,7 @@ export default function ActivityCard({ activity, onOpen }: ActivityCardProps) {
         if (animationImages.length > 1) {
           const animationSpeed = 700;
           intervalRef.current = setInterval(() => {
-            imageIndexRef.current =
-              (imageIndexRef.current + 1) % animationImages.length;
+            imageIndexRef.current = (imageIndexRef.current + 1) % animationImages.length;
             setCurrentImageSrc(animationImages[imageIndexRef.current]);
           }, animationSpeed);
         }
@@ -64,28 +61,16 @@ export default function ActivityCard({ activity, onOpen }: ActivityCardProps) {
         alt={`${activity.title} illustration`}
       />
       <div>
-        <div className="border-1 border-(--border) shadow-(--shadow-sm) mb-1 flex w-fit items-center gap-2 rounded-lg px-1 py-0.5 text-xs font-semibold">
+        <div className="mb-1 flex w-fit items-center gap-2 rounded-lg border-1 border-(--border) px-1 py-0.5 text-xs font-semibold shadow-(--shadow-sm)">
           {activity.boardsRequired === 1 ? (
             <>
-              <img
-                src={wbbIcon}
-                alt="Balance Board"
-                className="w-8 object-contain"
-              />
+              <img src={wbbIcon} alt="Balance Board" className="w-8 object-contain" />
               <span>1 board</span>
             </>
           ) : (
             <>
-              <img
-                src={wbbIcon}
-                alt="Balance Board"
-                className="w-8 object-contain"
-              />
-              <img
-                src={wbbIcon}
-                alt="Balance Board"
-                className="w-8 object-contain"
-              />
+              <img src={wbbIcon} alt="Balance Board" className="w-8 object-contain" />
+              <img src={wbbIcon} alt="Balance Board" className="w-8 object-contain" />
               <span>{activity.boardsRequired} boards</span>
             </>
           )}

@@ -18,15 +18,8 @@ interface ActivityEditProps {
   existingActionImages: TimelineBlock[];
 }
 
-export default function ActivityEdit({
-                                       activity,
-                                       open,
-                                       onClose,
-                                       existingActionImages
-                                     }: ActivityEditProps) {
-  const [timelineBlocks, setTimelineBlocks] = useState(
-    activity.timelineBlocks
-  );
+export default function ActivityEdit({ activity, open, onClose, existingActionImages }: ActivityEditProps) {
+  const [timelineBlocks, setTimelineBlocks] = useState(activity.timelineBlocks);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newActionName, setNewActionName] = useState("");
   const [newActionDuration, setNewActionDuration] = useState(10);
@@ -36,41 +29,31 @@ export default function ActivityEdit({
   const queryClient = useQueryClient();
 
   const { mutate: saveMutation } = useMutation({
-    mutationFn: (updated: Activity) =>
-      commands.activity.updateActivity(updated),
+    mutationFn: (updated: Activity) => commands.activity.updateActivity(updated),
     onSuccess: (_, updated) => {
       queryClient.setQueryData(
         ACTIVITIES_QUERY_KEY,
-        (
-          old: { activities: Activity[] } | undefined
-        ): { activities: Activity[] } | undefined => {
+        (old: { activities: Activity[] } | undefined): { activities: Activity[] } | undefined => {
           if (!old) return old;
           return {
-            activities: old.activities.map((a) =>
-              a.id === updated.id ? updated : a
-            ),
+            activities: old.activities.map((a) => (a.id === updated.id ? updated : a)),
           };
-        }
+        },
       );
     },
   });
 
   const resetMutation = useMutation({
-    mutationFn: (activityId: string) =>
-      commands.activity.resetActivity(activityId),
+    mutationFn: (activityId: string) => commands.activity.resetActivity(activityId),
     onSuccess: (resetActivity) => {
       queryClient.setQueryData(
         ACTIVITIES_QUERY_KEY,
-        (
-          old: { activities: Activity[] } | undefined
-        ): { activities: Activity[] } | undefined => {
+        (old: { activities: Activity[] } | undefined): { activities: Activity[] } | undefined => {
           if (!old) return old;
           return {
-            activities: old.activities.map((a) =>
-              a.id === resetActivity.id ? resetActivity : a
-            ),
+            activities: old.activities.map((a) => (a.id === resetActivity.id ? resetActivity : a)),
           };
-        }
+        },
       );
       setTimelineBlocks(resetActivity.timelineBlocks);
     },
@@ -82,9 +65,7 @@ export default function ActivityEdit({
   }, [activity]);
 
   const handleAddAction = () => {
-    const title = newActionName
-      ? newActionName
-      : existingActionImages.find((b) => b.id === newActionImage)?.title!;
+    const title = newActionName ? newActionName : existingActionImages.find((b) => b.id === newActionImage)?.title!;
 
     const newBlock: TimelineBlock = {
       id: newActionImage,
@@ -117,19 +98,15 @@ export default function ActivityEdit({
   if (!open) return null;
 
   return (
-    <ToolkitContainer className="flex flex-1 min-h-0 flex-col gap-8 p-5">
-      <div className="border-b-1 border-(--border) pt-2 h-13">
+    <ToolkitContainer className="flex min-h-0 flex-1 flex-col gap-8 p-5">
+      <div className="h-13 border-b-1 border-(--border) pt-2">
         <h3 className={"text-xl font-bold"}>{activity.title}</h3>
       </div>
 
       {/* Add Action Row */}
       <div className="flex items-center justify-end gap-4">
         {!showAddForm ? (
-          <ToolkitButton
-            type="button"
-            color="blue"
-            onClick={() => setShowAddForm(true)}
-          >
+          <ToolkitButton type="button" color="blue" onClick={() => setShowAddForm(true)}>
             + Add Action
           </ToolkitButton>
         ) : (
@@ -148,10 +125,7 @@ export default function ActivityEdit({
               onChange={(e) => setNewActionImage(e ?? "")}
             />
             {newActionImage === "logo-flamingo-blue" && (
-              <InputPrimitive
-                value={newActionName}
-                onChange={(e) => setNewActionName(e.target.value)}
-              />
+              <InputPrimitive value={newActionName} onChange={(e) => setNewActionName(e.target.value)} />
             )}
 
             <div>
@@ -174,23 +148,14 @@ export default function ActivityEdit({
             >
               Add
             </ToolkitButton>
-            <ToolkitButton
-              type="button"
-              color="grey"
-              onClick={handleCancelAdd}
-            >
+            <ToolkitButton type="button" color="grey" onClick={handleCancelAdd}>
               Cancel
             </ToolkitButton>
           </>
         )}
       </div>
 
-      <ActivityTimeline
-        blocks={timelineBlocks}
-        editable={true}
-        onChange={setTimelineBlocks}
-        onBlockSelect={() => {}}
-      />
+      <ActivityTimeline blocks={timelineBlocks} editable={true} onChange={setTimelineBlocks} onBlockSelect={() => {}} />
 
       <div className="flex flex-col items-end gap-3">
         <SingleColumn label="Repeat">
@@ -205,11 +170,7 @@ export default function ActivityEdit({
         </SingleColumn>
 
         <div className="flex gap-2">
-          <ToolkitButton
-            type="button"
-            onClick={() => resetMutation.mutate(activity.id)}
-            color="grey"
-          >
+          <ToolkitButton type="button" onClick={() => resetMutation.mutate(activity.id)} color="grey">
             Reset to Default
           </ToolkitButton>
 
@@ -217,12 +178,7 @@ export default function ActivityEdit({
             Close
           </ToolkitButton>
 
-          <ToolkitButton
-            onClick={handleSaveAndGoToSession}
-            to="/session"
-            color="blue"
-            iconUrl={sessionIcon}
-          >
+          <ToolkitButton onClick={handleSaveAndGoToSession} to="/session" color="blue" iconUrl={sessionIcon}>
             Save and go to Session →
           </ToolkitButton>
         </div>

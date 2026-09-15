@@ -1,11 +1,11 @@
 .activity-card {
   transition:
-          box-shadow var(--transition),
-          transform var(--transition),
-          top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-          left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-          width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-          height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow var(--transition),
+    transform var(--transition),
+    top 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    left 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .activity-card:hover {

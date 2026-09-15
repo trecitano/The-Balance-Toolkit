@@ -57,11 +57,7 @@ export default function Activities() {
       ) : (
         <div className="grid min-h-0 grid-cols-3 grid-rows-2 gap-10">
           {activities.map((activity) => (
-            <ActivityCard
-              key={activity.id}
-              activity={activity}
-              onOpen={() => setMaximizedId(activity.id)}
-            />
+            <ActivityCard key={activity.id} activity={activity} onOpen={() => setMaximizedId(activity.id)} />
           ))}
         </div>
       )}

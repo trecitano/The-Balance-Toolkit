@@ -60,11 +60,10 @@
   align-items: center;
   justify-content: center;
   transition:
-          background var(--transition),
-          color var(--transition);
+    background var(--transition),
+    color var(--transition);
 }
 .delete-block-btn:hover {
   color: var(--white);
   background: var(--red);
 }
-

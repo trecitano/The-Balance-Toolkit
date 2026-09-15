@@ -174,7 +174,7 @@ export default function Popup() {
       <h2 className="text-center text-xl font-bold">{activity.title}</h2>
 
       {/* Blocks Carousel */}
-      <ul ref={listRef} className="mask-horizontal-fade px-[calc(50vw-10rem)] flex flex-1 gap-6 overflow-hidden py-4">
+      <ul ref={listRef} className="mask-horizontal-fade flex flex-1 gap-6 overflow-hidden px-[calc(50vw-10rem)] py-4">
         {blocks.map((block, index) => {
           const isActive = index === currentBlockIndex;
 

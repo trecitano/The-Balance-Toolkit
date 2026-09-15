@@ -12,12 +12,7 @@ interface CalibrationModalProps {
   onClose: () => void;
 }
 
-type CalibrationPosition =
-  | "top_left"
-  | "top_right"
-  | "bottom_left"
-  | "bottom_right"
-  | "center";
+type CalibrationPosition = "top_left" | "top_right" | "bottom_left" | "bottom_right" | "center";
 
 interface PositionConfig {
   id: CalibrationPosition;
@@ -48,17 +43,15 @@ function CapturedReadingsTable({ readings }: { readings: CapturedReading[] }) {
 
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-      <h4 className="mb-2 text-xs font-semibold text-gray-600 uppercase">
-        Captured Readings
-      </h4>
-      <table className="w-full text-xs table-fixed">
+      <h4 className="mb-2 text-xs font-semibold text-gray-600 uppercase">Captured Readings</h4>
+      <table className="w-full table-fixed text-xs">
         <thead>
           <tr className="border-b border-gray-200 text-gray-500">
-            <th className="w-[40%] pb-1 pr-2 text-left font-medium">Position</th>
-            <th className="w-[12%] pb-1 px-1 text-right font-medium">TL</th>
-            <th className="w-[12%] pb-1 px-1 text-right font-medium">TR</th>
-            <th className="w-[12%] pb-1 px-1 text-right font-medium">BL</th>
-            <th className="w-[12%] pb-1 px-1 text-right font-medium">BR</th>
+            <th className="w-[40%] pr-2 pb-1 text-left font-medium">Position</th>
+            <th className="w-[12%] px-1 pb-1 text-right font-medium">TL</th>
+            <th className="w-[12%] px-1 pb-1 text-right font-medium">TR</th>
+            <th className="w-[12%] px-1 pb-1 text-right font-medium">BL</th>
+            <th className="w-[12%] px-1 pb-1 text-right font-medium">BR</th>
             <th className="w-[12%] pb-1 pl-2 text-right font-medium">Total</th>
           </tr>
         </thead>
@@ -68,19 +61,11 @@ function CapturedReadingsTable({ readings }: { readings: CapturedReading[] }) {
             return (
               <tr key={pos.id} className={reading ? "text-gray-700" : "text-gray-300"}>
                 <td className="py-1 pr-2 font-medium">{pos.label}</td>
-                <td className="py-1 px-1 text-right tabular-nums">
-                  {reading ? reading.topLeft.toFixed(1) : "-"}
-                </td>
-                <td className="py-1 px-1 text-right tabular-nums">
-                  {reading ? reading.topRight.toFixed(1) : "-"}
-                </td>
-                <td className="py-1 px-1 text-right tabular-nums">
-                  {reading ? reading.bottomLeft.toFixed(1) : "-"}
-                </td>
-                <td className="py-1 px-1 text-right tabular-nums">
-                  {reading ? reading.bottomRight.toFixed(1) : "-"}
-                </td>
-                <td className="py-1 pl-2 text-right tabular-nums font-medium">
+                <td className="px-1 py-1 text-right tabular-nums">{reading ? reading.topLeft.toFixed(1) : "-"}</td>
+                <td className="px-1 py-1 text-right tabular-nums">{reading ? reading.topRight.toFixed(1) : "-"}</td>
+                <td className="px-1 py-1 text-right tabular-nums">{reading ? reading.bottomLeft.toFixed(1) : "-"}</td>
+                <td className="px-1 py-1 text-right tabular-nums">{reading ? reading.bottomRight.toFixed(1) : "-"}</td>
+                <td className="py-1 pl-2 text-right font-medium tabular-nums">
                   {reading ? reading.totalWeight.toFixed(1) : "-"}
                 </td>
               </tr>
@@ -96,9 +81,7 @@ function SensorDisplay({ reading }: SensorDisplayProps) {
   if (!reading) {
     return (
       <div className="grid grid-cols-2 gap-2 rounded-lg bg-gray-100 p-3">
-        <div className="text-center text-sm text-gray-400">
-          Waiting for data...
-        </div>
+        <div className="text-center text-sm text-gray-400">Waiting for data...</div>
       </div>
     );
   }
@@ -119,9 +102,7 @@ function SensorDisplay({ reading }: SensorDisplayProps) {
           <div key={sensor.position} className="rounded-lg bg-gray-100 p-2">
             <div className="mb-1 flex items-center justify-between text-xs">
               <span className="font-medium text-gray-600">{sensor.label}</span>
-              <span className="tabular-nums text-gray-800">
-                {sensor.value.toFixed(2)} kg
-              </span>
+              <span className="text-gray-800 tabular-nums">{sensor.value.toFixed(2)} kg</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-gray-200">
               <div
@@ -134,35 +115,26 @@ function SensorDisplay({ reading }: SensorDisplayProps) {
       </div>
       <div className="text-center text-sm">
         <span className="text-gray-500">Total: </span>
-        <span className="font-semibold tabular-nums">
-          {reading.totalWeight.toFixed(2)} kg
-        </span>
+        <span className="font-semibold tabular-nums">{reading.totalWeight.toFixed(2)} kg</span>
       </div>
     </div>
   );
 }
 
-export default function CalibrationModal({
-                                           device,
-                                           onClose,
-                                         }: CalibrationModalProps) {
+export default function CalibrationModal({ device, onClose }: CalibrationModalProps) {
   const isOpen = !!device;
 
   const [calibrationWeight, setCalibrationWeight] = useState<string>("");
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sensorReading, setSensorReading] = useState<CalibrationReading | null>(
-    null
-  );
+  const [sensorReading, setSensorReading] = useState<CalibrationReading | null>(null);
   const [capturedReadings, setCapturedReadings] = useState<CapturedReading[]>([]);
   const [streamActive, setStreamActive] = useState(false);
 
   const stopStream = async (macAddress: number) => {
     if (streamActive) {
-      await commands.devices
-        .stopCalibrationStream(macAddress)
-        .catch(console.error);
+      await commands.devices.stopCalibrationStream(macAddress).catch(console.error);
       setStreamActive(false);
     }
     setSensorReading(null);
@@ -285,18 +257,13 @@ export default function CalibrationModal({
     return (
       <Modal className="w-[32rem]" open={isOpen} onClose={handleClose}>
         <div className="flex flex-col gap-6">
-          <h2 className="text-2xl font-semibold text-(--primary)">
-            Calibrate Device
-          </h2>
+          <h2 className="text-2xl font-semibold text-(--primary)">Calibrate Device</h2>
           <p className="text-(--text-light)">
             Calibrating: <span className="font-medium">{device?.name}</span>
           </p>
 
           <div className="flex flex-col gap-2">
-            <label
-              htmlFor="calibration-weight"
-              className="text-left text-sm font-medium"
-            >
+            <label htmlFor="calibration-weight" className="text-left text-sm font-medium">
               Calibration Weight (kg)
             </label>
             <InputPrimitive
@@ -320,11 +287,7 @@ export default function CalibrationModal({
             <ToolkitButton type="button" color="grey" onClick={handleClose}>
               Cancel
             </ToolkitButton>
-            <ToolkitButton
-              type="button"
-              color="blue"
-              onClick={handleStartCalibration}
-            >
+            <ToolkitButton type="button" color="blue" onClick={handleStartCalibration}>
               Start Calibration
             </ToolkitButton>
           </div>
@@ -339,12 +302,8 @@ export default function CalibrationModal({
       <Modal className="w-[32rem]" open={isOpen} onClose={handleClose}>
         <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-2xl font-semibold text-(--primary)">
-              Review Calibration
-            </h2>
-            <p className="text-sm text-(--text-lighter)">
-              Using {calibrationWeight} kg weight
-            </p>
+            <h2 className="text-2xl font-semibold text-(--primary)">Review Calibration</h2>
+            <p className="text-sm text-(--text-lighter)">Using {calibrationWeight} kg weight</p>
           </div>
 
           <CapturedReadingsTable readings={capturedReadings} />
@@ -356,20 +315,10 @@ export default function CalibrationModal({
           {error && <p className="text-center text-sm text-red-500">{error}</p>}
 
           <div className="flex justify-center gap-4">
-            <ToolkitButton
-              type="button"
-              color="grey"
-              onClick={handleBack}
-              disabled={isSubmitting}
-            >
+            <ToolkitButton type="button" color="grey" onClick={handleBack} disabled={isSubmitting}>
               Back
             </ToolkitButton>
-            <ToolkitButton
-              type="button"
-              color="blue"
-              onClick={handleSubmitCalibration}
-              disabled={isSubmitting}
-            >
+            <ToolkitButton type="button" color="blue" onClick={handleSubmitCalibration} disabled={isSubmitting}>
               {isSubmitting ? "Submitting..." : "Submit Calibration"}
             </ToolkitButton>
           </div>
@@ -386,13 +335,10 @@ export default function CalibrationModal({
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <span className="text-3xl text-green-600">✓</span>
           </div>
-          <h2 className="text-2xl font-semibold text-(--primary)">
-            Calibration Complete
-          </h2>
+          <h2 className="text-2xl font-semibold text-(--primary)">Calibration Complete</h2>
           <p className="text-(--text-light)">
-            Successfully calibrated{" "}
-            <span className="font-medium">{device?.name}</span> with{" "}
-            {calibrationWeight} kg weight.
+            Successfully calibrated <span className="font-medium">{device?.name}</span> with {calibrationWeight} kg
+            weight.
           </p>
           <ToolkitButton type="button" color="blue" onClick={handleClose}>
             Done
@@ -409,12 +355,8 @@ export default function CalibrationModal({
     <Modal className="w-[32rem]" open={isOpen} onClose={handleClose}>
       <div className="flex flex-col gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-(--primary)">
-            Calibrate Device
-          </h2>
-          <p className="text-sm text-(--text-lighter)">
-            Using {calibrationWeight} kg weight
-          </p>
+          <h2 className="text-2xl font-semibold text-(--primary)">Calibrate Device</h2>
+          <p className="text-sm text-(--text-lighter)">Using {calibrationWeight} kg weight</p>
         </div>
 
         <div className="flex items-center justify-center gap-2">
@@ -422,19 +364,14 @@ export default function CalibrationModal({
             <div
               key={index}
               className={`h-2 w-8 rounded-full transition-colors ${
-                index < currentStep
-                  ? "bg-green-500"
-                  : index === currentStep
-                    ? "bg-blue-500"
-                    : "bg-gray-200"
+                index < currentStep ? "bg-green-500" : index === currentStep ? "bg-blue-500" : "bg-gray-200"
               }`}
             />
           ))}
         </div>
 
         <p className="text-lg font-medium">
-          Step {currentStep + 1} of {CALIBRATION_POSITIONS.length}:{" "}
-          {currentPosition.label}
+          Step {currentStep + 1} of {CALIBRATION_POSITIONS.length}: {currentPosition.label}
         </p>
 
         <div className="relative mx-auto w-56">
@@ -452,9 +389,7 @@ export default function CalibrationModal({
               style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
             >
               {index < currentStep && (
-                <span className="flex h-full items-center justify-center text-xs text-green-700">
-                  ✓
-                </span>
+                <span className="flex h-full items-center justify-center text-xs text-green-700">✓</span>
               )}
             </div>
           ))}
@@ -465,22 +400,14 @@ export default function CalibrationModal({
         <CapturedReadingsTable readings={capturedReadings} />
 
         <p className="text-sm text-(--text-light)">
-          Place the weight on the{" "}
-          <span className="font-semibold">
-            {currentPosition.label.toLowerCase()}
-          </span>{" "}
-          of the board, then press Confirm.
+          Place the weight on the <span className="font-semibold">{currentPosition.label.toLowerCase()}</span> of the
+          board, then press Confirm.
         </p>
 
         {error && <p className="text-center text-sm text-red-500">{error}</p>}
 
         <div className="flex justify-center gap-4">
-          <ToolkitButton
-            type="button"
-            color="grey"
-            onClick={handleBack}
-            disabled={isSubmitting}
-          >
+          <ToolkitButton type="button" color="grey" onClick={handleBack} disabled={isSubmitting}>
             Back
           </ToolkitButton>
           <ToolkitButton

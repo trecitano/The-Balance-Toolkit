@@ -23,12 +23,8 @@ export function SimpleBoardPanel({
       </div>
 
       <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-1 text-xs">
-        <div className="col-span-2 row-span-1 rounded bg-gray-100 p-2 overflow-hidden">
-          <BalanceBoardWithCoPOverlay
-            macAddress={macAddress}
-            src={wbbTopdown}
-            store={store}
-          />
+        <div className="col-span-2 row-span-1 overflow-hidden rounded bg-gray-100 p-2">
+          <BalanceBoardWithCoPOverlay macAddress={macAddress} src={wbbTopdown} store={store} />
         </div>
 
         <div className="bg-gray-100 p-2">
