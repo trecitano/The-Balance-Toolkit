@@ -1,5 +1,9 @@
 use anyhow::{Result, anyhow};
 use async_trait::async_trait;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::RecvTimeoutError;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use windows::{
     Devices::Bluetooth::{BluetoothAdapter, BluetoothConnectionStatus, BluetoothDevice},
@@ -24,8 +28,24 @@ use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::core::HSTRING;
 use windows_core::{GUID, Interface};
 
+/// Upper bound for a single scan attempt. The Bluetooth actor restarts us after each return.
+const SCAN_TIMEOUT: Duration = Duration::from_secs(60);
+/// How often the scan thread checks whether the actor cancelled the scan.
+const STOP_POLL_INTERVAL: Duration = Duration::from_millis(250);
+
 #[derive(Default)]
 pub struct NativeBluetoothHandler;
+
+/// Signals the blocking scan thread to stop. Dropped when the `scan_and_pair_nintendo`
+/// future is dropped (the Bluetooth actor cancelled the scan).
+struct StopOnDrop(Arc<AtomicBool>);
+
+impl Drop for StopOnDrop {
+    fn drop(&mut self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+}
+
 #[async_trait]
 impl BluetoothHandler for NativeBluetoothHandler {
     // In Windows, we can only use a single bluetooth adapter. (This is an assumption).
@@ -92,12 +112,20 @@ impl BluetoothHandler for NativeBluetoothHandler {
     // that does not have the name. This name is later added via an "Updated" event, that updates the
     // "System.ItemNameDisplay" device property.
     // As such, we need to pay attention to both "Added" and "Updated" events.
+    //
+    // The WinRT calls run on a blocking thread. Dropping this future (the actor cancelling the
+    // scan) cannot stop that thread, so a stop flag is polled instead and the watcher is stopped
+    // on every exit path; otherwise each cancelled scan would leak a thread and a running watcher.
     async fn scan_and_pair_nintendo(
         &self,
         response_stream: mpsc::Sender<BluetoothPeripheral>,
     ) -> Result<()> {
+        let stop = Arc::new(AtomicBool::new(false));
+        let _guard = StopOnDrop(stop.clone());
+        let stop_thread = stop.clone();
+
         tokio::task::spawn_blocking(move || {
-            futures::executor::block_on(async {
+            futures::executor::block_on(async move {
                 let default_adapter = BluetoothAdapter::GetDefaultAsync()?.await?;
                 let adapter_mac_address =
                     convert_u64_to_mac_address(default_adapter.BluetoothAddress()?);
@@ -106,15 +134,21 @@ impl BluetoothHandler for NativeBluetoothHandler {
                 let watcher = DeviceInformation::CreateWatcherAqsFilter(&selector)?;
                 let pin = mac_address_to_wii_pin(adapter_mac_address);
 
-                let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+                // A std channel: the callbacks run on WinRT threads and a send must never
+                // fail loudly there, since a panic inside a COM callback aborts the process.
+                // Capacity one is enough; a second match (Added + Updated) is simply dropped.
+                let (tx, rx) = std::sync::mpsc::sync_channel::<HSTRING>(1);
 
                 let added_tx = tx.clone();
                 let added = TypedEventHandler::new(
                     move |watcher: windows::core::Ref<DeviceWatcher>,
                           info: windows::core::Ref<DeviceInformation>| {
-                        let device_info: &DeviceInformation = info.unwrap();
+                        let device_info = match info.as_ref() {
+                            Some(info) => info,
+                            None => return Ok(()),
+                        };
                         let device_id = device_info.Id()?;
-                        let device_name = device_info.Name().unwrap();
+                        let device_name = device_info.Name()?;
                         let device_properties = device_info.Properties()?;
 
                         log::debug!("Found device {}, {}", device_id, device_name);
@@ -125,8 +159,10 @@ impl BluetoothHandler for NativeBluetoothHandler {
 
                         if device_name_matches || properties_matches {
                             log::info!("Found the balance (in an add)! Pairing...");
-                            let _ = watcher.as_ref().unwrap().Stop();
-                            added_tx.try_send(device_id).unwrap();
+                            if let Some(watcher) = watcher.as_ref() {
+                                let _ = watcher.Stop();
+                            }
+                            let _ = added_tx.try_send(device_id);
                         }
 
                         Ok(())
@@ -149,13 +185,16 @@ impl BluetoothHandler for NativeBluetoothHandler {
 
                         if properties_matches {
                             log::info!("Found the balance (in an update)! Pairing...");
-                            let _ = watcher.as_ref().unwrap().Stop();
-                            updated_tx.try_send(device_id).unwrap();
+                            if let Some(watcher) = watcher.as_ref() {
+                                let _ = watcher.Stop();
+                            }
+                            let _ = updated_tx.try_send(device_id);
                         }
 
                         Ok(())
                     },
                 );
+                drop(tx);
 
                 watcher.Added(&added)?;
                 watcher.Updated(&updated)?;
@@ -164,19 +203,39 @@ impl BluetoothHandler for NativeBluetoothHandler {
                 log::debug!("Starting device watcher...");
                 watcher.Start()?;
 
-                if let Some(device_id) = rx.recv().await {
-                    let board_address =
-                        parse_board_address(&device_id.to_string()).ok_or_else(|| {
-                            anyhow!("Could not parse board address from id: {device_id}")
-                        })?;
-                    try_pair_with_board(board_address, pin)?;
-                    let bluetooth_device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
-                    let peripheral = convert_to_bluetooth_peripheral(bluetooth_device).await?;
-                    response_stream.send(peripheral).await.unwrap();
-                    return Ok(());
-                }
+                let deadline = Instant::now() + SCAN_TIMEOUT;
+                let found = loop {
+                    if stop_thread.load(Ordering::SeqCst) {
+                        log::debug!("Scan cancelled");
+                        break None;
+                    }
+                    if Instant::now() >= deadline {
+                        log::debug!("Discovery timeout reached");
+                        break None;
+                    }
+                    match rx.recv_timeout(STOP_POLL_INTERVAL) {
+                        Ok(device_id) => break Some(device_id),
+                        Err(RecvTimeoutError::Timeout) => continue,
+                        Err(RecvTimeoutError::Disconnected) => break None,
+                    }
+                };
 
-                Err(anyhow!("Failed to find a device to pair with."))
+                // Stop() fails if the watcher already stopped itself; that is fine.
+                let _ = watcher.Stop();
+
+                let Some(device_id) = found else {
+                    // Nothing found: the actor restarts us, same as on the other platforms.
+                    return Ok(());
+                };
+
+                let board_address = parse_board_address(&device_id.to_string())
+                    .ok_or_else(|| anyhow!("Could not parse board address from id: {device_id}"))?;
+                try_pair_with_board(board_address, pin)?;
+                let bluetooth_device = BluetoothDevice::FromIdAsync(&device_id)?.await?;
+                let peripheral = convert_to_bluetooth_peripheral(bluetooth_device).await?;
+                // The receiver may be gone if the scan was cancelled meanwhile.
+                let _ = response_stream.send(peripheral).await;
+                Ok(())
             })
         })
         .await?

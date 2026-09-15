@@ -6,11 +6,15 @@ use crate::actors::bluetooth_service::{
 };
 use crate::types::MacAddress;
 use async_trait::async_trait;
-use bluer::{AdapterEvent, Device, DeviceEvent, DeviceProperty, Session};
+use bluer::{AdapterEvent, Address, Device, Session};
 use futures::future::join_all;
 use futures::stream::StreamExt;
-use std::time::{Duration, Instant};
+use std::collections::HashSet;
+use std::time::Duration;
 use tokio::sync::{Mutex, mpsc};
+
+/// Upper bound for a single scan attempt. The Bluetooth actor restarts us after each return.
+const SCAN_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Default)]
 pub struct NativeBluetoothHandler {
@@ -71,10 +75,12 @@ impl BluetoothHandler for NativeBluetoothHandler {
                 let device_addresses = adapter.device_addresses().await?;
 
                 for address in device_addresses {
-                    let device = adapter.device(address)?;
-                    let bluetooth_peripheral = convert_to_bluetooth_peripheral(device).await?;
-
-                    devices.push(Ok(bluetooth_peripheral));
+                    // One unreadable device must not hide the rest of the adapter.
+                    let peripheral = match adapter.device(address) {
+                        Ok(device) => convert_to_bluetooth_peripheral(device).await,
+                        Err(e) => Err(e.into()),
+                    };
+                    devices.push(peripheral);
                 }
             }
 
@@ -96,11 +102,17 @@ impl BluetoothHandler for NativeBluetoothHandler {
     // The Linux Bluetooth stack (BlueZ) already has support for pairing and connecting to wiimotes
     // out of the box.
     //
-    // This is accomplished by the autopair.c code, found in the drivers.
-    // (link: https://github.com/bluez/bluez/blob/f4617c531abe2cd263ce3b9ba7ba77dc5859215c/plugins/autopair.c#L33-L105)
+    // This is accomplished by the wiimote plugin, which answers the PIN request with the
+    // reversed adapter address (sync-button pairing) for devices named "Nintendo RVL-*".
+    // (link: https://github.com/bluez/bluez/blob/master/plugins/wiimote.c)
     //
     // Currently this is bugged https://github.com/bluez/bluez/issues/911 (versions 5.72 to 5.79)
     // but it has already been fixed in Master and should be fixed in 5.80.
+    //
+    // BlueZ creates the device object as soon as the inquiry response arrives and resolves the
+    // remote name afterwards, so a brand-new board usually shows up without a name first. We
+    // therefore listen to the "with changes" discovery stream, which re-emits `DeviceAdded`
+    // whenever a device property (such as the name) changes.
     async fn scan_and_pair_nintendo(
         &self,
         response_stream: mpsc::Sender<BluetoothPeripheral>,
@@ -109,98 +121,58 @@ impl BluetoothHandler for NativeBluetoothHandler {
 
         let adapter = session.default_adapter().await?;
 
-        let mut events = adapter.discover_devices().await?;
+        let mut events = adapter.discover_devices_with_changes().await?;
 
-        // Set timeout for scanning
-        let timeout = Duration::from_secs(60);
-        let start_time = Instant::now();
+        // Addresses we already tried to pair during this attempt. A failed pairing is retried
+        // by the next attempt (the actor restarts us), not on every property change.
+        let mut attempted: HashSet<Address> = HashSet::new();
 
-        while let Some(event) = events.next().await {
-            // Check if we've exceeded the timeout
-            if start_time.elapsed() > timeout {
-                log::debug!("Discovery timeout reached");
-                break;
-            }
+        let scan = async {
+            while let Some(event) = events.next().await {
+                let AdapterEvent::DeviceAdded(addr) = event else {
+                    continue;
+                };
+                if attempted.contains(&addr) {
+                    continue;
+                }
 
-            if let AdapterEvent::DeviceAdded(addr) = event {
-                // Try to get the device
-                match adapter.device(addr) {
-                    Ok(device) => {
-                        // Get device name
-                        if let Ok(Some(name)) = device.name().await {
-                            // log::info!("Discovered device: {} ({})", name, addr);
-
-                            if name == NINTENDO_BOARD_ID {
-                                log::info!("Found Nintendo balance board! Attempting to pair...");
-
-                                if device.is_paired().await.unwrap_or(false) {
-                                    log::debug!("Device is already paired");
-                                }
-
-                                // Register for pairing events
-                                let mut device_events = device.events().await?;
-
-                                // Process the device events (logging)
-                                let _handle = tokio::spawn(async move {
-                                    while let Some(event) = device_events.next().await {
-                                        match event {
-                                            DeviceEvent::PropertyChanged(
-                                                DeviceProperty::Paired(paired),
-                                            ) => {
-                                                if paired {
-                                                    log::info!("Device successfully paired!");
-                                                }
-                                            }
-                                            DeviceEvent::PropertyChanged(prop) => {
-                                                log::debug!("Device property changed: {:?}", prop);
-                                            }
-                                        }
-                                    }
-                                });
-
-                                // Set the device to connectable and pairable
-                                log::debug!("Trusting device");
-                                device.set_trusted(true).await?;
-
-                                // Attempt to pair
-                                if !device.is_paired().await? {
-                                    log::debug!("Starting pairing...");
-                                    let pair_fut = device.pair();
-
-                                    match pair_fut.await {
-                                        Ok(_) => log::debug!("Pairing successful!"),
-                                        Err(e) => log::warn!("Pairing failed: {}", e),
-                                    }
-                                }
-
-                                // Try to connect after pairing
-                                if device.is_paired().await.unwrap_or(false) {
-                                    log::debug!("Connecting to the device...");
-                                    if let Err(e) = device.connect().await {
-                                        log::warn!("Failed to connect: {}", e);
-                                    } else {
-                                        let peripheral =
-                                            convert_to_bluetooth_peripheral(device).await?;
-                                        let _ = response_stream.send(peripheral).await;
-                                        log::info!("Successfully connected to the device!");
-                                    }
-                                    return Ok(());
-                                } else {
-                                    log::warn!(
-                                        "Pairing did not complete; will retry on the next scan."
-                                    );
-                                }
-                            }
-                        }
-                    }
+                let device = match adapter.device(addr) {
+                    Ok(device) => device,
                     Err(e) => {
                         log::warn!("Error accessing device {}: {}", addr, e);
+                        continue;
                     }
+                };
+
+                // The name may still be unresolved; a later change event will bring it.
+                let Ok(Some(name)) = device.name().await else {
+                    continue;
+                };
+                if name != NINTENDO_BOARD_ID {
+                    continue;
+                }
+
+                attempted.insert(addr);
+                log::info!("Found Nintendo balance board! Attempting to pair...");
+
+                if let Ok(true) = pair_and_connect(&device).await {
+                    let peripheral = convert_to_bluetooth_peripheral(device).await?;
+                    let _ = response_stream.send(peripheral).await;
+                    log::info!("Successfully connected to the device!");
+                    return Ok(true);
                 }
             }
-        }
 
-        Ok(())
+            Ok::<bool, anyhow::Error>(false)
+        };
+
+        match tokio::time::timeout(SCAN_TIMEOUT, scan).await {
+            Ok(result) => result.map(|_| ()),
+            Err(_) => {
+                log::debug!("Discovery timeout reached");
+                Ok(())
+            }
+        }
     }
 
     async fn remove_device(&self, mac_address: MacAddress) -> Result<()> {
@@ -245,6 +217,40 @@ impl BluetoothHandler for NativeBluetoothHandler {
         log::warn!("Device with MAC address {:012x} not found", mac_address);
         Ok(())
     }
+}
+
+/// Trusts, pairs (if needed) and connects the device. Returns `Ok(true)` when the device ended
+/// up connected, `Ok(false)` when pairing or connecting did not complete.
+async fn pair_and_connect(device: &Device) -> Result<bool> {
+    // Trusted devices are allowed to reconnect on their own later.
+    log::debug!("Trusting device");
+    device.set_trusted(true).await?;
+
+    if device.is_paired().await? {
+        log::debug!("Device is already paired");
+    } else {
+        log::debug!("Starting pairing...");
+        match device.pair().await {
+            Ok(()) => log::debug!("Pairing successful!"),
+            Err(e) => {
+                log::warn!("Pairing failed: {}", e);
+                return Ok(false);
+            }
+        }
+    }
+
+    if !device.is_paired().await.unwrap_or(false) {
+        log::warn!("Pairing did not complete; will retry on the next scan.");
+        return Ok(false);
+    }
+
+    log::debug!("Connecting to the device...");
+    if let Err(e) = device.connect().await {
+        log::warn!("Failed to connect: {}", e);
+        return Ok(false);
+    }
+
+    Ok(true)
 }
 
 async fn convert_to_bluetooth_peripheral(device: Device) -> Result<BluetoothPeripheral> {
