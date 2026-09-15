@@ -131,19 +131,6 @@ fn create_device_file_name_mapping(
     }).collect()
 }
 
-#[derive(Serialize)]
-pub struct SessionConfigurationFileFormatRef<'a> {
-    pub user: &'a User,
-    pub window_size_ms: u64,
-    pub window_slide_ms: u64,
-    pub sampling_rate: u64,
-    pub interpolation: &'a InterpolationSetting,
-    pub device_names: &'a HashMap<MacAddress, String>,
-    pub device_file_mappings: &'a HashMap<MacAddress, FileNameMapping>,
-    pub activity: &'a Option<Activity>,
-    pub session_stats: &'a SessionStats,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SessionConfigurationFileFormat {
     pub user: User,
@@ -177,16 +164,17 @@ async fn write_session_settings_to_disk(
     device_file_mappings: &HashMap<MacAddress, FileNameMapping>,
     session_id: &str,
 ) -> Result<()> {
-    let data = SessionConfigurationFileFormatRef {
-        user: &session_configuration.user,
+    // Written twice per session (at start and with the final stats), so the clones are cheap.
+    let data = SessionConfigurationFileFormat {
+        user: session_configuration.user.as_ref().clone(),
         window_size_ms: session_configuration.window_size_ms,
         window_slide_ms: session_configuration.window_slide_ms,
         sampling_rate: session_configuration.sampling_rate,
-        interpolation: &session_configuration.interpolation,
-        device_names,
-        device_file_mappings,
-        activity: &session_configuration.activity,
-        session_stats,
+        interpolation: session_configuration.interpolation.clone(),
+        device_names: device_names.clone(),
+        device_file_mappings: device_file_mappings.clone(),
+        activity: session_configuration.activity.clone(),
+        session_stats: session_stats.clone(),
     };
     let path = session_configuration.output_directory.clone();
     let file_path = path.join(format!("{session_id}.settings.json"));

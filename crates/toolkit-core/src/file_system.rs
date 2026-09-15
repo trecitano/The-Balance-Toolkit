@@ -1,7 +1,5 @@
 use crate::actors::state::activities::{Activity, ActivityState};
-use crate::processing::file_writer::{
-    SessionConfigurationFileFormat, SessionConfigurationFileFormatRef,
-};
+use crate::processing::file_writer::SessionConfigurationFileFormat;
 use crate::types::{GeneralSettings, MacAddress, NintendoDevice, User};
 use anyhow::{Context, Result};
 use chrono::{DateTime, NaiveDateTime, Utc};
@@ -121,42 +119,32 @@ const SETTINGS_FILE: &str = "settings.json";
 pub struct SettingsFileSystem;
 impl SettingsFileSystem {
     pub fn get_or_create_default_settings() -> Result<GeneralSettings> {
-        let settings: GeneralSettings = FileStore::load_with_default(Path::new(SETTINGS_FILE))?;
-
-        Ok(settings)
+        FileStore::load_with_default(Path::new(SETTINGS_FILE))
     }
 
     pub fn save_settings(settings: &GeneralSettings) -> Result<()> {
-        let old_settings: GeneralSettings = FileStore::load_with_default(Path::new(SETTINGS_FILE))?;
-
-        if old_settings == *settings {
-            return Ok(());
-        }
-
-        FileStore::save(Path::new(SETTINGS_FILE), settings)
+        FileStore::save_if_changed(Path::new(SETTINGS_FILE), settings)
     }
 }
 
 const ACTIVITIES_FILE: &str = "activities.json";
 pub struct ActivitiesFileSystem;
 impl ActivitiesFileSystem {
+    /// Loads the activities, writing the built-in defaults first if there is no file yet so
+    /// the user has something to edit.
     pub fn get_or_create_default_activities() -> Result<Vec<Activity>> {
-        let activities: Vec<Activity> = FileStore::load_or_else(
-            Path::new(ACTIVITIES_FILE),
-            ActivityState::create_default_activities,
-        )?;
+        let path = Path::new(ACTIVITIES_FILE);
+        let activities: Vec<Activity> = FileStore::load_with_default(path)?;
+        if activities.is_empty() {
+            let defaults = ActivityState::create_default_activities();
+            FileStore::save(path, &defaults)?;
+            return Ok(defaults);
+        }
         Ok(activities)
     }
 
     pub fn save_activities(activities: &Vec<Activity>) -> Result<()> {
-        let old_activities: Vec<Activity> =
-            FileStore::load_with_default(Path::new(ACTIVITIES_FILE))?;
-
-        if old_activities == *activities {
-            return Ok(());
-        }
-
-        FileStore::save(Path::new(ACTIVITIES_FILE), activities)
+        FileStore::save_if_changed(Path::new(ACTIVITIES_FILE), activities)
     }
 }
 
@@ -212,91 +200,45 @@ impl ExistingSessionFileSystem {
         FileStore::load(file_path)
     }
 
-    pub fn save(file_path: &Path, session: &SessionConfigurationFileFormatRef) -> Result<()> {
+    pub fn save(file_path: &Path, session: &SessionConfigurationFileFormat) -> Result<()> {
         FileStore::save(file_path, session)
     }
 }
 
 // PRIMITIVES
 
+/// JSON files under [`app_dir`]. Relative paths are resolved against it; absolute paths
+/// (session files) are used as given.
 struct FileStore;
 
 impl FileStore {
-    pub fn load<T>(file_name: &Path) -> Result<T>
-    where
-        T: Serialize + DeserializeOwned,
-    {
+    /// Loads a file that must exist.
+    pub fn load<T: DeserializeOwned>(file_name: &Path) -> Result<T> {
         let file_path = app_dir().join(file_name);
-
         let file = File::open(&file_path)
             .with_context(|| format!("Failed to open file: {:?}", file_path))?;
-
-        let reader = BufReader::new(file);
-
-        let data: T = serde_json::from_reader(reader)
-            .with_context(|| format!("Failed to parse JSON from file: {:?}", file_path))?;
-
-        Ok(data)
+        serde_json::from_reader(BufReader::new(file))
+            .with_context(|| format!("Failed to parse JSON from file: {:?}", file_path))
     }
 
-    pub fn load_with_default<T>(file_name: &Path) -> Result<T>
-    where
-        T: Serialize + DeserializeOwned + Default,
-    {
+    /// Loads a file, or returns `T::default()` when it does not exist yet or is empty.
+    pub fn load_with_default<T: DeserializeOwned + Default>(file_name: &Path) -> Result<T> {
         let file_path = app_dir().join(file_name);
-
         if !file_path.exists() {
             return Ok(T::default());
         }
-
         let file = File::open(&file_path)
             .with_context(|| format!("Failed to open file: {:?}", file_path))?;
-
-        let reader = BufReader::new(file);
-
-        let data = match serde_json::from_reader(reader) {
-            Ok(data) => data,
-            Err(e) if e.is_eof() => T::default(),
-            Err(e) => return Err(e.into()),
-        };
-
-        Ok(data)
-    }
-
-    pub fn load_or_else<T, F>(file_name: &Path, default_fn: F) -> Result<T>
-    where
-        T: Serialize + DeserializeOwned,
-        F: FnOnce() -> T,
-    {
-        let file_path = app_dir().join(file_name);
-
-        if !file_path.exists() {
-            let defaults = default_fn();
-            FileStore::save(file_name, &defaults)?;
-            return Ok(defaults);
-        }
-
-        let file = File::open(&file_path)
-            .with_context(|| format!("Failed to open file: {:?}", file_path))?;
-        let reader = BufReader::new(file);
-
-        let data = match serde_json::from_reader(reader) {
-            Ok(data) => data,
-            Err(e) if e.is_eof() => {
-                let defaults = default_fn();
-                FileStore::save(file_name, &defaults)?;
-                defaults
+        match serde_json::from_reader(BufReader::new(file)) {
+            Ok(data) => Ok(data),
+            Err(e) if e.is_eof() => Ok(T::default()),
+            Err(e) => {
+                Err(e).with_context(|| format!("Failed to parse JSON from file: {:?}", file_path))
             }
-            Err(e) => return Err(e.into()),
-        };
-
-        Ok(data)
+        }
     }
 
-    pub fn save<T>(file_name: &Path, data: T) -> Result<()>
-    where
-        T: Serialize,
-    {
+    pub fn save<T: Serialize>(file_name: &Path, data: T) -> Result<()> {
         let file_path = app_dir().join(file_name);
 
         if let Some(parent) = file_path.parent() {
@@ -309,6 +251,19 @@ impl FileStore {
             .with_context(|| format!("Failed to save file: {:?}", file_path))?;
 
         Ok(())
+    }
+
+    /// Saves only when the content differs from what is on disk, sparing a rewrite (and a
+    /// changed modification time) for a no-op update.
+    pub fn save_if_changed<T>(file_name: &Path, data: &T) -> Result<()>
+    where
+        T: Serialize + DeserializeOwned + Default + PartialEq,
+    {
+        let current: T = Self::load_with_default(file_name)?;
+        if current == *data {
+            return Ok(());
+        }
+        Self::save(file_name, data)
     }
 }
 

@@ -1,5 +1,8 @@
+use crate::actors::balance_board_actor::BalanceBoardCalibratedReading;
 use crate::actors::state::activities::Activity;
-use crate::actors::toolkit_service::{CoreSessionConfiguration, ReplayConfiguration};
+use crate::actors::toolkit_service::{
+    CalibrationPosition, CoreSessionConfiguration, ReplayConfiguration,
+};
 use crate::file_system;
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::file_writer::SessionStats;
@@ -198,7 +201,7 @@ impl From<&ReplayConfiguration> for FrontendReplayConfiguration {
             core: FrontendCoreSession::from(&cfg.core),
             activity: cfg.core.activity.clone(),
             file_path: cfg.file_path.clone(),
-            has_ongoing_session: cfg.replay_start_time.is_some(),
+            has_ongoing_session: cfg.running.is_some(),
         }
     }
 }
@@ -219,20 +222,35 @@ impl NintendoDevice {
     }
 }
 
+/// A sensor reading as the frontend captured it during calibration.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FrontendCalibrationReadingInput {
     pub mac_address: MacAddress,
-    pub timestamp: i64,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    pub timestamp: DateTime<Utc>,
     pub top_left: f32,
     pub top_right: f32,
     pub bottom_left: f32,
     pub bottom_right: f32,
 }
 
+impl From<FrontendCalibrationReadingInput> for BalanceBoardCalibratedReading {
+    fn from(input: FrontendCalibrationReadingInput) -> Self {
+        BalanceBoardCalibratedReading {
+            timestamp: input.timestamp,
+            mac_address: input.mac_address,
+            top_right: input.top_right,
+            bottom_right: input.bottom_right,
+            top_left: input.top_left,
+            bottom_left: input.bottom_left,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct FrontendCapturedReading {
-    pub position: String,
+    pub position: CalibrationPosition,
     pub reading: FrontendCalibrationReadingInput,
 }
 

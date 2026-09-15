@@ -1,7 +1,7 @@
 use crate::file_system::ActivitiesFileSystem;
+use crate::types::OngoingSessionActivityState;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::string::ToString;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -19,6 +19,37 @@ impl Activity {
     pub fn get_total_duration_ms(&self) -> i32 {
         let loop_duration: i32 = self.timeline_blocks.iter().map(|tb| tb.duration).sum();
         loop_duration * self.loops * 1000
+    }
+
+    /// Zero-based loop/block position; no ongoing state for an invalid or finished activity.
+    pub fn state_at(&self, elapsed: chrono::TimeDelta) -> Option<OngoingSessionActivityState> {
+        if self.loops <= 0 || self.timeline_blocks.iter().any(|block| block.duration < 0) {
+            return None;
+        }
+        let loop_ms: i64 = self
+            .timeline_blocks
+            .iter()
+            .map(|block| i64::from(block.duration) * 1000)
+            .sum();
+        let elapsed_ms = elapsed.num_milliseconds().max(0);
+        if loop_ms == 0 || elapsed_ms >= loop_ms * i64::from(self.loops) {
+            return None;
+        }
+
+        let mut remaining_ms = elapsed_ms % loop_ms;
+        for (index, block) in self.timeline_blocks.iter().enumerate() {
+            let block_ms = i64::from(block.duration) * 1000;
+            if remaining_ms < block_ms {
+                return Some(OngoingSessionActivityState {
+                    current_block_index: index as i32,
+                    time_to_next_block_ms: (block_ms - remaining_ms).min(i64::from(i32::MAX))
+                        as i32,
+                    loop_number: (elapsed_ms / loop_ms) as i32,
+                });
+            }
+            remaining_ms -= block_ms;
+        }
+        None
     }
 }
 
@@ -70,40 +101,7 @@ impl ActivityState {
     }
 
     pub fn get_available_time_blocks(&self) -> Vec<TimelineBlock> {
-        vec![
-            eyes_close(),
-            eyes_open(),
-            lean_backwards(),
-            lean_forward(),
-            lean_to_the_left(),
-            lean_to_the_right(),
-            left_arm_down(),
-            left_arm_reach(),
-            left_arm_up(),
-            left_foot_in_front(),
-            left_leg_up(),
-            right_arm_down(),
-            right_arm_reach(),
-            right_arm_up(),
-            right_foot_in_front(),
-            right_leg_up(),
-            sit(),
-            sit_again(),
-            stand(),
-            stand_on_board(),
-            stand_on_board_reach(),
-            stand_upright(),
-            step_onto_board(),
-            tare(),
-            turn_around(),
-            walk_back(),
-            walk_forward(),
-            dual_tare(),
-            dual_step_on_the_boards(),
-            dual_one_foot_on_each_board(),
-            dual_squat_on_the_boards(),
-            dual_stand_on_the_boards(),
-        ]
+        TIMELINE_BLOCKS.iter().map(|(id, _, _)| block(id)).collect()
     }
 
     pub fn create_default_activities() -> Vec<Activity> {
@@ -116,7 +114,11 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Assess balance during quiet standing with eyes open and closed"
                     .into(),
-                timeline_blocks: vec![step_onto_board(), eyes_open(), eyes_close()],
+                timeline_blocks: vec![
+                    block("step-onto-board"),
+                    block("eyes-open"),
+                    block("eyes-close"),
+                ],
                 loops: 2,
             },
             // Functional Reach
@@ -127,14 +129,14 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Measure reaching capability while maintaining balance".into(),
                 timeline_blocks: vec![
-                    step_onto_board(),
-                    stand_on_board_reach(),
-                    left_arm_up(),
-                    left_arm_reach(),
-                    left_arm_down(),
-                    right_arm_up(),
-                    right_arm_reach(),
-                    right_arm_down(),
+                    block("step-onto-board"),
+                    block("stand-on-the-board-reach"),
+                    block("left-arm-up"),
+                    block("left-arm-reach"),
+                    block("left-arm-down"),
+                    block("right-arm-up"),
+                    block("right-arm-reach"),
+                    block("right-arm-down"),
                 ],
                 loops: 2,
             },
@@ -146,12 +148,12 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Assess balance while standing on one leg".into(),
                 timeline_blocks: vec![
-                    step_onto_board(),
-                    stand_on_board(),
-                    left_leg_up(),
-                    stand_on_board(),
-                    right_leg_up(),
-                    stand_on_board(),
+                    block("step-onto-board"),
+                    block("stand-on-the-board"),
+                    block("left-leg-up"),
+                    block("stand-on-the-board"),
+                    block("right-leg-up"),
+                    block("stand-on-the-board"),
                 ],
                 loops: 2,
             },
@@ -163,12 +165,12 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Assess balance with feet in tandem position".into(),
                 timeline_blocks: vec![
-                    step_onto_board(),
-                    stand_on_board(),
-                    left_foot_in_front(),
-                    stand_on_board(),
-                    right_foot_in_front(),
-                    stand_on_board(),
+                    block("step-onto-board"),
+                    block("stand-on-the-board"),
+                    block("left-foot-in-front"),
+                    block("stand-on-the-board"),
+                    block("right-foot-in-front"),
+                    block("stand-on-the-board"),
                 ],
                 loops: 2,
             },
@@ -180,12 +182,12 @@ impl ActivityState {
                 boards_required: 1,
                 description: "Evaluate mobility and fall risk".into(),
                 timeline_blocks: vec![
-                    sit(),
-                    stand(),
-                    walk_forward(),
-                    turn_around(),
-                    walk_back(),
-                    sit_again(),
+                    block("sit"),
+                    block("stand"),
+                    block("walk-forward"),
+                    block("turn-around"),
+                    block("walk-back"),
+                    block("sit-again"),
                 ],
                 loops: 2,
             },
@@ -197,10 +199,10 @@ impl ActivityState {
                 boards_required: 2,
                 description: "Assess controlled weight shifting ability".into(),
                 timeline_blocks: vec![
-                    dual_step_on_the_boards(),
-                    dual_one_foot_on_each_board(),
-                    dual_squat_on_the_boards(),
-                    dual_stand_on_the_boards(),
+                    block("dual-board-step-on-the-boards"),
+                    block("dual-board-one-foot-on-each-board"),
+                    block("dual-board-squat-on-the-boards"),
+                    block("dual-board-stand-on-the-boards"),
                 ],
                 loops: 2,
             },
@@ -208,258 +210,135 @@ impl ActivityState {
     }
 }
 
-fn eyes_close() -> TimelineBlock {
+/// Every timeline block a user can put in an activity: `(id, title, duration in seconds)`.
+/// The id doubles as the name of the illustration the frontends show.
+const TIMELINE_BLOCKS: &[(&str, &str, i32)] = &[
+    ("eyes-close", "Eyes Closed", 4),
+    ("eyes-open", "Eyes Open", 4),
+    ("lean-backwards", "Lean Backwards", 6),
+    ("lean-forward", "Lean Forward", 6),
+    ("lean-to-the-left", "Lean to the Left", 6),
+    ("lean-to-the-right", "Lean to the Right", 8),
+    ("left-arm-down", "Left Arm Down", 8),
+    ("left-arm-reach", "Left Arm Reach", 8),
+    ("left-arm-up", "Left Arm Up", 8),
+    ("left-foot-in-front", "Left Foot in Front", 8),
+    ("left-leg-up", "Left Leg Up", 8),
+    ("right-arm-down", "Right Arm Down", 8),
+    ("right-arm-reach", "Right Arm Reach", 8),
+    ("right-arm-up", "Right Arm Up", 8),
+    ("right-foot-in-front", "Right Foot in Front", 8),
+    ("right-leg-up", "Right Leg Up", 8),
+    ("sit", "Sit", 12),
+    ("sit-again", "Sit Again", 12),
+    ("stand", "Stand", 12),
+    ("stand-on-the-board", "Stand on the Board", 12),
+    ("stand-on-the-board-reach", "Stand on the Board (Reach)", 12),
+    ("stand-upright", "Stand Upright", 12),
+    ("step-onto-board", "Step onto Board", 12),
+    ("tare", "Tare", 12),
+    ("turn-around", "Turn Around", 12),
+    ("walk-back", "Walk Back", 12),
+    ("walk-forward", "Walk Forward", 12),
+    ("dual-board-tare", "Tare", 3),
+    ("dual-board-step-on-the-boards", "Step on the boards", 3),
+    (
+        "dual-board-one-foot-on-each-board",
+        "One foot on each board",
+        3,
+    ),
+    ("dual-board-squat-on-the-boards", "Squat on the boards", 3),
+    ("dual-board-stand-on-the-boards", "Stand on the boards", 3),
+];
+
+/// Builds the block with the given id. Panics on an unknown id, which can only be a typo
+/// in the default activities below.
+fn block(id: &str) -> TimelineBlock {
+    let (id, title, duration) = TIMELINE_BLOCKS
+        .iter()
+        .find(|(block_id, _, _)| *block_id == id)
+        .unwrap_or_else(|| panic!("unknown timeline block id: {id}"));
     TimelineBlock {
-        title: "Eyes Closed".to_string(),
-        id: "eyes-close".to_string(),
-        duration: 4,
+        title: (*title).to_string(),
+        id: (*id).to_string(),
+        duration: *duration,
     }
 }
 
-fn eyes_open() -> TimelineBlock {
-    TimelineBlock {
-        title: "Eyes Open".to_string(),
-        id: "eyes-open".to_string(),
-        duration: 4,
-    }
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeDelta;
 
-fn lean_backwards() -> TimelineBlock {
-    TimelineBlock {
-        title: "Lean Backwards".to_string(),
-        id: "lean-backwards".to_string(),
-        duration: 6,
+    fn activity(durations: &[i32], loops: i32) -> Activity {
+        Activity {
+            id: "test".into(),
+            title: String::new(),
+            static_image: String::new(),
+            description: String::new(),
+            boards_required: 1,
+            loops,
+            timeline_blocks: durations
+                .iter()
+                .map(|&duration| TimelineBlock {
+                    id: String::new(),
+                    title: String::new(),
+                    duration,
+                })
+                .collect(),
+        }
     }
-}
 
-fn lean_forward() -> TimelineBlock {
-    TimelineBlock {
-        title: "Lean Forward".to_string(),
-        id: "lean-forward".to_string(),
-        duration: 6,
+    #[test]
+    fn timeline_advances_across_blocks_and_loops_then_finishes() {
+        let activity = activity(&[2, 3], 2);
+        for (elapsed_ms, expected) in [
+            (-1, (0, 0, 2000)),
+            (0, (0, 0, 2000)),
+            (1999, (0, 0, 1)),
+            (2000, (0, 1, 3000)),
+            (4999, (0, 1, 1)),
+            (5000, (1, 0, 2000)),
+            (7000, (1, 1, 3000)),
+            (9999, (1, 1, 1)),
+        ] {
+            let state = activity
+                .state_at(TimeDelta::milliseconds(elapsed_ms))
+                .unwrap();
+            assert_eq!(
+                (
+                    state.loop_number,
+                    state.current_block_index,
+                    state.time_to_next_block_ms
+                ),
+                expected
+            );
+        }
+        assert!(activity.state_at(TimeDelta::milliseconds(10_000)).is_none());
+        assert!(activity.state_at(TimeDelta::milliseconds(10_001)).is_none());
     }
-}
 
-fn lean_to_the_left() -> TimelineBlock {
-    TimelineBlock {
-        title: "Lean to the Left".to_string(),
-        id: "lean-to-the-left".to_string(),
-        duration: 6,
-    }
-}
-
-fn lean_to_the_right() -> TimelineBlock {
-    TimelineBlock {
-        title: "Lean to the Right".to_string(),
-        id: "lean-to-the-right".to_string(),
-        duration: 8,
-    }
-}
-
-fn left_arm_down() -> TimelineBlock {
-    TimelineBlock {
-        title: "Left Arm Down".to_string(),
-        id: "left-arm-down".to_string(),
-        duration: 8,
-    }
-}
-
-fn left_arm_reach() -> TimelineBlock {
-    TimelineBlock {
-        title: "Left Arm Reach".to_string(),
-        id: "left-arm-reach".to_string(),
-        duration: 8,
-    }
-}
-
-fn left_arm_up() -> TimelineBlock {
-    TimelineBlock {
-        title: "Left Arm Up".to_string(),
-        id: "left-arm-up".to_string(),
-        duration: 8,
-    }
-}
-
-fn left_foot_in_front() -> TimelineBlock {
-    TimelineBlock {
-        title: "Left Foot in Front".to_string(),
-        id: "left-foot-in-front".to_string(),
-        duration: 8,
-    }
-}
-
-fn left_leg_up() -> TimelineBlock {
-    TimelineBlock {
-        title: "Left Leg Up".to_string(),
-        id: "left-leg-up".to_string(),
-        duration: 8,
-    }
-}
-
-fn right_arm_down() -> TimelineBlock {
-    TimelineBlock {
-        title: "Right Arm Down".to_string(),
-        id: "right-arm-down".to_string(),
-        duration: 8,
-    }
-}
-
-fn right_arm_reach() -> TimelineBlock {
-    TimelineBlock {
-        title: "Right Arm Reach".to_string(),
-        id: "right-arm-reach".to_string(),
-        duration: 8,
-    }
-}
-
-fn right_arm_up() -> TimelineBlock {
-    TimelineBlock {
-        title: "Right Arm Up".to_string(),
-        id: "right-arm-up".to_string(),
-        duration: 8,
-    }
-}
-
-fn right_foot_in_front() -> TimelineBlock {
-    TimelineBlock {
-        title: "Right Foot in Front".to_string(),
-        id: "right-foot-in-front".to_string(),
-        duration: 8,
-    }
-}
-
-fn right_leg_up() -> TimelineBlock {
-    TimelineBlock {
-        title: "Right Leg Up".to_string(),
-        id: "right-leg-up".to_string(),
-        duration: 8,
-    }
-}
-
-fn sit() -> TimelineBlock {
-    TimelineBlock {
-        title: "Sit".to_string(),
-        id: "sit".to_string(),
-        duration: 12,
-    }
-}
-
-fn sit_again() -> TimelineBlock {
-    TimelineBlock {
-        title: "Sit Again".to_string(),
-        id: "sit-again".to_string(),
-        duration: 12,
-    }
-}
-
-fn stand() -> TimelineBlock {
-    TimelineBlock {
-        title: "Stand".to_string(),
-        id: "stand".to_string(),
-        duration: 12,
-    }
-}
-
-fn stand_on_board() -> TimelineBlock {
-    TimelineBlock {
-        title: "Stand on the Board".to_string(),
-        id: "stand-on-the-board".to_string(),
-        duration: 12,
-    }
-}
-
-fn stand_on_board_reach() -> TimelineBlock {
-    TimelineBlock {
-        title: "Stand on the Board (Reach)".to_string(),
-        id: "stand-on-the-board-reach".to_string(),
-        duration: 12,
-    }
-}
-
-fn stand_upright() -> TimelineBlock {
-    TimelineBlock {
-        title: "Stand Upright".to_string(),
-        id: "stand-upright".to_string(),
-        duration: 12,
-    }
-}
-
-fn step_onto_board() -> TimelineBlock {
-    TimelineBlock {
-        title: "Step onto Board".to_string(),
-        id: "step-onto-board".to_string(),
-        duration: 12,
-    }
-}
-
-fn tare() -> TimelineBlock {
-    TimelineBlock {
-        title: "Tare".to_string(),
-        id: "tare".to_string(),
-        duration: 12,
-    }
-}
-
-fn turn_around() -> TimelineBlock {
-    TimelineBlock {
-        title: "Turn Around".to_string(),
-        id: "turn-around".to_string(),
-        duration: 12,
-    }
-}
-
-fn walk_back() -> TimelineBlock {
-    TimelineBlock {
-        title: "Walk Back".to_string(),
-        id: "walk-back".to_string(),
-        duration: 12,
-    }
-}
-
-fn walk_forward() -> TimelineBlock {
-    TimelineBlock {
-        title: "Walk Forward".to_string(),
-        id: "walk-forward".to_string(),
-        duration: 12,
-    }
-}
-
-fn dual_tare() -> TimelineBlock {
-    TimelineBlock {
-        title: "Step on the boards".to_string(),
-        id: "dual-board-tare".to_string(),
-        duration: 3,
-    }
-}
-
-fn dual_step_on_the_boards() -> TimelineBlock {
-    TimelineBlock {
-        title: "Step on the boards".to_string(),
-        id: "dual-board-step-on-the-boards".to_string(),
-        duration: 3,
-    }
-}
-
-fn dual_one_foot_on_each_board() -> TimelineBlock {
-    TimelineBlock {
-        title: "One foot on each board".to_string(),
-        id: "dual-board-one-foot-on-each-board".to_string(),
-        duration: 3,
-    }
-}
-
-fn dual_squat_on_the_boards() -> TimelineBlock {
-    TimelineBlock {
-        title: "Squat on the boards".to_string(),
-        id: "dual-board-squat-on-the-boards".to_string(),
-        duration: 3,
-    }
-}
-
-fn dual_stand_on_the_boards() -> TimelineBlock {
-    TimelineBlock {
-        title: "Stand on the boards".to_string(),
-        id: "dual-board-stand-on-the-boards".to_string(),
-        duration: 3,
+    #[test]
+    fn empty_or_invalid_timelines_have_no_ongoing_state() {
+        for activity in [
+            activity(&[], 2),
+            activity(&[0, 0], 2),
+            activity(&[2], 0),
+            activity(&[2], -1),
+            activity(&[2, -1], 2),
+        ] {
+            assert!(activity.state_at(TimeDelta::zero()).is_none());
+        }
+        let state = activity(&[0, 2, 0], 2)
+            .state_at(TimeDelta::seconds(2))
+            .unwrap();
+        assert_eq!(
+            (
+                state.loop_number,
+                state.current_block_index,
+                state.time_to_next_block_ms
+            ),
+            (1, 1, 2000)
+        );
     }
 }

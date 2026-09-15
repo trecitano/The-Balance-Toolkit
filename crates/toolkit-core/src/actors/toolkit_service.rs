@@ -8,12 +8,12 @@ use crate::actors::state::users::UserState;
 use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem, SettingsFileSystem};
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::lsl_writer::LslConnectionSettings;
+use crate::processing::observers::broadcast;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
 use crate::types::{
     FrontendCapturedReading, FrontendCoreSession, FrontendLastSessionInformation,
     FrontendReplayConfiguration, FrontendSessionInformation, GeneralSettings, MacAddress,
-    NintendoDevice, OngoingSessionActivityState, SelectOption, SelectedBoard, SessionActivityState,
-    User, UserPageInformation,
+    NintendoDevice, SelectOption, SelectedBoard, SessionActivityState, User, UserPageInformation,
 };
 use crate::{NINTENDO_BOARD_ID, utils};
 use anyhow::{Result, anyhow};
@@ -25,9 +25,12 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::mpsc::error::TrySendError;
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
+
+#[cfg(test)]
+#[path = "toolkit_service_tests.rs"]
+mod tests;
 
 /// Calibration position identifier
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -41,16 +44,14 @@ pub enum CalibrationPosition {
 }
 
 impl CalibrationPosition {
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "top_left" => Some(Self::TopLeft),
-            "top_right" => Some(Self::TopRight),
-            "bottom_left" => Some(Self::BottomLeft),
-            "bottom_right" => Some(Self::BottomRight),
-            "center" => Some(Self::Center),
-            _ => None,
-        }
-    }
+    /// Every position a complete calibration must cover.
+    pub const ALL: [CalibrationPosition; 5] = [
+        Self::TopLeft,
+        Self::TopRight,
+        Self::BottomLeft,
+        Self::BottomRight,
+        Self::Center,
+    ];
 }
 
 /// Data captured at a single calibration position
@@ -199,6 +200,12 @@ pub enum ToolkitCommand {
         response: oneshot::Sender<()>,
     },
 
+    /// Internal timer command, tied to the run that scheduled it.
+    AutoStop {
+        target: SessionTarget,
+        cancellation_token: CancellationToken,
+    },
+
     BoardAction {
         mac_address: MacAddress,
         action: BoardAction,
@@ -228,6 +235,34 @@ pub enum ToolkitResponse {
     SessionActivityChanged,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum SessionTarget {
+    Session,
+    Replay,
+}
+
+/// Owns a run's timer. Replacing or clearing the run cancels pending auto-stop work.
+#[derive(Debug)]
+pub struct RunningSession {
+    started_at: chrono::DateTime<Utc>,
+    cancellation_token: CancellationToken,
+}
+
+impl RunningSession {
+    fn new(cancellation_token: CancellationToken) -> Self {
+        Self {
+            started_at: Utc::now(),
+            cancellation_token,
+        }
+    }
+}
+
+impl Drop for RunningSession {
+    fn drop(&mut self) {
+        self.cancellation_token.cancel();
+    }
+}
+
 pub struct ConnectionManager {
     tx: Sender<ToolkitCommand>,
     rx: Receiver<ToolkitCommand>,
@@ -242,17 +277,15 @@ pub struct ConnectionManager {
     /// Every board this manager has ever seen, with the user-facing names from the device
     /// file. Refreshed by `boards_system_view`; read by anything that only needs names, so
     /// routine UI refetches never have to touch the Bluetooth stack.
-    known_devices: Vec<NintendoDevice>,
+    known_devices: HashMap<MacAddress, NintendoDevice>,
     /// Tracks active calibration streams (mac_address -> cancellation flag)
     active_calibration_streams: HashMap<MacAddress, CancellationToken>,
 }
 
-#[derive(Clone)]
 pub struct SessionConfiguration {
     pub core: CoreSessionConfiguration,
     pub connections: HashMap<MacAddress, Sender<BoardAction>>,
-    pub session_start_time: Option<chrono::DateTime<Utc>>,
-    pub cancel_token: Option<CancellationToken>,
+    pub running: Option<RunningSession>,
 }
 
 #[derive(Clone, Debug)]
@@ -268,15 +301,28 @@ pub struct CoreSessionConfiguration {
     pub interpolation: InterpolationSetting,
 }
 
-#[derive(Clone, Debug)]
+impl CoreSessionConfiguration {
+    /// Copies the pipeline settings a frontend may change. The user and the activity are
+    /// resolved by the caller, since they need the user and activity state.
+    pub fn apply(&mut self, configuration: &FrontendCoreSession) {
+        self.lsl_enabled = configuration.lsl_enabled;
+        self.tcp_enabled = configuration.tcp_enabled;
+        self.output_directory = configuration.output_directory.clone();
+        self.window_size_ms = configuration.window_size_ms;
+        self.window_slide_ms = configuration.window_slide_ms;
+        self.sampling_rate = configuration.sampling_rate;
+        self.interpolation = configuration.interpolation.clone();
+    }
+}
+
+#[derive(Debug)]
 pub struct ReplayConfiguration {
     pub core: CoreSessionConfiguration,
     pub file_path: PathBuf,
     pub device_names: HashMap<MacAddress, String>,
     pub connections: HashMap<MacAddress, Sender<BoardAction>>,
     pub replay_duration: Duration,
-    pub replay_start_time: Option<chrono::DateTime<Utc>>,
-    pub cancel_token: Option<CancellationToken>,
+    pub running: Option<RunningSession>,
 }
 
 impl ConnectionManager {
@@ -287,7 +333,10 @@ impl ConnectionManager {
         let user_state = UserState::new()?;
 
         let general_settings = SettingsFileSystem::get_or_create_default_settings()?;
-        let known_devices = DeviceFileSystem::get_stored_devices()?;
+        let known_devices = DeviceFileSystem::get_stored_devices()?
+            .into_iter()
+            .map(|device| (device.mac_address, device))
+            .collect();
         let session_settings = SessionConfiguration {
             core: CoreSessionConfiguration {
                 user: user_state.get_default_user(),
@@ -301,8 +350,7 @@ impl ConnectionManager {
                 interpolation: general_settings.processing_settings.interpolation.clone(),
             },
             connections: HashMap::new(),
-            session_start_time: None,
-            cancel_token: None,
+            running: None,
         };
 
         Ok(Self {
@@ -359,7 +407,7 @@ impl ConnectionManager {
                         connection.send(BoardAction::StopRecording).await?;
                     }
                     self.session_settings.connections.remove(&mac_address);
-                    self.known_devices.retain(|d| d.mac_address != mac_address);
+                    self.known_devices.remove(&mac_address);
                     DeviceFileSystem::remove_device(mac_address)?;
                     self.bluetooth_manager_tx.send(action).await?
                 }
@@ -379,7 +427,7 @@ impl ConnectionManager {
                 // 1 - We cannot make a weight measurement if a session is ongoing
                 // 2 - We only perform a weight measurement on a specific board
                 // 3 - When the user closes the channel, we stop reading from the board.
-                if self.session_settings.session_start_time.is_some() {
+                if self.session_settings.running.is_some() {
                     return Ok(());
                 }
 
@@ -418,11 +466,7 @@ impl ConnectionManager {
                 mac_address,
                 device_name,
             } => {
-                if let Some(device) = self
-                    .known_devices
-                    .iter_mut()
-                    .find(|d| d.mac_address == mac_address)
-                {
+                if let Some(device) = self.known_devices.get_mut(&mac_address) {
                     device.name = device_name.clone();
                 }
                 DeviceFileSystem::update_board_name(mac_address, device_name)?
@@ -549,7 +593,7 @@ impl ConnectionManager {
                     selected_boards,
                     core: (&self.session_settings.core).into(),
                     activity: self.session_settings.core.activity.clone(),
-                    has_ongoing_session: self.session_settings.session_start_time.is_some(),
+                    has_ongoing_session: self.session_settings.running.is_some(),
                 };
                 let _ = response.send(session_information);
             }
@@ -559,13 +603,7 @@ impl ConnectionManager {
             } => {
                 self.session_settings.core.user =
                     self.user_state.get_user(configuration.selected_user);
-                self.session_settings.core.lsl_enabled = configuration.lsl_enabled;
-                self.session_settings.core.tcp_enabled = configuration.tcp_enabled;
-                self.session_settings.core.output_directory = configuration.output_directory;
-                self.session_settings.core.window_size_ms = configuration.window_size_ms;
-                self.session_settings.core.window_slide_ms = configuration.window_slide_ms;
-                self.session_settings.core.sampling_rate = configuration.sampling_rate;
-                self.session_settings.core.interpolation = configuration.interpolation;
+                self.session_settings.core.apply(&configuration);
 
                 // If the activity has changed, let's reset it
                 if let Some(activity_id) = configuration.activity_id {
@@ -596,8 +634,8 @@ impl ConnectionManager {
                 response,
             } => {
                 let cancellation_token = CancellationToken::new();
-                self.session_settings.cancel_token = Some(cancellation_token.clone());
-                self.session_settings.session_start_time = Some(Utc::now());
+                self.session_settings.running =
+                    Some(RunningSession::new(cancellation_token.clone()));
                 let device_names = self.connected_device_names();
 
                 start_session(
@@ -615,8 +653,6 @@ impl ConnectionManager {
                     .await?;
 
                 if let Some(activity) = &self.session_settings.core.activity {
-                    let manager_tx = self.get_sender_channel();
-
                     // If the session has an activity that starts with a tare, then perform the tare
                     if !activity.timeline_blocks.is_empty()
                         && activity.timeline_blocks[0].id == "tare"
@@ -626,25 +662,9 @@ impl ConnectionManager {
                         }
                     }
 
-                    // Cancel the session when the activity ends
-                    let duration = activity.get_total_duration_ms() as u64;
-                    let response_tx = self.response_tx.clone();
-                    tokio::spawn(async move {
-                        log::debug!("Going to sleep for {duration}");
-                        tokio::select! {
-                            _ = tokio::time::sleep(Duration::from_millis(duration)) => {
-                                log::info!("Activity duration ended, stopping session...");
-                                let (stop_tx, stop_rx) = oneshot::channel();
-                                let _ = manager_tx.send(ToolkitCommand::StopSession { response: stop_tx }).await;
-                                let _ = stop_rx.await;
-                                let _ = response_tx.send(ToolkitResponse::SessionCompleted).await;
-                            }
-                            _ = cancellation_token.cancelled() => {
-                                log::debug!("Session cancelled manually, auto-stop task exiting.");
-                                let _ = response_tx.send(ToolkitResponse::SessionCompleted).await;
-                            }
-                        }
-                    });
+                    // Stop the session when the activity ends
+                    let duration = Duration::from_millis(activity.get_total_duration_ms() as u64);
+                    self.spawn_auto_stop(duration, cancellation_token, SessionTarget::Session);
                 }
 
                 // Reply only once the session state is updated, so a refetch triggered by the
@@ -652,16 +672,7 @@ impl ConnectionManager {
                 let _ = response.send(());
             }
             ToolkitCommand::StopSession { response } => {
-                if let Some(token) = self.session_settings.cancel_token.take() {
-                    token.cancel();
-                }
-
-                for board in self.session_settings.connections.values() {
-                    let command = { BoardAction::StopRecording };
-                    board.send(command).await?
-                }
-
-                self.session_settings.session_start_time = None;
+                self.stop_run(SessionTarget::Session).await?;
                 let _ = response.send(());
             }
             ToolkitCommand::SessionActivityState { response } => {
@@ -670,37 +681,11 @@ impl ConnectionManager {
                     return Ok(());
                 };
 
-                let total_loop_duration_ms = activity.get_total_duration_ms();
-                let ongoing_state = match self.session_settings.session_start_time {
-                    Some(start_time) if total_loop_duration_ms > 0 => {
-                        let elapsed_ms = (Utc::now() - start_time).num_milliseconds().max(0) as i32;
-
-                        let current_loop_number = elapsed_ms / total_loop_duration_ms;
-                        let elapsed_in_current_loop = elapsed_ms % total_loop_duration_ms;
-
-                        let mut accumulated = 0;
-                        let mut current_block_index: i32 = 0;
-                        let mut time_to_next_block_ms = 0;
-
-                        for (i, block) in activity.timeline_blocks.iter().enumerate() {
-                            let block_duration_ms = block.duration * 1000;
-                            if elapsed_in_current_loop < accumulated + block_duration_ms {
-                                current_block_index = i as i32;
-                                time_to_next_block_ms = (accumulated + block_duration_ms)
-                                    .saturating_sub(elapsed_in_current_loop);
-                                break;
-                            }
-                            accumulated += block_duration_ms;
-                        }
-
-                        Some(OngoingSessionActivityState {
-                            current_block_index,
-                            time_to_next_block_ms,
-                            loop_number: current_loop_number,
-                        })
-                    }
-                    _ => None,
-                };
+                let ongoing_state = self
+                    .session_settings
+                    .running
+                    .as_ref()
+                    .and_then(|running| activity.state_at(Utc::now() - running.started_at));
 
                 let _ = response.send(Some(SessionActivityState {
                     activity,
@@ -774,8 +759,7 @@ impl ConnectionManager {
                     device_names: file_session.device_names,
                     connections,
                     replay_duration: file_session.session_stats.duration,
-                    replay_start_time: None,
-                    cancel_token: None,
+                    running: None,
                 });
 
                 let _ = response.send(());
@@ -788,14 +772,10 @@ impl ConnectionManager {
                 configuration,
                 response,
             } => {
+                // The replay keeps the user recorded in the file; only the pipeline
+                // settings are adjustable.
                 if let Some(settings) = self.replay_settings.as_mut() {
-                    settings.core.lsl_enabled = configuration.lsl_enabled;
-                    settings.core.tcp_enabled = configuration.tcp_enabled;
-                    settings.core.output_directory = configuration.output_directory;
-                    settings.core.window_size_ms = configuration.window_size_ms;
-                    settings.core.window_slide_ms = configuration.window_slide_ms;
-                    settings.core.sampling_rate = configuration.sampling_rate;
-                    settings.core.interpolation = configuration.interpolation;
+                    settings.core.apply(&configuration);
                 }
 
                 let _ = response.send(());
@@ -814,42 +794,28 @@ impl ConnectionManager {
                     )
                     .await;
 
-                    // Cancel the replay when the activity ends
+                    // Stop the replay when the recording ends
                     let cancellation_token = CancellationToken::new();
-                    settings.replay_start_time = Some(Utc::now());
-                    settings.cancel_token = Some(cancellation_token.clone());
+                    settings.running = Some(RunningSession::new(cancellation_token.clone()));
                     let duration = settings.replay_duration;
-                    let manager_tx = self.get_sender_channel();
-                    let response_tx = self.response_tx.clone();
-                    tokio::spawn(async move {
-                        tokio::select! {
-                            _ = tokio::time::sleep(duration) => {
-                                log::info!("Activity duration ended, stopping replay...");
-                                let (stop_tx, stop_rx) = oneshot::channel();
-                                let _ = manager_tx.send(ToolkitCommand::StopReplay { response: stop_tx }).await;
-                                let _ = stop_rx.await;
-                                let _ = response_tx.send(ToolkitResponse::ReplayCompleted).await;
-                            }
-                            _ = cancellation_token.cancelled() => {
-                                log::debug!("Replay cancelled manually, auto-stop task exiting.");
-                                let _ = response_tx.send(ToolkitResponse::ReplayCompleted).await;
-                            }
-                        }
-                    });
+                    self.spawn_auto_stop(duration, cancellation_token, SessionTarget::Replay);
                 }
 
                 let _ = response.send(());
             }
             ToolkitCommand::StopReplay { response } => {
-                if let Some(settings) = self.replay_settings.as_mut() {
-                    for board in settings.connections.values() {
-                        let command = { BoardAction::StopRecording };
-                        board.send(command).await?
-                    }
-                    settings.replay_start_time = None;
-                }
-
+                self.stop_run(SessionTarget::Replay).await?;
                 let _ = response.send(());
+            }
+
+            ToolkitCommand::AutoStop {
+                target,
+                cancellation_token,
+            } => {
+                // A timer can already be queued when a manual stop/restart happens.
+                if !cancellation_token.is_cancelled() {
+                    self.stop_run(target).await?;
+                }
             }
 
             // Calibration commands
@@ -878,11 +844,50 @@ impl ConnectionManager {
         Ok(())
     }
 
+    async fn stop_run(&mut self, target: SessionTarget) -> Result<()> {
+        let (running, connections, completed) = match target {
+            SessionTarget::Session => (
+                &mut self.session_settings.running,
+                &self.session_settings.connections,
+                ToolkitResponse::SessionCompleted,
+            ),
+            SessionTarget::Replay => {
+                let Some(settings) = self.replay_settings.as_mut() else {
+                    return Ok(());
+                };
+                (
+                    &mut settings.running,
+                    &settings.connections,
+                    ToolkitResponse::ReplayCompleted,
+                )
+            }
+        };
+        let was_running = running.is_some();
+        stop_running(running, connections).await?;
+        if was_running {
+            self.response_tx.send(completed).await?;
+        }
+        Ok(())
+    }
+
+    fn spawn_auto_stop(
+        &self,
+        duration: Duration,
+        cancellation_token: CancellationToken,
+        target: SessionTarget,
+    ) {
+        tokio::spawn(auto_stop(
+            duration,
+            cancellation_token,
+            target,
+            self.get_sender_channel(),
+        ));
+    }
+
     /// Name of a board as the user knows it, from the device cache or the MAC address.
     fn device_name(&self, mac_address: MacAddress) -> String {
         self.known_devices
-            .iter()
-            .find(|d| d.mac_address == mac_address)
+            .get(&mac_address)
             .map(|d| d.name.clone())
             .unwrap_or_else(|| utils::mac_address_human_name(mac_address))
     }
@@ -895,24 +900,18 @@ impl ConnectionManager {
             .session_settings
             .connections
             .keys()
-            .map(|&mac_address| {
-                match self
-                    .known_devices
-                    .iter()
-                    .find(|d| d.mac_address == mac_address)
-                {
-                    Some(device) => NintendoDevice {
-                        is_connected: true,
-                        ..device.clone()
-                    },
-                    None => NintendoDevice {
-                        id: utils::mac_address_human_name(mac_address),
-                        name: utils::mac_address_human_name(mac_address),
-                        mac_address,
-                        is_connected: true,
-                        last_connected: Some(Utc::now()),
-                    },
-                }
+            .map(|&mac_address| match self.known_devices.get(&mac_address) {
+                Some(device) => NintendoDevice {
+                    is_connected: true,
+                    ..device.clone()
+                },
+                None => NintendoDevice {
+                    id: utils::mac_address_human_name(mac_address),
+                    name: utils::mac_address_human_name(mac_address),
+                    mac_address,
+                    is_connected: true,
+                    last_connected: Some(Utc::now()),
+                },
             })
             .collect();
         boards.sort_by(|a, b| a.name.cmp(&b.name).then(a.mac_address.cmp(&b.mac_address)));
@@ -1011,7 +1010,10 @@ impl ConnectionManager {
         }
 
         DeviceFileSystem::update_file_system_boards(&nintendo_devices)?;
-        self.known_devices = nintendo_devices.clone();
+        self.known_devices = nintendo_devices
+            .iter()
+            .map(|device| (device.mac_address, device.clone()))
+            .collect();
 
         Ok(nintendo_devices)
     }
@@ -1050,25 +1052,20 @@ impl ConnectionManager {
             }
         };
         self.all_connections.insert(mac_address, board_connection);
-        match self
+        // Boards paired through a scan reach here before any system view has run. The
+        // placeholder is replaced by the next `boards_system_view`.
+        let device = self
             .known_devices
-            .iter_mut()
-            .find(|d| d.mac_address == mac_address)
-        {
-            Some(device) => {
-                device.is_connected = true;
-                device.last_connected = Some(Utc::now());
-            }
-            // Boards paired through a scan reach here before any system view has run. The
-            // placeholder is replaced by the next `boards_system_view`.
-            None => self.known_devices.push(NintendoDevice {
+            .entry(mac_address)
+            .or_insert_with(|| NintendoDevice {
                 id: utils::mac_address_human_name(mac_address),
                 name: NINTENDO_BOARD_ID.to_string(),
                 mac_address,
-                is_connected: true,
-                last_connected: Some(Utc::now()),
-            }),
-        }
+                is_connected: false,
+                last_connected: None,
+            });
+        device.is_connected = true;
+        device.last_connected = Some(Utc::now());
         self.response_tx
             .send(ToolkitResponse::NewDeviceFound(mac_address))
             .await?;
@@ -1150,30 +1147,21 @@ impl ConnectionManager {
         let mut positions = HashMap::new();
 
         for captured in readings {
-            let position = CalibrationPosition::from_str(&captured.position)
-                .ok_or_else(|| format!("Invalid calibration position: {}", captured.position))?;
-
-            // Convert timestamp from milliseconds to DateTime<Utc>
-            let timestamp = chrono::DateTime::from_timestamp_millis(captured.reading.timestamp)
-                .ok_or_else(|| format!("Invalid timestamp: {}", captured.reading.timestamp))?;
-
-            let sensor_readings = BalanceBoardCalibratedReading {
-                mac_address: captured.reading.mac_address,
-                timestamp,
-                top_left: captured.reading.top_left,
-                top_right: captured.reading.top_right,
-                bottom_left: captured.reading.bottom_left,
-                bottom_right: captured.reading.bottom_right,
-            };
-
             positions.insert(
-                position.clone(),
+                captured.position.clone(),
                 CalibrationPositionData {
-                    position,
+                    position: captured.position,
                     weight_kg,
-                    sensor_readings,
+                    sensor_readings: captured.reading.into(),
                 },
             );
+        }
+
+        if let Some(missing) = CalibrationPosition::ALL
+            .iter()
+            .find(|position| !positions.contains_key(position))
+        {
+            return Err(format!("Missing calibration position: {missing:?}"));
         }
 
         let calibration_data = DeviceCalibrationData {
@@ -1181,21 +1169,6 @@ impl ConnectionManager {
             calibration_weight_kg: weight_kg,
             positions,
         };
-
-        // Verify all 5 positions have been captured
-        let required_positions = vec![
-            CalibrationPosition::TopLeft,
-            CalibrationPosition::TopRight,
-            CalibrationPosition::BottomLeft,
-            CalibrationPosition::BottomRight,
-            CalibrationPosition::Center,
-        ];
-
-        for pos in &required_positions {
-            if !calibration_data.positions.contains_key(pos) {
-                return Err(format!("Missing calibration position: {:?}", pos));
-            }
-        }
 
         log::info!(
             "Calibration submitted for device {}: {} positions captured",
@@ -1303,21 +1276,67 @@ impl ConnectionManager {
 // either or both the raw and processed data. (The Data Processor can only receive raw data).
 // As such, we must keep track of who is interested in what, and in the end, create the correct channel
 // connections.
-#[derive(Clone, Debug)]
-enum ObserverType {
-    DataProcessor,
-    FrontendObserver,
-    FileWriter,
-    TcpWriter,
-    LslWriter,
-}
-
 #[derive(Debug)]
 struct SessionMapping {
     mac_address: MacAddress,
-    observers_raw: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
-    observers_processed: Vec<(ObserverType, Sender<BalanceBoardOutput>)>,
+    observers_raw: Vec<Sender<BalanceBoardOutput>>,
+    observers_processed: Vec<Sender<BalanceBoardOutput>>,
 }
+
+/// Subscribes `observer` to every board's raw and/or processed data.
+fn attach_observer(
+    observer_list: &mut [SessionMapping],
+    observer: &Sender<BalanceBoardOutput>,
+    observe_raw_data: bool,
+    observe_processed_data: bool,
+) {
+    for mapping in observer_list.iter_mut() {
+        if observe_raw_data {
+            mapping.observers_raw.push(observer.clone());
+        }
+        if observe_processed_data {
+            mapping.observers_processed.push(observer.clone());
+        }
+    }
+}
+
+/// Sends `StopRecording` to every board, which closes the recording channels and lets the
+/// pipeline behind them drain and finish.
+async fn stop_boards(connections: &HashMap<MacAddress, Sender<BoardAction>>) -> Result<()> {
+    for board in connections.values() {
+        board.send(BoardAction::StopRecording).await?;
+    }
+    Ok(())
+}
+
+async fn stop_running(
+    running: &mut Option<RunningSession>,
+    connections: &HashMap<MacAddress, Sender<BoardAction>>,
+) -> Result<()> {
+    // Cancel even if a disconnected board rejects the stop command.
+    running.take();
+    stop_boards(connections).await
+}
+
+/// Timers request a stop; only the manager stopping the current run emits completion.
+async fn auto_stop(
+    duration: Duration,
+    cancellation_token: CancellationToken,
+    target: SessionTarget,
+    manager_tx: Sender<ToolkitCommand>,
+) {
+    tokio::select! {
+        biased;
+        _ = cancellation_token.cancelled() => {}
+        _ = tokio::time::sleep(duration) => {
+            let _ = manager_tx.send(ToolkitCommand::AutoStop {
+                target,
+                cancellation_token,
+            }).await;
+        }
+    }
+}
+
 async fn start_session(
     frontend_channel: Sender<BalanceBoardOutput>,
     general_settings: &GeneralSettings,
@@ -1325,14 +1344,14 @@ async fn start_session(
     connections: &HashMap<MacAddress, Sender<BoardAction>>,
     device_names: HashMap<MacAddress, String>,
 ) {
-    let mut observer_list: Vec<SessionMapping> = vec![];
-    for &mac_address in connections.keys() {
-        observer_list.push(SessionMapping {
+    let mut observer_list: Vec<SessionMapping> = connections
+        .keys()
+        .map(|&mac_address| SessionMapping {
             mac_address,
             observers_raw: vec![],
             observers_processed: vec![],
         })
-    }
+        .collect();
 
     let processing_settings = ProcessingSettings {
         balance_board_x_size: general_settings.processing_settings.balance_board_x_size,
@@ -1344,141 +1363,84 @@ async fn start_session(
         baseline_weight: session_settings.user.weight,
     };
 
-    // 1 file writer
-    // This file writer then spawns multiple different tasks
-    let store_files = general_settings.store_raw_session || general_settings.store_processed_data;
-    if store_files {
-        let write_raw_files = general_settings.store_raw_session;
-        let write_processed_files = general_settings.store_processed_data;
-
+    // 1 file writer, which spawns one task per board
+    let write_raw_files = general_settings.store_raw_session;
+    let write_processed_files = general_settings.store_processed_data;
+    if write_raw_files || write_processed_files {
         let tx = file_writer::initialize(
             session_settings.clone(),
             device_names,
             write_raw_files,
             write_processed_files,
         );
-
-        for session_mapping in observer_list.iter_mut() {
-            add_observer_to_device_list(
-                session_mapping,
-                tx.clone(),
-                ObserverType::FileWriter,
-                write_raw_files,
-                write_processed_files,
-            );
-        }
+        attach_observer(
+            &mut observer_list,
+            &tx,
+            write_raw_files,
+            write_processed_files,
+        );
     }
 
-    // 1 LSL Writer
-    let should_use_lsl = session_settings.lsl_enabled
-        && (general_settings.lsl_send_raw_data || general_settings.lsl_send_processed_data);
-    if should_use_lsl {
-        let config = LslConnectionSettings {
+    // 1 LSL writer
+    let lsl_raw = general_settings.lsl_send_raw_data;
+    let lsl_processed = general_settings.lsl_send_processed_data;
+    if session_settings.lsl_enabled && (lsl_raw || lsl_processed) {
+        let tx = lsl_writer::initialize(LslConnectionSettings {
             stream_name: general_settings.lsl_stream_name.clone(),
             source_id: general_settings.lsl_source_id.clone(),
-        };
-        let tx = lsl_writer::initialize(config);
-        for session_mapping in observer_list.iter_mut() {
-            add_observer_to_device_list(
-                session_mapping,
-                tx.clone(),
-                ObserverType::LslWriter,
-                general_settings.lsl_send_raw_data,
-                general_settings.lsl_send_processed_data,
-            );
-        }
+        });
+        attach_observer(&mut observer_list, &tx, lsl_raw, lsl_processed);
     }
 
-    // 1 TCP Writer
-    let should_use_tcp = session_settings.tcp_enabled
-        && (general_settings.tcp_send_raw_data || general_settings.tcp_send_processed_data);
-    if should_use_tcp {
+    // 1 TCP writer
+    let tcp_raw = general_settings.tcp_send_raw_data;
+    let tcp_processed = general_settings.tcp_send_processed_data;
+    if session_settings.tcp_enabled && (tcp_raw || tcp_processed) {
         let tx = tcp_writer::initialize(
             general_settings.tcp_connection_string_raw.clone(),
             general_settings.tcp_connection_string_processed.clone(),
         );
-        for session_mapping in observer_list.iter_mut() {
-            add_observer_to_device_list(
-                session_mapping,
-                tx.clone(),
-                ObserverType::TcpWriter,
-                general_settings.tcp_send_raw_data,
-                general_settings.tcp_send_processed_data,
-            );
-        }
-    };
-
-    // 1 Frontend Observer
-    for session_mapping in observer_list.iter_mut() {
-        add_observer_to_device_list(
-            session_mapping,
-            frontend_channel.clone(),
-            ObserverType::FrontendObserver,
-            true,
-            true,
-        );
+        attach_observer(&mut observer_list, &tx, tcp_raw, tcp_processed);
     }
 
-    // N Data Processors (one per board)
-    for device_mapping in observer_list.iter_mut() {
-        let observers: Vec<Sender<BalanceBoardOutput>> = device_mapping
-            .observers_processed
-            .iter()
-            .map(|(_, sender)| sender.clone())
-            .collect();
+    // 1 frontend observer
+    attach_observer(&mut observer_list, &frontend_channel, true, true);
 
-        if !observers.is_empty() {
+    // N data processors (one per board), feeding the processed observers
+    for mapping in observer_list.iter_mut() {
+        if !mapping.observers_processed.is_empty() {
             let tx = data_processor::initialize(
-                observers,
-                device_mapping.mac_address,
+                mapping.observers_processed.clone(),
+                mapping.mac_address,
                 processing_settings.clone(),
             );
-            device_mapping
-                .observers_raw
-                .push((ObserverType::DataProcessor, tx));
+            mapping.observers_raw.push(tx);
         }
     }
 
-    for device_mapping in &observer_list {
-        let observers: Vec<Sender<BalanceBoardOutput>> = device_mapping
-            .observers_raw
-            .iter()
-            .map(|(_, sender)| sender.clone())
-            .collect();
-
-        if !observers.is_empty() {
-            let (raw_data_tx, raw_data_rx) = mpsc::channel(10);
-            let command = BoardAction::StartRecording(raw_data_tx);
-
-            let Some(sender) = connections.get(&device_mapping.mac_address) else {
-                continue;
-            };
-            if let Err(e) = sender.send(command).await {
-                log::error!(
-                    "Board {} is not accepting commands; it will not take part in this session: {e}",
-                    utils::mac_address_human_name(device_mapping.mac_address)
-                );
-                continue;
-            }
-            initialize_raw_data_forwarder(raw_data_rx, observers);
-        }
-    }
-
-    for device_mapping in observer_list {
+    for mapping in observer_list {
         log::debug!(
-            "Board {}: raw observers {:?}, processed observers {:?}",
-            utils::mac_address_human_name(device_mapping.mac_address),
-            device_mapping
-                .observers_raw
-                .iter()
-                .map(|(observer_type, _)| observer_type)
-                .collect::<Vec<_>>(),
-            device_mapping
-                .observers_processed
-                .iter()
-                .map(|(observer_type, _)| observer_type)
-                .collect::<Vec<_>>(),
+            "Board {}: {} raw observers, {} processed observers",
+            utils::mac_address_human_name(mapping.mac_address),
+            mapping.observers_raw.len(),
+            mapping.observers_processed.len(),
         );
+        if mapping.observers_raw.is_empty() {
+            continue;
+        }
+        let Some(board) = connections.get(&mapping.mac_address) else {
+            continue;
+        };
+
+        let (raw_data_tx, raw_data_rx) = mpsc::channel(10);
+        if let Err(e) = board.send(BoardAction::StartRecording(raw_data_tx)).await {
+            log::error!(
+                "Board {} is not accepting commands; it will not take part in this session: {e}",
+                utils::mac_address_human_name(mapping.mac_address)
+            );
+            continue;
+        }
+        initialize_raw_data_forwarder(raw_data_rx, mapping.observers_raw);
     }
 }
 
@@ -1489,46 +1451,15 @@ fn initialize_raw_data_forwarder(
     tokio::spawn(async move {
         let mut warned_about_drops = false;
         while let Some(data) = raw_data_rx.recv().await {
-            observers.retain(|observer| {
-                match observer.try_send(BalanceBoardOutput::Raw(data.clone())) {
-                    Ok(()) => true,
-                    // The consumer is momentarily behind. Skipping one sample for it is far
-                    // better than the alternative of evicting it for the rest of the session.
-                    Err(TrySendError::Full(_)) => {
-                        if !warned_about_drops {
-                            warned_about_drops = true;
-                            log::warn!(
-                                "A raw data consumer is falling behind; dropping samples for it."
-                            );
-                        }
-                        true
-                    }
-                    Err(TrySendError::Closed(_)) => false,
-                }
-            });
+            broadcast(
+                &mut observers,
+                BalanceBoardOutput::Raw(data),
+                &mut warned_about_drops,
+            );
 
             if observers.is_empty() {
                 break;
             }
         }
     });
-}
-
-fn add_observer_to_device_list(
-    session_mapping: &mut SessionMapping,
-    observer: Sender<BalanceBoardOutput>,
-    observer_type: ObserverType,
-    observe_raw_data: bool,
-    observe_processed_data: bool,
-) {
-    if observe_raw_data {
-        session_mapping
-            .observers_raw
-            .push((observer_type.clone(), observer.clone()));
-    }
-    if observe_processed_data {
-        session_mapping
-            .observers_processed
-            .push((observer_type.clone(), observer.clone()));
-    }
 }

@@ -80,6 +80,18 @@ The Android and Rust tests share tare/weight examples. Their session JSON schema
 remain different; the desktop recording fixture proves Rust record/replay
 compatibility only. Cross-platform recording import requires a separate migration.
 
+Session and replay configurations keep their active timestamp and timer in one
+`running: Option<RunningSession>`. Clearing or replacing it cancels that run's
+timer; queued auto-stop commands also check cancellation before stopping boards.
+The manager emits completion when it stops an active run; cancelled timers exit
+without emitting completion for a replacement run.
+These configurations are not cloneable because they own the running lifecycle.
+Activity progress reports zero-based loop and block indices, uses a single loop's
+duration to advance between loops, and has no ongoing state after the final loop.
+The core unit tests cover these rules alongside observer backpressure and sway
+calculations with uneven sample intervals. Serialized session settings retain
+their existing format.
+
 ## Android environment
 
 Install a JDK (JDK 25 is supported), Android SDK platform 36 and its build tools.
