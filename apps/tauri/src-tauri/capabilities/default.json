@@ -5,8 +5,6 @@
   "windows": ["main", "session-activity-pop-up"],
   "permissions": [
     "core:default",
-    "opener:default",
-    "fs:default",
     "dialog:default",
     "core:webview:allow-create-webview-window"
   ]

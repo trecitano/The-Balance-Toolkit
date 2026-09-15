@@ -2,7 +2,6 @@ use serde::Serialize;
 use std::path::PathBuf;
 use tauri::ipc::Channel;
 use tauri::{Emitter, Manager, State};
-use tauri_plugin_fs::FsExt;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::{mpsc, oneshot};
 use toolkit_core::actors::balance_board_actor::{
@@ -13,7 +12,6 @@ use toolkit_core::actors::state::activities::{Activity, TimelineBlock};
 use toolkit_core::actors::toolkit_service::{
     DeviceCalibrationData, ToolkitCommand, ToolkitResponse,
 };
-use toolkit_core::file_system;
 use toolkit_core::processing::data_processor::AmplitudeSpectrum;
 use toolkit_core::types::{
     FrontendCapturedReading, FrontendCoreSession, FrontendLastSessionInformation,
@@ -27,15 +25,8 @@ pub struct AppState {
 
 pub fn initialize(manager_tx: Sender<ToolkitCommand>, mut manager_rx: Receiver<ToolkitResponse>) {
     tauri::Builder::default()
-        .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            // allowed the given directory
-            let app_dir = file_system::app_dir();
-            let scope = app.fs_scope();
-            scope.allow_directory(app_dir, true)?;
-
             let app_handle = app.app_handle().clone();
             tokio::spawn(async move {
                 while let Some(new_event) = manager_rx.recv().await {
