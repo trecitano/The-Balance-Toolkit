@@ -161,29 +161,19 @@ impl BluetoothService {
         bluetooth_handler: &Arc<dyn BluetoothHandler>,
     ) -> Result<Vec<BluetoothPeripheral>> {
         let adapter_info = bluetooth_handler.get_all_bluetooth_adapters_info().await?;
-        BluetoothService::filter_nintendo_devices(Ok(adapter_info)).await
+        Ok(Self::filter_nintendo_devices(adapter_info))
     }
 
-    pub async fn filter_nintendo_devices(
-        bluetooth_adapter_info: Result<Vec<Result<BluetoothAdapterInfo>>>,
-    ) -> Result<Vec<BluetoothPeripheral>> {
-        let adapters: Vec<BluetoothAdapterInfo> = bluetooth_adapter_info?
+    pub fn filter_nintendo_devices(
+        bluetooth_adapter_info: Vec<Result<BluetoothAdapterInfo>>,
+    ) -> Vec<BluetoothPeripheral> {
+        bluetooth_adapter_info
             .into_iter()
-            .filter_map(|result| result.ok())
-            .collect();
-
-        let devices: Vec<BluetoothPeripheral> = adapters
-            .into_iter()
+            .filter_map(Result::ok)
             .flat_map(|adapter| adapter.devices.into_iter())
-            .filter_map(|result| result.ok())
-            .collect();
-
-        let nintendo_devices = devices
-            .into_iter()
+            .filter_map(Result::ok)
             .filter(|device| device.name == NINTENDO_BOARD_ID)
-            .collect();
-
-        Ok(nintendo_devices)
+            .collect()
     }
 }
 

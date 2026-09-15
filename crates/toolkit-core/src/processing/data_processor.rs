@@ -1,4 +1,5 @@
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardOutput};
+use crate::processing::observers::broadcast;
 use anyhow::Result;
 use chrono::{DateTime, TimeDelta, Utc};
 use rustfft::{FftPlanner, num_complex::Complex};
@@ -8,7 +9,6 @@ use std::sync::Arc;
 use std::thread;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::mpsc::error::TrySendError;
 
 use crate::types::MacAddress;
 
@@ -36,8 +36,8 @@ pub struct ProcessingSettings {
     pub baseline_weight: Option<f32>,
 }
 
-impl ProcessingSettings {
-    pub fn default() -> ProcessingSettings {
+impl Default for ProcessingSettings {
+    fn default() -> ProcessingSettings {
         ProcessingSettings {
             balance_board_x_size: 446.0,
             balance_board_y_size: 238.0,
@@ -207,22 +207,11 @@ fn data_process_loop(
             dpsi_metrics,
         });
 
-        observers.retain(|observer| {
-            match observer.try_send(BalanceBoardOutput::Processed(Arc::clone(&result))) {
-                Ok(()) => true,
-                // Momentarily behind: skip this window for that consumer rather than evicting it.
-                Err(TrySendError::Full(_)) => {
-                    if !warned_about_drops {
-                        warned_about_drops = true;
-                        log::warn!(
-                            "A processed data consumer is falling behind; dropping windows for it."
-                        );
-                    }
-                    true
-                }
-                Err(TrySendError::Closed(_)) => false,
-            }
-        });
+        broadcast(
+            &mut observers,
+            BalanceBoardOutput::Processed(result),
+            &mut warned_about_drops,
+        );
 
         if observers.is_empty() {
             break;
@@ -243,28 +232,18 @@ fn data_process_loop(
 }
 
 fn balance_board_reading_to_cop(data: BalanceBoardCalibratedReading) -> CenterOfPressurePoint {
-    let total_force = data.top_right + data.bottom_right + data.top_left + data.bottom_left;
-
-    if total_force.abs() < 0.1 {
-        return CenterOfPressurePoint {
-            timestamp: data.timestamp,
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-        };
-    }
-
-    let center_of_pressure_x =
-        ((data.top_right + data.bottom_right) - (data.top_left + data.bottom_left)) / total_force;
-
-    let center_of_pressure_y =
-        ((data.top_right + data.top_left) - (data.bottom_right + data.bottom_left)) / total_force;
-
+    let cop = data.calculate_cop();
+    let total_force = data.total_force();
     CenterOfPressurePoint {
         timestamp: data.timestamp,
-        x: center_of_pressure_x,
-        y: center_of_pressure_y,
-        z: total_force,
+        x: cop.x,
+        y: cop.y,
+        // Same empty-board threshold as `calculate_cop`.
+        z: if total_force.abs() < 0.1 {
+            0.0
+        } else {
+            total_force
+        },
     }
 }
 
@@ -580,45 +559,43 @@ fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<Sway
         return None;
     }
 
-    let mut velocities_x = Vec::new();
-    let mut velocities_y = Vec::new();
-    let mut velocities_total = Vec::new();
+    let mut velocity_x_sum = 0.0;
+    let mut velocity_y_sum = 0.0;
+    let mut velocity_sum = 0.0;
+    let mut valid_intervals = 0;
     let mut total_path_length = 0.0;
     let mut total_time = 0.0;
 
-    for i in 1..points.len() {
-        let dt = (points[i].timestamp - points[i - 1].timestamp).num_milliseconds() as f32 / 1000.0;
+    for pair in points.windows(2) {
+        let dt = (pair[1].timestamp - pair[0].timestamp).num_milliseconds() as f32 / 1000.0;
 
         if dt > 0.0 {
-            let dx = points[i].x - points[i - 1].x;
-            let dy = points[i].y - points[i - 1].y;
+            let dx = pair[1].x - pair[0].x;
+            let dy = pair[1].y - pair[0].y;
+            let distance = (dx * dx + dy * dy).sqrt();
 
             let v_x = dx / dt;
             let v_y = dy / dt;
-            let v_total = (dx * dx + dy * dy).sqrt() / dt;
+            let v_total = distance / dt;
 
-            velocities_x.push(v_x.abs());
-            velocities_y.push(v_y.abs());
-            velocities_total.push(v_total);
+            velocity_x_sum += v_x.abs();
+            velocity_y_sum += v_y.abs();
+            velocity_sum += v_total;
+            valid_intervals += 1;
 
-            total_path_length += (dx * dx + dy * dy).sqrt();
+            total_path_length += distance;
             total_time += dt;
         }
     }
 
-    if velocities_total.is_empty() {
+    if valid_intervals == 0 {
         return None;
     }
 
-    let v_cop_x = velocities_x.iter().sum::<f32>() / velocities_x.len() as f32;
-    let v_cop_y = velocities_y.iter().sum::<f32>() / velocities_y.len() as f32;
-    let mean_velocity = velocities_total.iter().sum::<f32>() / velocities_total.len() as f32;
-
-    let velocity_moment = if total_time > 0.0 {
-        total_path_length / total_time
-    } else {
-        0.0
-    };
+    let v_cop_x = velocity_x_sum / valid_intervals as f32;
+    let v_cop_y = velocity_y_sum / valid_intervals as f32;
+    let mean_velocity = velocity_sum / valid_intervals as f32;
+    let velocity_moment = total_path_length / total_time;
 
     Some(SwayMetrics {
         v_cop_x,

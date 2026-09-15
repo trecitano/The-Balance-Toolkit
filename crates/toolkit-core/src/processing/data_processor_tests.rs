@@ -41,6 +41,23 @@ fn known_motion_has_velocity_in_normalized_units_per_second() {
 }
 
 #[test]
+fn uneven_intervals_preserve_average_velocity_and_velocity_moment() {
+    let points = [
+        point(0, 0.0, 0.0),
+        point(1000, 1.0, 0.0),
+        point(1000, 1.0, 0.0), // A duplicate timestamp contributes no interval.
+        point(3000, 1.0, 2.0),
+        point(3500, 0.0, 2.0),
+    ];
+    let sway = calculate_basic_sway_metrics(&points).unwrap();
+    close(sway.v_cop_x, 1.0);
+    close(sway.v_cop_y, 1.0 / 3.0);
+    close(sway.mean_velocity, 4.0 / 3.0);
+    close(sway.total_path_length, 4.0);
+    close(sway.velocity_moment, 4.0 / 3.5);
+}
+
+#[test]
 fn interpolation_preserves_linear_motion_and_timestamps() {
     let points = [point(0, -0.5, 0.0), point(1000, 0.5, 1.0)];
     for interpolate in [
