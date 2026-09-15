@@ -32,6 +32,33 @@ frontend executables. It does not install packages, start Bluetooth or change
 group membership. `mise run setup -- --check` is the broader desktop/hardware setup
 check and can fail on machines that can still run this verification profile.
 
+## Running and building the apps
+
+After setup, run these tasks from the repository root:
+
+| Command | Result |
+|---|---|
+| `mise run dev:desktop` | Launch the Tauri desktop app in development mode |
+| `mise run dev:cli` | Launch the interactive terminal dashboard; press `?` for controls and `q` to quit |
+| `mise run build:desktop` | Build the release desktop executable in `target/release/` and platform packages in `target/release/bundle/` |
+| `mise run build:cli` | Build the release CLI at `target/release/tbt` (`tbt.exe` on Windows) |
+
+Desktop tasks run in `apps/tauri/` automatically and require the frontend
+dependencies and platform GUI prerequisites from [INSTALL.md](../INSTALL.md).
+The desktop build also builds the frontend and packages for the current platform.
+
+Extra arguments are forwarded to the underlying command. For example:
+
+```bash
+mise run dev:cli -- devices list
+mise run dev:cli -- --help
+mise run build:desktop -- --no-bundle
+```
+
+Run the release CLI directly with `./target/release/tbt`. Launch the release
+desktop executable or install a generated package. For Android, use
+[Android Studio](../apps/android/README.md#run-the-app-in-android-studio).
+
 ## Commands and success criteria
 
 | Command | What passes |
@@ -125,7 +152,7 @@ for device setup and app operation.
 - Rust format failures: run `mise exec -- cargo fmt --all`, then review the diff.
 - Build blocked by another Cargo invocation: wait, or set `CARGO_TARGET_DIR` to a separate build directory.
 - Missing Linux native library: run `mise run doctor` and install the development package named in the diagnostic.
-- To inspect backend logs, use `TBT_LOG=debug mise exec -- bun run tauri dev` from `apps/tauri/`; `bun run dev` starts only Vite.
+- To inspect backend logs, use `TBT_LOG=debug mise run dev:desktop` from the repository root; `bun run dev` in `apps/tauri/` starts only Vite.
 
 Once dependencies are cached, Cargo tests can also run with `--offline`.
 The first setup and dependency installation need network access.

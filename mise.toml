@@ -17,6 +17,25 @@ run_windows = "powershell -NoProfile -ExecutionPolicy Bypass -File setup/setup.p
 description = "Check the pinned tools and dependencies for verification without hardware"
 run = "bun scripts/verify/doctor.mjs"
 
+[tasks."dev:desktop"]
+description = "Launch the desktop app in development mode"
+dir = "apps/tauri"
+run = "bun run tauri dev"
+
+[tasks."dev:cli"]
+description = "Launch the terminal dashboard or run a CLI command"
+raw = true
+run = "cargo run --locked -p toolkit-cli --"
+
+[tasks."build:desktop"]
+description = "Build the release desktop app and platform packages"
+dir = "apps/tauri"
+run = "bun run tauri build"
+
+[tasks."build:cli"]
+description = "Build the release CLI in target/release/tbt"
+run = "cargo build --locked --release -p toolkit-cli"
+
 [tasks.check]
 description = "Check Rust formatting/compilation and lint/build the desktop frontend"
 depends = ["check:rust", "check:frontend"]
