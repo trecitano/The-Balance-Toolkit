@@ -6,7 +6,7 @@ import { SessionPanelConfiguration, SelectedBoard } from "@/types.ts";
 import { sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
-import { listen } from "@tauri-apps/api/event";
+import { events } from "@/bindings";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 import { BaseOption } from "@/components/SelectPrimitive.tsx";
 import { SESSION_QUERY_KEY, SessionQuery, SessionQueryData } from "@/pages/session/session/sessionQuery.ts";
@@ -19,7 +19,7 @@ export default function SessionPage() {
   // and removes it on unmount.
   useEffect(() => {
     const refetch = () => queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
-    const unlistenPromises = [listen<void>("session_started", refetch), listen<void>("session_completed", refetch)];
+    const unlistenPromises = [events.sessionStarted.listen(refetch), events.sessionCompleted.listen(refetch)];
     return () => {
       unlistenPromises.forEach((promise) => promise.then((unlisten) => unlisten()));
     };

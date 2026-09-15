@@ -1,99 +1,80 @@
-import { Channel, invoke } from "@tauri-apps/api/core";
-import {
+// Grouped façade over the generated command bindings. Argument and return types are
+// inferred from `@/bindings`, so a backend signature change fails `tsc` here.
+import { Channel } from "@tauri-apps/api/core";
+import { commands as backend } from "@/bindings";
+import type {
   Activity,
   BalanceBoardEvent,
   CalibrationReading,
-  Device,
+  CapturedCalibrationReading,
   GeneralSettings,
-  ReplayConfiguration,
   SessionPanelConfiguration,
-  SessionInformation,
-  UserPageInformation,
   UserType,
-  LastSessionInformation,
-  TimelineBlock,
-  SessionActivityState,
 } from "@/types.ts";
 
 export const commands = {
   settings: {
-    getSettings: async () => invoke<GeneralSettings>("settings_get_settings"),
-    setSettings: async (settings: GeneralSettings) => invoke<void>("settings_set_settings", { settings: settings }),
+    getSettings: () => backend.settingsGetSettings(),
+    setSettings: (settings: GeneralSettings) => backend.settingsSetSettings(settings),
   },
 
   users: {
-    userPageInformation: async () => invoke<UserPageInformation>("user_page_information"),
-    selectUser: async (userId: number) => invoke<void>("user_select_user", { userId: userId }),
-    createUser: async () => invoke<UserType>("user_create"),
-    updateUser: async (user: UserType) => invoke<void>("user_update", { user: user }),
-    deleteUser: async (userId: number) => invoke<void>("user_delete", { userId: userId }),
-    startMeasureWeight: async (channel: Channel<number>, macAddress: number) =>
-      invoke<void>("user_measure_weight", { channel: channel, macAddress: macAddress }),
+    userPageInformation: () => backend.userPageInformation(),
+    selectUser: (userId: number) => backend.userSelectUser(userId),
+    createUser: () => backend.userCreate(),
+    updateUser: (user: UserType) => backend.userUpdate(user),
+    deleteUser: (userId: number) => backend.userDelete(userId),
+    // The generator types a bare `f64` channel payload as nullable (JSON has no NaN); the
+    // backend only ever sends finite weights.
+    startMeasureWeight: (channel: Channel<number>, macAddress: number) =>
+      backend.userMeasureWeight(channel as Channel<number | null>, macAddress),
   },
 
   devices: {
-    fetchDevices: async () => invoke<Device[]>("devices_fetch_all_devices"),
-    scanDevices: async () => invoke<Device[]>("devices_scan_without_timeout"),
-    cancelScanDevices: async () => invoke<void>("devices_cancel_scan"),
-    isScanning: async () => invoke<boolean>("devices_is_scanning"),
-    selectDevice: async (macAddress: number) => invoke<void>("devices_select_device", { macAddress: macAddress }),
-    unselectDevice: async (macAddress: number) => invoke<void>("devices_unselect_device", { macAddress: macAddress }),
-    selectedDevices: async () => invoke<number[]>("devices_get_selected_devices"),
-    removeDevice: async (macAddress: number) => invoke<void>("devices_remove_device", { macAddress: macAddress }),
-    disconnectDevice: async (macAddress: number) =>
-      invoke<void>("devices_disconnect_device", { macAddress: macAddress }),
-    updateDeviceName: async (macAddress: number, deviceName: string) => {
-      return invoke<void>("devices_update_device_name", {
-        macAddress: macAddress,
-        deviceName: deviceName,
-      });
-    },
-    tareDevice: async (macAddress: number) => invoke<void>("devices_tare_device", { macAddress: macAddress }),
-    identifyDevice: async (macAddress: number) => invoke<void>("devices_identify_device", { macAddress: macAddress }),
-    startCalibrationStream: async (calibrationChannel: Channel<CalibrationReading>, macAddress: number) =>
-      invoke<void>("devices_start_calibration_stream", { calibrationChannel, macAddress }),
-    stopCalibrationStream: async (macAddress: number) =>
-      invoke<void>("devices_stop_calibration_stream", { macAddress }),
-    submitCalibration: async (
-      macAddress: number,
-      weightKg: number,
-      readings: { position: string; reading: CalibrationReading }[],
-    ) => invoke<void>("devices_submit_calibration", { macAddress, weightKg, readings }),
+    fetchDevices: () => backend.devicesFetchAllDevices(),
+    scanDevices: () => backend.devicesScanWithoutTimeout(),
+    cancelScanDevices: () => backend.devicesCancelScan(),
+    isScanning: () => backend.devicesIsScanning(),
+    selectDevice: (macAddress: number) => backend.devicesSelectDevice(macAddress),
+    unselectDevice: (macAddress: number) => backend.devicesUnselectDevice(macAddress),
+    selectedDevices: () => backend.devicesGetSelectedDevices(),
+    removeDevice: (macAddress: number) => backend.devicesRemoveDevice(macAddress),
+    updateDeviceName: (macAddress: number, deviceName: string) =>
+      backend.devicesUpdateDeviceName(macAddress, deviceName),
+    tareDevice: (macAddress: number) => backend.devicesTareDevice(macAddress),
+    identifyDevice: (macAddress: number) => backend.devicesIdentifyDevice(macAddress),
+    startCalibrationStream: (calibrationChannel: Channel<CalibrationReading>, macAddress: number) =>
+      backend.devicesStartCalibrationStream(macAddress, calibrationChannel),
+    stopCalibrationStream: (macAddress: number) => backend.devicesStopCalibrationStream(macAddress),
+    submitCalibration: (macAddress: number, weightKg: number, readings: CapturedCalibrationReading[]) =>
+      backend.devicesSubmitCalibration(macAddress, weightKg, readings),
   },
 
   session: {
-    sessionInfo: async () => invoke<SessionInformation>("session_information"),
-    updateSession: async (configuration: SessionPanelConfiguration) =>
-      invoke<void>("session_update_session_configuration", { configuration: configuration }),
-
-    startSession: async (sessionChannel: Channel<BalanceBoardEvent>) => {
-      return invoke<void>("session_start_session", { sessionChannel: sessionChannel });
-    },
-
-    tareDevices: async () => invoke<void>("session_tare_devices"),
-    stopSession: async () => invoke<void>("session_stop_session"),
-    getActivityState: async () => invoke<SessionActivityState | null>("session_activity_state"),
+    sessionInfo: () => backend.sessionInformation(),
+    updateSession: (configuration: SessionPanelConfiguration) =>
+      backend.sessionUpdateSessionConfiguration(configuration),
+    startSession: (sessionChannel: Channel<BalanceBoardEvent>) => backend.sessionStartSession(sessionChannel),
+    tareDevices: () => backend.sessionTareDevices(),
+    stopSession: () => backend.sessionStopSession(),
+    getActivityState: () => backend.sessionActivityState(),
   },
 
   replay: {
-    loadLastSessionDetails: async () => invoke<LastSessionInformation>("replay_load_last_session_info"),
-    replayInfo: async () => invoke<ReplayConfiguration>("replay_information"),
-    loadReplayFile: async (filePath: string) => invoke<void>("replay_load_file", { filePath: filePath }),
-    updateReplay: async (configuration: SessionPanelConfiguration) =>
-      invoke<void>("replay_update", { configuration: configuration }),
-    startReplay: async (sessionChannel: Channel<BalanceBoardEvent>) => {
-      return invoke<Device[]>("replay_start_replay", { sessionChannel: sessionChannel });
-    },
-    stopReplay: async () => invoke<void>("replay_stop_replay"),
-    clearReplay: async () => invoke<void>("replay_clear_replay"),
+    loadLastSessionDetails: () => backend.replayLoadLastSessionInfo(),
+    replayInfo: () => backend.replayInformation(),
+    loadReplayFile: (filePath: string) => backend.replayLoadFile(filePath),
+    updateReplay: (configuration: SessionPanelConfiguration) => backend.replayUpdate(configuration),
+    startReplay: (sessionChannel: Channel<BalanceBoardEvent>) => backend.replayStartReplay(sessionChannel),
+    stopReplay: () => backend.replayStopReplay(),
+    clearReplay: () => backend.replayClearReplay(),
   },
 
   activity: {
-    getAvailableTimeBlocks: async () => invoke<TimelineBlock[]>("activity_get_available_time_blocks"),
-    getActivities: async () => invoke<Activity[]>("activity_get_activities"),
-    getActivity: async (activityId: string) => invoke<Activity>("activity_get_activity", { activityId: activityId }),
-    updateActivity: async (activity: Activity) => invoke<void>("activity_update_activity", { activity: activity }),
-    resetActivity: async (activityId: string) =>
-      invoke<Activity>("activity_reset_activity_to_default", { activityId: activityId }),
+    getAvailableTimeBlocks: () => backend.activityGetAvailableTimeBlocks(),
+    getActivities: () => backend.activityGetActivities(),
+    getActivity: (activityId: string) => backend.activityGetActivity(activityId),
+    updateActivity: (activity: Activity) => backend.activityUpdateActivity(activity),
+    resetActivity: (activityId: string) => backend.activityResetActivityToDefault(activityId),
   },
 };

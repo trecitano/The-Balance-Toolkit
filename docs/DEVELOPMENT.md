@@ -67,7 +67,8 @@ desktop executable or install a generated package. For Android, use
 | `mise run test` | Core sensor, deterministic mock, processing and recording-contract tests; CLI unit tests |
 | `mise run smoke` | Isolated CLI recording/replay, fixture playback and nonzero failures |
 | `mise run verify` | `doctor`, `check`, `test`, then `smoke`, stopping on failure |
-| `mise run check:desktop` | Tauri shell compilation with platform GUI development libraries installed |
+| `mise run check:desktop` | Tauri shell compilation with platform GUI development libraries installed, and the committed TypeScript bindings match the Rust commands |
+| `mise run gen:bindings` | Regenerates `apps/tauri/src/bindings.ts` from the Tauri bridge (also happens on every debug desktop launch) |
 | `mise run test:android` | Android JVM tests, including the shared sensor fixtures; no emulator needed |
 | `mise run check:android` | Android lint, Detekt and debug APK build |
 

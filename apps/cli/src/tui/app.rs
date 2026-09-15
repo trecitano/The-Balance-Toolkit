@@ -13,8 +13,7 @@ use toolkit_core::actors::state::activities::Activity;
 use toolkit_core::file_system::ExistingSessionFileSystem;
 use toolkit_core::processing::data_processor::InterpolationSetting;
 use toolkit_core::types::{
-    FrontendCoreSession, GeneralSettings, MacAddress, NintendoDevice, SelectOption,
-    SessionActivityState,
+    GeneralSettings, MacAddress, NintendoDevice, SessionActivityState, SessionSettings, UserSummary,
 };
 use toolkit_core::utils::mac_address_human_name;
 use toolkit_core::{ToolkitCommand, ToolkitResponse};
@@ -301,8 +300,8 @@ pub struct App {
     pub scanning: bool,
     last_board_refresh: Instant,
 
-    pub core: FrontendCoreSession,
-    pub users: Vec<SelectOption<usize>>,
+    pub core: SessionSettings,
+    pub users: Vec<UserSummary>,
     pub activities: Vec<Activity>,
     pub duration_secs: Option<u64>,
     pub tare_first: bool,
@@ -382,8 +381,8 @@ impl App {
     pub fn user_label(&self) -> String {
         self.users
             .iter()
-            .find(|u| u.value == self.core.selected_user)
-            .map(|u| u.label.clone())
+            .find(|u| u.id == self.core.selected_user)
+            .map(|u| u.name.clone())
             .unwrap_or_else(|| format!("#{}", self.core.selected_user))
     }
 
@@ -606,7 +605,7 @@ impl App {
             }
             (Action::PickUser, Input::Choice(index)) => {
                 if let Some(user) = self.users.get(index) {
-                    self.core.selected_user = user.value;
+                    self.core.selected_user = user.id;
                 }
             }
             (Action::PickActivity, Input::Choice(index)) => {
@@ -811,11 +810,11 @@ impl App {
                 let cursor = self
                     .users
                     .iter()
-                    .position(|u| u.value == self.core.selected_user)
+                    .position(|u| u.id == self.core.selected_user)
                     .unwrap_or(0);
                 self.modal = Some(Modal::Picker {
                     title: "User".into(),
-                    items: self.users.iter().map(|u| u.label.clone()).collect(),
+                    items: self.users.iter().map(|u| u.name.clone()).collect(),
                     cursor,
                     action: Action::PickUser,
                 });

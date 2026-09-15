@@ -6,7 +6,7 @@ import { RawBalanceBoardEvent } from "@/types.ts";
 import { Tooltip } from "@/components/Tooltip.tsx";
 
 type DataSelector<T> = (state: SessionState) => BoardBuffer<T> | undefined;
-type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: number[] };
+type DataMapper<T> = (buf: BoardBuffer<T>) => { t: number[]; y: (number | null)[] };
 
 /** Seconds of history the rolling plots show. */
 export const PLOT_WINDOW_SEC = 10;
@@ -324,10 +324,11 @@ export function forEachFrameInWindow<T extends { timestamp: number }>(
   }
 }
 
-export function makeDataMapper<T extends { timestamp: number }>(selector: (data: T) => number) {
+// A `null` value is a metric the backend could not compute for that frame; uPlot draws it as a gap.
+export function makeDataMapper<T extends { timestamp: number }>(selector: (data: T) => number | null) {
   return (buf: BoardBuffer<T>) => {
     const t: number[] = [];
-    const y: number[] = [];
+    const y: (number | null)[] = [];
 
     // Epoch seconds go straight onto the x scale: its range is relative to the newest point
     // and the axis labels are hidden, so no per-frame re-basing is needed.

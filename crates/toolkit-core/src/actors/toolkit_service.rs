@@ -12,14 +12,13 @@ use crate::processing::lsl_writer::LslConnectionSettings;
 use crate::processing::observers::broadcast;
 use crate::processing::{data_processor, file_writer, lsl_writer, tcp_writer};
 use crate::types::{
-    FrontendCapturedReading, FrontendCoreSession, FrontendLastSessionInformation,
-    FrontendReplayConfiguration, FrontendSessionInformation, GeneralSettings, MacAddress,
-    NintendoDevice, SelectOption, SelectedBoard, SessionActivityState, User, UserPageInformation,
+    CapturedCalibrationReading, GeneralSettings, LastSessionInformation, MacAddress,
+    NintendoDevice, ReplayInformation, SelectedBoard, SessionActivityState, SessionInformation,
+    SessionSettings, User, UserSummary,
 };
 use crate::{NINTENDO_BOARD_ID, utils};
 use anyhow::{Result, anyhow};
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -58,8 +57,7 @@ struct ConnectRetry {
 }
 
 /// Calibration position identifier
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CalibrationPosition {
     TopLeft,
     TopRight,
@@ -80,7 +78,7 @@ impl CalibrationPosition {
 }
 
 /// Data captured at a single calibration position
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct CalibrationPositionData {
     pub position: CalibrationPosition,
     pub weight_kg: f64,
@@ -88,7 +86,7 @@ pub struct CalibrationPositionData {
 }
 
 /// Complete calibration data for a device
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct DeviceCalibrationData {
     pub mac_address: MacAddress,
     pub calibration_weight_kg: f64,
@@ -117,8 +115,8 @@ pub enum ToolkitCommand {
     SelectUser {
         user_id: usize,
     },
-    UserPageInformation {
-        response: oneshot::Sender<UserPageInformation>,
+    GetUsers {
+        response: oneshot::Sender<Vec<Arc<User>>>,
     },
     CreateUser {
         response: oneshot::Sender<Arc<User>>,
@@ -179,13 +177,13 @@ pub enum ToolkitCommand {
 
     // Session
     LastSessionInformation {
-        response: oneshot::Sender<Option<FrontendLastSessionInformation>>,
+        response: oneshot::Sender<Option<LastSessionInformation>>,
     },
     SessionInformation {
-        response: oneshot::Sender<FrontendSessionInformation>,
+        response: oneshot::Sender<SessionInformation>,
     },
     UpdateSessionInformation {
-        configuration: FrontendCoreSession,
+        configuration: SessionSettings,
         response: oneshot::Sender<()>,
     },
     StartSession {
@@ -204,7 +202,7 @@ pub enum ToolkitCommand {
 
     // Replay session
     ReplayInformation {
-        response: oneshot::Sender<Option<FrontendReplayConfiguration>>,
+        response: oneshot::Sender<Option<ReplayInformation>>,
     },
     LoadReplayFile {
         file_path: PathBuf,
@@ -214,7 +212,7 @@ pub enum ToolkitCommand {
         response: oneshot::Sender<()>,
     },
     UpdateReplayInformation {
-        configuration: FrontendCoreSession,
+        configuration: SessionSettings,
         response: oneshot::Sender<()>,
     },
     StartReplay {
@@ -251,7 +249,7 @@ pub enum ToolkitCommand {
     SubmitCalibration {
         mac_address: MacAddress,
         weight_kg: f64,
-        readings: Vec<FrontendCapturedReading>,
+        readings: Vec<CapturedCalibrationReading>,
         response: oneshot::Sender<Result<DeviceCalibrationData, String>>,
     },
 }
@@ -340,7 +338,7 @@ pub struct CoreSessionConfiguration {
 impl CoreSessionConfiguration {
     /// Copies the pipeline settings a frontend may change. The user and the activity are
     /// resolved by the caller, since they need the user and activity state.
-    pub fn apply(&mut self, configuration: &FrontendCoreSession) {
+    pub fn apply(&mut self, configuration: &SessionSettings) {
         self.lsl_enabled = configuration.lsl_enabled;
         self.tcp_enabled = configuration.tcp_enabled;
         self.output_directory = configuration.output_directory.clone();
@@ -526,18 +524,8 @@ impl ConnectionManager {
             ToolkitCommand::SelectUser { user_id } => {
                 self.session_settings.core.user = self.user_state.get_user(user_id)?;
             }
-            ToolkitCommand::UserPageInformation { response } => {
-                let information = UserPageInformation {
-                    users: self
-                        .user_state
-                        .get_users()
-                        .iter()
-                        .map(|user| user.as_ref().clone())
-                        .collect(),
-                    selected_user_id: self.session_settings.core.user.id,
-                    session_devices: self.session_boards(),
-                };
-                let _ = response.send(information);
+            ToolkitCommand::GetUsers { response } => {
+                let _ = response.send(self.user_state.get_users());
             }
             ToolkitCommand::CreateUser { response } => {
                 let new_user = self.user_state.create_user()?;
@@ -608,7 +596,7 @@ impl ConnectionManager {
                     &self.general_settings.store_files_default_directory,
                 ) {
                     Some((file_path, session)) => {
-                        let result = FrontendLastSessionInformation {
+                        let result = LastSessionInformation {
                             user: session.user,
                             session_stats: session.session_stats,
                             file_location: file_path,
@@ -633,15 +621,12 @@ impl ConnectionManager {
                     })
                     .collect();
 
-                let session_information = FrontendSessionInformation {
+                let session_information = SessionInformation {
                     available_users: self
                         .user_state
                         .get_users()
                         .iter()
-                        .map(|user| SelectOption {
-                            label: user.name.clone(),
-                            value: user.id,
-                        })
+                        .map(|user| UserSummary::from(user.as_ref()))
                         .collect(),
                     selected_boards,
                     core: (&self.session_settings.core).into(),
@@ -1260,7 +1245,7 @@ impl ConnectionManager {
         &mut self,
         mac_address: MacAddress,
         weight_kg: f64,
-        readings: Vec<FrontendCapturedReading>,
+        readings: Vec<CapturedCalibrationReading>,
     ) -> Result<DeviceCalibrationData, String> {
         // Stop any active calibration stream first
         self.stop_calibration_stream(mac_address).await;
@@ -1274,7 +1259,7 @@ impl ConnectionManager {
                 CalibrationPositionData {
                     position: captured.position,
                     weight_kg,
-                    sensor_readings: captured.reading.into(),
+                    sensor_readings: captured.reading,
                 },
             );
         }

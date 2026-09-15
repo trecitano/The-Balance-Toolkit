@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listen } from "@tauri-apps/api/event";
+import { events } from "@/bindings";
 import bluetoothDisconnectedIcon from "@/assets/bluetooth-disconnected-icon.svg";
 import DeviceRow from "./DeviceRow";
 import { Device } from "@/types";
@@ -19,15 +19,19 @@ export default function Devices() {
   const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Boards found while scanning. One listener per mount, removed on unmount; previously a new
-  // listener was added on every scan and never removed.
+  // Boards found while scanning, and boards that stopped answering. One listener each per
+  // mount, removed on unmount.
   useEffect(() => {
-    const unlistenPromise = listen<Device>("new_board", () => {
-      setFoundDevicesCount((prev) => prev + 1);
-      queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
-    });
+    const refetch = () => queryClient.invalidateQueries({ queryKey: DEVICES_QUERY_KEY });
+    const unlistenPromises = [
+      events.newBoard.listen(() => {
+        setFoundDevicesCount((prev) => prev + 1);
+        refetch();
+      }),
+      events.boardDisconnected.listen(refetch),
+    ];
     return () => {
-      unlistenPromise.then((unlisten) => unlisten());
+      unlistenPromises.forEach((promise) => promise.then((unlisten) => unlisten()));
     };
   }, [queryClient]);
   const [showIdentifyModal, setShowIdentifyModal] = useState<Device | null>(null);
@@ -118,7 +122,9 @@ export default function Devices() {
     const connected = devices.filter((d) => d.isConnected);
     const disconnected = devices.filter((d) => !d.isConnected);
 
-    connected.sort((a, b) => new Date(a.lastConnected).getTime() - new Date(b.lastConnected).getTime());
+    // A board that has never been seen disconnected has no timestamp; sort it first.
+    const lastConnected = (d: Device) => (d.lastConnected ? new Date(d.lastConnected).getTime() : 0);
+    connected.sort((a, b) => lastConnected(a) - lastConnected(b));
     disconnected.sort((a, b) => a.name.localeCompare(b.name));
 
     return [...connected, ...disconnected];

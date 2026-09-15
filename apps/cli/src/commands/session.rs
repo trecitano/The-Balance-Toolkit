@@ -10,7 +10,7 @@ use toolkit_core::file_system::ExistingSessionFileSystem;
 use toolkit_core::processing::data_processor::InterpolationSetting;
 use toolkit_core::processing::file_writer::SessionConfigurationFileFormat;
 use toolkit_core::types::{
-    FrontendCoreSession, FrontendSessionInformation, GeneralSettings, MacAddress, NintendoDevice,
+    GeneralSettings, MacAddress, NintendoDevice, SessionInformation, SessionSettings,
 };
 use toolkit_core::utils::mac_address_human_name;
 use toolkit_core::{ToolkitCommand, ToolkitResponse};
@@ -84,7 +84,7 @@ pub struct StreamArgs {
 }
 
 impl StreamArgs {
-    pub fn apply(&self, core: &mut FrontendCoreSession, default_output: &Path) {
+    pub fn apply(&self, core: &mut SessionSettings, default_output: &Path) {
         core.tcp_enabled = self.tcp;
         core.lsl_enabled = self.lsl;
         if let Some(output) = &self.output {
@@ -115,7 +115,7 @@ pub struct ProcessingArgs {
 }
 
 impl ProcessingArgs {
-    pub fn apply(&self, core: &mut FrontendCoreSession) {
+    pub fn apply(&self, core: &mut SessionSettings) {
         if let Some(value) = self.window_size_ms {
             core.window_size_ms = value;
         }
@@ -216,8 +216,8 @@ async fn record(toolkit: &mut Toolkit, args: RunArgs) -> Result<()> {
     let user = info
         .available_users
         .iter()
-        .find(|u| u.value == info.core.selected_user)
-        .map(|u| u.label.clone())
+        .find(|u| u.id == info.core.selected_user)
+        .map(|u| u.name.clone())
         .unwrap_or_else(|| format!("#{}", info.core.selected_user));
     Plan {
         boards: &names,
@@ -274,7 +274,7 @@ async fn record(toolkit: &mut Toolkit, args: RunArgs) -> Result<()> {
     Ok(())
 }
 
-async fn session_information(toolkit: &Toolkit) -> Result<FrontendSessionInformation> {
+async fn session_information(toolkit: &Toolkit) -> Result<SessionInformation> {
     toolkit
         .request(|response| ToolkitCommand::SessionInformation { response })
         .await
@@ -297,8 +297,8 @@ async fn show(toolkit: &Toolkit, json: bool) -> Result<()> {
     let user = info
         .available_users
         .iter()
-        .find(|u| u.value == info.core.selected_user)
-        .map(|u| u.label.clone())
+        .find(|u| u.id == info.core.selected_user)
+        .map(|u| u.name.clone())
         .unwrap_or_else(|| format!("#{}", info.core.selected_user));
     let boards: HashMap<MacAddress, String> = info
         .selected_boards
@@ -362,7 +362,7 @@ pub struct Plan<'a> {
     pub user: &'a str,
     pub activity: Option<&'a Activity>,
     pub duration: Option<Duration>,
-    pub core: &'a FrontendCoreSession,
+    pub core: &'a SessionSettings,
     pub settings: &'a GeneralSettings,
 }
 

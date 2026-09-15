@@ -260,10 +260,10 @@ function draw(
 
   // Polygons under the trail/dot
   if (poly) {
-    if (showHull && poly.convexHullPolygon?.length >= 3) {
+    if (showHull && poly.convexHullPolygon && poly.convexHullPolygon.length >= 3) {
       drawPolygon(ctx, w, h, poly.convexHullPolygon, RED, RED_FILL, 2);
     }
-    if (showCE && poly.confidenceEllipsePolygon?.length >= 3) {
+    if (showCE && poly.confidenceEllipsePolygon && poly.confidenceEllipsePolygon.length >= 3) {
       drawPolygon(ctx, w, h, poly.confidenceEllipsePolygon, BLUE, BLUE_FILL, 2);
     }
   }

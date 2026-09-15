@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBlockImage } from "@/utils/activityImages.ts";
-import { listen } from "@tauri-apps/api/event";
+import { events } from "@/bindings";
 import { commands } from "@/utils/requests.ts";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import "@/App.css";
@@ -98,20 +98,15 @@ export default function Popup() {
   }, [localBlockIndex, sessionActivityState?.activity?.timelineBlocks]);
 
   useEffect(() => {
-    const sessionStartedListener = listen<void>("session_started", (_) => {
-      queryClient.invalidateQueries({ queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY });
-    });
-    const sessionActivityChangedListener = listen<void>("session_activity_changed", (_) => {
-      queryClient.invalidateQueries({ queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY });
-    });
-    const sessionCompletedListener = listen<void>("session_completed", (_) => {
-      queryClient.invalidateQueries({ queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY });
-    });
+    const refetch = () => queryClient.invalidateQueries({ queryKey: SESSION_ACTIVITY_POP_UP_QUERY_KEY });
+    const unlistenPromises = [
+      events.sessionStarted.listen(refetch),
+      events.sessionActivityChanged.listen(refetch),
+      events.sessionCompleted.listen(refetch),
+    ];
 
     return () => {
-      sessionStartedListener.then((unlisten) => unlisten());
-      sessionActivityChangedListener.then((unlisten) => unlisten());
-      sessionCompletedListener.then((unlisten) => unlisten());
+      unlistenPromises.forEach((promise) => promise.then((unlisten) => unlisten()));
     };
   }, []);
 

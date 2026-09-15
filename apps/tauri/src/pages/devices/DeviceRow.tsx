@@ -35,7 +35,7 @@ export default function DeviceRow({
 }: DeviceRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const formatLastConnected = (dateString: string | undefined) => {
+  const formatLastConnected = (dateString: string | null | undefined) => {
     if (!dateString) return "N/A";
     const now = new Date();
     const date = new Date(dateString);
