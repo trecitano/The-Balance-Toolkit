@@ -219,11 +219,15 @@ impl From<&ReplayConfiguration> for ReplayInformation {
 pub struct NintendoDevice {
     pub id: String,
     pub name: String,
+    // Devices files written before the camelCase switch use snake_case keys; accept both so
+    // an existing install keeps its boards. The next save rewrites the file in camelCase.
+    #[serde(alias = "mac_address")]
     pub mac_address: MacAddress,
     /// Live state. Printed by the CLI, but never read back from the devices file: a board is
     /// disconnected until the manager says otherwise.
     #[serde(skip_deserializing)]
     pub is_connected: bool,
+    #[serde(alias = "last_connected")]
     pub last_connected: Option<DateTime<Utc>>,
 }
 
