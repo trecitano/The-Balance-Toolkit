@@ -1,58 +1,39 @@
-// Types shared with the Rust backend come from the generated bindings; this module keeps
-// the names the UI has always used and the handful of shapes that only exist in the UI.
-import type {
-  Activity,
-  AmplitudeSpectrum,
-  CalibrationPosition,
-  FrontendBalanceBoardEvent,
-  FrontendCalibrationReading,
-  CapturedCalibrationReading,
-  SessionSettings,
-  LastSessionInformation,
-  ReplayInformation,
-  SessionInformation,
-  GeneralSettings,
-  InterpolationSetting,
-  NintendoDevice,
-  OngoingSessionActivityState,
-  ProcessingSettings,
-  SelectedBoard,
-  SessionActivityState,
-  SessionStats,
-  TimelineBlock,
-  User,
-  UserPageInformation,
-} from "@/bindings";
+// Types shared with the Rust backend come from the generated bindings; this module re-exports
+// the ones the UI uses under their generated names and adds the handful of UI-only shapes.
+import type { AmplitudeSpectrum, FrontendBalanceBoardEvent, InterpolationSetting } from "@/bindings";
 
 export type {
   Activity,
   AmplitudeSpectrum,
   CalibrationPosition,
   CapturedCalibrationReading,
+  FrontendBalanceBoardEvent,
+  FrontendCalibrationReading,
   GeneralSettings,
+  InterpolationSetting,
   LastSessionInformation,
-  SessionInformation,
+  NintendoDevice,
   OngoingSessionActivityState,
   ProcessingSettings,
+  ReplayInformation,
   SelectedBoard,
   SessionActivityState,
+  SessionInformation,
+  SessionSettings,
   SessionStats,
   TimelineBlock,
+  User,
   UserPageInformation,
-};
+} from "@/bindings";
 
-export type UserType = User;
-export type Device = NintendoDevice;
-export type SessionPanelConfiguration = SessionSettings;
-export type ReplayConfiguration = ReplayInformation;
-export type CalibrationReading = FrontendCalibrationReading;
-
-export type BalanceBoardEvent = FrontendBalanceBoardEvent;
 export type RawBalanceBoardEvent = Extract<FrontendBalanceBoardEvent, { event: "raw" }>;
 export type ProcessedBoardEvent = Extract<FrontendBalanceBoardEvent, { event: "processed" }>;
 
-export type InterpolationOption = InterpolationSetting;
-export const interpolationOptions = ["Linear", "Cubic", "Polynomial"] as const satisfies readonly InterpolationOption[];
+export const interpolationOptions = [
+  "Linear",
+  "Cubic",
+  "Polynomial",
+] as const satisfies readonly InterpolationSetting[];
 
 // Per-frame shapes kept by the session store, derived from `ProcessedBoardEvent`.
 export type ProcessedSessionData = {

@@ -7,9 +7,10 @@ interface ScanningModalProps {
   foundDevicesCount: number;
 }
 
+/** Shown while a scan runs; closing it cancels the scan. */
 export default function ScanningModal({ open, onClose, foundDevicesCount }: ScanningModalProps) {
   return (
-    <Modal className="min-w-sm" open={open} onClose={onClose}>
+    <Modal label="Scan for devices" className="min-w-sm" open={open} onClose={onClose}>
       <div className="flex flex-col gap-6">
         <div>
           <span className="spinner" />
@@ -19,7 +20,7 @@ export default function ScanningModal({ open, onClose, foundDevicesCount }: Scan
         <p className="text-lg font-medium">{`Found ${foundDevicesCount} devices so far...`}</p>
 
         <ToolkitButton type="button" color="blue" onClick={onClose}>
-          OK
+          Stop scanning
         </ToolkitButton>
       </div>
     </Modal>

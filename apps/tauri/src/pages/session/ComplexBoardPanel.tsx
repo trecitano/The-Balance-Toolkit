@@ -1,17 +1,8 @@
-import {
-  BLUE_COLOUR,
-  copXPlotSettings,
-  copYPlotSettings,
-  makeDataMapper,
-  RED_COLOUR,
-  standardPlot,
-  UPlot,
-} from "./UPlot.tsx";
+import { UPlot } from "./UPlot.tsx";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
 import { convertNumberToMacAddress } from "@/utils/macAddress.ts";
-import { SessionState, SessionStore } from "@/store/sessionDataStore.tsx";
-import { ProcessedSessionData } from "@/types.ts";
+import { SessionStore } from "@/store/sessionDataStore.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import { MultiMetricPlot } from "@/pages/session/MultiMetricDsiPlot.tsx";
 import { FFTAmplitudePlot } from "@/pages/session/FFTAmplitudePlot.tsx";
@@ -26,7 +17,7 @@ export function ComplexBoardPanel({
   store: SessionStore;
 }) {
   return (
-    <ToolkitContainer className={"flex h-full min-h-0 flex-col gap-3"}>
+    <ToolkitContainer className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex gap-2 text-sm">
         <p className="font-semibold">{boardName}</p>
         <p>{convertNumberToMacAddress(macAddress)}</p>
@@ -38,46 +29,31 @@ export function ComplexBoardPanel({
         </div>
 
         <div className="col-span-3 bg-gray-100 p-2">
-          <UPlot title="copX" tooltipId={"session_cop_x"} {...copXPlotSettings(macAddress)} store={store} />
+          <UPlot title="copX" tooltipId="session_cop_x" kind="copX" macAddress={macAddress} store={store} />
         </div>
         <div className="col-span-3 bg-gray-100 p-2">
-          <UPlot title="copY" tooltipId={"session_cop_y"} {...copYPlotSettings(macAddress)} store={store} />
+          <UPlot title="copY" tooltipId="session_cop_y" kind="copY" macAddress={macAddress} store={store} />
         </div>
 
         <div className="col-span-3 bg-gray-100 p-2">
           <FFTAmplitudePlot
             title="FFT Amplitude Spectrum (Normalized)"
-            tooltipId={"session_amplitude_spectrum"}
+            tooltipId="session_amplitude_spectrum"
             macAddress={macAddress}
             store={store}
           />
         </div>
 
-        {/* Combined DPSI metrics plot - spans 4 columns */}
         <div className="col-span-3 bg-gray-100 p-2">
-          <MultiMetricPlot title="DPSI Metrics" tooltipText={"TODO"} macAddress={macAddress} store={store} />
+          <MultiMetricPlot title="DPSI Metrics" tooltipId="session_dpsi" macAddress={macAddress} store={store} />
         </div>
 
         <div className="col-span-3 bg-gray-100 p-2">
-          <UPlot
-            title="vCopX"
-            tooltipId={"session_mean_velocity_x"}
-            uPlotOptions={standardPlot(BLUE_COLOUR)}
-            dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
-            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopX)}
-            store={store}
-          />
+          <UPlot title="vCopX" tooltipId="session_mean_velocity_x" kind="vCopX" macAddress={macAddress} store={store} />
         </div>
 
         <div className="col-span-3 bg-gray-100 p-2">
-          <UPlot
-            title="vCopY"
-            tooltipId={"session_mean_velocity_y"}
-            uPlotOptions={standardPlot(RED_COLOUR)}
-            dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
-            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopY)}
-            store={store}
-          />
+          <UPlot title="vCopY" tooltipId="session_mean_velocity_y" kind="vCopY" macAddress={macAddress} store={store} />
         </div>
       </div>
     </ToolkitContainer>

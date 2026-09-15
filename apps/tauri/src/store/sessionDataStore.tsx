@@ -1,8 +1,7 @@
 import { create } from "zustand";
 import {
-  BalanceBoardEvent,
+  FrontendBalanceBoardEvent,
   RawBalanceBoardEvent,
-  ProcessedBoardEvent,
   ProcessedSessionData,
   ProcessedSingleFrameSessionData,
 } from "@/types";
@@ -23,9 +22,7 @@ export type SessionState = {
 
   actions: {
     /** Apply a batch of events in a single store update, so subscribers fire once per batch. */
-    pushFrames: (frames: BalanceBoardEvent[]) => void;
-    pushRawFrame: (f: RawBalanceBoardEvent) => void;
-    pushProcessedFrame: (f: ProcessedBoardEvent) => void;
+    pushFrames: (frames: FrontendBalanceBoardEvent[]) => void;
     clear: () => void;
   };
 };
@@ -52,7 +49,7 @@ function createSessionDataStore() {
       // Events arrive at ~100 Hz per board, but the display only changes 60 times a second.
       // Applying a whole animation frame's worth of events in one `set` means every plot
       // subscriber fires (and redraws) once per frame instead of once per event.
-      const pushFrames = (frames: BalanceBoardEvent[]) => {
+      const pushFrames = (frames: FrontendBalanceBoardEvent[]) => {
         if (frames.length === 0) return;
 
         set((state) => {
@@ -115,8 +112,6 @@ function createSessionDataStore() {
 
         actions: {
           pushFrames,
-          pushRawFrame: (f) => pushFrames([f]),
-          pushProcessedFrame: (f) => pushFrames([f]),
           clear: () => set({ rawSessionData: {}, processedSessionData: {}, processedSingleFrameSessionData: {} }),
         },
       };
@@ -128,7 +123,7 @@ export const useSessionDataStore = createSessionDataStore();
 export const useReplayDataStore = createSessionDataStore();
 
 // Selectors
-export const useSessionActions = () => useSessionDataStore.getState().actions;
-export const useReplayActions = () => useReplayDataStore.getState().actions;
+export const getSessionActions = () => useSessionDataStore.getState().actions;
+export const getReplayActions = () => useReplayDataStore.getState().actions;
 
 export type SessionStore = ReturnType<typeof createSessionDataStore>;

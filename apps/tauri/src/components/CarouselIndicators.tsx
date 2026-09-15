@@ -16,32 +16,25 @@ export default function CarouselIndicators({
   className,
 }: Props) {
   return (
-    <div className={clsx("flex w-full list-none justify-center gap-3", className)} role="list">
+    <div className={clsx("flex w-full justify-center gap-3", className)} role="group" aria-label="Choose an item">
       {entries.map((entry, index) => {
         const distance = Math.abs(index - selectedIndex);
-
-        let dotClass = `size-3 rounded-full bg-[var(--border)] opacity-50 transition ${onSelect && "cursor-pointer"}`;
-
-        if (index === selectedIndex) {
-          dotClass += " bg-[var(--primary)] opacity-100 scale-125";
-        } else if (distance <= nearbyThreshold) {
-          dotClass += " bg-[var(--secondary-dark)] opacity-80";
-        }
-
+        const selected = index === selectedIndex;
         return (
-          <div
+          <button
+            type="button"
             key={entry}
-            className={dotClass}
+            className={clsx(
+              "size-3 rounded-full bg-(--border) opacity-50 transition",
+              onSelect && "cursor-pointer",
+              selected && "scale-125 bg-(--primary) opacity-100",
+              !selected && distance <= nearbyThreshold && "bg-(--secondary-dark) opacity-80",
+            )}
             onClick={() => onSelect?.(index)}
             title={entry}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (onSelect && (e.key === "Enter" || e.key === " ")) {
-                e.preventDefault();
-                onSelect(index);
-              }
-            }}
+            aria-label={entry}
+            aria-pressed={selected}
+            disabled={!onSelect}
           />
         );
       })}

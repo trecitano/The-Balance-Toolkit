@@ -1,169 +1,102 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { ReplayQuery, useSaveConfiguration } from "@/queries/toolkit";
+import { useBoardDisplay } from "@/hooks/useBoardDisplay";
+import { useDraftFields } from "@/hooks/useDraftFields";
+import { useAction } from "@/hooks/useAction";
+import { QueryStatus } from "@/components/QueryStatus";
 import { ReplayPanel } from "./ReplayPanel.tsx";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { commands } from "@/utils/requests.ts";
-import { ReplayConfiguration, SelectedBoard, SessionPanelConfiguration } from "@/types.ts";
 import { replayChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useReplayDataStore } from "@/store/sessionDataStore.tsx";
-import { events } from "@/bindings";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import { BaseOption } from "@/components/SelectPrimitive.tsx";
-
-const REPLAY_QUERY_KEY = ["replay_key"];
-type ReplayQueryData = { replayInformation: ReplayConfiguration };
-export const ReplayQuery = {
-  queryKey: REPLAY_QUERY_KEY,
-  queryFn: async () => {
-    const replayInformation = await commands.replay.replayInfo();
-
-    return { replayInformation };
-  },
-};
+import { DraftNotice } from "@/pages/session/ProcessingFields.tsx";
 
 export default function ReplayPage() {
-  const { data } = useQuery(ReplayQuery);
-  const replayInformation = data?.replayInformation ?? null;
-
+  const [panelRevision, setPanelRevision] = useState(0);
+  const drafts = useDraftFields();
+  const query = useQuery(ReplayQuery);
+  const replayInformation = query.data ?? null;
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const refetch = () => queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
-    const unlistenPromise = events.replayCompleted.listen(refetch);
-    return () => {
-      unlistenPromise.then((unlisten) => unlisten());
-    };
-  }, [queryClient]);
-
-  const updateReplay = useMutation({
-    mutationFn: (newState: SessionPanelConfiguration) => commands.replay.updateReplay(newState),
-    onMutate: async (next) => {
-      await queryClient.cancelQueries({ queryKey: REPLAY_QUERY_KEY });
-      const previous = queryClient.getQueryData<ReplayQueryData>(REPLAY_QUERY_KEY);
-
-      queryClient.setQueryData(REPLAY_QUERY_KEY, (old: ReplayQueryData | undefined) => {
-        if (!old?.replayInformation) return old;
-        return {
-          ...old,
-          replayInformation: {
-            ...old.replayInformation,
-            core: { ...old.replayInformation.core, ...next },
-          },
-        };
-      });
-
-      return { previous };
-    },
-    onError: (_error, _next, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(REPLAY_QUERY_KEY, context.previous);
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
-    },
+  const updateReplay = useSaveConfiguration("replay");
+  // Loading or clearing a file replaces the whole configuration, so the panel is remounted
+  // and any numeric drafts are dropped.
+  const fileAction = useAction(async () => {
+    setPanelRevision((previous) => previous + 1);
+    drafts.clearDrafts();
+    await queryClient.invalidateQueries(ReplayQuery);
   });
-
-  const updateFileLoad = useMutation({
-    mutationFn: (filePath: string) => commands.replay.loadReplayFile(filePath),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
-    },
-  });
-
-  const { mutate: resetReplay } = useMutation({
-    mutationFn: () => commands.replay.clearReplay(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
-    },
-  });
-
   const selectedBoards = replayInformation?.devices ?? [];
-  const [boardDisplaySelected, setBoardDisplaySelected] = useState<number[]>([]);
-  const lastAvailableBoardsRef = useRef<string>("");
-
-  // Check if available boards changed and update display selection accordingly
-  const availableBoardMacs = selectedBoards.map((b) => b.macAddress);
-  const availableBoardsKey = availableBoardMacs.join(",");
-
-  if (availableBoardsKey !== lastAvailableBoardsRef.current) {
-    lastAvailableBoardsRef.current = availableBoardsKey;
-    setBoardDisplaySelected(availableBoardMacs);
-  }
-
-  const boardDisplayOptions: BaseOption<number>[] = selectedBoards.map((board) => ({
-    value: board.macAddress,
-    label: board.name,
-  }));
-  const selectedDisplayBoards = boardDisplaySelected
-    .map((mac) => selectedBoards.find((b) => b.macAddress === mac))
-    .filter((b): b is SelectedBoard => Boolean(b));
+  const display = useBoardDisplay(selectedBoards);
+  const busy = updateReplay.isPending || fileAction.isPending;
   const chosenActivity = replayInformation?.activity;
-  const canStartSession = (replayInformation?.devices?.length ?? 0) > 0;
   const hasOngoingSession = replayInformation?.hasOngoingSession ?? false;
-  const devices = replayInformation?.devices ?? [];
   const replayIsSelected = !!replayInformation?.filePath;
 
-  const pickSessionFile = async (defaultPath?: string | null) => {
-    const selected = await open({
-      directory: false,
-      defaultPath: defaultPath ?? "",
-      multiple: false,
-      filters: [
-        {
-          name: "Session file",
-          extensions: ["settings.json"],
-        },
-      ],
-      title: "Select the Session file",
+  const pickSessionFile = (defaultPath?: string | null) =>
+    fileAction.run(async () => {
+      const selected = await open({
+        directory: false,
+        defaultPath: defaultPath ?? "",
+        multiple: false,
+        filters: [{ name: "Session file", extensions: ["settings.json"] }],
+        title: "Select the Session file",
+      });
+      if (typeof selected === "string") await commands.replay.loadReplayFile(selected);
     });
-    if (typeof selected === "string") {
-      updateFileLoad.mutate(selected);
-    }
-  };
 
+  if (query.isPending || (!query.data && query.error))
+    return <QueryStatus pending={query.isPending} error={query.error} onRetry={() => void query.refetch()} />;
   return (
     <div className="flex h-full flex-col gap-5">
       <ReplayPanel
+        onDraftChange={drafts.onDraftChange}
+        key={`${replayInformation?.filePath ?? "empty"}:${panelRevision}`}
         config={replayInformation}
-        boardDisplaySelected={boardDisplaySelected}
-        onBoardDisplayChange={setBoardDisplaySelected}
-        boardDisplayOptions={boardDisplayOptions}
-        onChange={(newState) => updateReplay.mutate(newState.core)}
+        {...display}
+        saving={busy}
+        onChange={(newState) => updateReplay.mutateAsync(newState.core)}
         onPickSessionFile={pickSessionFile}
-        onResetFile={resetReplay}
+        onResetFile={() => fileAction.run(commands.replay.clearReplay)}
       />
 
+      <QueryStatus error={updateReplay.error || fileAction.error || query.error} />
+      {busy && <p role="status">Saving replay configuration…</p>}
+      <DraftNotice show={drafts.hasDrafts} />
       <TimelinePanel
         activity={chosenActivity}
-        playButtonClass={
-          "border-l-15 border-r-0 border-t-10 border-b-10 border-l-[#e50012] border-t-transparent border-b-transparent"
-        }
+        playButtonClass="border-l-15 border-r-0 border-t-10 border-b-10 border-l-[#e50012] border-t-transparent border-b-transparent"
         hasOngoingSession={hasOngoingSession}
         placeholderMessage={replayIsSelected ? "No Activity" : ""}
-        canStart={canStartSession}
+        canStart={selectedBoards.length > 0 && !busy && !drafts.hasDrafts}
         onStart={async () => {
           await replayChannelManager.start();
-          await queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
+          await queryClient.invalidateQueries(ReplayQuery);
         }}
         onStop={async () => {
           await replayChannelManager.stop();
-          await queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
+          await queryClient.invalidateQueries(ReplayQuery);
         }}
       />
 
-      {devices.length === 0 ? (
+      {selectedBoards.length === 0 ? (
         <div className="flex h-full flex-col items-center justify-center py-12 text-center text-gray-500">
           <p className="text-3xl font-medium">No session file selected</p>
           <p className="mb-4 text-xl text-gray-400">Select a session file to replay it!</p>
-          <ToolkitButton color="grey" onClick={() => pickSessionFile(replayInformation?.core?.outputDirectory)}>
+          <ToolkitButton
+            type="button"
+            color="grey"
+            disabled={busy}
+            onClick={() => pickSessionFile(replayInformation?.core?.outputDirectory)}
+          >
             Select Replay
           </ToolkitButton>
         </div>
       ) : (
-        <BoardGrid selectedBoards={selectedBoards} displayBoards={selectedDisplayBoards} store={useReplayDataStore} />
+        <BoardGrid selectedBoards={selectedBoards} displayBoards={display.displayBoards} store={useReplayDataStore} />
       )}
     </div>
   );

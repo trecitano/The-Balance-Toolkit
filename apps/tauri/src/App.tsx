@@ -1,11 +1,13 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Outlet } from "react-router-dom";
 import Navigation from "@/components/navigation/Navigation";
 import Home from "@/pages/home/Home.tsx";
-import { DevicesQuery } from "@/pages/devices/devicesQuery.ts";
 import "./App.css";
 import { QueryClient, QueryClientProvider, usePrefetchQuery } from "@tanstack/react-query";
-import { SettingsQuery } from "@/components/modals/SettingsModal.tsx";
+import { SettingsQuery, DevicesQuery } from "@/queries/toolkit";
+import { ToolkitEvents } from "@/services/ToolkitEvents";
+import { PageErrorBoundary } from "@/components/PageErrorBoundary";
+import { QueryStatus } from "@/components/QueryStatus";
 
 // Each page is its own chunk, so the plotting code (uPlot and the canvas overlays) only loads
 // when a session or replay page is opened.
@@ -17,45 +19,49 @@ const Activities = lazy(() => import("@/pages/activities/Activities"));
 const ActivityPopup = lazy(() => import("./pages/session-activity-pop-up/activityPopup.tsx"));
 
 function DefaultLayout() {
-  const navigate = useNavigate();
   const location = useLocation();
-
-  const handleViewChange = (view: string) => {
-    const targetPath = `/${view === "home" ? "" : view}`;
-    if (location.pathname !== targetPath) {
-      navigate(targetPath);
-    }
-  };
-
   usePrefetchQuery(SettingsQuery);
   usePrefetchQuery(DevicesQuery);
 
   return (
     <div className="flex flex-row">
-      <Navigation activeView={location.pathname.substring(1) || "home"} onViewChange={handleViewChange} />
+      <Navigation />
       <main className="h-screen min-h-120 min-w-330 grow overflow-auto bg-(--bg-primary) px-20 py-8">
-        <Suspense fallback={null}>
-          <Outlet />
-        </Suspense>
+        <PageErrorBoundary key={location.pathname}>
+          <Suspense fallback={<QueryStatus pending />}>
+            <Outlet />
+          </Suspense>
+        </PageErrorBoundary>
       </main>
     </div>
   );
 }
 
 function BareLayout() {
+  const location = useLocation();
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-(--bg-primary)">
-      <Suspense fallback={null}>
-        <Outlet />
-      </Suspense>
+      <PageErrorBoundary key={location.pathname}>
+        <Suspense fallback={<QueryStatus pending />}>
+          <Outlet />
+        </Suspense>
+      </PageErrorBoundary>
     </div>
   );
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    // Every query is a local IPC command: a failure is a bug or a dead board, not a flaky
+    // network, so retrying only delays the error UI by several seconds.
+    queries: { retry: false },
+  },
+});
+
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ToolkitEvents />
       <BrowserRouter>
         <Routes>
           {/* Routes with Navigation */}

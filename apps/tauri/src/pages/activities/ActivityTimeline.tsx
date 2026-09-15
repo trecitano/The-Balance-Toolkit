@@ -13,15 +13,6 @@ interface ActivityTimelineProps {
 
 const MIN_DURATION = 1;
 
-function recalcStartTimes(arr: TimelineBlock[]): TimelineBlock[] {
-  let start = 0;
-  return arr.map((b) => {
-    const out = { ...b, start };
-    start += b.duration;
-    return out;
-  });
-}
-
 type DragState = {
   type: "drag";
   blockIdx: number;
@@ -60,7 +51,8 @@ export default function ActivityTimeline({ blocks, editable = false, onChange, o
       const xSeconds = (x / rect.width) * totalDuration;
 
       const boundaries: number[] = [0];
-      blocks.forEach((b) => boundaries.push(boundaries[boundaries.length - 1] + b.duration));
+      let end = 0;
+      for (const b of blocks) boundaries.push((end += b.duration));
 
       let idx = 0;
       let best = Infinity;
@@ -78,9 +70,9 @@ export default function ActivityTimeline({ blocks, editable = false, onChange, o
 
   // Mouse Interactions - only active when editable
   useEffect(() => {
-    if (!interaction || !editable || !onChange || !onBlockSelect) return;
+    if (!interaction || !editable || !onChange) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       if (interaction.type === "drag") {
         const dropIdx = computeDropIndex(e.clientX);
         setInteraction({
@@ -99,34 +91,36 @@ export default function ActivityTimeline({ blocks, editable = false, onChange, o
         newDuration = Math.max(MIN_DURATION, newDuration);
 
         const updated = blocks.map((b, idx) => (idx === blockIdx ? { ...b, duration: newDuration } : b));
-        onChange(recalcStartTimes(updated));
+        onChange(updated);
       }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       if (interaction.type === "drag") {
         const { blockIdx, dropIdx } = interaction;
         if (dropIdx != null && blockIdx !== dropIdx && blockIdx + 1 !== dropIdx) {
           const copy = [...blocks];
           const [removed] = copy.splice(blockIdx, 1);
-          const insertIdx = blockIdx < dropIdx ? dropIdx - 1 : dropIdx;
-          copy.splice(insertIdx, 0, removed);
-          onChange(recalcStartTimes(copy));
+          if (removed) {
+            const insertIdx = blockIdx < dropIdx ? dropIdx - 1 : dropIdx;
+            copy.splice(insertIdx, 0, removed);
+            onChange(copy);
+          }
         }
       }
       setInteraction(null);
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
 
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [interaction, blocks, onChange, computeDropIndex, editable, onBlockSelect]);
+  }, [interaction, blocks, onChange, computeDropIndex, editable]);
 
-  const handleBlockMouseDown = (idx: number, e: React.MouseEvent) => {
+  const handleBlockPointerDown = (idx: number, e: React.PointerEvent) => {
     if (!editable || interaction || (e.target as HTMLElement).classList.contains("resize-handle")) {
       return;
     }
@@ -142,7 +136,7 @@ export default function ActivityTimeline({ blocks, editable = false, onChange, o
     });
   };
 
-  const handleResizeStart = (blockIdx: number, direction: "left" | "right", e: React.MouseEvent) => {
+  const handleResizeStart = (blockIdx: number, direction: "left" | "right", e: React.PointerEvent) => {
     if (!editable) return;
     const block = blocks[blockIdx];
     if (!block) return;
@@ -157,27 +151,27 @@ export default function ActivityTimeline({ blocks, editable = false, onChange, o
   };
 
   const handleDeleteBlock = (blockIdx: number, e: React.MouseEvent) => {
-    if (!editable || !onChange || !onBlockSelect) return;
+    if (!editable || !onChange) return;
 
     e.stopPropagation();
-    const remaining = blocks.filter((_, idx) => idx !== blockIdx);
-    onChange(recalcStartTimes(remaining));
+    onChange(blocks.filter((_, idx) => idx !== blockIdx));
   };
 
   const handleDurationEdit = (idx: number) => {
-    if (!editable || !onChange || !onBlockSelect) return;
+    const block = blocks[idx];
+    if (!editable || !onChange || !block) return;
 
     setEditingDurationIdx(idx);
-    setDurationInputValue(blocks[idx].duration.toString());
+    setDurationInputValue(block.duration.toString());
   };
 
   const handleDurationSave = (idx: number) => {
-    if (!editable || !onChange || !onBlockSelect) return;
+    if (!editable || !onChange) return;
 
     const val = parseInt(durationInputValue, 10);
     if (!isNaN(val) && val >= MIN_DURATION) {
       const updated = blocks.map((b, i) => (i === idx ? { ...b, duration: val } : b));
-      onChange(recalcStartTimes(updated));
+      onChange(updated);
     }
     setEditingDurationIdx(null);
   };
@@ -219,11 +213,9 @@ export default function ActivityTimeline({ blocks, editable = false, onChange, o
                 editable && "transition-colors hover:bg-gray-50",
               )}
               data-block-id={idx}
-              onMouseDown={(e) => handleBlockMouseDown(idx, e)}
+              onPointerDown={(e) => handleBlockPointerDown(idx, e)}
               onClick={() => onBlockSelect?.(block)}
-              onDoubleClick={(_) => {
-                handleDurationEdit(idx);
-              }}
+              onDoubleClick={() => handleDurationEdit(idx)}
               style={{
                 flex: block.duration,
                 cursor: getBlockCursor(idx),
@@ -248,11 +240,11 @@ export default function ActivityTimeline({ blocks, editable = false, onChange, o
                 <>
                   <div
                     className="resize-handle left absolute top-0 left-0 h-full w-1 hover:bg-blue-400 hover:opacity-50"
-                    onMouseDown={(e) => handleResizeStart(idx, "left", e)}
+                    onPointerDown={(e) => handleResizeStart(idx, "left", e)}
                   />
                   <div
                     className="resize-handle right absolute top-0 right-0 h-full w-1 hover:bg-blue-400 hover:opacity-50"
-                    onMouseDown={(e) => handleResizeStart(idx, "right", e)}
+                    onPointerDown={(e) => handleResizeStart(idx, "right", e)}
                   />
                 </>
               )}

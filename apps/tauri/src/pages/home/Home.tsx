@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { ReactNode, useRef, useState } from "react";
 import logoLettering from "@/assets/logo/logo-lettering-white.svg";
 import fileIcon from "@/assets/file-icon.svg";
 import userIcon from "@/assets/user-icon.svg";
@@ -6,8 +6,10 @@ import calendarIcon from "@/assets/calendar-icon.svg";
 import activitiesIconUrl from "@/assets/activities-icon.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { useQuery } from "@tanstack/react-query";
-import { commands } from "@/utils/requests.ts";
-import { Activity, Device, LastSessionInformation } from "@/types.ts";
+import { ActivitiesQuery, DevicesQuery, LastSessionQuery } from "@/queries/toolkit";
+import { QueryStatus } from "@/components/QueryStatus";
+import { Modal } from "@/components/Modal";
+import { Activity, NintendoDevice, LastSessionInformation } from "@/types.ts";
 import { getBlockImage } from "@/utils/activityImages.ts";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
@@ -19,9 +21,7 @@ import rippleIcon from "@/assets/ripple-icon.svg";
 import underConstructionHelp from "@/assets/under-construction-1-grey.svg";
 import underConstructionDoc from "@/assets/under-construction-2-grey.svg";
 import underConstructionResources from "@/assets/under-construction-3-grey.svg";
-import { activitiesIcon, devicesIcon, replayIcon } from "@/components/navigation/Navigation.tsx";
-
-const HOME_QUERY_KEY = ["home"];
+import { activitiesIcon, devicesIcon, replayIcon } from "@/assets/icons";
 
 // Filenames look like "tbt-2026-05-26T14-43-10.settings.json" — pull the
 // embedded timestamp out and render it as a friendly date. The backend names
@@ -30,7 +30,7 @@ const formatSessionDate = (fileName: string): string | null => {
   const match = fileName.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2})-(\d{2})-(\d{2})/);
   if (!match) return null;
 
-  const [, year, month, day, hour, minute, second] = match.map(Number);
+  const [year = 0, month = 1, day = 1, hour = 0, minute = 0, second = 0] = match.slice(1).map(Number);
   const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
   if (Number.isNaN(date.getTime())) return null;
 
@@ -40,30 +40,27 @@ const formatSessionDate = (fileName: string): string | null => {
   }).format(date);
 };
 
-const Home: React.FC = () => {
-  const { data, isLoading, error } = useQuery({
-    queryKey: HOME_QUERY_KEY,
-    queryFn: async () => {
-      const [activities, lastSessionDetails, devices] = await Promise.all([
-        commands.activity.getActivities(),
-        commands.replay.loadLastSessionDetails(),
-        commands.devices.fetchDevices(),
-      ]);
-      return { activities, lastSessionDetails, devices };
-    },
-  });
-
-  if (isLoading) {
-    return <div></div>;
-  }
-
-  if (error) {
-    return <div></div>;
-  }
-
-  const activities = data?.activities ?? [];
-  const lastSessionDetails = data?.lastSessionDetails;
-  const devices = data?.devices;
+function Home() {
+  const activitiesQuery = useQuery(ActivitiesQuery);
+  const devicesQuery = useQuery(DevicesQuery);
+  const lastSessionQuery = useQuery(LastSessionQuery);
+  const pending = activitiesQuery.isPending || devicesQuery.isPending || lastSessionQuery.isPending;
+  const error = activitiesQuery.error || devicesQuery.error || lastSessionQuery.error;
+  if (pending || error)
+    return (
+      <QueryStatus
+        pending={pending}
+        error={error}
+        onRetry={() => {
+          void activitiesQuery.refetch();
+          void devicesQuery.refetch();
+          void lastSessionQuery.refetch();
+        }}
+      />
+    );
+  const activities = activitiesQuery.data ?? [];
+  const devices = devicesQuery.data?.devices ?? [];
+  const lastSessionDetails = lastSessionQuery.data;
 
   return (
     <>
@@ -77,15 +74,15 @@ const Home: React.FC = () => {
         </ToolkitContainer>
 
         <ToolkitContainer className="row-span-6">
-          <ConnectionCard devices={devices} />{" "}
+          <ConnectionCard devices={devices} />
         </ToolkitContainer>
 
         <ToolkitContainer className="row-span-2" background={"bg-gray-100"}>
-          <HelpSupportCard />{" "}
+          <HelpSupportCard />
         </ToolkitContainer>
 
         <ToolkitContainer className="row-span-2" background={"bg-gray-100"}>
-          <DocumentationCard />{" "}
+          <DocumentationCard />
         </ToolkitContainer>
 
         <ToolkitContainer className="row-span-3">
@@ -93,51 +90,117 @@ const Home: React.FC = () => {
         </ToolkitContainer>
 
         <ToolkitContainer className="row-span-2" background={"bg-gray-100"}>
-          <OtherResourcesCard />{" "}
+          <OtherResourcesCard />
         </ToolkitContainer>
       </div>
     </>
   );
-};
+}
 
-const Header: React.FC = () => {
+function Header() {
+  const [information, setInformation] = useState<"citation" | "source" | null>(null);
+  const [copyStatus, setCopyStatus] = useState("");
+  const content =
+    information === "citation"
+      ? "Valente, A., Kothari, N., Ahmed-Mahmoud, H., Esteves, A., & Billinghurst, M. (2026). The Balance Toolkit: Democratizing balance-based interaction through open-source software for repurposed Wii Balance Boards. In Proceedings of the Annual Symposium on Computer-Human Interaction in Play (CHI PLAY '26). ACM."
+      : "https://github.com/trecitano/The-Balance-Toolkit";
   return (
     <div className="bg-(--red) px-6 py-6 text-white">
-      <div className="flex grid grid-cols-3 items-center gap-6">
-        <img className={"w-34"} src={logoLettering} draggable={false} />
+      <div className="grid grid-cols-3 items-center gap-6">
+        <img alt="The Balance Toolkit" className={"w-34"} src={logoLettering} draggable={false} />
 
         {/* Center: Circle logo */}
         <h1 className="text-center text-6xl leading-tight font-semibold italic">Welcome!</h1>
 
         {/* Right: Links */}
         <div className="mt-auto flex flex-col items-end gap-3">
-          <button className="inline-flex items-center gap-2 text-white/95 hover:text-white" type="button">
+          <button
+            className="inline-flex items-center gap-2 text-white/95 hover:text-white"
+            type="button"
+            onClick={() => {
+              setInformation("citation");
+              setCopyStatus("");
+            }}
+          >
             <span className="text-base">Cite</span>
           </button>
 
-          <button className="inline-flex h-5 items-center gap-2 text-white/95 hover:text-white" type="button">
-            <img src={githubIcon} className={"h-full object-contain"} />
+          <button
+            className="inline-flex h-5 items-center gap-2 text-white/95 hover:text-white"
+            type="button"
+            onClick={() => {
+              setInformation("source");
+              setCopyStatus("");
+            }}
+          >
+            <img alt="" src={githubIcon} className={"h-full object-contain"} />
             <span className="text-base">Source Code</span>
           </button>
         </div>
       </div>
+      <Modal
+        open={information !== null}
+        label={information === "citation" ? "Citation" : "Source code"}
+        onClose={() => setInformation(null)}
+        className="w-2xl text-gray-900"
+      >
+        <h2 className="mb-4 text-lg font-bold">
+          {information === "citation" ? "Cite The Balance Toolkit" : "Source code"}
+        </h2>
+        <textarea
+          readOnly
+          aria-label={information === "citation" ? "Paper citation" : "Repository address"}
+          rows={information === "citation" ? 6 : 2}
+          className="w-full resize-none rounded border border-gray-300 p-3 text-sm"
+          value={content}
+          onFocus={(event) => event.target.select()}
+        />
+        <p role="status" className="my-3 text-sm">
+          {copyStatus}
+        </p>
+        <div className="flex justify-center gap-3">
+          <ToolkitButton
+            type="button"
+            color="blue"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(content);
+                setCopyStatus("Copied.");
+              } catch {
+                setCopyStatus("Select the text above and copy it with your keyboard.");
+              }
+            }}
+          >
+            Copy {information === "citation" ? "citation" : "repository link"}
+          </ToolkitButton>
+          <ToolkitButton type="button" color="grey" onClick={() => setInformation(null)}>
+            Close
+          </ToolkitButton>
+        </div>
+      </Modal>
     </div>
   );
-};
+}
 
-const SessionLabel: React.FC<{ icon: string; iconClassName?: string; children: React.ReactNode }> = ({
+function SessionLabel({
   icon,
   iconClassName = "",
   children,
-}) => (
-  <span className="flex items-center gap-1.5 font-semibold">
-    <img className={`h-4 w-4 object-contain ${iconClassName}`} src={icon} draggable={false} />
-    {children}
-  </span>
-);
+}: {
+  icon: string;
+  iconClassName?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span className="flex items-center gap-1.5 font-semibold">
+      <img alt="" className={`h-4 w-4 object-contain ${iconClassName}`} src={icon} draggable={false} />
+      {children}
+    </span>
+  );
+}
 
 // Last Session Card
-const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation | null }> = ({ sessionDetails }) => {
+function LastSessionCard({ sessionDetails }: { sessionDetails?: LastSessionInformation | null }) {
   if (!sessionDetails) {
     return (
       <div className="flex h-full flex-col p-(--space-sm)">
@@ -152,8 +215,7 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation | null
     );
   }
 
-  const user = sessionDetails?.user;
-  const activity = sessionDetails?.activity;
+  const { user, activity } = sessionDetails;
   const fileLocation = String(sessionDetails.fileLocation);
   const fileName = fileLocation.split(/[\\/]/).pop() ?? fileLocation;
   const sessionDate = formatSessionDate(fileName);
@@ -189,21 +251,22 @@ const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation | null
       </div>
 
       <div className="mt-auto flex justify-end">
-        <ToolkitButton to="/replay" color={"grey"} iconUrl={replayIcon}>
-          {" "}
+        <ToolkitButton to="/replay" color="grey" iconUrl={replayIcon}>
           Replay →
         </ToolkitButton>
       </div>
     </div>
   );
-};
+}
 
-const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) => {
+function ActivitiesCard({ activities }: { activities: Activity[] }) {
   const [selected, setSelected] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
 
   const scrollToActivity = (index: number) => {
-    const el = listRef.current?.querySelector(`[data-activityid="${activities[index].id}"]`);
+    const activity = activities[index];
+    if (!activity) return;
+    const el = listRef.current?.querySelector(`[data-activityid="${activity.id}"]`);
     el?.scrollIntoView({
       behavior: "smooth",
       inline: "center",
@@ -260,27 +323,26 @@ const ActivitiesCard: React.FC<{ activities: Activity[] }> = ({ activities }) =>
       <div className="flex justify-end">
         <ToolkitButton
           to={`/activities${activities[selected] ? `/${activities[selected].id}` : ""}`}
-          color={"grey"}
+          color="grey"
           iconUrl={activitiesIcon}
         >
-          {" "}
           Activities →
         </ToolkitButton>
       </div>
     </div>
   );
-};
+}
 
 // Connection Card
-const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
-  const hasAnyDevices = !devices || devices.length === 0;
+function ConnectionCard({ devices }: { devices?: NintendoDevice[] }) {
+  const noDevices = !devices || devices.length === 0;
   const numberConnectedDevices = devices?.filter((device) => device.isConnected).length ?? 0;
 
   return (
     <div className="flex h-full flex-col gap-5 p-(--space-sm)">
       <PageSubtitle>Connection</PageSubtitle>
 
-      {hasAnyDevices ? (
+      {noDevices ? (
         <>
           <div className="text-sm">
             <p className="font-semibold">There are no connected devices!</p>
@@ -288,7 +350,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
           </div>
 
           <div className="flex flex-1 items-center justify-center">
-            <img className={"h-40 object-contain"} src={wbbIcon} />
+            <img alt="" className={"h-40 object-contain"} src={wbbIcon} />
           </div>
         </>
       ) : numberConnectedDevices === 0 ? (
@@ -299,7 +361,7 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
           </div>
 
           <div className="flex flex-1 items-center justify-center">
-            <img className={"h-40 object-contain"} src={wbbIcon} />
+            <img alt="" className={"h-40 object-contain"} src={wbbIcon} />
           </div>
         </>
       ) : (
@@ -314,27 +376,31 @@ const ConnectionCard: React.FC<{ devices?: Device[] }> = ({ devices }) => {
           </div>
 
           <div className="relative flex flex-1 items-center justify-center">
-            <img src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
-            <img src={wbbIconBlue} className="z-10 w-50 object-contain" />
+            <img alt="" src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
+            <img alt="" src={wbbIconBlue} className="z-10 w-50 object-contain" />
           </div>
         </>
       )}
 
       <div className="mt-auto flex justify-end">
-        <ToolkitButton to="/devices" color={"grey"} iconUrl={devicesIcon}>
-          {" "}
+        <ToolkitButton to="/devices" color="grey" iconUrl={devicesIcon}>
           Devices →
         </ToolkitButton>
       </div>
     </div>
   );
-};
+}
 
 // Help Support Card
-const HelpSupportCard: React.FC = () => {
+function HelpSupportCard() {
   return (
     <div className="relative z-1 flex h-full flex-col overflow-hidden p-(--space-sm)">
-      <img src={underConstructionHelp} className="absolute inset-0 -z-1 m-auto w-1/2 opacity-60" draggable={false} />
+      <img
+        alt=""
+        src={underConstructionHelp}
+        className="absolute inset-0 -z-1 m-auto w-1/2 opacity-60"
+        draggable={false}
+      />
 
       <div className="mb-4 flex items-center space-x-2">
         <PageSubtitle>Help and Support</PageSubtitle>
@@ -345,13 +411,18 @@ const HelpSupportCard: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 // Documentation Card
-const DocumentationCard: React.FC = () => {
+function DocumentationCard() {
   return (
     <div className="relative z-1 flex h-full flex-col p-(--space-sm)">
-      <img src={underConstructionDoc} className="absolute inset-0 -z-1 m-auto w-1/2 opacity-60" draggable={false} />
+      <img
+        alt=""
+        src={underConstructionDoc}
+        className="absolute inset-0 -z-1 m-auto w-1/2 opacity-60"
+        draggable={false}
+      />
 
       <div className="mb-4 flex items-center space-x-2">
         <PageSubtitle>Documentation</PageSubtitle>
@@ -362,13 +433,14 @@ const DocumentationCard: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 // Other Resources Card
-const OtherResourcesCard: React.FC = () => {
+function OtherResourcesCard() {
   return (
     <div className="relative z-1 flex h-full flex-col p-(--space-sm)">
       <img
+        alt=""
         src={underConstructionResources}
         className="absolute inset-0 -z-1 m-auto w-1/2 opacity-60"
         draggable={false}
@@ -381,6 +453,6 @@ const OtherResourcesCard: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default Home;

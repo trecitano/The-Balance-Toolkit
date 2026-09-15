@@ -1,8 +1,7 @@
-import { copXPlotSettings, copYPlotSettings, makeDataMapper, RED_COLOUR, standardPlot, UPlot } from "./UPlot.tsx";
+import { UPlot } from "./UPlot.tsx";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
 import { convertNumberToMacAddress } from "@/utils/macAddress.ts";
-import { SessionState, SessionStore } from "@/store/sessionDataStore.tsx";
-import { ProcessedSessionData } from "@/types.ts";
+import { SessionStore } from "@/store/sessionDataStore.tsx";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 
@@ -16,7 +15,7 @@ export function SimpleBoardPanel({
   store: SessionStore;
 }) {
   return (
-    <ToolkitContainer className={"flex h-full min-h-0 flex-col gap-3"}>
+    <ToolkitContainer className="flex h-full min-h-0 flex-col gap-3">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="font-semibold">{boardName}</h3>
         <p>{convertNumberToMacAddress(macAddress)}</p>
@@ -28,29 +27,16 @@ export function SimpleBoardPanel({
         </div>
 
         <div className="bg-gray-100 p-2">
-          <UPlot title="copX" {...copXPlotSettings(macAddress)} store={store} />
+          <UPlot title="copX" kind="copX" macAddress={macAddress} store={store} />
         </div>
         <div className="bg-gray-100 p-2">
-          <UPlot title="copY" {...copYPlotSettings(macAddress)} store={store} />
-        </div>
-
-        <div className="bg-gray-100 p-2">
-          <UPlot
-            title="vCopX"
-            uPlotOptions={standardPlot(RED_COLOUR)}
-            dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
-            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopX)}
-            store={store}
-          />
+          <UPlot title="copY" kind="copY" macAddress={macAddress} store={store} />
         </div>
         <div className="bg-gray-100 p-2">
-          <UPlot
-            title="vCopY"
-            uPlotOptions={standardPlot(RED_COLOUR)}
-            dataSelector={(state: SessionState) => state.processedSessionData[macAddress]}
-            dataMapper={makeDataMapper<ProcessedSessionData>((d) => d.vCopY)}
-            store={store}
-          />
+          <UPlot title="vCopX" kind="vCopX" macAddress={macAddress} store={store} />
+        </div>
+        <div className="bg-gray-100 p-2">
+          <UPlot title="vCopY" kind="vCopY" macAddress={macAddress} store={store} />
         </div>
       </div>
     </ToolkitContainer>

@@ -1,89 +1,169 @@
+import { useEffect, useRef, useState } from "react";
+import { Channel } from "@tauri-apps/api/core";
 import { Modal } from "@/components/Modal";
 import { ToolkitButton } from "@/components/ToolkitButton";
-import { SingleColumn } from "@/components/SingleColumn";
 import { SelectPrimitive } from "@/components/SelectPrimitive";
+import { QueryStatus, errorMessage } from "@/components/QueryStatus";
+import { commands } from "@/utils/requests";
 
-import { devicesIcon } from "@/components/navigation/Navigation.tsx";
-interface WeightMeasureModalProps {
-  open: boolean;
-  onClose: () => void;
-  liveWeight: number | null;
-  weightMetric: string;
-  sessionDevices: Array<{ name: string; macAddress: number }>;
-  selectedDeviceMac: number | null;
-  isMeasuring: boolean;
-  onDeviceSelect: (mac: number) => void;
-  onTare: () => void;
-  onStart: () => void;
-  onStop: () => void;
-  onSave: () => void;
-}
-
+type Measurement = { id: string; started: Promise<unknown>; frame: number | null };
 export default function WeightMeasureModal({
-  open,
   onClose,
-  liveWeight,
+  onSave,
   weightMetric,
   sessionDevices,
-  selectedDeviceMac,
-  isMeasuring,
-  onDeviceSelect,
-  onTare,
-  onStart,
-  onStop,
-  onSave,
-}: WeightMeasureModalProps) {
-  const hasDevices = sessionDevices.length > 0;
-  const hasSelectedDevice = !!selectedDeviceMac;
+}: {
+  onClose: () => void;
+  onSave: (weight: number) => void;
+  weightMetric: string;
+  sessionDevices: Array<{ name: string; macAddress: number }>;
+}) {
+  const [device, setDevice] = useState<number | undefined>(sessionDevices[0]?.macAddress);
+  const [weightKg, setWeightKg] = useState<number | null>(null);
+  const [measuring, setMeasuring] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const measurement = useRef<Measurement | null>(null);
 
+  useEffect(
+    () => () => {
+      const current = measurement.current;
+      measurement.current = null;
+      if (!current) return;
+      if (current.frame !== null) cancelAnimationFrame(current.frame);
+      void current.started
+        .catch(() => {})
+        .then(() => commands.users.stopMeasureWeight(current.id))
+        .catch((failure) => console.error("Could not stop weight measurement", failure));
+    },
+    [],
+  );
+
+  const start = async () => {
+    if (device === undefined || measurement.current || busy) return;
+    setBusy(true);
+    setError(null);
+    setWeightKg(null);
+    const channel = new Channel<number>();
+    const id = crypto.randomUUID();
+    const current: Measurement = { id, started: commands.users.startMeasureWeight(channel, device, id), frame: null };
+    measurement.current = current;
+    let latest = 0;
+    channel.onmessage = (value) => {
+      if (measurement.current !== current || !Number.isFinite(value)) return;
+      latest = value;
+      if (current.frame !== null) return;
+      current.frame = requestAnimationFrame(() => {
+        current.frame = null;
+        if (measurement.current === current) setWeightKg(latest);
+      });
+    };
+    try {
+      await current.started;
+      if (measurement.current === current) setMeasuring(true);
+    } catch (failure) {
+      if (measurement.current === current) {
+        measurement.current = null;
+        setError(errorMessage(failure));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+  const stop = async () => {
+    const current = measurement.current;
+    if (!current) return;
+    await current.started.catch(() => {});
+    try {
+      await commands.users.stopMeasureWeight(current.id);
+    } finally {
+      // Release the run even when the stop command fails, so a new measurement can start.
+      if (current.frame !== null) cancelAnimationFrame(current.frame);
+      if (measurement.current === current) measurement.current = null;
+      setMeasuring(false);
+    }
+  };
+  const run = async (action: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+    } catch (failure) {
+      setError(errorMessage(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const weight = weightKg === null ? null : weightKg * (weightMetric === "lb" ? 2.2046226218 : 1);
+  const close = () => {
+    if (!busy)
+      void run(async () => {
+        await stop();
+        onClose();
+      });
+  };
   return (
-    <Modal open={open} onClose={onClose} className="min-w-lg">
-      <h4 className="mb-4 text-lg font-bold">Weight Measure</h4>
-
-      <div className="mb-3 flex flex-col items-center">
-        <div className="mb-1 text-lg text-gray-500">Live reading</div>
-        <div className="text-4xl font-semibold tabular-nums">
-          {liveWeight !== null ? liveWeight.toFixed(2) : "--"}
-          <span className="ml-2 text-2xl font-normal">{weightMetric}</span>
-        </div>
-      </div>
-
-      {!hasDevices ? (
-        <div>
-          <p className="mb-7 text-lg text-gray-400">Connect to a board in the Devices page!</p>
-          <ToolkitButton to="/devices" color="blue" iconUrl={devicesIcon}>
-            Devices →
-          </ToolkitButton>
-        </div>
-      ) : (
+    <Modal open label="Measure weight" onClose={close} className="min-w-lg">
+      <h2 className="mb-4 text-lg font-bold">Measure weight</h2>
+      <p className="text-gray-500">Live reading</p>
+      <p className="mb-6 text-4xl tabular-nums">
+        {weight?.toFixed(2) ?? "--"} <span className="text-2xl">{weightMetric}</span>
+      </p>
+      <QueryStatus error={error} />
+      {sessionDevices.length ? (
         <>
-          <SingleColumn className="mb-10 items-center" label="Select a Device" backgroundType="transparent">
-            <SelectPrimitive<number>
-              value={selectedDeviceMac ?? 0}
-              onChange={onDeviceSelect}
-              options={sessionDevices.map((device) => ({
-                label: device.name,
-                value: device.macAddress,
-              }))}
-              disabled={isMeasuring}
-            />
-          </SingleColumn>
-
-          <div className="flex justify-center gap-6">
-            <ToolkitButton disabled={!hasSelectedDevice} color="grey" onClick={onTare}>
+          <SelectPrimitive
+            value={device}
+            noneOption="Choose a device"
+            aria-label="Measurement device"
+            options={sessionDevices.map((board) => ({ label: board.name, value: board.macAddress }))}
+            onChange={(next) => {
+              setDevice(next);
+              setWeightKg(null);
+            }}
+            disabled={measuring || busy}
+          />
+          <div className="mt-6 flex justify-center gap-4">
+            <ToolkitButton
+              disabled={device === undefined || busy}
+              color="grey"
+              onClick={() =>
+                void run(async () => {
+                  if (device !== undefined) await commands.devices.tareDevice(device);
+                  setWeightKg(null);
+                })
+              }
+            >
               Tare
             </ToolkitButton>
-
-            <ToolkitButton disabled={!hasSelectedDevice} color="grey" onClick={isMeasuring ? onStop : onStart}>
-              {isMeasuring ? "Stop" : "Start"}
+            <ToolkitButton
+              disabled={device === undefined || busy}
+              color="grey"
+              onClick={() => (measuring ? void run(stop) : void start())}
+            >
+              {measuring ? "Stop" : "Start"}
             </ToolkitButton>
-
-            <ToolkitButton disabled={!hasSelectedDevice || isMeasuring} color="blue" onClick={onSave}>
-              Save
+            <ToolkitButton
+              disabled={weight === null || weight <= 0 || busy}
+              color="blue"
+              onClick={() =>
+                void run(async () => {
+                  await stop();
+                  if (weight !== null) onSave(Number(weight.toFixed(2)));
+                })
+              }
+            >
+              Use weight
             </ToolkitButton>
           </div>
         </>
+      ) : (
+        <p>Connect and select a board on the Devices page to measure weight.</p>
       )}
+      <ToolkitButton className="mt-6" disabled={busy} color="grey" onClick={close}>
+        Close
+      </ToolkitButton>
     </Modal>
   );
 }

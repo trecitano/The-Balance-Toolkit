@@ -1,11 +1,34 @@
+.user-carousel-track {
+  --user-card-width: clamp(10rem, 23.75vh, 17.1rem);
+  position: relative;
+  display: flex;
+  gap: 2rem;
+  height: clamp(11.5rem, 25vh, 18rem);
+  padding-block: 0.5rem;
+  /* Enough space to center the first and last cards as well as the middle ones. */
+  padding-inline: calc(50% - var(--user-card-width) / 2);
+  overflow: hidden;
+}
+
+.user-carousel-track > li {
+  flex: 0 0 var(--user-card-width);
+  min-width: 0;
+}
+
 .user-carousel-item {
   cursor: pointer;
   background: var(--light-accent);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-light);
+  outline: none;
   opacity: 0.45;
   transform: scale(0.85);
   transition: var(--transition);
+}
+
+.default-user {
+  background: linear-gradient(90deg, var(--primary) 50%, var(--accent) 50%);
 }
 
 .user-carousel-item:hover {
@@ -15,59 +38,22 @@
 
 .user-carousel-item.selected {
   background-color: #e0eafc;
+  border-color: var(--primary);
   font-weight: bold;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.1),
-    0 0 0 0.5px var(--primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   opacity: 1;
-  transform: scale(0.98);
+  transform: scale(1);
 }
 
-.default-user {
-  background: linear-gradient(90deg, var(--primary) 50%, var(--accent) 50%);
+.user-carousel-item:focus-visible {
+  outline: 2px solid var(--primary-dark);
+  outline-offset: 3px;
 }
 
-.color-swatch {
-  width: calc(100% - 10px);
-  max-width: 100%;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  border: none;
-  position: relative;
-  display: block;
-}
-
-.recent-colors-dropdown {
-  position: absolute;
-  top: calc(0% - 90px);
-  left: 0;
-  background-color: var(--white);
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 20;
-  padding: 10px;
-  width: 85%;
-}
-
-.recent-colors {
+.user-editor-field {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.recent-color-swatch {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  cursor: pointer;
-  border: 1px solid var(--border);
-  transition:
-    transform 0.1s ease,
-    box-shadow 0.1s ease;
-}
-
-.recent-color-swatch:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
 }

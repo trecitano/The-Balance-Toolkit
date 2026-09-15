@@ -9,95 +9,66 @@ export class ProgressTimer {
   private startTime: number | null = null;
   private singleLoopDuration = 0;
   private totalLoops = 1;
-  private currentLoop = 0;
   private rafId: number | null = null;
   private playhead: HTMLDivElement | null = null;
   private progressCallback: ProgressCallback | null = null;
+  private lastSecond = -1;
 
-  registerPlayhead(el: HTMLDivElement) {
-    this.playhead = el;
-    // If we have an ongoing session but no animation loop, restart it
-    if (this.startTime !== null && this.rafId === null) {
-      this.playhead.classList.remove("hidden");
-      this.loop(); // Restart the animation loop
-    }
+  registerPlayhead(element: HTMLDivElement | null) {
+    this.playhead = element;
   }
-
   registerProgressCallback(callback: ProgressCallback) {
     this.progressCallback = callback;
   }
 
-  async startTimeline(singleLoopDurationMs: number, loops: number = 1) {
-    await this.stopTimeline(); // reset if already running
+  startTimeline(singleLoopDurationMs: number, loops = 1) {
+    this.stopTimeline();
+    this.singleLoopDuration = Math.max(singleLoopDurationMs, 0);
+    this.totalLoops = Math.max(loops, 0);
+    this.lastSecond = -1;
+    // Publish a clean readout first: a zero-length activity never ticks, and would otherwise
+    // leave whatever the previous run last reported on screen.
+    this.progressCallback?.({
+      currentLoop: 1,
+      totalLoops: this.totalLoops,
+      currentSeconds: 0,
+      totalSeconds: (this.singleLoopDuration * this.totalLoops) / 1000,
+    });
+    if (this.singleLoopDuration <= 0 || this.totalLoops <= 0) return;
     this.startTime = performance.now();
-    this.singleLoopDuration = singleLoopDurationMs;
-    this.totalLoops = loops;
-    this.currentLoop = 0;
-
-    if (this.playhead) {
-      this.playhead.style.transform = "translateX(0px)";
-      this.playhead.classList.remove("hidden");
-    }
-
     this.loop();
   }
-
-  async stopTimeline() {
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-    }
+  stopTimeline() {
+    if (this.rafId !== null) cancelAnimationFrame(this.rafId);
     this.rafId = null;
     this.startTime = null;
-    this.currentLoop = 0;
-    if (this.playhead) {
-      this.playhead.classList.add("hidden");
-    }
+  }
+  dispose() {
+    this.stopTimeline();
+    this.playhead = null;
+    this.progressCallback = null;
   }
 
-  private async loop() {
-    if (!this.playhead || this.startTime === null || this.playhead.clientWidth === 0) {
-      this.rafId = null;
-      return;
+  private loop() {
+    if (this.startTime === null) return;
+    const total = this.singleLoopDuration * this.totalLoops;
+    const elapsed = Math.min(performance.now() - this.startTime, total);
+    const loop = Math.min(Math.floor(elapsed / this.singleLoopDuration), this.totalLoops - 1);
+    const progress = Math.min((elapsed - loop * this.singleLoopDuration) / this.singleLoopDuration, 1);
+    if (this.playhead?.parentElement) {
+      this.playhead.style.transform = `translateX(${this.playhead.parentElement.clientWidth * progress}px)`;
     }
-
-    const elapsed = performance.now() - this.startTime;
-
-    if (elapsed >= this.singleLoopDuration * this.totalLoops) {
-      await this.stopTimeline();
-      return;
-    }
-
-    // Calculate which loop we should be in based on elapsed time
-    const expectedLoop = Math.floor(elapsed / this.singleLoopDuration);
-
-    // Check if we've moved to a new loop
-    if (expectedLoop > this.currentLoop && expectedLoop < this.totalLoops) {
-      this.currentLoop = expectedLoop;
-      this.playhead.style.transform = "translateX(0px)";
-      // Small delay to show the reset visually
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-
-    // Calculate progress within current loop
-    const elapsedInCurrentLoop = elapsed - this.currentLoop * this.singleLoopDuration;
-    const progressInLoop = Math.min(elapsedInCurrentLoop / this.singleLoopDuration, 1);
-
-    // Update playhead position based on progress in current loop
-    const container = this.playhead.parentElement!;
-    const width = container.clientWidth;
-    const x = width * progressInLoop;
-    this.playhead.style.transform = `translateX(${x}px)`;
-
-    // Call progress callback if registered
-    if (this.progressCallback) {
-      this.progressCallback({
-        currentLoop: this.currentLoop + 1, // Display as 1-indexed
+    const second = Math.floor(elapsed / 1000);
+    if (second !== this.lastSecond) {
+      this.lastSecond = second;
+      this.progressCallback?.({
+        currentLoop: loop + 1,
         totalLoops: this.totalLoops,
-        currentSeconds: Math.floor(elapsed / 1000),
-        totalSeconds: Math.floor((this.singleLoopDuration * this.totalLoops) / 1000),
+        currentSeconds: second,
+        totalSeconds: total / 1000,
       });
     }
-
-    this.rafId = requestAnimationFrame(() => this.loop());
+    if (elapsed >= total) this.stopTimeline();
+    else this.rafId = requestAnimationFrame(() => this.loop());
   }
 }

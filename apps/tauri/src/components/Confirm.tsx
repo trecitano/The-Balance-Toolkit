@@ -3,7 +3,6 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 
 interface ConfirmModalProps {
   open: boolean;
-  onClose: () => void;
   title?: string;
   message: string;
   onConfirm: () => void;
@@ -15,7 +14,6 @@ interface ConfirmModalProps {
 
 export function ConfirmModal({
   open,
-  onClose,
   title,
   message,
   onConfirm,
@@ -26,16 +24,14 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const handleConfirm = () => {
     onConfirm();
-    onClose();
   };
 
   const handleCancel = () => {
     onCancel();
-    onClose();
   };
 
   return (
-    <Modal open={open} onClose={handleCancel}>
+    <Modal label={title ?? "Confirm"} open={open} onClose={handleCancel}>
       {title && <h4 className="mb-4 text-lg font-bold">{title}</h4>}
       <p className="mb-6 text-base leading-relaxed text-gray-700">{message}</p>
       <div className="mt-12 flex justify-center gap-6">

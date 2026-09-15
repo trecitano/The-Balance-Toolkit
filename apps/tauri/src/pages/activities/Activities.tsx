@@ -3,42 +3,35 @@ import ActivityCard from "./ActivityCard";
 import ActivityEdit from "./ActivityEdit";
 import PageTitle from "@/components/PageTitle.tsx";
 import { useQuery } from "@tanstack/react-query";
-import { commands } from "@/utils/requests.ts";
+import { ActivitiesQuery, BlocksQuery } from "@/queries/toolkit";
+import { QueryStatus } from "@/components/QueryStatus";
 import { useParams } from "react-router-dom";
-
-export const ACTIVITIES_QUERY_KEY = ["activities"];
-const AVAILABLE_BLOCKS_QUERY_KEY = ["available-blocks"];
 
 export default function Activities() {
   const { activityId } = useParams<{ activityId?: string }>();
   const [maximizedId, setMaximizedId] = useState<string | null>(activityId || null);
 
-  const {
-    data: activitiesData,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ACTIVITIES_QUERY_KEY,
-    queryFn: async () => {
-      const activities = await commands.activity.getActivities();
-      return { activities };
-    },
-  });
-
-  const { data: timeBlocksData } = useQuery({
-    queryKey: AVAILABLE_BLOCKS_QUERY_KEY,
-    queryFn: async () => {
-      return await commands.activity.getAvailableTimeBlocks();
-    },
-    staleTime: Infinity,
-  });
-
-  if (isLoading || error) {
-    return <div></div>;
+  const activitiesQuery = useQuery(ActivitiesQuery);
+  const blocksQuery = useQuery(BlocksQuery);
+  if (
+    activitiesQuery.isPending ||
+    blocksQuery.isPending ||
+    (!activitiesQuery.data && activitiesQuery.error) ||
+    (!blocksQuery.data && blocksQuery.error)
+  ) {
+    return (
+      <QueryStatus
+        pending={activitiesQuery.isPending || blocksQuery.isPending}
+        error={activitiesQuery.error || blocksQuery.error}
+        onRetry={() => {
+          void activitiesQuery.refetch();
+          void blocksQuery.refetch();
+        }}
+      />
+    );
   }
-
-  const activities = activitiesData?.activities ?? [];
-  const existingTimeBlocks = timeBlocksData ?? [];
+  const activities = activitiesQuery.data ?? [];
+  const existingTimeBlocks = blocksQuery.data ?? [];
   const maximizedActivity = activities.find((a) => a.id === maximizedId);
 
   return (
@@ -47,10 +40,11 @@ export default function Activities() {
         <PageTitle>Activities</PageTitle>
       </header>
 
+      <QueryStatus error={activitiesQuery.error || blocksQuery.error} />
       {maximizedActivity ? (
         <ActivityEdit
+          key={maximizedActivity.id}
           activity={maximizedActivity}
-          open={!!maximizedId}
           onClose={() => setMaximizedId(null)}
           existingActionImages={existingTimeBlocks}
         />
