@@ -491,7 +491,7 @@ export default function Users() {
             <SingleColumn label="Age:" icon={<img src={calendarIcon} />}>
               <InputPrimitive
                 type="number"
-                value={displayData?.age}
+                value={displayData?.age ?? ""}
                 onChange={(e) => handleEditUpdate("age", Number(e.target.value))}
                 disabled={!editingUserData}
               />

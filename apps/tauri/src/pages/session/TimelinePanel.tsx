@@ -24,7 +24,7 @@ const formatTime = (seconds: number): string => {
 };
 
 type TimelinePanelProps = {
-  activity?: Activity;
+  activity?: Activity | null;
   playButtonClass: string;
   placeholderMessage?: string;
   hasOngoingSession: boolean;

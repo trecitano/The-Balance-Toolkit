@@ -120,12 +120,12 @@ export function SessionPanel({
           className="col-span-9"
           disabled={disabled}
           actionText="Clear"
-          onActionClick={() => update("activityId", "")}
+          onActionClick={() => update("activityId", null)}
         >
           <SelectPrimitive
             disabled={disabled}
             value={value?.activityId ?? ""}
-            onChange={(v) => update("activityId", v)}
+            onChange={(v) => update("activityId", v || null)}
             options={activityOptions}
             noneOption="None"
           />

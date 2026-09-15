@@ -62,8 +62,15 @@ description = "Run the complete hardware-free verification profile"
 run = ["mise run doctor", "mise run check", "mise run test", "mise run smoke"]
 
 [tasks."check:desktop"]
-description = "Compile the Tauri shell (requires platform Tauri dependencies)"
-run = "cargo check --locked -p the-balance-toolkitapp"
+description = "Compile the Tauri shell and verify the generated TypeScript bindings are current (requires platform Tauri dependencies)"
+run = [
+  "cargo check --locked -p the-balance-toolkitapp",
+  "cargo test --locked -p the-balance-toolkitapp committed_bindings_are_current",
+]
+
+[tasks."gen:bindings"]
+description = "Regenerate apps/tauri/src/bindings.ts from the Tauri commands and events"
+run = "cargo test --locked -p the-balance-toolkitapp export_bindings -- --ignored"
 
 [tasks."test:android"]
 description = "Run Android JVM fixture tests (requires a JDK and Android SDK, no device)"

@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::oneshot;
 use toolkit_core::actors::state::activities::Activity;
-use toolkit_core::types::{GeneralSettings, MacAddress, NintendoDevice, SelectOption};
+use toolkit_core::types::{GeneralSettings, MacAddress, NintendoDevice, UserSummary};
 use toolkit_core::utils::mac_address_human_name;
 use toolkit_core::{ToolkitCommand, ToolkitResponse};
 
@@ -159,21 +159,21 @@ pub fn resolve_board<'a>(
 }
 
 /// Finds a user by id or by name (case-insensitive).
-pub fn resolve_user(users: &[SelectOption<usize>], reference: &str) -> Result<usize> {
+pub fn resolve_user(users: &[UserSummary], reference: &str) -> Result<usize> {
     if let Ok(id) = reference.parse::<usize>() {
         return users
             .iter()
-            .find(|user| user.value == id)
-            .map(|user| user.value)
+            .find(|user| user.id == id)
+            .map(|user| user.id)
             .ok_or_else(|| anyhow!("No user with id {id}. See `tbt users list`."));
     }
     let wanted = reference.trim().to_lowercase();
-    let matches: Vec<&SelectOption<usize>> = users
+    let matches: Vec<&UserSummary> = users
         .iter()
-        .filter(|user| user.label.to_lowercase() == wanted)
+        .filter(|user| user.name.to_lowercase() == wanted)
         .collect();
     match matches.as_slice() {
-        [user] => Ok(user.value),
+        [user] => Ok(user.id),
         [] => bail!("No user named '{reference}'. See `tbt users list`."),
         _ => bail!("Several users are named '{reference}'. Use the id instead (`tbt users list`)."),
     }

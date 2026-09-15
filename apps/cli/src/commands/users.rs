@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::Subcommand;
 use toolkit_core::ToolkitCommand;
-use toolkit_core::types::UserPageInformation;
 
 use crate::client::Toolkit;
 use crate::output::{Table, or_dash, print_json, yes_no};
@@ -19,14 +18,14 @@ pub async fn run(toolkit: &mut Toolkit, command: UsersCommand, json: bool) -> Re
 }
 
 async fn list(toolkit: &Toolkit, json: bool) -> Result<()> {
-    let page: UserPageInformation = toolkit
-        .request(|response| ToolkitCommand::UserPageInformation { response })
+    let users = toolkit
+        .request(|response| ToolkitCommand::GetUsers { response })
         .await?;
     if json {
-        return print_json(&page.users);
+        return print_json(&users);
     }
     let mut table = Table::new(&["ID", "NAME", "AGE", "HEIGHT", "WEIGHT", "DEFAULT"]);
-    for user in &page.users {
+    for user in &users {
         table.row(vec![
             user.id.to_string(),
             user.name.clone(),

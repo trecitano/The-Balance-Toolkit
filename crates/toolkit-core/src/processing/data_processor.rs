@@ -57,7 +57,7 @@ pub enum InterpolationSetting {
     Polynomial,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct ProcessedBoardData {
     pub timestamp: DateTime<Utc>,
     pub mac_address: MacAddress,
@@ -545,7 +545,7 @@ fn calculate_stability_index(points: &[CenterOfPressurePoint]) -> Option<f32> {
 // BASIC SWAY METRICS
 // ============================================================================
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct SwayMetrics {
     pub v_cop_x: f32,
     pub v_cop_y: f32,
@@ -610,7 +610,7 @@ fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<Sway
 // DPSI METRICS
 // ============================================================================
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct DpsiMetrics {
     pub mlsi: f32,
     pub apsi: f32,
@@ -660,7 +660,7 @@ fn calculate_dpsi_metrics(
 // AREA-BASED METRICS
 // ============================================================================
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct AreaMetrics {
     pub confidence_ellipse_polygon: Vec<(f32, f32)>,
     pub convex_hull_polygon: Vec<(f32, f32)>,
@@ -824,7 +824,7 @@ fn chi_square_quantile_2df(p: f32) -> Option<f32> {
 // FREQUENCY DOMAIN ANALYSIS
 // ============================================================================
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct AmplitudeSpectrum {
     pub freqs_hz: Vec<f32>,
     pub amplitude_x: Vec<f32>,  // Amplitude in mm for X direction

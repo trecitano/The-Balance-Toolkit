@@ -7,7 +7,6 @@ use anyhow::Result;
 use chrono::Utc;
 use processing::board_hid_reader;
 use processing::board_hid_reader_mock;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
@@ -40,7 +39,7 @@ impl BalanceBoardOutput {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct BalanceBoardCalibratedReading {
     pub timestamp: chrono::DateTime<Utc>,
     pub mac_address: MacAddress,

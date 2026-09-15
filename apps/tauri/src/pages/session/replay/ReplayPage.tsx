@@ -6,7 +6,7 @@ import { ReplayConfiguration, SelectedBoard, SessionPanelConfiguration } from "@
 import { replayChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
 import BoardGrid from "@/pages/session/BoardGrid.tsx";
 import { useReplayDataStore } from "@/store/sessionDataStore.tsx";
-import { listen } from "@tauri-apps/api/event";
+import { events } from "@/bindings";
 import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
@@ -31,7 +31,7 @@ export default function ReplayPage() {
 
   useEffect(() => {
     const refetch = () => queryClient.invalidateQueries({ queryKey: REPLAY_QUERY_KEY });
-    const unlistenPromise = listen<void>("replay_completed", refetch);
+    const unlistenPromise = events.replayCompleted.listen(refetch);
     return () => {
       unlistenPromise.then((unlisten) => unlisten());
     };

@@ -12,15 +12,22 @@ Use `mise run …` or `mise exec -- …` so commands use the versions in
 |---|---|
 | `crates/toolkit-core/` | Bluetooth, HID, processing, session state, persistence, recording and replay |
 | `apps/cli/` | `tbt` arguments, terminal output, orchestration and process exit status |
-| `apps/tauri/src-tauri/` | Desktop shell, Tauri commands and event serialization |
+| `apps/tauri/src-tauri/` | Desktop shell, Tauri commands, typed events and the desktop wire types (`src/frontend/dto.rs`) |
 | `apps/tauri/src/` | React UI, queries, frame storage and plots |
 | `apps/android/` | Separate Kotlin application; also read `apps/android/AGENTS.md` |
 | `tests/fixtures/` | Synthetic sensor cases shared with Android and desktop recording examples |
 | `scripts/verify/` | Development diagnostics |
 
 The desktop shell and CLI share the Rust core. Android does not use that core.
-Keep UI/toolkit boundaries explicit; TypeScript command types are currently
-maintained manually in `apps/tauri/src/types.ts` and `apps/tauri/src/utils/requests.ts`.
+Keep UI/toolkit boundaries explicit. `toolkit-core` knows nothing about Tauri or
+`specta`: the desktop shell mirrors every type that crosses the bridge in
+`apps/tauri/src-tauri/src/frontend/dto.rs` with `From` conversions, and commands
+only take and return those DTOs. The TypeScript command, event and payload types
+in `apps/tauri/src/bindings.ts` are generated from the DTOs by `tauri-specta`;
+never edit that file. After changing a Tauri command, an event or a DTO, run
+`mise run gen:bindings` and commit the result (`mise run check:desktop` fails
+while the file is stale). `apps/tauri/src/types.ts` only aliases generated names
+and holds UI-only shapes.
 
 ## Verification
 
@@ -31,7 +38,7 @@ Run from the repository root. All commands below are noninteractive.
 | Rust math, types or persistence | `mise run check:rust` and `mise run test` |
 | CLI, recording or replay | Above, plus `mise run smoke` |
 | React/TypeScript | `mise run check:frontend` |
-| Tauri bridge | `mise run check:rust`, `mise run check:desktop`, `mise run check:frontend` |
+| Tauri bridge | `mise run gen:bindings`, then `mise run check:rust`, `mise run check:desktop`, `mise run check:frontend` |
 | Shared sensor fixtures | `mise run test` and `mise run test:android` |
 | Android | `mise run test:android` and `mise run check:android` |
 | Full default verification profile | `mise run verify` |

@@ -2,9 +2,9 @@ use crate::actors::state::activities::{Activity, ActivityState};
 use crate::processing::file_writer::SessionConfigurationFileFormat;
 use crate::types::{GeneralSettings, MacAddress, NintendoDevice, User};
 use anyhow::{Context, Result};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::NaiveDateTime;
+use serde::Serialize;
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::fs::File;
 use std::io::BufReader;
@@ -26,47 +26,10 @@ impl UserFileSystem {
 
 const NINTENDO_DEVICES_FILE: &str = "nintendo_devices.json";
 pub struct DeviceFileSystem;
-#[derive(Serialize, Deserialize)]
-pub struct FileSystemNintendoDevice {
-    pub id: String,
-    pub name: String,
-    pub mac_address: MacAddress,
-    pub last_connected: Option<DateTime<Utc>>,
-}
-impl From<&NintendoDevice> for FileSystemNintendoDevice {
-    fn from(device: &NintendoDevice) -> Self {
-        FileSystemNintendoDevice {
-            id: device.id.clone(),
-            name: device.name.clone(),
-            mac_address: device.mac_address,
-            last_connected: device.last_connected,
-        }
-    }
-}
-
-impl From<FileSystemNintendoDevice> for NintendoDevice {
-    fn from(val: FileSystemNintendoDevice) -> Self {
-        NintendoDevice {
-            id: val.id.clone(),
-            name: val.name.clone(),
-            mac_address: val.mac_address,
-            is_connected: false,
-            last_connected: val.last_connected,
-        }
-    }
-}
-
 impl DeviceFileSystem {
+    /// Devices as last saved; none is connected until the manager says so.
     pub fn get_stored_devices() -> Result<Vec<NintendoDevice>> {
-        let file_system_devices: Vec<FileSystemNintendoDevice> =
-            FileStore::load_with_default(Path::new(NINTENDO_DEVICES_FILE))?;
-
-        let devices = file_system_devices
-            .into_iter()
-            .map(|device| device.into())
-            .collect();
-
-        Ok(devices)
+        FileStore::load_with_default(Path::new(NINTENDO_DEVICES_FILE))
     }
 
     pub fn update_board_name(mac_address: MacAddress, device_board_name: String) -> Result<()> {
@@ -93,10 +56,10 @@ impl DeviceFileSystem {
     pub fn update_file_system_boards(devices: &[NintendoDevice]) -> Result<()> {
         // Check if we really need to update the file system.
         // If the boards in the file system and in our argument are the same, we return.
-        let file_system_devices = Self::get_stored_devices()?;
-
-        let mut sorted_file_system = file_system_devices.clone();
-        let mut sorted_devices = devices.to_vec();
+        // Connection state is not stored, so compare the stored view of both sides.
+        let mut sorted_file_system = Self::get_stored_devices()?;
+        let mut sorted_devices: Vec<NintendoDevice> =
+            devices.iter().map(NintendoDevice::as_stored).collect();
         sorted_file_system.sort();
         sorted_devices.sort();
 
@@ -104,14 +67,11 @@ impl DeviceFileSystem {
             return Ok(());
         }
 
-        Self::save(devices)
+        Self::save(&sorted_devices)
     }
 
     fn save(devices: &[NintendoDevice]) -> Result<()> {
-        let file_system_devices: Vec<FileSystemNintendoDevice> =
-            devices.iter().map(|device| device.into()).collect();
-
-        FileStore::save(Path::new(NINTENDO_DEVICES_FILE), &file_system_devices)
+        FileStore::save(Path::new(NINTENDO_DEVICES_FILE), devices)
     }
 }
 

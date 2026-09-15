@@ -137,7 +137,7 @@ const SessionLabel: React.FC<{ icon: string; iconClassName?: string; children: R
 );
 
 // Last Session Card
-const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation }> = ({ sessionDetails }) => {
+const LastSessionCard: React.FC<{ sessionDetails?: LastSessionInformation | null }> = ({ sessionDetails }) => {
   if (!sessionDetails) {
     return (
       <div className="flex h-full flex-col p-(--space-sm)">

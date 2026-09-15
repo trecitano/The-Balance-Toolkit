@@ -1,3 +1,7 @@
+//! The manager's API types, shared by every frontend. Serde appears only where a type is
+//! written to disk or printed by the CLI; those JSON shapes are contracts. Everything
+//! else is plain Rust, and a frontend maps it to its own wire format.
+
 use crate::actors::balance_board_actor::BalanceBoardCalibratedReading;
 use crate::actors::state::activities::Activity;
 use crate::actors::toolkit_service::{
@@ -51,23 +55,13 @@ impl Default for GeneralSettings {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct UserPageInformation {
-    pub users: Vec<User>,
-    pub selected_user_id: usize,
-    pub session_devices: Vec<NintendoDevice>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct SessionActivityState {
     pub activity: Activity,
     pub ongoing_state: Option<OngoingSessionActivityState>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone)]
 pub struct OngoingSessionActivityState {
     pub current_block_index: i32,
     pub time_to_next_block_ms: i32,
@@ -112,42 +106,56 @@ impl Default for User {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+/// Printed by `tbt session show --json`.
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct FrontendSessionInformation {
-    pub available_users: Vec<SelectOption<usize>>,
+pub struct SessionInformation {
+    pub available_users: Vec<UserSummary>,
     pub selected_boards: Vec<SelectedBoard>,
-    pub core: FrontendCoreSession,
+    pub core: SessionSettings,
     pub activity: Option<Activity>,
     pub has_ongoing_session: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+/// Enough of a user to pick one.
+#[derive(Serialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct SelectOption<T> {
-    pub label: String,
-    pub value: T,
+pub struct UserSummary {
+    pub id: usize,
+    pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+impl From<&User> for UserSummary {
+    fn from(user: &User) -> Self {
+        UserSummary {
+            id: user.id,
+            name: user.name.clone(),
+        }
+    }
+}
+
+/// Printed by `tbt session last --json`.
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct FrontendLastSessionInformation {
+pub struct LastSessionInformation {
     pub user: User,
     pub session_stats: SessionStats,
     pub file_location: String,
     pub activity: Option<Activity>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SelectedBoard {
     pub name: String,
     pub mac_address: MacAddress,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+/// The pipeline settings a frontend may change for a session or replay, with the user
+/// and activity by id. The manager resolves them into a `CoreSessionConfiguration`.
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct FrontendCoreSession {
+pub struct SessionSettings {
     pub selected_user: usize,
     pub activity_id: Option<String>,
     pub lsl_enabled: bool,
@@ -159,9 +167,9 @@ pub struct FrontendCoreSession {
     pub interpolation: InterpolationSetting,
 }
 
-impl From<&CoreSessionConfiguration> for FrontendCoreSession {
+impl From<&CoreSessionConfiguration> for SessionSettings {
     fn from(cfg: &CoreSessionConfiguration) -> Self {
-        FrontendCoreSession {
+        SessionSettings {
             selected_user: cfg.user.id,
             activity_id: cfg.activity.clone().map(|act| act.id.clone()),
             lsl_enabled: cfg.lsl_enabled,
@@ -175,20 +183,19 @@ impl From<&CoreSessionConfiguration> for FrontendCoreSession {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct FrontendReplayConfiguration {
+#[derive(Debug, Clone)]
+pub struct ReplayInformation {
     pub user: User,
-    pub core: FrontendCoreSession,
+    pub core: SessionSettings,
     pub devices: Vec<SelectedBoard>,
     pub activity: Option<Activity>,
     pub file_path: PathBuf,
     pub has_ongoing_session: bool,
 }
 
-impl From<&ReplayConfiguration> for FrontendReplayConfiguration {
+impl From<&ReplayConfiguration> for ReplayInformation {
     fn from(cfg: &ReplayConfiguration) -> Self {
-        FrontendReplayConfiguration {
+        ReplayInformation {
             user: cfg.core.user.as_ref().clone(),
             devices: cfg
                 .device_names
@@ -198,7 +205,7 @@ impl From<&ReplayConfiguration> for FrontendReplayConfiguration {
                     mac_address: *mac_address,
                 })
                 .collect(),
-            core: FrontendCoreSession::from(&cfg.core),
+            core: SessionSettings::from(&cfg.core),
             activity: cfg.core.activity.clone(),
             file_path: cfg.file_path.clone(),
             has_ongoing_session: cfg.running.is_some(),
@@ -206,12 +213,16 @@ impl From<&ReplayConfiguration> for FrontendReplayConfiguration {
     }
 }
 
+/// Stored in the devices file and printed by `tbt devices list --json`.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
 pub struct NintendoDevice {
     pub id: String,
     pub name: String,
     pub mac_address: MacAddress,
+    /// Live state. Printed by the CLI, but never read back from the devices file: a board is
+    /// disconnected until the manager says otherwise.
+    #[serde(skip_deserializing)]
     pub is_connected: bool,
     pub last_connected: Option<DateTime<Utc>>,
 }
@@ -220,38 +231,21 @@ impl NintendoDevice {
     pub fn is_demo_device(&self) -> bool {
         self.id.starts_with("TBB_MOCKED_DEVICE_ID")
     }
-}
 
-/// A sensor reading as the frontend captured it during calibration.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FrontendCalibrationReadingInput {
-    pub mac_address: MacAddress,
-    #[serde(with = "chrono::serde::ts_milliseconds")]
-    pub timestamp: DateTime<Utc>,
-    pub top_left: f32,
-    pub top_right: f32,
-    pub bottom_left: f32,
-    pub bottom_right: f32,
-}
-
-impl From<FrontendCalibrationReadingInput> for BalanceBoardCalibratedReading {
-    fn from(input: FrontendCalibrationReadingInput) -> Self {
-        BalanceBoardCalibratedReading {
-            timestamp: input.timestamp,
-            mac_address: input.mac_address,
-            top_right: input.top_right,
-            bottom_right: input.bottom_right,
-            top_left: input.top_left,
-            bottom_left: input.bottom_left,
+    /// The persisted view of this device, for comparing against the devices file.
+    pub fn as_stored(&self) -> NintendoDevice {
+        NintendoDevice {
+            is_connected: false,
+            ..self.clone()
         }
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct FrontendCapturedReading {
+/// A sensor reading a frontend captured at one calibration position.
+#[derive(Debug, Clone)]
+pub struct CapturedCalibrationReading {
     pub position: CalibrationPosition,
-    pub reading: FrontendCalibrationReadingInput,
+    pub reading: BalanceBoardCalibratedReading,
 }
 
 pub type MacAddress = u64;

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use tokio::sync::mpsc;
 use toolkit_core::ToolkitCommand;
 use toolkit_core::file_system::ExistingSessionFileSystem;
-use toolkit_core::types::{FrontendReplayConfiguration, MacAddress};
+use toolkit_core::types::{MacAddress, ReplayInformation};
 
 use crate::client::Toolkit;
 use crate::commands::session::{
@@ -120,7 +120,7 @@ async fn replay(toolkit: &mut Toolkit, args: ReplayArgs) -> Result<()> {
     Ok(())
 }
 
-async fn replay_information(toolkit: &Toolkit) -> Result<FrontendReplayConfiguration> {
+async fn replay_information(toolkit: &Toolkit) -> Result<ReplayInformation> {
     toolkit
         .request(|response| ToolkitCommand::ReplayInformation { response })
         .await?

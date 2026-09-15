@@ -3,5 +3,5 @@
   "printWidth": 120,
   "sortPackageJson": false,
   "sortTailwindcss": {},
-  "ignorePatterns": []
+  "ignorePatterns": ["src/bindings.ts"]
 }
