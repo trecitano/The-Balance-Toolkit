@@ -9,8 +9,7 @@ use processing::board_hid_reader_mock;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::mpsc::Sender;
 
 // Board primitives
 #[derive(Debug, Clone)]
@@ -20,15 +19,6 @@ pub enum BoardAction {
     TurnOffLed,
     StartRecording(Sender<BalanceBoardCalibratedReading>),
     StopRecording,
-}
-
-#[derive(Debug)]
-pub enum BalanceBoardCommands {
-    TurnOnLed,
-    TurnOffLed,
-    ApplyTare,
-    StartRecording(Sender<BalanceBoardCalibratedReading>),
-    FinishRecording,
 }
 
 /// One sample flowing through the session pipeline. Processed results carry several
@@ -71,8 +61,14 @@ impl BalanceBoardCalibratedReading {
         }
     }
 
+    /// Sum of the four sensors, i.e. the weight on the board.
+    pub fn total_force(&self) -> f32 {
+        self.top_right + self.bottom_right + self.top_left + self.bottom_left
+    }
+
+    /// Centre of pressure normalised to [-1, 1] on each axis. Zero when the board is empty.
     pub fn calculate_cop(&self) -> CenterOfPressure {
-        let total_force = self.top_right + self.bottom_right + self.top_left + self.bottom_left;
+        let total_force = self.total_force();
         if total_force.abs() < 0.1 {
             return CenterOfPressure { x: 0.0, y: 0.0 };
         }
@@ -141,48 +137,18 @@ pub enum BoardConnectionMode {
     ReadFromFile(PathBuf),
 }
 
+/// Starts the reader for one board and returns the channel used to drive it. Dropping
+/// every sender shuts the reader down; `StopRecording` closes the recording channel,
+/// which in turn closes every pipeline channel downstream of it.
 pub fn initialize(
     mac_address: MacAddress,
     mode: BoardConnectionMode,
 ) -> Result<Sender<BoardAction>> {
-    let (tx, rx) = mpsc::channel(100);
-
-    let board_hid_tx = match mode {
-        BoardConnectionMode::Real => board_hid_reader::initialize(mac_address)?,
-        BoardConnectionMode::Demo => board_hid_reader_mock::initialize(mac_address)?,
+    match mode {
+        BoardConnectionMode::Real => board_hid_reader::initialize(mac_address),
+        BoardConnectionMode::Demo => board_hid_reader_mock::initialize(mac_address),
         BoardConnectionMode::ReadFromFile(file_path) => {
-            board_hid_file_reader::initialize(mac_address, file_path)?
-        }
-    };
-
-    tokio::spawn(async move { balance_board_actor_loop(rx, board_hid_tx).await });
-
-    Ok(tx)
-}
-
-async fn balance_board_actor_loop(
-    mut rx: Receiver<BoardAction>,
-    board_hid_tx: Sender<BalanceBoardCommands>,
-) {
-    while let Some(action) = rx.recv().await {
-        let command = match action {
-            BoardAction::Tare => BalanceBoardCommands::ApplyTare,
-            BoardAction::TurnOnLed => BalanceBoardCommands::TurnOnLed,
-            BoardAction::TurnOffLed => BalanceBoardCommands::TurnOffLed,
-            BoardAction::StartRecording(raw_data_tx) => {
-                BalanceBoardCommands::StartRecording(raw_data_tx)
-            }
-            BoardAction::StopRecording => {
-                log::debug!("Stopping the recording");
-                // This closes the channel from the balance board side,
-                // which closes all of the subsequent pipeline channels
-                BalanceBoardCommands::FinishRecording
-            }
-        };
-
-        if board_hid_tx.send(command).await.is_err() {
-            log::error!("Board reader thread has stopped; shutting down its actor.");
-            break;
+            board_hid_file_reader::initialize(mac_address, file_path)
         }
     }
 }

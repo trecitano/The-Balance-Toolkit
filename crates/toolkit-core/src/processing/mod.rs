@@ -1,7 +1,9 @@
 pub mod board_hid_file_reader;
 pub mod board_hid_reader;
 pub mod board_hid_reader_mock;
+pub mod board_reader;
 pub mod data_processor;
 pub mod file_writer;
 pub mod lsl_writer;
+pub(crate) mod observers;
 pub mod tcp_writer;

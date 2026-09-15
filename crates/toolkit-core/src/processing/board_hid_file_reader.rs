@@ -1,4 +1,5 @@
-use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BoardAction};
+use crate::processing::board_reader::{self, Sample, SampleSource};
 use crate::types::MacAddress;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -7,121 +8,89 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::thread;
 use std::time::Duration;
-use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 
-pub fn initialize(
-    mac_address: MacAddress,
-    file_path: PathBuf,
-) -> Result<Sender<BalanceBoardCommands>> {
-    let (tx, rx) = mpsc::channel(100);
+/// How long to wait between polls once a replay has finished or is not running.
+const IDLE_INTERVAL: Duration = Duration::from_millis(200);
 
-    thread::spawn(move || {
-        if let Err(e) = blocking_file_reading_loop(mac_address, rx, file_path) {
-            log::error!("Error in Board Hid File Reader: {:?}", e);
-        }
-    });
-
-    Ok(tx)
+pub fn initialize(mac_address: MacAddress, file_path: PathBuf) -> Result<Sender<BoardAction>> {
+    log::info!(
+        "File replay for {mac_address:012x}: {}",
+        file_path.display()
+    );
+    board_reader::spawn(
+        "board-replay",
+        mac_address,
+        FileBoard {
+            mac_address,
+            file_path,
+            records: None,
+            previous_timestamp: None,
+        },
+    )
 }
 
 #[derive(Debug, Deserialize)]
 struct CsvBalanceBoardRecord {
-    timestamp: DateTime<Utc>, // parsed directly into chrono DateTime
+    timestamp: DateTime<Utc>,
     top_right: f32,
     bottom_right: f32,
     top_left: f32,
     bottom_left: f32,
 }
 
-fn blocking_file_reading_loop(
+struct FileBoard {
     mac_address: MacAddress,
-    mut control_rx: mpsc::Receiver<BalanceBoardCommands>,
     file_path: PathBuf,
-) -> Result<()> {
-    let mut rdr: Option<csv::DeserializeRecordsIntoIter<File, CsvBalanceBoardRecord>> = None;
-    let mut prev_time: Option<DateTime<Utc>> = None;
-    let mut tx: Option<Sender<BalanceBoardCalibratedReading>> = None;
+    records: Option<csv::DeserializeRecordsIntoIter<File, CsvBalanceBoardRecord>>,
+    /// Timestamp of the last record replayed, used to pace playback at the recorded rate.
+    previous_timestamp: Option<DateTime<Utc>>,
+}
 
-    log::info!("File replay loop started for {}", file_path.display());
-    loop {
-        match control_rx.try_recv() {
-            Ok(command) => match command {
-                BalanceBoardCommands::TurnOnLed => {}
-                BalanceBoardCommands::TurnOffLed => {}
-                BalanceBoardCommands::ApplyTare => {}
-                BalanceBoardCommands::StartRecording(sender) => {
-                    let reader = csv::ReaderBuilder::new()
-                        .has_headers(true)
-                        .from_path(file_path.clone())?;
-                    rdr = Some(reader.into_deserialize());
-                    prev_time = None;
-                    tx = Some(sender);
-                }
-                BalanceBoardCommands::FinishRecording => {
-                    rdr = None;
-                    tx = None;
-                    prev_time = None;
-                }
-            },
-            Err(mpsc::error::TryRecvError::Empty) => {}
-            Err(mpsc::error::TryRecvError::Disconnected) => {
-                log::debug!("HID File Reader disconnected. Shutting down.");
-                break;
-            }
-        }
-
-        // 2. If file is being replayed, advance one record
-        if let (Some(iter), Some(sender)) = (rdr.as_mut(), tx.as_ref()) {
-            if let Some(result) = iter.next() {
-                match result {
-                    Ok(record) => {
-                        // Sleep according to timestamp delta
-                        if let Some(prev) = prev_time {
-                            let delta = record.timestamp - prev;
-                            let millis = delta.num_milliseconds().max(0);
-                            thread::sleep(Duration::from_millis(millis as u64));
-                        }
-
-                        let reading = BalanceBoardCalibratedReading {
-                            timestamp: Utc::now(),
-                            mac_address,
-                            top_right: record.top_right,
-                            bottom_right: record.bottom_right,
-                            top_left: record.top_left,
-                            bottom_left: record.bottom_left,
-                        };
-
-                        // Try sending (non-async, so use blocking_send if needed)
-                        if sender.blocking_send(reading).is_err() {
-                            log::debug!("Replay consumer went away, stopping replay.");
-                            rdr = None;
-                            tx = None;
-                            prev_time = None;
-                        } else {
-                            prev_time = Some(record.timestamp);
-                        }
-                        continue;
-                    }
-                    Err(e) => {
-                        log::warn!("CSV parse error: {:?}", e);
-                        rdr = None;
-                        tx = None;
-                        prev_time = None;
-                    }
-                }
-            } else {
-                log::info!("File replay finished.");
-                rdr = None;
-                tx = None;
-                prev_time = None;
-            }
-        }
-
-        // 3. Small sleep to avoid busy loop when idle
-        thread::sleep(Duration::from_millis(200));
+impl SampleSource for FileBoard {
+    fn start(&mut self) -> Result<()> {
+        let reader = csv::ReaderBuilder::new()
+            .has_headers(true)
+            .from_path(&self.file_path)?;
+        self.records = Some(reader.into_deserialize());
+        self.previous_timestamp = None;
+        Ok(())
     }
 
-    log::debug!("File reading complete HID loop terminated.");
-    Ok(())
+    fn stop(&mut self) -> Result<()> {
+        self.records = None;
+        self.previous_timestamp = None;
+        Ok(())
+    }
+
+    fn next_sample(&mut self) -> Result<Sample> {
+        let Some(records) = self.records.as_mut() else {
+            thread::sleep(IDLE_INTERVAL);
+            return Ok(Sample::Idle);
+        };
+
+        let record = match records.next() {
+            Some(Ok(record)) => record,
+            Some(Err(e)) => {
+                log::warn!("CSV parse error, stopping replay: {e:?}");
+                return Ok(Sample::Finished);
+            }
+            None => return Ok(Sample::Finished),
+        };
+
+        if let Some(previous) = self.previous_timestamp {
+            let millis = (record.timestamp - previous).num_milliseconds().max(0);
+            thread::sleep(Duration::from_millis(millis as u64));
+        }
+        self.previous_timestamp = Some(record.timestamp);
+
+        Ok(Sample::Reading(BalanceBoardCalibratedReading {
+            timestamp: Utc::now(),
+            mac_address: self.mac_address,
+            top_right: record.top_right,
+            bottom_right: record.bottom_right,
+            top_left: record.top_left,
+            bottom_left: record.bottom_left,
+        }))
+    }
 }

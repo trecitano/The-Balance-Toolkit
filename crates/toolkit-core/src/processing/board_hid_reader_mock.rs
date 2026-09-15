@@ -1,103 +1,53 @@
-use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BoardAction};
+use crate::processing::board_reader::{self, Sample, SampleSource};
 use crate::types::MacAddress;
 use chrono::{DateTime, Utc};
 use rand::{RngExt, SeedableRng, rngs::StdRng};
-use std::thread;
-use tokio::sync::mpsc;
+use std::f32::consts::PI;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc::Sender;
 
-pub fn initialize(mac_address: MacAddress) -> anyhow::Result<Sender<BalanceBoardCommands>> {
-    let (tx, rx) = mpsc::channel(100);
+/// Interval between generated samples, roughly the board's real rate.
+const SAMPLE_INTERVAL: Duration = Duration::from_millis(10);
 
-    thread::spawn(move || {
-        if let Err(e) = mock_hid_loop(rx, mac_address) {
-            log::error!("Error in Board Hid Reader Mock: {:?}", e);
-        }
-    });
-
-    Ok(tx)
+pub fn initialize(mac_address: MacAddress) -> anyhow::Result<Sender<BoardAction>> {
+    board_reader::spawn(
+        "board-mock",
+        mac_address,
+        MockBoard {
+            mac_address,
+            generator: None,
+        },
+    )
 }
 
-fn mock_hid_loop(
-    mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>,
+struct MockBoard {
     mac_address: MacAddress,
-) -> anyhow::Result<()> {
-    let mut tx_channel: Option<mpsc::Sender<BalanceBoardCalibratedReading>> = None;
-    let mut update_tare = false;
-    let mut tare_value = BalanceBoardCalibratedReading {
-        timestamp: Utc::now(),
-        mac_address: 0,
-        top_right: 0.0,
-        top_left: 0.0,
-        bottom_right: 0.0,
-        bottom_left: 0.0,
-    };
-    let mut generator: Option<MockBoardGen> = None;
+    generator: Option<MockBoardGen>,
+}
 
-    log::debug!("Mock HID loop starting.");
-
-    loop {
-        match hid_control_rx.try_recv() {
-            Ok(command) => {
-                log::debug!("Mock HID loop: got command {:?}", command);
-                match command {
-                    BalanceBoardCommands::TurnOnLed => { /* No Action */ }
-                    BalanceBoardCommands::TurnOffLed => { /* No Action */ }
-                    BalanceBoardCommands::ApplyTare => {
-                        update_tare = true;
-                    }
-                    BalanceBoardCommands::StartRecording(tx) => {
-                        log::info!("Mock Board {} is starting the session!", mac_address);
-                        tx_channel = Some(tx);
-                        generator = Some(MockBoardGen::new_random(mac_address));
-                    }
-                    BalanceBoardCommands::FinishRecording => {
-                        log::info!("Mock Board {} has stopped the session.", mac_address);
-                        tx_channel = None;
-                        generator = None;
-                    }
-                }
-            }
-            Err(mpsc::error::TryRecvError::Empty) => { /* No command, continue */ }
-            Err(mpsc::error::TryRecvError::Disconnected) => {
-                // The async part has shut down. We must exit.
-                log::debug!("HID Mock Reader disconnected. Shutting down.");
-                break;
-            }
-        }
-
-        if let (Some(tx), Some(mock_generator)) = (&tx_channel, &mut generator) {
-            let mock_reading = mock_generator.next();
-
-            if update_tare {
-                update_tare = false;
-                tare_value = mock_reading.clone();
-            }
-
-            let tared_reading = BalanceBoardCalibratedReading {
-                timestamp: mock_reading.timestamp,
-                mac_address: mock_reading.mac_address,
-                top_right: mock_reading.top_right - tare_value.top_right,
-                top_left: mock_reading.top_left - tare_value.top_left,
-                bottom_right: mock_reading.bottom_right - tare_value.bottom_right,
-                bottom_left: mock_reading.bottom_left - tare_value.bottom_left,
-            };
-
-            tx.blocking_send(tared_reading)?;
-
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        } else {
-            // No session, sleep for a bit
-            std::thread::sleep(std::time::Duration::from_millis(100));
-        }
+impl SampleSource for MockBoard {
+    fn start(&mut self) -> anyhow::Result<()> {
+        log::info!("Mock Board {} is starting the session!", self.mac_address);
+        self.generator = Some(MockBoardGen::new_random(self.mac_address));
+        Ok(())
     }
 
-    log::debug!("Mock HID loop terminated.");
-    Ok(())
-}
+    fn stop(&mut self) -> anyhow::Result<()> {
+        if self.generator.take().is_some() {
+            log::info!("Mock Board {} has stopped the session.", self.mac_address);
+        }
+        Ok(())
+    }
 
-use std::f32::consts::PI;
-use std::time::Instant;
+    fn next_sample(&mut self) -> anyhow::Result<Sample> {
+        std::thread::sleep(SAMPLE_INTERVAL);
+        Ok(match &self.generator {
+            Some(generator) => Sample::Reading(generator.next()),
+            None => Sample::Idle,
+        })
+    }
+}
 
 pub struct MockBoardGen {
     mac: MacAddress,
@@ -159,7 +109,7 @@ impl MockBoardGen {
     /// Sample at an explicit elapsed time and timestamp, without sleeping or reading a clock.
     pub fn sample_at(
         &self,
-        elapsed: std::time::Duration,
+        elapsed: Duration,
         timestamp: DateTime<Utc>,
     ) -> BalanceBoardCalibratedReading {
         let t = elapsed.as_secs_f32();

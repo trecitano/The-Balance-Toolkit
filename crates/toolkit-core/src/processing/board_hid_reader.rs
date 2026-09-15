@@ -1,4 +1,5 @@
-use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BalanceBoardCommands};
+use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BoardAction};
+use crate::processing::board_reader::{self, Sample, SampleSource};
 use crate::types::MacAddress;
 use anyhow::{Result, anyhow};
 use chrono::Utc;
@@ -6,7 +7,6 @@ use hidapi::HidError::HidApiError;
 use hidapi::{HidApi, HidDevice, HidResult};
 use std::thread;
 use std::time::Duration;
-use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 
 // --- HID Command Constants ---
@@ -36,14 +36,85 @@ const BOARD_TURN_OFF_LED: [u8; 2] = [HID_INTERFACE_LED_INPUT, 0x00];
 const BOARD_START_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, HID_CMD_DATA_REPORT_MODE];
 const BOARD_STOP_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, 0x30];
 
-pub fn initialize(mac_address: MacAddress) -> Result<Sender<BalanceBoardCommands>> {
-    let (tx, rx) = mpsc::channel(100);
-
+pub fn initialize(mac_address: MacAddress) -> Result<Sender<BoardAction>> {
     let device = connect_via_hid(mac_address)?;
 
-    thread::spawn(move || blocking_hid_loop(device, mac_address, rx));
+    board_reader::spawn(
+        "board-hid",
+        mac_address,
+        HidBoard {
+            device,
+            mac_address,
+            calibration: BalanceBoardCalibrationData::default(),
+            buf: [0u8; 32],
+            _ext_keepalive: None,
+        },
+    )
+}
 
-    Ok(tx)
+struct HidBoard {
+    device: HidDevice,
+    mac_address: MacAddress,
+    calibration: BalanceBoardCalibrationData,
+    buf: [u8; 32],
+    // On Linux the in-kernel hid-wiimote driver re-applies its own data-report
+    // mode after every ~30s UPower battery-poll status report. Unless it thinks
+    // the extension is "in use" it resets the board to mode 0x30 (buttons-only)
+    // and kills our 0x34 hidraw stream. Opening (and merely holding open, never
+    // reading) the driver's balance-board input node runs wiimod_bboard_open()
+    // in the kernel -> sets WIIPROTO_FLAG_EXT_USED -> select_drm() returns
+    // DRM_KEE (report 0x34), which the driver then re-applies after each status
+    // report. Held for the whole life of the reader; None on non-Linux.
+    _ext_keepalive: Option<std::fs::File>,
+}
+
+impl SampleSource for HidBoard {
+    fn open(&mut self) -> Result<()> {
+        self._ext_keepalive = hold_driver_extension_open(self.mac_address);
+        write_to_device(&self.device, &BOARD_TURN_ON_LED)?;
+        self.calibration = read_calibration_data(&self.device)?;
+        Ok(())
+    }
+
+    fn set_led(&mut self, on: bool) -> Result<()> {
+        let command = if on {
+            BOARD_TURN_ON_LED
+        } else {
+            BOARD_TURN_OFF_LED
+        };
+        write_to_device(&self.device, &command)?;
+        Ok(())
+    }
+
+    fn start(&mut self) -> Result<()> {
+        write_to_device(&self.device, &BOARD_START_READING)?;
+        Ok(())
+    }
+
+    fn stop(&mut self) -> Result<()> {
+        write_to_device(&self.device, &BOARD_STOP_READING)?;
+        Ok(())
+    }
+
+    fn next_sample(&mut self) -> Result<Sample> {
+        let len = read_from_device(&self.device, &mut self.buf)
+            .map_err(|e| anyhow!("Error reading from HID device: {e}"))?;
+        if len < DATA_PACKET_MIN_LEN {
+            // Read timeout with no data, or a report too short to carry sensor values.
+            return Ok(Sample::Idle);
+        }
+
+        let buf = &self.buf;
+        let raw = BalanceBoardSensorRawReading {
+            top_right: i16::from_be_bytes([buf[3], buf[4]]),
+            bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
+            top_left: i16::from_be_bytes([buf[7], buf[8]]),
+            bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
+        };
+        Ok(Sample::Reading(
+            raw.calculate_weights(&self.calibration, self.mac_address),
+        ))
+    }
 }
 
 /// Opens and returns (to hold open) the hid-wiimote balance-board input node
@@ -165,120 +236,6 @@ fn connect_via_hid(mac_address: MacAddress) -> HidResult<HidDevice> {
             ),
         })?;
     balance_board_info.open_device(&api)
-}
-
-fn blocking_hid_loop(
-    device: HidDevice,
-    mac_address: MacAddress,
-    mut hid_control_rx: mpsc::Receiver<BalanceBoardCommands>,
-) -> anyhow::Result<()> {
-    let mut buf = [0u8; 32];
-
-    // On Linux the in-kernel hid-wiimote driver re-applies its own data-report
-    // mode after every ~30s UPower battery-poll status report. Unless it thinks
-    // the extension is "in use" it resets the board to mode 0x30 (buttons-only)
-    // and kills our 0x34 hidraw stream. Opening (and merely holding open, never
-    // reading) the driver's balance-board input node runs wiimod_bboard_open()
-    // in the kernel -> sets WIIPROTO_FLAG_EXT_USED -> select_drm() returns
-    // DRM_KEE (report 0x34), which the driver then re-applies after each status
-    // report. Bound here so the fd is held for the whole life of this loop;
-    // no-op (None) on non-Linux.
-    let _ext_keepalive = hold_driver_extension_open(mac_address);
-
-    write_to_device(&device, &BOARD_TURN_ON_LED)?;
-    let calibration = read_calibration_data(&device)?;
-    let mut tx_channel: Option<mpsc::Sender<BalanceBoardCalibratedReading>> = None;
-    // By default, we use an empty tare value.
-    // If the user wants to tare, then in the next balance board reading, the tare_value is updated.
-    let mut update_tare = false;
-    let mut tare_value: BalanceBoardCalibratedReading = BalanceBoardCalibratedReading::default();
-
-    loop {
-        // While recording, the blocking device read below paces this loop, so commands are
-        // only polled. While idle there is nothing to read from the board, so block on the
-        // control channel instead of spinning on `try_recv` at 100% of a core.
-        let command = if tx_channel.is_some() {
-            match hid_control_rx.try_recv() {
-                Ok(command) => Some(command),
-                Err(mpsc::error::TryRecvError::Empty) => None,
-                Err(mpsc::error::TryRecvError::Disconnected) => {
-                    // The async part has shut down. We must exit.
-                    log::debug!("HID Loop: Control channel disconnected. Shutting down.");
-                    break;
-                }
-            }
-        } else {
-            match hid_control_rx.blocking_recv() {
-                Some(command) => Some(command),
-                None => {
-                    log::debug!("HID Loop: Control channel disconnected. Shutting down.");
-                    break;
-                }
-            }
-        };
-
-        if let Some(command) = command {
-            log::debug!("HID loop: got command {:?}", command);
-            match command {
-                BalanceBoardCommands::TurnOnLed => {
-                    write_to_device(&device, &BOARD_TURN_ON_LED)?;
-                }
-                BalanceBoardCommands::TurnOffLed => {
-                    write_to_device(&device, &BOARD_TURN_OFF_LED)?;
-                }
-                BalanceBoardCommands::ApplyTare => {
-                    update_tare = true;
-                }
-                BalanceBoardCommands::StartRecording(tx) => {
-                    tx_channel = Some(tx);
-                    write_to_device(&device, &BOARD_START_READING)?;
-                }
-                BalanceBoardCommands::FinishRecording => {
-                    tx_channel = None;
-                    write_to_device(&device, &BOARD_STOP_READING)?;
-                }
-            }
-        }
-
-        // If there is a listener, then read data from the balance board
-        if let Some(tx) = &tx_channel {
-            match read_from_device(&device, &mut buf) {
-                Ok(len) if len > 0 => {
-                    if len >= DATA_PACKET_MIN_LEN {
-                        let reading = BalanceBoardSensorRawReading {
-                            top_right: i16::from_be_bytes([buf[3], buf[4]]),
-                            bottom_right: i16::from_be_bytes([buf[5], buf[6]]),
-                            top_left: i16::from_be_bytes([buf[7], buf[8]]),
-                            bottom_left: i16::from_be_bytes([buf[9], buf[10]]),
-                        };
-
-                        if update_tare {
-                            update_tare = false;
-                            tare_value =
-                                reading.clone().calculate_weights(&calibration, mac_address);
-                        }
-
-                        let calibrated_reading =
-                            reading.calculate_weights(&calibration, mac_address);
-                        let tared_reading = calibrated_reading.apply_tare(&tare_value);
-
-                        tx.blocking_send(tared_reading)?;
-                    }
-                }
-                Ok(_) => {
-                    // Read timeout with no data; keep polling.
-                    log::trace!("HID read timed out without data");
-                }
-                Err(e) => {
-                    log::error!("Error reading from HID device: {}", e);
-                    break;
-                }
-            }
-        }
-    }
-    let _ = write_to_device(&device, &BOARD_STOP_READING);
-    log::debug!("Blocking HID loop terminated.");
-    Ok(())
 }
 
 fn read_calibration_data(device: &HidDevice) -> anyhow::Result<BalanceBoardCalibrationData> {
