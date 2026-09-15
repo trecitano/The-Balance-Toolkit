@@ -1433,6 +1433,13 @@ impl App {
                 ));
                 self.refresh_boards().await?;
             }
+            ToolkitResponse::BoardDisconnected(mac_address) => {
+                self.log.error(format!(
+                    "{} stopped responding and was disconnected.",
+                    mac_address_human_name(mac_address)
+                ));
+                self.refresh_boards().await?;
+            }
             ToolkitResponse::SessionCompleted => {
                 if matches!(&self.phase, Phase::Running(run) if run.kind == Kind::Session && !run.stopping)
                 {

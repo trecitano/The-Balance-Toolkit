@@ -1,5 +1,5 @@
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BoardAction};
-use crate::processing::board_reader::{self, Sample, SampleSource};
+use crate::processing::board_reader::{self, ReaderFailure, Sample, SampleSource};
 use crate::types::MacAddress;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -13,7 +13,11 @@ use tokio::sync::mpsc::Sender;
 /// How long to wait between polls once a replay has finished or is not running.
 const IDLE_INTERVAL: Duration = Duration::from_millis(200);
 
-pub fn initialize(mac_address: MacAddress, file_path: PathBuf) -> Result<Sender<BoardAction>> {
+pub fn initialize(
+    mac_address: MacAddress,
+    file_path: PathBuf,
+    failure_tx: Option<Sender<ReaderFailure>>,
+) -> Result<Sender<BoardAction>> {
     log::info!(
         "File replay for {mac_address:012x}: {}",
         file_path.display()
@@ -27,6 +31,7 @@ pub fn initialize(mac_address: MacAddress, file_path: PathBuf) -> Result<Sender<
             records: None,
             previous_timestamp: None,
         },
+        failure_tx,
     )
 }
 

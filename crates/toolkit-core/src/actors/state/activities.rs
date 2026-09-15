@@ -1,6 +1,6 @@
 use crate::file_system::ActivitiesFileSystem;
 use crate::types::OngoingSessionActivityState;
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -82,22 +82,30 @@ impl ActivityState {
 
     pub fn update_activity(&mut self, activity: Activity) -> Result<()> {
         log::debug!("Updating activity: {:?}", activity);
-        let index = self
-            .activities
-            .iter()
-            .position(|a| a.id == activity.id)
-            .unwrap();
+        let index = self.index_of(&activity.id)?;
         self.activities[index] = activity;
         ActivitiesFileSystem::save_activities(&self.activities)?;
         Ok(())
     }
 
+    /// Restores the built-in definition of an activity and persists it, so the reset
+    /// survives a restart like any other edit.
     pub fn reset_activity(&mut self, id: &str) -> Result<Activity> {
-        let default_activities = Self::create_default_activities();
-        let default_activity = default_activities.into_iter().find(|a| a.id == id).unwrap();
-        let index = self.activities.iter().position(|a| a.id == id).unwrap();
+        let default_activity = Self::create_default_activities()
+            .into_iter()
+            .find(|a| a.id == id)
+            .ok_or_else(|| anyhow!("Activity {id} has no built-in default"))?;
+        let index = self.index_of(id)?;
         self.activities[index] = default_activity.clone();
+        ActivitiesFileSystem::save_activities(&self.activities)?;
         Ok(default_activity)
+    }
+
+    fn index_of(&self, id: &str) -> Result<usize> {
+        self.activities
+            .iter()
+            .position(|a| a.id == id)
+            .ok_or_else(|| anyhow!("Unknown activity: {id}"))
     }
 
     pub fn get_available_time_blocks(&self) -> Vec<TimelineBlock> {
@@ -269,6 +277,56 @@ fn block(id: &str) -> TimelineBlock {
 mod tests {
     use super::*;
     use chrono::TimeDelta;
+    use std::path::PathBuf;
+
+    /// Points the file store at a throwaway directory. The only test in this crate's unit
+    /// suite that touches the application directory, so the process-wide override is safe.
+    fn isolated_app_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("tbt-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // SAFETY: no other thread in this test binary reads or writes the environment.
+        unsafe { std::env::set_var("TBT_APP_DIR", &dir) };
+        dir
+    }
+
+    #[test]
+    fn resetting_an_activity_restores_the_default_and_persists_it() {
+        let dir = isolated_app_dir("activity-reset");
+        let mut state = ActivityState::new().unwrap();
+        let mut edited = state.get_copy_of_activity("eyes-open-close").unwrap();
+        edited.loops += 5;
+        edited.title = "Edited".into();
+        state.update_activity(edited.clone()).unwrap();
+        assert_eq!(
+            ActivityState::new()
+                .unwrap()
+                .get_copy_of_activity("eyes-open-close"),
+            Some(edited)
+        );
+
+        let restored = state.reset_activity("eyes-open-close").unwrap();
+        let default = ActivityState::create_default_activities()
+            .into_iter()
+            .find(|a| a.id == "eyes-open-close")
+            .unwrap();
+        assert_eq!(restored, default);
+        assert_eq!(
+            state.get_copy_of_activity("eyes-open-close"),
+            Some(default.clone())
+        );
+        // A fresh load from disk must see the reset, not the edit.
+        assert_eq!(
+            ActivityState::new()
+                .unwrap()
+                .get_copy_of_activity("eyes-open-close"),
+            Some(default)
+        );
+
+        assert!(state.reset_activity("no-such-activity").is_err());
+        assert!(state.update_activity(activity(&[1], 1)).is_err());
+        let _ = std::fs::remove_dir_all(dir);
+    }
 
     fn activity(durations: &[i32], loops: i32) -> Activity {
         Activity {

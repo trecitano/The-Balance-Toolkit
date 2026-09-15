@@ -1,5 +1,5 @@
 use crate::actors::balance_board_actor::{BalanceBoardCalibratedReading, BoardAction};
-use crate::processing::board_reader::{self, Sample, SampleSource};
+use crate::processing::board_reader::{self, ReaderFailure, Sample, SampleSource};
 use crate::types::MacAddress;
 use anyhow::{Result, anyhow};
 use chrono::Utc;
@@ -36,7 +36,10 @@ const BOARD_TURN_OFF_LED: [u8; 2] = [HID_INTERFACE_LED_INPUT, 0x00];
 const BOARD_START_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, HID_CMD_DATA_REPORT_MODE];
 const BOARD_STOP_READING: [u8; 3] = [HID_INTERFACE_DATA_REPORTING, 0x00, 0x30];
 
-pub fn initialize(mac_address: MacAddress) -> Result<Sender<BoardAction>> {
+pub fn initialize(
+    mac_address: MacAddress,
+    failure_tx: Option<Sender<ReaderFailure>>,
+) -> Result<Sender<BoardAction>> {
     let device = connect_via_hid(mac_address)?;
 
     board_reader::spawn(
@@ -49,6 +52,7 @@ pub fn initialize(mac_address: MacAddress) -> Result<Sender<BoardAction>> {
             buf: [0u8; 32],
             _ext_keepalive: None,
         },
+        failure_tx,
     )
 }
 

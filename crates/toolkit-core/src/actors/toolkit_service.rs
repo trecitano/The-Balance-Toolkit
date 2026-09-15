@@ -6,6 +6,7 @@ use crate::actors::bluetooth_service::{BluetoothCommand, BluetoothService};
 use crate::actors::state::activities::{Activity, ActivityState, TimelineBlock};
 use crate::actors::state::users::UserState;
 use crate::file_system::{DeviceFileSystem, ExistingSessionFileSystem, SettingsFileSystem};
+use crate::processing::board_reader::ReaderFailure;
 use crate::processing::data_processor::{InterpolationSetting, ProcessingSettings};
 use crate::processing::lsl_writer::LslConnectionSettings;
 use crate::processing::observers::broadcast;
@@ -31,6 +32,30 @@ use tokio_util::sync::CancellationToken;
 #[cfg(test)]
 #[path = "toolkit_service_tests.rs"]
 mod tests;
+
+/// A paired board whose HID node cannot be opened is retried with exponential backoff, at
+/// most this many times per appearance in the Bluetooth view. Every explicit refresh still
+/// makes one attempt of its own, so a user can always retry by hand.
+const MAX_CONNECT_ATTEMPTS: u32 = 6;
+const CONNECT_RETRY_BASE_DELAY: Duration = Duration::from_secs(1);
+const CONNECT_RETRY_MAX_DELAY: Duration = Duration::from_secs(30);
+
+/// Delay before connect attempt `attempt` (1-based): 1 s, 2 s, 4 s, … capped.
+fn connect_retry_delay(attempt: u32) -> Duration {
+    let factor = 2u32.saturating_pow(attempt.saturating_sub(1));
+    CONNECT_RETRY_BASE_DELAY
+        .saturating_mul(factor)
+        .min(CONNECT_RETRY_MAX_DELAY)
+}
+
+/// Reconnect bookkeeping for one board, kept while it is visible but not connected.
+#[derive(Debug, Default)]
+struct ConnectRetry {
+    /// Retries scheduled so far.
+    attempts: u32,
+    /// A retry timer is running; no second chain is started for the same board.
+    scheduled: bool,
+}
 
 /// Calibration position identifier
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -205,6 +230,10 @@ pub enum ToolkitCommand {
         target: SessionTarget,
         cancellation_token: CancellationToken,
     },
+    /// Internal timer command: a board that could not be opened is due for another attempt.
+    RetryConnect {
+        mac_address: MacAddress,
+    },
 
     BoardAction {
         mac_address: MacAddress,
@@ -229,6 +258,9 @@ pub enum ToolkitCommand {
 
 pub enum ToolkitResponse {
     NewDeviceFound(MacAddress),
+    /// The board's reader gave up (the board stopped answering); it is no longer connected
+    /// and has been removed from the session.
+    BoardDisconnected(MacAddress),
     SessionCompleted,
     ReplayCompleted,
     SessionStarted,
@@ -280,6 +312,10 @@ pub struct ConnectionManager {
     known_devices: HashMap<MacAddress, NintendoDevice>,
     /// Tracks active calibration streams (mac_address -> cancellation flag)
     active_calibration_streams: HashMap<MacAddress, CancellationToken>,
+    connect_retries: HashMap<MacAddress, ConnectRetry>,
+    /// Reader threads report here when they give up on their board.
+    reader_failure_tx: Sender<ReaderFailure>,
+    reader_failure_rx: Receiver<ReaderFailure>,
 }
 
 pub struct SessionConfiguration {
@@ -328,6 +364,7 @@ pub struct ReplayConfiguration {
 impl ConnectionManager {
     pub fn new(response_tx: Sender<ToolkitResponse>) -> Result<Self> {
         let (tx, rx) = mpsc::channel(100);
+        let (reader_failure_tx, reader_failure_rx) = mpsc::channel(16);
 
         let activity_state = ActivityState::new()?;
         let user_state = UserState::new()?;
@@ -339,7 +376,7 @@ impl ConnectionManager {
             .collect();
         let session_settings = SessionConfiguration {
             core: CoreSessionConfiguration {
-                user: user_state.get_default_user(),
+                user: user_state.get_default_user()?,
                 activity: None,
                 lsl_enabled: false,
                 tcp_enabled: false,
@@ -369,6 +406,9 @@ impl ConnectionManager {
             all_connections: HashMap::new(),
             known_devices,
             active_calibration_streams: HashMap::new(),
+            connect_retries: HashMap::new(),
+            reader_failure_tx,
+            reader_failure_rx,
         })
     }
 
@@ -379,11 +419,21 @@ impl ConnectionManager {
     pub async fn run(mut self) -> Result<()> {
         log::info!("Toolkit service started.");
 
-        while let Some(command) = self.rx.recv().await {
-            // A failing command must not take the whole manager (and with it every board
-            // connection) down: log it and keep serving the next one.
-            if let Err(e) = self.handle_command(command).await {
-                log::error!("Toolkit command failed: {e:#}");
+        loop {
+            tokio::select! {
+                command = self.rx.recv() => {
+                    let Some(command) = command else { break };
+                    // A failing command must not take the whole manager (and with it every
+                    // board connection) down: log it and keep serving the next one.
+                    if let Err(e) = self.handle_command(command).await {
+                        log::error!("Toolkit command failed: {e:#}");
+                    }
+                }
+                Some(failure) = self.reader_failure_rx.recv() => {
+                    if let Err(e) = self.board_reader_failed(failure).await {
+                        log::error!("Failed to handle a board reader failure: {e:#}");
+                    }
+                }
             }
         }
 
@@ -474,8 +524,7 @@ impl ConnectionManager {
 
             // Users
             ToolkitCommand::SelectUser { user_id } => {
-                let user = self.user_state.get_user(user_id);
-                self.session_settings.core.user = user;
+                self.session_settings.core.user = self.user_state.get_user(user_id)?;
             }
             ToolkitCommand::UserPageInformation { response } => {
                 let information = UserPageInformation {
@@ -500,6 +549,10 @@ impl ConnectionManager {
             }
             ToolkitCommand::DeleteUser { user_id, response } => {
                 self.user_state.delete_user(user_id)?;
+                // A session must not record under a user that no longer exists.
+                if self.session_settings.core.user.id == user_id {
+                    self.session_settings.core.user = self.user_state.get_default_user()?;
+                }
                 let _ = response.send(());
             }
 
@@ -602,7 +655,7 @@ impl ConnectionManager {
                 response,
             } => {
                 self.session_settings.core.user =
-                    self.user_state.get_user(configuration.selected_user);
+                    self.user_state.get_user(configuration.selected_user)?;
                 self.session_settings.core.apply(&configuration);
 
                 // If the activity has changed, let's reset it
@@ -736,9 +789,12 @@ impl ConnectionManager {
                     // We assume that the raw file is in the same directory as the session file.
                     let raw_file_path = directory.join(raw_file_name);
 
+                    // Replay readers are not watched: a broken file ends the replay on its
+                    // own and there is no device to mark disconnected.
                     let tx = balance_board_actor::initialize(
                         *mac_address,
                         BoardConnectionMode::ReadFromFile(raw_file_path),
+                        None,
                     )?;
                     connections.insert(*mac_address, tx);
                 }
@@ -816,6 +872,14 @@ impl ConnectionManager {
                 if !cancellation_token.is_cancelled() {
                     self.stop_run(target).await?;
                 }
+            }
+            ToolkitCommand::RetryConnect { mac_address } => {
+                if let Some(retry) = self.connect_retries.get_mut(&mac_address) {
+                    retry.scheduled = false;
+                }
+                // The system view only connects boards that are still present and, when
+                // the attempt fails again, schedules the next retry.
+                self.boards_system_view().await?;
             }
 
             // Calibration commands
@@ -958,6 +1022,7 @@ impl ConnectionManager {
             BluetoothService::start_bluetooth_handler(self.general_settings.is_demo_mode);
         self.session_settings.connections = HashMap::new();
         self.all_connections = HashMap::new();
+        self.connect_retries.clear();
         self.boards_system_view().await?;
         Ok(())
     }
@@ -984,12 +1049,17 @@ impl ConnectionManager {
                 self.connect(mac_address).await?;
             }
         }
-        // Remove connections to any device that has been disconnected.
-        self.all_connections.retain(|mac_address, _| {
+        // Remove connections to any device that has been disconnected. A board that left
+        // the Bluetooth view also gets a fresh retry budget for when it comes back.
+        let is_present = |mac_address: &MacAddress| {
             nintendo_devices
                 .iter()
                 .any(|device| device.mac_address == *mac_address && device.is_connected)
-        });
+        };
+        self.all_connections
+            .retain(|mac_address, _| is_present(mac_address));
+        self.connect_retries
+            .retain(|mac_address, _| is_present(mac_address));
 
         // Update name of devices and add any missing devices to the list.
         // Additionally, update the last connected date if the device is not connected.
@@ -1030,27 +1100,18 @@ impl ConnectionManager {
             BoardConnectionMode::Real
         };
 
-        let board_connection = match balance_board_actor::initialize(mac_address, connection_mode) {
+        let board_connection = match balance_board_actor::initialize(
+            mac_address,
+            connection_mode,
+            Some(self.reader_failure_tx.clone()),
+        ) {
             Ok(connection) => connection,
             Err(e) => {
-                let manager_tx = self.get_sender_channel();
-                tokio::spawn(async move {
-                    log::warn!(
-                        "Failed to connect to device {:?}: {}. Trying again in 1 second.",
-                        mac_address,
-                        e
-                    );
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                    // We use the BoardSystemView because it only tries to connect if the device actually exists in the bluetooth view.
-                    let (tx, rx) = oneshot::channel();
-                    let command = ToolkitCommand::GetBoardsSystemView { response: tx };
-                    let _ = manager_tx.send(command).await;
-                    let _ = rx.await;
-                });
-
+                self.schedule_connect_retry(mac_address, e);
                 return Ok(());
             }
         };
+        self.connect_retries.remove(&mac_address);
         self.all_connections.insert(mac_address, board_connection);
         // Boards paired through a scan reach here before any system view has run. The
         // placeholder is replaced by the next `boards_system_view`.
@@ -1070,6 +1131,67 @@ impl ConnectionManager {
             .send(ToolkitResponse::NewDeviceFound(mac_address))
             .await?;
 
+        Ok(())
+    }
+
+    /// Queues one more connect attempt for a board that could not be opened. At most one
+    /// timer runs per board, however many refreshes hit the failure, and the chain ends
+    /// after `MAX_CONNECT_ATTEMPTS`.
+    fn schedule_connect_retry(&mut self, mac_address: MacAddress, error: anyhow::Error) {
+        let name = utils::mac_address_human_name(mac_address);
+        let retry = self.connect_retries.entry(mac_address).or_default();
+        if retry.scheduled {
+            log::debug!("Failed to connect to {name}: {error:#}. A retry is already scheduled.");
+            return;
+        }
+        if retry.attempts >= MAX_CONNECT_ATTEMPTS {
+            log::warn!(
+                "Failed to connect to {name}: {error:#}. Gave up after {MAX_CONNECT_ATTEMPTS} retries; refresh the devices to try again."
+            );
+            return;
+        }
+
+        retry.attempts += 1;
+        retry.scheduled = true;
+        let delay = connect_retry_delay(retry.attempts);
+        log::warn!(
+            "Failed to connect to {name}: {error:#}. Retrying in {delay:?} ({}/{MAX_CONNECT_ATTEMPTS}).",
+            retry.attempts
+        );
+
+        let manager_tx = self.get_sender_channel();
+        tokio::spawn(async move {
+            tokio::time::sleep(delay).await;
+            let _ = manager_tx
+                .send(ToolkitCommand::RetryConnect { mac_address })
+                .await;
+        });
+    }
+
+    /// A reader thread gave up on its board. Forget the connection so the board shows as
+    /// disconnected and a session stop no longer trips over a dead channel, then tell the
+    /// frontend. Reports from a reader that was already replaced are ignored.
+    async fn board_reader_failed(&mut self, failure: ReaderFailure) -> Result<()> {
+        let ReaderFailure { mac_address, error } = failure;
+        let name = utils::mac_address_human_name(mac_address);
+        let is_current = self
+            .all_connections
+            .get(&mac_address)
+            .is_some_and(|connection| connection.is_closed());
+        if !is_current {
+            log::debug!("Ignoring a failure from a replaced reader for {name}: {error:#}");
+            return Ok(());
+        }
+
+        log::error!("Board {name} stopped responding and was disconnected: {error:#}");
+        self.all_connections.remove(&mac_address);
+        self.session_settings.connections.remove(&mac_address);
+        if let Some(device) = self.known_devices.get_mut(&mac_address) {
+            device.is_connected = false;
+        }
+        self.response_tx
+            .send(ToolkitResponse::BoardDisconnected(mac_address))
+            .await?;
         Ok(())
     }
 

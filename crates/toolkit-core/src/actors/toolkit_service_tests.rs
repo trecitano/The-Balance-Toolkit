@@ -66,3 +66,13 @@ async fn failed_board_stop_still_cancels_timer_and_clears_running_state() {
     assert!(running.is_none());
     assert!(token.is_cancelled());
 }
+
+#[test]
+fn connect_retry_delay_backs_off_exponentially_and_caps() {
+    assert_eq!(connect_retry_delay(1), Duration::from_secs(1));
+    assert_eq!(connect_retry_delay(2), Duration::from_secs(2));
+    assert_eq!(connect_retry_delay(3), Duration::from_secs(4));
+    assert_eq!(connect_retry_delay(5), Duration::from_secs(16));
+    assert_eq!(connect_retry_delay(6), CONNECT_RETRY_MAX_DELAY);
+    assert_eq!(connect_retry_delay(u32::MAX), CONNECT_RETRY_MAX_DELAY);
+}
