@@ -132,6 +132,12 @@ pub enum ToolkitCommand {
     MeasureWeight {
         frontend_channel: Sender<f64>,
         mac_address: MacAddress,
+        measurement_id: String,
+        response: oneshot::Sender<Result<(), String>>,
+    },
+    StopWeightMeasurement {
+        measurement_id: String,
+        response: oneshot::Sender<Result<(), String>>,
     },
 
     Connect {
@@ -293,6 +299,12 @@ impl Drop for RunningSession {
     }
 }
 
+struct WeightMeasurement {
+    id: String,
+    board: Sender<BoardAction>,
+    task: tokio::task::JoinHandle<()>,
+}
+
 pub struct ConnectionManager {
     tx: Sender<ToolkitCommand>,
     rx: Receiver<ToolkitCommand>,
@@ -310,6 +322,7 @@ pub struct ConnectionManager {
     known_devices: HashMap<MacAddress, NintendoDevice>,
     /// Tracks active calibration streams (mac_address -> cancellation flag)
     active_calibration_streams: HashMap<MacAddress, CancellationToken>,
+    weight_measurement: Option<WeightMeasurement>,
     connect_retries: HashMap<MacAddress, ConnectRetry>,
     /// Reader threads report here when they give up on their board.
     reader_failure_tx: Sender<ReaderFailure>,
@@ -404,6 +417,7 @@ impl ConnectionManager {
             all_connections: HashMap::new(),
             known_devices,
             active_calibration_streams: HashMap::new(),
+            weight_measurement: None,
             connect_retries: HashMap::new(),
             reader_failure_tx,
             reader_failure_rx,
@@ -470,38 +484,28 @@ impl ConnectionManager {
             ToolkitCommand::MeasureWeight {
                 frontend_channel,
                 mac_address,
+                measurement_id,
+                response,
             } => {
-                // Weight measurements semantics:
-                // 1 - We cannot make a weight measurement if a session is ongoing
-                // 2 - We only perform a weight measurement on a specific board
-                // 3 - When the user closes the channel, we stop reading from the board.
-                if self.session_settings.running.is_some() {
-                    return Ok(());
-                }
-
-                let Some(board) = self.session_settings.connections.get(&mac_address) else {
-                    log::warn!(
-                        "Weight measurement requested for a board that is not in the session: {}",
-                        utils::mac_address_human_name(mac_address)
-                    );
-                    return Ok(());
+                let result = self
+                    .start_weight_measurement(mac_address, measurement_id, frontend_channel)
+                    .await;
+                let _ = response.send(result.map_err(|error| error.to_string()));
+            }
+            ToolkitCommand::StopWeightMeasurement {
+                measurement_id,
+                response,
+            } => {
+                let result = if self
+                    .weight_measurement
+                    .as_ref()
+                    .is_some_and(|m| m.id == measurement_id)
+                {
+                    self.stop_weight_measurement().await
+                } else {
+                    Ok(())
                 };
-                let (raw_data_tx, mut raw_data_rx) = mpsc::channel(10);
-                let command = BoardAction::StartRecording(raw_data_tx);
-                board.send(command).await?;
-
-                let board_clone = board.clone();
-                tokio::spawn(async move {
-                    while let Some(data) = raw_data_rx.recv().await {
-                        let weight =
-                            data.top_left + data.top_right + data.bottom_left + data.bottom_right;
-                        if frontend_channel.send(weight as f64).await.is_err() {
-                            log::debug!("Weight measurement channel is closed, stopping recording");
-                            let _ = board_clone.send(BoardAction::StopRecording).await;
-                            break;
-                        }
-                    }
-                });
+                let _ = response.send(result.map_err(|error| error.to_string()));
             }
 
             ToolkitCommand::Connect { mac_address } => {
@@ -671,6 +675,16 @@ impl ConnectionManager {
                 frontend_channel,
                 response,
             } => {
+                // Finish the measurement before replacing the board's recording stream.
+                // Later modal cleanup is scoped to its old measurement ID.
+                self.stop_weight_measurement().await?;
+                if let Some(activity) = &self.session_settings.core.activity {
+                    self.session_settings.core.activity =
+                        self.activity_state.get_copy_of_activity(&activity.id);
+                }
+                self.session_settings.core.user = self
+                    .user_state
+                    .get_user(self.session_settings.core.user.id)?;
                 let cancellation_token = CancellationToken::new();
                 self.session_settings.running =
                     Some(RunningSession::new(cancellation_token.clone()));
@@ -889,6 +903,66 @@ impl ConnectionManager {
                     .await;
                 let _ = response.send(result);
             }
+        }
+        Ok(())
+    }
+
+    async fn start_weight_measurement(
+        &mut self,
+        mac_address: MacAddress,
+        measurement_id: String,
+        frontend_channel: Sender<f64>,
+    ) -> Result<()> {
+        if self.session_settings.running.is_some() {
+            anyhow::bail!("Stop the session before measuring weight");
+        }
+        if self.weight_measurement.is_some() {
+            anyhow::bail!("A weight measurement is already running");
+        }
+        if self.active_calibration_streams.contains_key(&mac_address) {
+            anyhow::bail!("Finish calibration before measuring weight");
+        }
+        let board = self
+            .session_settings
+            .connections
+            .get(&mac_address)
+            .ok_or_else(|| anyhow!("Select a connected board before measuring weight"))?
+            .clone();
+        let (raw_data_tx, mut raw_data_rx) = mpsc::channel(10);
+        board.send(BoardAction::StartRecording(raw_data_tx)).await?;
+        let manager = self.tx.clone();
+        let id = measurement_id.clone();
+        let task = tokio::spawn(async move {
+            while let Some(data) = raw_data_rx.recv().await {
+                let weight = data.top_left + data.top_right + data.bottom_left + data.bottom_right;
+                if frontend_channel.send(weight as f64).await.is_err() {
+                    break;
+                }
+            }
+            // Only the manager stops boards, so a late stream closure cannot stop
+            // a session or another measurement that has since taken ownership.
+            let (response, _) = oneshot::channel();
+            let _ = manager
+                .send(ToolkitCommand::StopWeightMeasurement {
+                    measurement_id: id,
+                    response,
+                })
+                .await;
+        });
+        self.weight_measurement = Some(WeightMeasurement {
+            id: measurement_id,
+            board,
+            task,
+        });
+        Ok(())
+    }
+
+    async fn stop_weight_measurement(&mut self) -> Result<()> {
+        if let Some(measurement) = self.weight_measurement.take() {
+            measurement.task.abort();
+            let _ = measurement.task.await;
+            // A disconnected board has already stopped producing readings.
+            let _ = measurement.board.send(BoardAction::StopRecording).await;
         }
         Ok(())
     }
@@ -1295,6 +1369,8 @@ impl ConnectionManager {
         mac_address: MacAddress,
         frontend_channel: Sender<BalanceBoardCalibratedReading>,
     ) {
+        // Finish measurement ownership before calibration replaces the board stream.
+        let _ = self.stop_weight_measurement().await;
         // Stop any existing stream for this device
         self.stop_calibration_stream(mac_address).await;
 

@@ -54,6 +54,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             user_update,
             user_delete,
             user_measure_weight,
+            user_stop_measure_weight,
             devices_get_selected_devices,
             devices_fetch_all_devices,
             devices_scan_without_timeout,
@@ -326,16 +327,29 @@ async fn user_measure_weight(
     state: State<'_, AppState>,
     channel: Channel<f64>,
     mac_address: MacAddress,
+    measurement_id: String,
 ) -> Result<(), String> {
     let frontend_channel = forward_to_channel(channel, |weight| weight);
-    tell(
-        &state,
-        ToolkitCommand::MeasureWeight {
-            frontend_channel,
-            mac_address,
-        },
-    )
-    .await
+    ask(&state, |response| ToolkitCommand::MeasureWeight {
+        frontend_channel,
+        mac_address,
+        measurement_id,
+        response,
+    })
+    .await?
+}
+
+#[tauri::command]
+#[specta::specta]
+async fn user_stop_measure_weight(
+    state: State<'_, AppState>,
+    measurement_id: String,
+) -> Result<(), String> {
+    ask(&state, |response| ToolkitCommand::StopWeightMeasurement {
+        measurement_id,
+        response,
+    })
+    .await?
 }
 
 // --- DEVICES ---
