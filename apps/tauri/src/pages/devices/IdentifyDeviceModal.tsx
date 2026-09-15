@@ -1,78 +1,25 @@
-import { useState, useEffect } from "react";
-import { Modal } from "@/components/Modal.tsx";
-import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import { Device } from "@/types";
-import ledImage1 from "@/assets/wbb-top-white.svg";
-import ledImage2 from "@/assets/wbb-top-white-blink.svg";
+import { Modal } from "@/components/Modal";
+import { ToolkitButton } from "@/components/ToolkitButton";
+import type { NintendoDevice } from "@/types";
+import ledOff from "@/assets/wbb-top-white.svg";
+import ledOn from "@/assets/wbb-top-white-blink.svg";
 
-interface IdentifyDeviceModalProps {
-  device: Device | null;
+export default function IdentifyDeviceModal({
+  device,
+  onClose,
+}: {
+  device: NintendoDevice | null;
   onClose: () => void;
-}
-
-export default function IdentifyDeviceModal({ device, onClose }: IdentifyDeviceModalProps) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const isOpen = !!device;
-
-  useEffect(() => {
-    if (!isOpen) {
-      setCurrentImageIndex(0);
-      return;
-    }
-
-    let timeoutId: ReturnType<typeof setTimeout>;
-    let currentCycle = 0;
-    const totalCycles = 10;
-
-    const runFlashSequence = () => {
-      if (currentCycle >= totalCycles) {
-        setCurrentImageIndex(1); // LED stays on at the end
-        return;
-      }
-
-      // First flash: ON
-      setCurrentImageIndex(1);
-      timeoutId = setTimeout(() => {
-        // First flash: OFF
-        setCurrentImageIndex(0);
-        timeoutId = setTimeout(() => {
-          // Second flash: ON
-          setCurrentImageIndex(1);
-          timeoutId = setTimeout(() => {
-            // Second flash: OFF
-            setCurrentImageIndex(0);
-            timeoutId = setTimeout(() => {
-              currentCycle++;
-              runFlashSequence(); // Start next cycle
-            }, 800); // 800ms pause between cycles
-          }, 100);
-        }, 100);
-      }, 100);
-    };
-
-    // Start with LED off, then begin sequence
-    setCurrentImageIndex(0);
-    timeoutId = setTimeout(runFlashSequence, 100);
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [isOpen]);
-
+}) {
+  if (!device) return null;
   return (
-    <Modal open={isOpen} onClose={onClose}>
-      <h4 className="mb-4 text-lg font-bold">Identifying {device?.name}</h4>
-
-      <p className="text-base leading-relaxed text-gray-700">
-        A flashing sequence will appear on the LED of the board.
-      </p>
-
-      <img
-        src={currentImageIndex === 0 ? ledImage1 : ledImage2}
-        alt="LED flashing animation"
-        className="mx-auto size-80 object-contain transition-opacity duration-200"
-      />
-
+    <Modal open label={`Identifying ${device.name}`} onClose={onClose}>
+      <h2 className="mb-4 text-lg font-bold">Identifying {device.name}</h2>
+      <p>A flashing sequence will appear on the LED of the board.</p>
+      <div key={device.macAddress} className="relative mx-auto size-80">
+        <img src={ledOff} alt="Balance board" className="absolute size-full object-contain" />
+        <img src={ledOn} alt="" className="identify-led absolute size-full object-contain" />
+      </div>
       <ToolkitButton type="button" color="grey" onClick={onClose}>
         Close
       </ToolkitButton>

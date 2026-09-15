@@ -8,7 +8,6 @@ interface StabilityBarGaugeProps {
   title?: string;
   tooltipId?: string;
   width?: number;
-  height?: number; // This will be ignored in favor of parent height
 }
 
 export function StabilityBarGauge({
@@ -17,12 +16,11 @@ export function StabilityBarGauge({
   title = "Stability",
   tooltipId,
   width = 60,
-  height = 200, // fallback height
 }: StabilityBarGaugeProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [stabilityIndex, setStabilityIndex] = useState<number | null>(null);
-  const [canvasHeight, setCanvasHeight] = useState<number>(height);
+  const [canvasHeight, setCanvasHeight] = useState(200);
 
   // Subscribe to stability index updates
   useEffect(() => {
@@ -31,7 +29,6 @@ export function StabilityBarGauge({
       (lastFrameData) => {
         setStabilityIndex(lastFrameData?.stabilityIndex ?? null);
       },
-      { equalityFn: (a, b) => a === b },
     );
 
     return () => unsub();
@@ -104,12 +101,7 @@ export function StabilityBarGauge({
       const fillHeight = barHeight * displayValue;
       const fillY = barY + barHeight - fillHeight;
 
-      // Create gradient
-      const gradient = ctx.createLinearGradient(0, barY + barHeight, 0, barY);
-      gradient.addColorStop(0, "#397aac");
-      gradient.addColorStop(1, "#397aac");
-
-      ctx.fillStyle = gradient;
+      ctx.fillStyle = "#397aac";
       ctx.fillRect(barX, fillY, barWidth, fillHeight);
 
       // Draw current value indicator (horizontal line)

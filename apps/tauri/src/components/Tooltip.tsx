@@ -1,17 +1,19 @@
-import React, { useRef, useState, useEffect } from "react";
-import { useTooltipText } from "@/hooks/useTooltipText";
+import { useRef, useState, useId } from "react";
+import { getTooltip } from "@/utils/tooltips";
 import clsx from "clsx";
 
-const InfoIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-    />
-  </svg>
-);
+function InfoIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  );
+}
 
 function isClippingOverflow(value: string) {
   // Treat auto | scroll | hidden | clip as clipping contexts
@@ -31,53 +33,47 @@ function nearestOverflowAncestor(el: HTMLElement | null): HTMLElement | null {
 }
 
 export function Tooltip({ tooltipId }: { tooltipId: string }) {
-  const tooltipData = useTooltipText(tooltipId);
+  const tooltipContentId = useId();
+  const tooltipData = getTooltip(tooltipId);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [showBelow, setShowBelow] = useState(false);
 
-  useEffect(() => {
-    const handleMouseEnter = () => {
-      if (!containerRef.current || !tooltipRef.current) return;
-
-      const triggerRect = containerRef.current.getBoundingClientRect();
-      const tooltipRect = tooltipRef.current.getBoundingClientRect();
-
-      const overflowParent = nearestOverflowAncestor(containerRef.current);
-
-      // The top boundary that can clip the tooltip is the intersection
-      // of the viewport top (0) and the nearest overflow ancestor top.
-      const boundaryTop = Math.max(0, overflowParent ? overflowParent.getBoundingClientRect().top : 0);
-
-      const spaceAboveWithin = triggerRect.top - boundaryTop;
-
-      const tooltipHeight = tooltipRect.height || 200;
-      const buffer = 20; // spacing + safety
-
-      // If placing above would be clipped by the overflow boundary (or viewport),
-      // then place it below instead.
-      setShowBelow(spaceAboveWithin < tooltipHeight + buffer);
-    };
-
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener("mouseenter", handleMouseEnter);
-      return () => container.removeEventListener("mouseenter", handleMouseEnter);
-    }
-  }, []);
+  // Decide the placement when the tooltip is about to appear: put it below the trigger if
+  // placing it above would be clipped by the viewport or the nearest scrolling ancestor.
+  const choosePlacement = () => {
+    if (!containerRef.current || !tooltipRef.current) return;
+    const triggerRect = containerRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    const overflowParent = nearestOverflowAncestor(containerRef.current);
+    const boundaryTop = Math.max(0, overflowParent ? overflowParent.getBoundingClientRect().top : 0);
+    const spaceAboveWithin = triggerRect.top - boundaryTop;
+    const tooltipHeight = tooltipRect.height || 200;
+    const buffer = 20; // spacing + safety
+    setShowBelow(spaceAboveWithin < tooltipHeight + buffer);
+  };
 
   if (!tooltipData) return null;
 
   return (
-    <div className="group relative" ref={containerRef}>
-      <InfoIcon className="size-4 cursor-help text-gray-400 hover:text-gray-600" />
+    <div className="group relative" ref={containerRef} onMouseEnter={choosePlacement} onFocus={choosePlacement}>
+      <button
+        type="button"
+        aria-label={`About ${tooltipData.name}`}
+        aria-describedby={tooltipContentId}
+        className="block rounded focus-visible:outline-2 focus-visible:outline-blue-500"
+      >
+        <InfoIcon className="size-4 cursor-help text-gray-400 hover:text-gray-600" />
+      </button>
       <div
         ref={tooltipRef}
+        id={tooltipContentId}
+        role="tooltip"
         className={clsx(
           "pointer-events-none absolute left-1/2 z-30 min-w-60 px-3 py-2 text-sm",
           "-translate-x-1/2 transform rounded-md bg-gray-900 text-white",
           "opacity-0 shadow-lg transition-opacity duration-200",
-          "group-hover:opacity-100",
+          "group-hover:opacity-100 group-focus-within:opacity-100",
           showBelow ? "top-full mt-2" : "bottom-full mb-2",
         )}
       >
@@ -87,6 +83,7 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
           )}
 
           {tooltipData.equation && (
+            // Equations are bundled markup from assets/tooltips.json, not user input.
             <div
               className="rounded border bg-gray-800 px-2 py-1 font-mono text-sm text-blue-200"
               dangerouslySetInnerHTML={{ __html: tooltipData.equation }}

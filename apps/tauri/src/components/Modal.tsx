@@ -1,52 +1,49 @@
 import clsx from "clsx";
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import type { PropsWithChildren } from "react";
+import { createPortal } from "react-dom";
 
-interface ModalProps extends React.PropsWithChildren {
+interface ModalProps extends PropsWithChildren {
   open: boolean;
-  onOpen?: () => void;
   onClose: () => void;
   className?: string;
   defaultLayout?: boolean;
+  label?: string;
 }
 
-export function Modal({ open, onOpen, onClose, children, className, defaultLayout = true }: ModalProps) {
-  const previousOpenRef = useRef(open);
-
-  if (open && !previousOpenRef.current && onOpen) {
-    onOpen();
-  }
-  previousOpenRef.current = open;
-
-  // Keyboard support
+export function Modal({ open, onClose, children, className, defaultLayout = true, label = "Dialog" }: ModalProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    if (!open) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open, onClose]);
+    const dialog = dialogRef.current;
+    if (!open || !dialog) return;
+    dialog.showModal();
+    return () => dialog.close();
+  }, [open]);
 
   if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/35" onClick={onClose}>
-      {defaultLayout ? (
-        <div
-          className={clsx("rounded-lg bg-[#ffffff] px-20 py-12 text-center shadow-lg", className)}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {children}
-        </div>
-      ) : (
-        children
-      )}
-    </div>
+  return createPortal(
+    <dialog
+      ref={dialogRef}
+      aria-label={label}
+      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none bg-transparent p-4 text-inherit backdrop:bg-black/35 open:flex open:items-center open:justify-center"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className={clsx(
+          "max-h-full overflow-auto",
+          defaultLayout && "rounded-lg bg-white px-20 py-12 text-center shadow-lg",
+          className,
+        )}
+      >
+        {children}
+      </div>
+    </dialog>,
+    document.body,
   );
 }

@@ -120,6 +120,38 @@ The core unit tests cover these rules alongside observer backpressure and sway
 calculations with uneven sample intervals. Serialized session settings retain
 their existing format.
 
+## Desktop frontend state and forms
+
+Shared query definitions and mutation invalidation live in
+`apps/tauri/src/queries/toolkit.ts`. Pages compose these queries instead of caching
+activities or devices in page-specific bundles. `ToolkitEvents` refreshes affected
+resources throughout each desktop window; `useTauriEvent` owns subscription cleanup.
+
+Numeric processing fields keep a local draft. Blur or Enter saves a positive whole
+number; Escape discards the draft. Empty and invalid drafts never reach the backend,
+and the Start control waits until drafts and pending saves are resolved. Activity
+and user forms keep failed saves editable. Switching users and closing an edited
+activity require an explicit discard; reopening an editor starts a fresh draft.
+Settings drafts exist only while the settings form is mounted.
+
+The Users page composes `UserCarousel`, `UserEditor`, and `WeightMeasureModal`.
+Measurement readings update only the mounted modal, at most once per animation
+frame. Readings arrive in kilograms and are converted for a pounds display. The
+shared modal uses the browser's modal dialog API for focus containment, Escape,
+and focus restoration, with an accessible name supplied by each caller.
+
+`user_measure_weight` takes a caller-generated `measurement_id` and acknowledges
+whether the core started the stream. `user_stop_measure_weight` stops only that
+identifier. The modal stops its measurement on close or unmount; dropping a
+JavaScript channel alone is insufficient. The core finishes measurement cleanup
+before a session or calibration takes over a board. Late cleanup for an old
+identifier cannot stop the replacement stream. Starting a session also refreshes
+the selected user and activity from their saved definitions.
+
+Plots share creation, resizing, and destruction through `useUPlot`; data updates
+remain direct store subscriptions. Timeline animation stops on unmount or session
+completion. The activity popup uses backend progress and polls while running.
+
 ## Android environment
 
 Install a JDK (JDK 25 is supported), Android SDK platform 36 and its build tools.

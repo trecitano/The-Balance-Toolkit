@@ -4,12 +4,12 @@ import { Channel } from "@tauri-apps/api/core";
 import { commands as backend } from "@/bindings";
 import type {
   Activity,
-  BalanceBoardEvent,
-  CalibrationReading,
+  FrontendBalanceBoardEvent,
+  FrontendCalibrationReading,
   CapturedCalibrationReading,
   GeneralSettings,
-  SessionPanelConfiguration,
-  UserType,
+  SessionSettings,
+  User,
 } from "@/types.ts";
 
 export const commands = {
@@ -22,12 +22,13 @@ export const commands = {
     userPageInformation: () => backend.userPageInformation(),
     selectUser: (userId: number) => backend.userSelectUser(userId),
     createUser: () => backend.userCreate(),
-    updateUser: (user: UserType) => backend.userUpdate(user),
+    updateUser: (user: User) => backend.userUpdate(user),
     deleteUser: (userId: number) => backend.userDelete(userId),
     // The generator types a bare `f64` channel payload as nullable (JSON has no NaN); the
     // backend only ever sends finite weights.
-    startMeasureWeight: (channel: Channel<number>, macAddress: number) =>
-      backend.userMeasureWeight(channel as Channel<number | null>, macAddress),
+    startMeasureWeight: (channel: Channel<number>, macAddress: number, measurementId: string) =>
+      backend.userMeasureWeight(channel as Channel<number | null>, macAddress, measurementId),
+    stopMeasureWeight: (measurementId: string) => backend.userStopMeasureWeight(measurementId),
   },
 
   devices: {
@@ -43,7 +44,7 @@ export const commands = {
       backend.devicesUpdateDeviceName(macAddress, deviceName),
     tareDevice: (macAddress: number) => backend.devicesTareDevice(macAddress),
     identifyDevice: (macAddress: number) => backend.devicesIdentifyDevice(macAddress),
-    startCalibrationStream: (calibrationChannel: Channel<CalibrationReading>, macAddress: number) =>
+    startCalibrationStream: (calibrationChannel: Channel<FrontendCalibrationReading>, macAddress: number) =>
       backend.devicesStartCalibrationStream(macAddress, calibrationChannel),
     stopCalibrationStream: (macAddress: number) => backend.devicesStopCalibrationStream(macAddress),
     submitCalibration: (macAddress: number, weightKg: number, readings: CapturedCalibrationReading[]) =>
@@ -52,9 +53,8 @@ export const commands = {
 
   session: {
     sessionInfo: () => backend.sessionInformation(),
-    updateSession: (configuration: SessionPanelConfiguration) =>
-      backend.sessionUpdateSessionConfiguration(configuration),
-    startSession: (sessionChannel: Channel<BalanceBoardEvent>) => backend.sessionStartSession(sessionChannel),
+    updateSession: (configuration: SessionSettings) => backend.sessionUpdateSessionConfiguration(configuration),
+    startSession: (sessionChannel: Channel<FrontendBalanceBoardEvent>) => backend.sessionStartSession(sessionChannel),
     tareDevices: () => backend.sessionTareDevices(),
     stopSession: () => backend.sessionStopSession(),
     getActivityState: () => backend.sessionActivityState(),
@@ -64,8 +64,8 @@ export const commands = {
     loadLastSessionDetails: () => backend.replayLoadLastSessionInfo(),
     replayInfo: () => backend.replayInformation(),
     loadReplayFile: (filePath: string) => backend.replayLoadFile(filePath),
-    updateReplay: (configuration: SessionPanelConfiguration) => backend.replayUpdate(configuration),
-    startReplay: (sessionChannel: Channel<BalanceBoardEvent>) => backend.replayStartReplay(sessionChannel),
+    updateReplay: (configuration: SessionSettings) => backend.replayUpdate(configuration),
+    startReplay: (sessionChannel: Channel<FrontendBalanceBoardEvent>) => backend.replayStartReplay(sessionChannel),
     stopReplay: () => backend.replayStopReplay(),
     clearReplay: () => backend.replayClearReplay(),
   },
@@ -73,7 +73,6 @@ export const commands = {
   activity: {
     getAvailableTimeBlocks: () => backend.activityGetAvailableTimeBlocks(),
     getActivities: () => backend.activityGetActivities(),
-    getActivity: (activityId: string) => backend.activityGetActivity(activityId),
     updateActivity: (activity: Activity) => backend.activityUpdateActivity(activity),
     resetActivity: (activityId: string) => backend.activityResetActivityToDefault(activityId),
   },

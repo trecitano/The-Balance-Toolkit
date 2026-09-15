@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { ConfirmModal } from "@/components/Confirm.tsx";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { ConfirmModal } from "@/components/Confirm";
 
 interface ConfirmOptions {
   title?: string;
@@ -8,55 +8,30 @@ interface ConfirmOptions {
   cancelText?: string;
   confirmColor?: "blue" | "red" | "grey";
 }
-
 export function useConfirm() {
-  const [confirmState, setConfirmState] = useState<{
-    isOpen: boolean;
-    options: ConfirmOptions;
-    resolve: (value: boolean) => void;
-  } | null>(null);
-
-  const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
+  const [options, setOptions] = useState<ConfirmOptions | null>(null);
+  const resolver = useRef<((value: boolean) => void) | null>(null);
+  useEffect(
+    () => () => {
+      resolver.current?.(false);
+      resolver.current = null;
+    },
+    [],
+  );
+  const confirm = useCallback((next: ConfirmOptions): Promise<boolean> => {
+    resolver.current?.(false);
+    setOptions(next);
     return new Promise((resolve) => {
-      setConfirmState({
-        isOpen: true,
-        options,
-        resolve,
-      });
+      resolver.current = resolve;
     });
   }, []);
-
-  const handleConfirm = useCallback(() => {
-    if (confirmState) {
-      confirmState.resolve(true);
-      setConfirmState(null);
-    }
-  }, [confirmState]);
-
-  const handleCancel = useCallback(() => {
-    if (confirmState) {
-      confirmState.resolve(false);
-      setConfirmState(null);
-    }
-  }, [confirmState]);
-
-  const ConfirmDialog = useCallback(() => {
-    if (!confirmState) return null;
-
-    return (
-      <ConfirmModal
-        open={confirmState.isOpen}
-        onClose={handleCancel}
-        title={confirmState.options.title}
-        message={confirmState.options.message}
-        onConfirm={handleConfirm}
-        onCancel={handleCancel}
-        confirmText={confirmState.options.confirmText}
-        cancelText={confirmState.options.cancelText}
-        confirmColor={confirmState.options.confirmColor}
-      />
-    );
-  }, [confirmState, handleConfirm, handleCancel]);
-
+  const finish = useCallback((accepted: boolean) => {
+    resolver.current?.(accepted);
+    resolver.current = null;
+    setOptions(null);
+  }, []);
+  const ConfirmDialog = options ? (
+    <ConfirmModal open {...options} onConfirm={() => finish(true)} onCancel={() => finish(false)} />
+  ) : null;
   return { confirm, ConfirmDialog };
 }

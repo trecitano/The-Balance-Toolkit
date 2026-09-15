@@ -1,124 +1,72 @@
-import { useEffect, useRef, useState } from "react";
-import { SessionPanel } from "./SessionPanel.tsx";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { commands } from "@/utils/requests.ts";
-import { SessionPanelConfiguration, SelectedBoard } from "@/types.ts";
-import { sessionChannelManager } from "@/services/BalanceBoardChannelManager.tsx";
-import BoardGrid from "@/pages/session/BoardGrid.tsx";
-import { useSessionDataStore } from "@/store/sessionDataStore.tsx";
-import { events } from "@/bindings";
-import { TimelinePanel } from "@/pages/session/TimelinePanel.tsx";
-import { BaseOption } from "@/components/SelectPrimitive.tsx";
-import { SESSION_QUERY_KEY, SessionQuery, SessionQueryData } from "@/pages/session/session/sessionQuery.ts";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { SessionPanel } from "./SessionPanel";
+import { SessionQuery, ActivitiesQuery, useSaveConfiguration } from "@/queries/toolkit";
+import { useBoardDisplay } from "@/hooks/useBoardDisplay";
+import { useDraftFields } from "@/hooks/useDraftFields";
+import { QueryStatus } from "@/components/QueryStatus";
+import { sessionChannelManager } from "@/services/BalanceBoardChannelManager";
+import BoardGrid from "../BoardGrid";
+import { useSessionDataStore } from "@/store/sessionDataStore";
+import { TimelinePanel } from "../TimelinePanel";
+import { DraftNotice } from "@/pages/session/ProcessingFields.tsx";
 
 export default function SessionPage() {
-  const { data } = useQuery(SessionQuery);
-  const queryClient = useQueryClient();
-
-  // Backend session events. Registered in an effect so each mount adds exactly one listener
-  // and removes it on unmount.
-  useEffect(() => {
-    const refetch = () => queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
-    const unlistenPromises = [events.sessionStarted.listen(refetch), events.sessionCompleted.listen(refetch)];
-    return () => {
-      unlistenPromises.forEach((promise) => promise.then((unlisten) => unlisten()));
-    };
-  }, [queryClient]);
-
-  const updateSession = useMutation({
-    mutationFn: (newState: SessionPanelConfiguration) => commands.session.updateSession(newState),
-    onMutate: async (next) => {
-      await queryClient.cancelQueries({ queryKey: SESSION_QUERY_KEY });
-      const previous = queryClient.getQueryData<SessionQueryData>(SESSION_QUERY_KEY);
-
-      queryClient.setQueryData(SESSION_QUERY_KEY, (old: SessionQueryData) => {
-        if (!old?.sessionInformation) return old;
-        return {
-          ...old,
-          sessionInformation: {
-            ...old.sessionInformation,
-            core: {
-              ...old.sessionInformation.core,
-              ...next,
-            },
-          },
-        };
-      });
-
-      return { previous };
-    },
-    onError: (_error, _next, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(SESSION_QUERY_KEY, context.previous);
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
-    },
-  });
-
-  const { sessionInformation, activities } = data ?? {
-    sessionInformation: null,
-    activities: [],
-  };
-
-  const sessionConfiguration: SessionPanelConfiguration | null = sessionInformation ? sessionInformation.core : null;
-  const selectedBoards = sessionInformation?.selectedBoards ?? [];
-
-  const [boardDisplaySelected, setBoardDisplaySelected] = useState<number[]>([]);
-  const lastAvailableBoardsRef = useRef<string>("");
-
-  // Check if available boards changed and update display selection accordingly
-  const availableBoardMacs = selectedBoards.map((b) => b.macAddress);
-  const availableBoardsKey = availableBoardMacs.join(",");
-
-  if (availableBoardsKey !== lastAvailableBoardsRef.current) {
-    lastAvailableBoardsRef.current = availableBoardsKey;
-    setBoardDisplaySelected(availableBoardMacs);
-  }
-
-  const boardDisplayOptions: BaseOption<number>[] = selectedBoards.map((board) => ({
-    value: board.macAddress,
-    label: board.name,
-  }));
-  const selectedDisplayBoards = boardDisplaySelected
-    .map((mac) => selectedBoards.find((b) => b.macAddress === mac))
-    .filter((b): b is SelectedBoard => Boolean(b));
-  const activityOptions = activities.map((i) => ({ label: i.title, value: i.id }));
-  const chosenActivity = activities.find((a) => a.id === sessionInformation?.core.activityId);
-  const canStartSession = selectedBoards.length > 0;
-  const hasOngoingSession = sessionInformation?.hasOngoingSession ?? false;
-
+  const drafts = useDraftFields();
+  const query = useQuery(SessionQuery);
+  const activityQuery = useQuery(ActivitiesQuery);
+  const client = useQueryClient();
+  const save = useSaveConfiguration("session");
+  const information = query.data?.sessionInformation;
+  const boards = information?.selectedBoards ?? [];
+  const display = useBoardDisplay(boards);
+  if (
+    query.isPending ||
+    activityQuery.isPending ||
+    (!query.data && query.error) ||
+    (!activityQuery.data && activityQuery.error)
+  )
+    return (
+      <QueryStatus
+        pending={query.isPending || activityQuery.isPending}
+        error={query.error || activityQuery.error}
+        onRetry={() => {
+          void query.refetch();
+          void activityQuery.refetch();
+        }}
+      />
+    );
+  const activities = activityQuery.data ?? [];
+  const running = information?.hasOngoingSession ?? false;
   return (
     <div className="flex h-full flex-col gap-5">
       <SessionPanel
-        boardDisplaySelected={boardDisplaySelected}
-        onBoardDisplayChange={setBoardDisplaySelected}
-        boardDisplayOptions={boardDisplayOptions}
-        activityOptions={activityOptions}
-        userOptions={sessionInformation?.availableUsers ?? []}
-        disabled={hasOngoingSession}
-        value={sessionConfiguration}
-        onChange={(newState) => updateSession.mutate(newState)}
+        {...display}
+        onDraftChange={drafts.onDraftChange}
+        activityOptions={activities.map((activity) => ({ label: activity.title, value: activity.id }))}
+        userOptions={information?.availableUsers ?? []}
+        disabled={running || save.isPending || !information}
+        value={information?.core ?? null}
+        onChange={save.mutateAsync}
       />
-
+      <QueryStatus error={save.error || query.error || activityQuery.error} />
+      {save.isPending && <p role="status">Saving configuration…</p>}
+      <DraftNotice show={drafts.hasDrafts} />
       <TimelinePanel
-        activity={chosenActivity}
-        playButtonClass={"size-6 rounded-full bg-[#e50012]"}
+        activity={activities.find((activity) => activity.id === information?.core.activityId)}
+        playButtonClass="size-6 rounded-full bg-[#e50012]"
         placeholderMessage="No activity selected"
-        hasOngoingSession={hasOngoingSession}
-        canStart={canStartSession}
+        hasOngoingSession={running}
+        canStart={boards.length > 0 && !save.isPending && !drafts.hasDrafts}
         onStart={async () => {
           await sessionChannelManager.start();
-          await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+          await client.invalidateQueries(SessionQuery);
         }}
         onStop={async () => {
           await sessionChannelManager.stop();
-          await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+          await client.invalidateQueries(SessionQuery);
         }}
       />
-
-      <BoardGrid selectedBoards={selectedBoards} displayBoards={selectedDisplayBoards} store={useSessionDataStore} />
+      <BoardGrid selectedBoards={boards} displayBoards={display.displayBoards} store={useSessionDataStore} />
     </div>
   );
 }

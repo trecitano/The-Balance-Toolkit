@@ -70,3 +70,32 @@ body {
   font-family: "Segoe UI", "Inter", "Roboto", Arial, sans-serif;
   -webkit-user-select: none;
 }
+
+/* Match the board's two short flashes and pause; finish with the LED lit. */
+@keyframes identify-led {
+  0%,
+  9.09%,
+  18.18%,
+  27.27% {
+    opacity: 1;
+  }
+  9.1%,
+  18.17%,
+  27.28%,
+  99.99% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.identify-led {
+  opacity: 0;
+  animation: identify-led 1.1s steps(1, end) 0.1s 10 forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .identify-led {
+    animation: none;
+    opacity: 1;
+  }
+}

@@ -3,7 +3,7 @@ import ComplexBoardPanel from "@/pages/session/ComplexBoardPanel.tsx";
 import { SessionStore } from "@/store/sessionDataStore.tsx";
 import SimpleBoardPanel from "@/pages/session/SimpleBoardPanel.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
-import { devicesIcon } from "@/components/navigation/Navigation.tsx";
+import { devicesIcon } from "@/assets/icons";
 
 export function BoardGrid({
   selectedBoards,
@@ -14,6 +14,7 @@ export function BoardGrid({
   displayBoards: SelectedBoard[];
   store: SessionStore;
 }) {
+  const single = displayBoards.length === 1 ? displayBoards[0] : undefined;
   return (
     <div className={"min-h-105 flex-1"}>
       {selectedBoards.length === 0 ? (
@@ -29,13 +30,13 @@ export function BoardGrid({
           <p className="text-3xl font-medium">No boards selected</p>
           <p className="text-xl text-gray-400">Choose a board from the panel above to get started.</p>
         </div>
-      ) : displayBoards.length === 1 ? (
+      ) : single ? (
         // Keyed by board: the plots inside subscribe once on mount, so switching the displayed
         // board must remount them rather than re-render them with a new macAddress.
         <ComplexBoardPanel
-          key={displayBoards[0].macAddress}
-          boardName={displayBoards[0].name}
-          macAddress={displayBoards[0].macAddress}
+          key={single.macAddress}
+          boardName={single.name}
+          macAddress={single.macAddress}
           store={store}
         />
       ) : (

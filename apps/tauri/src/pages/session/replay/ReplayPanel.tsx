@@ -1,41 +1,38 @@
 import { BaseOption, SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
-import { InterpolationOption, interpolationOptions, ReplayConfiguration, SessionPanelConfiguration } from "@/types.ts";
+import { ReplayInformation, SessionSettings } from "@/types.ts";
 import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
-import { Checkbox } from "@/components/Checkbox.tsx";
+import { ProcessingFields, StreamToggles } from "@/pages/session/ProcessingFields.tsx";
 
 export function ReplayPanel({
   config,
+  saving,
   boardDisplaySelected,
   onBoardDisplayChange,
   boardDisplayOptions,
   onChange,
+  onDraftChange,
   onPickSessionFile,
   onResetFile,
 }: {
-  config: ReplayConfiguration | null;
+  config: ReplayInformation | null;
+  saving: boolean;
   boardDisplaySelected: number[];
   onBoardDisplayChange: (ids: number[]) => void;
   boardDisplayOptions: BaseOption<number>[];
-  onChange: (v: ReplayConfiguration) => void;
+  onDraftChange: (field: string, dirty: boolean) => void;
+  onChange: (v: ReplayInformation) => Promise<unknown>;
   onPickSessionFile: (defaultPath?: string | null) => void;
   onResetFile: () => void;
 }) {
-  const update = <K extends keyof SessionPanelConfiguration>(key: K, val: SessionPanelConfiguration[K]) => {
-    const next: ReplayConfiguration = {
-      ...config!,
-      core: {
-        ...config!.core,
-        [key]: val,
-      },
-    };
-
-    onChange(next);
+  const update = <K extends keyof SessionSettings>(key: K, val: SessionSettings[K]) => {
+    if (!config) return Promise.reject(new Error("No replay is loaded."));
+    return onChange({ ...config, core: { ...config.core, [key]: val } });
   };
 
-  const disabled = config === null || config.hasOngoingSession;
+  const disabled = saving || config === null || config.hasOngoingSession;
 
   return (
     <>
@@ -46,81 +43,32 @@ export function ReplayPanel({
       <ToolkitContainer className="grid grid-cols-40 grid-rows-2 text-xs">
         <SingleColumn label="Board to Display" className="col-span-9">
           <SelectPrimitive
-            mode={"multi"}
+            mode="multi"
             options={boardDisplayOptions}
-            noOptionsMessage={"No boards in session."}
+            noOptionsMessage="No boards in session."
             value={boardDisplaySelected}
             onChange={onBoardDisplayChange}
-            placeholder="Choose a Board to diplay"
+            disabled={disabled}
+            placeholder="Choose a board to display"
           />
         </SingleColumn>
 
-        <SingleColumn label="User" className="col-span-9" tooltipId={"session_user"}>
-          <InputPrimitive disabled={true} value={config?.user.name ?? "No User"} />
+        <SingleColumn label="User" className="col-span-9" tooltipId="session_user">
+          <InputPrimitive disabled value={config?.user.name ?? "No User"} />
         </SingleColumn>
 
-        <SingleColumn label="Window Size (ms)" className="col-span-6" tooltipId={"session_window_size"}>
-          <InputPrimitive
-            disabled={disabled}
-            type="number"
-            value={config?.core.windowSizeMs}
-            onChange={(e) => update("windowSizeMs", Number(e.target.value))}
-          />
-        </SingleColumn>
-
-        <SingleColumn label="Window Slide (ms)" className="col-span-6" tooltipId={"session_window_slide"}>
-          <InputPrimitive
-            disabled={disabled}
-            type="number"
-            value={config?.core.windowSlideMs}
-            onChange={(e) => update("windowSlideMs", Number(e.target.value))}
-          />
-        </SingleColumn>
-        <SingleColumn label="Sampling Rate" className="col-span-5" tooltipId={"session_sampling_rate"}>
-          <InputPrimitive
-            disabled={disabled}
-            type="number"
-            value={config?.core.samplingRate}
-            onChange={(e) => update("samplingRate", Number(e.target.value))}
-          />
-        </SingleColumn>
-
-        <SingleColumn label="Interpolation" className="col-span-5" tooltipId={"session_interpolation"}>
-          <SelectPrimitive<string>
-            disabled={disabled}
-            value={config?.core.interpolation ?? "Linear"}
-            onChange={(v) => update("interpolation", v as InterpolationOption)}
-            options={interpolationOptions.map((i) => ({ label: i, value: i }))}
-          />
-        </SingleColumn>
+        <ProcessingFields
+          value={config?.core ?? null}
+          disabled={disabled}
+          onChange={update}
+          onDraftChange={onDraftChange}
+        />
 
         <SingleColumn label="Activity" className="col-span-9">
-          <InputPrimitive disabled={true} value={config?.activity?.title ?? "No Activity"} />
+          <InputPrimitive disabled value={config?.activity?.title ?? "No Activity"} />
         </SingleColumn>
 
-        <SingleColumn label="LSL" direction="row" tooltipId={"session_lsl_toggle"} className={"col-span-2"}>
-          <Checkbox
-            disabled={disabled}
-            className={"ml-2"}
-            checked={config?.core.lslEnabled ?? false}
-            onChange={(e) => update("lslEnabled", e.target.checked)}
-          />
-          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>
-            {config?.core.lslEnabled ? "ON" : "OFF"}
-          </span>
-        </SingleColumn>
-
-        <SingleColumn label="TCP" direction="row" tooltipId={"session_tcp_toggle"} className={"col-span-2"}>
-          <Checkbox
-            disabled={disabled}
-            className={"ml-2"}
-            checked={config?.core.tcpEnabled ?? false}
-            onChange={(e) => update("tcpEnabled", e.target.checked)}
-          />
-          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>
-            {config?.core.tcpEnabled ? "ON" : "OFF"}
-          </span>
-        </SingleColumn>
+        <StreamToggles value={config?.core ?? null} disabled={disabled} onChange={update} />
 
         <SingleColumn
           label="Load Session"
@@ -128,14 +76,14 @@ export function ReplayPanel({
           className="col-start-19 col-end-41"
           disabled={disabled}
           actionText="Clear"
-          tooltipId={"replay_load_session"}
+          tooltipId="replay_load_session"
           onActionClick={onResetFile}
         >
           <div className="flex h-8 items-center gap-2">
             <button
               type="button"
-              disabled={config?.hasOngoingSession ?? false}
-              className="h-8 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200"
+              disabled={saving || (config?.hasOngoingSession ?? false)}
+              className="h-8 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100/80 disabled:text-gray-600"
               onClick={() => onPickSessionFile(config?.core?.outputDirectory)}
             >
               Choose…

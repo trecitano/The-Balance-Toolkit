@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useCallback, useState } from "react";
 import { BoardBuffer, SessionStore } from "@/store/sessionDataStore.tsx";
 import { ProcessedSingleFrameSessionData, RawBalanceBoardEvent } from "@/types.ts";
-import wbbTopdown from "@/assets/wbb-topdown.svg";
+import clsx from "clsx";
 import { StabilityBarGauge } from "@/pages/session/StabilityBarGauge.tsx";
 import { Tooltip } from "@/components/Tooltip.tsx";
 
@@ -27,7 +27,13 @@ type Props = {
   store: SessionStore;
 };
 
-export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
+export function BalanceBoardWithCoPOverlay({
+  macAddress,
+  store,
+  src,
+  alt = "Balance board with center of pressure",
+  className,
+}: Props) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -116,7 +122,6 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
         rawRef.current = buf;
         scheduleDraw();
       },
-      { equalityFn: (a, b) => a === b },
     );
 
     const lastFrameDataUnsub = store.subscribe(
@@ -126,14 +131,13 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
 
         scheduleDraw();
       },
-      { equalityFn: (a, b) => a === b },
     );
 
     return () => {
       rawDataUnsub();
       lastFrameDataUnsub();
     };
-  }, [macAddress, scheduleDraw]);
+  }, [macAddress, scheduleDraw, store]);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -154,11 +158,12 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
   }, []);
 
   return (
-    <div className="relative flex h-full w-full items-center justify-evenly gap-3">
+    <div className={clsx("relative flex h-full w-full items-center justify-evenly gap-3", className)}>
       <div className="relative h-full w-4/10">
         <img
           ref={imgRef}
-          src={wbbTopdown}
+          src={src}
+          alt={alt}
           className="pointer-events-none block h-full object-contain select-none"
           draggable={false}
           onLoad={scheduleDraw}
@@ -195,13 +200,7 @@ export function BalanceBoardWithCoPOverlay({ macAddress, store }: Props) {
         <ForceReadout macAddress={macAddress} store={store} />
       </div>
 
-      <StabilityBarGauge
-        macAddress={macAddress}
-        store={store}
-        width={50}
-        height={150}
-        tooltipId={"session_stability_index"}
-      />
+      <StabilityBarGauge macAddress={macAddress} store={store} width={50} tooltipId="session_stability_index" />
     </div>
   );
 }
@@ -226,7 +225,6 @@ function ForceReadout({ macAddress, store }: { macAddress: number; store: Sessio
           setForceText(next);
         }
       },
-      { equalityFn: (a, b) => a === b },
     );
   }, [macAddress, store]);
 
@@ -286,14 +284,12 @@ function draw(
       ctx.strokeStyle = DOT_COLOR;
 
       ctx.beginPath();
-      ctx.moveTo(mapped[0].x, mapped[0].y);
-      for (let i = 1; i < mapped.length; i++) {
-        ctx.lineTo(mapped[i].x, mapped[i].y);
-      }
+      mapped.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
       ctx.stroke();
       ctx.restore();
 
       const last = mapped[mapped.length - 1];
+      if (!last) return;
       ctx.save();
       ctx.beginPath();
       ctx.arc(last.x, last.y, DOT_RADIUS, 0, Math.PI * 2);
@@ -316,17 +312,13 @@ function drawPolygon(
   fill?: string,
   lineWidth = 2,
 ) {
-  if (!points || points.length === 0) return;
+  if (points.length === 0) return;
 
   ctx.save();
   ctx.beginPath();
-  const [x0, y0] = points[0];
-  ctx.moveTo(mapX(x0, width), mapY(y0, height));
-
-  for (let i = 1; i < points.length; i++) {
-    const [x, y] = points[i];
-    ctx.lineTo(mapX(x, width), mapY(y, height));
-  }
+  points.forEach(([x, y], i) =>
+    i === 0 ? ctx.moveTo(mapX(x, width), mapY(y, height)) : ctx.lineTo(mapX(x, width), mapY(y, height)),
+  );
 
   ctx.closePath();
 

@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useContext } from "react";
+import { FieldLabelContext } from "./FieldLabelContext";
 import clsx from "clsx";
 
 interface InputPrimitiveProps extends React.InputHTMLAttributes<HTMLInputElement> {}
 
 export function InputPrimitive({ className, type, ...props }: InputPrimitiveProps) {
+  const labelId = useContext(FieldLabelContext);
   return (
     <input
       className={clsx(
@@ -14,6 +16,7 @@ export function InputPrimitive({ className, type, ...props }: InputPrimitiveProp
         className,
       )}
       type={type}
+      aria-labelledby={props["aria-labelledby"] ?? (props["aria-label"] ? undefined : labelId)}
       {...props}
       value={props.value ?? ""}
     />

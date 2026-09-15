@@ -1,130 +1,114 @@
 import { useState } from "react";
-import logo from "@/assets/logo/logo-flamingo-white.svg";
-import homeIcon from "@/assets/home-icon.svg";
-import devicesIcon from "@/assets/wbb-top-bold.svg";
-import usersIcon from "@/assets/users-icon.svg";
-import sessionIcon from "@/assets/session-icon.svg";
-import replayIcon from "@/assets/replay-icon.svg";
-import settingsIcon from "@/assets/settings-icon.svg";
-import activitiesIcon from "@/assets/activities-icon.svg";
-import Settings from "@/components/modals/SettingsModal.tsx";
-import "./Navigation.css";
+import { NavLink } from "react-router-dom";
 import clsx from "clsx";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { SESSION_QUERY_KEY, SessionQueryData } from "@/pages/session/session/sessionQuery.ts";
+import { useQuery } from "@tanstack/react-query";
+import logo from "@/assets/logo/logo-flamingo-white.svg";
+import {
+  activitiesIcon,
+  devicesIcon,
+  homeIcon,
+  replayIcon,
+  sessionIcon,
+  settingsIcon,
+  usersIcon,
+} from "@/assets/icons";
+import Settings from "@/components/modals/SettingsModal.tsx";
+import { SessionQuery } from "@/queries/toolkit";
+import "./Navigation.css";
 
-interface NavigationProps {
-  activeView: string;
-  onViewChange: (view: string) => void;
-}
-
-type MenuItemType = {
-  id: string;
-  label: string;
-  icon: string;
-};
-
-const menuItems: MenuItemType[] = [
-  { id: "home", label: "Home", icon: homeIcon },
-  { id: "users", label: "Users", icon: usersIcon },
-  { id: "devices", label: "Devices", icon: devicesIcon },
-  { id: "session", label: "Session", icon: sessionIcon },
-  { id: "replay", label: "Replay", icon: replayIcon },
-  { id: "activities", label: "Activities", icon: activitiesIcon },
+const menuItems = [
+  { to: "/", label: "Home", icon: homeIcon },
+  { to: "/users", label: "Users", icon: usersIcon },
+  { to: "/devices", label: "Devices", icon: devicesIcon },
+  { to: "/session", label: "Session", icon: sessionIcon },
+  { to: "/replay", label: "Replay", icon: replayIcon },
+  { to: "/activities", label: "Activities", icon: activitiesIcon },
 ];
 
-interface MenuItemProps {
-  id: string;
-  label: string;
-  icon: string;
-  isActive?: boolean;
-  isDisabled?: boolean;
-  onClick: () => void;
+function menuItemClass(isActive: boolean, isDisabled: boolean) {
+  return clsx(
+    "menu-item flex flex-col items-center",
+    isActive && "active",
+    isDisabled ? "disabled cursor-not-allowed opacity-65" : "group cursor-pointer",
+  );
 }
 
-function MenuItem({ id, label, icon, isActive = false, isDisabled = false, onClick }: MenuItemProps) {
+function MenuItemBody({
+  icon,
+  label,
+  isActive,
+  isDisabled,
+}: {
+  icon: string;
+  label: string;
+  isActive: boolean;
+  isDisabled: boolean;
+}) {
   return (
-    <button
-      className={clsx(
-        "menu-item flex flex-col items-center",
-        id,
-        isActive && "active",
-        isDisabled ? "disabled cursor-not-allowed opacity-65" : "cursor-pointer group",
-      )}
-      onClick={onClick}
-      disabled={isDisabled}
-      title={label}
-    >
+    <>
       <div
         className={clsx(
           "menu-item-icon flex size-12 items-center transition-all",
           !isActive && "scale-50",
-          isActive && "bg-(--red-dark) rounded-xl p-2",
+          isActive && "rounded-xl bg-(--red-dark) p-2",
           !isActive &&
             !isDisabled &&
-            "group-hover:bg-(--red-dark) group-hover:rounded-xl group-hover:p-2 group-hover:scale-100",
+            "group-hover:scale-100 group-hover:rounded-xl group-hover:bg-(--red-dark) group-hover:p-2",
         )}
       >
-        <img src={icon} className={"object-contain"} />
+        <img alt="" src={icon} className="object-contain" />
       </div>
       <div className="text-white">{label}</div>
-    </button>
+    </>
   );
 }
 
-function Navigation({ activeView, onViewChange }: NavigationProps) {
+export default function Navigation() {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const queryClient = useQueryClient();
 
   const { data: hasOngoingSession = false } = useQuery({
-    queryKey: SESSION_QUERY_KEY,
-    queryFn: async () => {
-      return queryClient.getQueryData<SessionQueryData>(SESSION_QUERY_KEY);
-    },
-    enabled: false, // don’t fetch, just subscribe
-    initialData: () => queryClient.getQueryData(SESSION_QUERY_KEY),
-    select: (d: SessionQueryData | undefined) => d?.sessionInformation?.hasOngoingSession ?? false,
+    ...SessionQuery,
+    select: (data) => data.sessionInformation.hasOngoingSession,
   });
 
-  const handleSettingsClick = () => {
-    if (!hasOngoingSession) {
-      setSettingsOpen(true);
-    }
-  };
-
   return (
-    <nav className={"flex w-22 shrink-0 flex-col justify-between gap-10 bg-(--red)"}>
-      <img src={logo} className="mx-auto mt-5 size-15 object-contain" />
-      <div className={"flex grow flex-col gap-2"}>
+    <nav className="flex w-22 shrink-0 flex-col justify-between gap-10 bg-(--red)">
+      <img alt="The Balance Toolkit" src={logo} className="mx-auto mt-5 size-15 object-contain" />
+      <div className="flex grow flex-col gap-2">
         {menuItems.map((item) => (
-          <MenuItem
-            key={item.id}
-            id={item.id}
-            label={item.label}
-            icon={item.icon}
-            isActive={activeView === item.id}
-            isDisabled={hasOngoingSession}
-            onClick={() => onViewChange(item.id)}
-          />
+          // `end` keeps Home from matching every path; the other items stay lit on nested
+          // routes such as /activities/:id.
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === "/"}
+            title={item.label}
+            aria-disabled={hasOngoingSession || undefined}
+            tabIndex={hasOngoingSession ? -1 : undefined}
+            onClick={(event) => {
+              if (hasOngoingSession) event.preventDefault();
+            }}
+            className={({ isActive }) => menuItemClass(isActive, hasOngoingSession)}
+          >
+            {({ isActive }) => (
+              <MenuItemBody icon={item.icon} label={item.label} isActive={isActive} isDisabled={hasOngoingSession} />
+            )}
+          </NavLink>
         ))}
       </div>
       <div className="mb-8 flex flex-col">
-        {/* Settings */}
-        <MenuItem
-          id="settings"
-          label="Settings"
-          icon={settingsIcon}
-          isActive={settingsOpen}
-          isDisabled={hasOngoingSession}
-          onClick={handleSettingsClick}
-        />
+        <button
+          type="button"
+          className={menuItemClass(settingsOpen, hasOngoingSession)}
+          onClick={() => setSettingsOpen(true)}
+          disabled={hasOngoingSession}
+          title="Settings"
+        >
+          <MenuItemBody icon={settingsIcon} label="Settings" isActive={settingsOpen} isDisabled={hasOngoingSession} />
+        </button>
       </div>
 
-      {/* Settings Popup */}
       <Settings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </nav>
   );
 }
-
-export default Navigation;
-export { sessionIcon, replayIcon, devicesIcon, activitiesIcon };

@@ -3,12 +3,12 @@ import { Channel } from "@tauri-apps/api/core";
 import { Modal } from "@/components/Modal.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { InputPrimitive } from "@/components/InputPrimitive.tsx";
-import { Device, CalibrationReading } from "@/types";
+import { NintendoDevice, FrontendCalibrationReading } from "@/types";
 import { commands } from "@/utils/requests.ts";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 
 interface CalibrationModalProps {
-  device: Device | null;
+  device: NintendoDevice | null;
   onClose: () => void;
 }
 
@@ -31,11 +31,11 @@ const CALIBRATION_POSITIONS: PositionConfig[] = [
 
 interface CapturedReading {
   position: CalibrationPosition;
-  reading: CalibrationReading;
+  reading: FrontendCalibrationReading;
 }
 
 interface SensorDisplayProps {
-  reading: CalibrationReading | null;
+  reading: FrontendCalibrationReading | null;
 }
 
 function CapturedReadingsTable({ readings }: { readings: CapturedReading[] }) {
@@ -128,7 +128,7 @@ export default function CalibrationModal({ device, onClose }: CalibrationModalPr
   const [currentStep, setCurrentStep] = useState<number>(-1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sensorReading, setSensorReading] = useState<CalibrationReading | null>(null);
+  const [sensorReading, setSensorReading] = useState<FrontendCalibrationReading | null>(null);
   const [capturedReadings, setCapturedReadings] = useState<CapturedReading[]>([]);
   const [streamActive, setStreamActive] = useState(false);
 
@@ -141,7 +141,7 @@ export default function CalibrationModal({ device, onClose }: CalibrationModalPr
   };
 
   const startStream = async (macAddress: number) => {
-    const channel = new Channel<CalibrationReading>();
+    const channel = new Channel<FrontendCalibrationReading>();
     channel.onmessage = (reading) => {
       setSensorReading(reading);
     };
@@ -191,6 +191,7 @@ export default function CalibrationModal({ device, onClose }: CalibrationModalPr
     if (!device) return;
 
     const currentPosition = CALIBRATION_POSITIONS[currentStep];
+    if (!currentPosition) return;
 
     if (!sensorReading) {
       setError("No sensor data available. Please wait for readings.");
@@ -255,9 +256,9 @@ export default function CalibrationModal({ device, onClose }: CalibrationModalPr
   // Weight input step
   if (currentStep === -1) {
     return (
-      <Modal className="w-[32rem]" open={isOpen} onClose={handleClose}>
+      <Modal label="Calibrate device" className="w-[32rem]" open={isOpen} onClose={handleClose}>
         <div className="flex flex-col gap-6">
-          <h2 className="text-2xl font-semibold text-(--primary)">Calibrate Device</h2>
+          <h2 className="text-2xl font-semibold text-(--primary)">Calibrate NintendoDevice</h2>
           <p className="text-(--text-light)">
             Calibrating: <span className="font-medium">{device?.name}</span>
           </p>
@@ -299,7 +300,7 @@ export default function CalibrationModal({ device, onClose }: CalibrationModalPr
   // Review step - show all captured data before submission
   if (currentStep === 5) {
     return (
-      <Modal className="w-[32rem]" open={isOpen} onClose={handleClose}>
+      <Modal label="Calibrate device" className="w-[32rem]" open={isOpen} onClose={handleClose}>
         <div className="flex flex-col gap-4">
           <div>
             <h2 className="text-2xl font-semibold text-(--primary)">Review Calibration</h2>
@@ -330,7 +331,7 @@ export default function CalibrationModal({ device, onClose }: CalibrationModalPr
   // Complete state
   if (currentStep === 6) {
     return (
-      <Modal className="w-[32rem]" open={isOpen} onClose={handleClose}>
+      <Modal label="Calibrate device" className="w-[32rem]" open={isOpen} onClose={handleClose}>
         <div className="flex flex-col items-center gap-6">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <span className="text-3xl text-green-600">✓</span>
@@ -350,12 +351,13 @@ export default function CalibrationModal({ device, onClose }: CalibrationModalPr
 
   // Position calibration steps
   const currentPosition = CALIBRATION_POSITIONS[currentStep];
+  if (!currentPosition) return null;
 
   return (
-    <Modal className="w-[32rem]" open={isOpen} onClose={handleClose}>
+    <Modal label="Calibrate device" className="w-[32rem]" open={isOpen} onClose={handleClose}>
       <div className="flex flex-col gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-(--primary)">Calibrate Device</h2>
+          <h2 className="text-2xl font-semibold text-(--primary)">Calibrate NintendoDevice</h2>
           <p className="text-sm text-(--text-lighter)">Using {calibrationWeight} kg weight</p>
         </div>
 

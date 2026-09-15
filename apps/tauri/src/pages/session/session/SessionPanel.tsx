@@ -1,13 +1,17 @@
+import { QueryStatus } from "@/components/QueryStatus";
 import { open } from "@tauri-apps/plugin-dialog";
 import { BaseOption, SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
-import { InputPrimitive } from "@/components/InputPrimitive.tsx";
-import { InterpolationOption, interpolationOptions, SessionPanelConfiguration } from "@/types.ts";
+import { SessionSettings } from "@/types.ts";
 import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
-import { Checkbox } from "@/components/Checkbox.tsx";
 import tareIcon from "@/assets/tare.svg";
 import { commands } from "@/utils/requests.ts";
+import { useAction } from "@/hooks/useAction";
+import { ProcessingFields, StreamToggles } from "@/pages/session/ProcessingFields.tsx";
+
+// The owner's mutation exposes any rejection, so fire-and-forget controls only need to swallow it.
+const fire = (promise: Promise<unknown>) => void promise.catch(() => undefined);
 
 export function SessionPanel({
   boardDisplaySelected,
@@ -18,6 +22,7 @@ export function SessionPanel({
   disabled,
   value,
   onChange,
+  onDraftChange,
 }: {
   boardDisplaySelected: number[];
   onBoardDisplayChange: (ids: number[]) => void;
@@ -25,27 +30,24 @@ export function SessionPanel({
   activityOptions: BaseOption[];
   userOptions: BaseOption<number>[];
   disabled: boolean;
-  value: SessionPanelConfiguration | null;
-  onChange: (v: SessionPanelConfiguration) => void;
+  value: SessionSettings | null;
+  onDraftChange: (field: string, dirty: boolean) => void;
+  onChange: (v: SessionSettings) => Promise<unknown>;
 }) {
-  const update = <K extends keyof SessionPanelConfiguration>(key: K, val: SessionPanelConfiguration[K]) => {
-    const next = { ...value!, [key]: val };
-    onChange(next);
+  const action = useAction();
+  const update = <K extends keyof SessionSettings>(key: K, val: SessionSettings[K]) => {
+    if (!value) return Promise.reject(new Error("The session configuration has not loaded yet."));
+    return onChange({ ...value, [key]: val });
   };
 
   const pickDirectory = async () => {
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: "Select save directory",
-    });
-    if (typeof selected === "string") {
-      update("outputDirectory", selected);
-    }
+    const selected = await open({ directory: true, multiple: false, title: "Select save directory" });
+    if (typeof selected === "string") fire(update("outputDirectory", selected));
   };
 
   return (
     <>
+      <QueryStatus error={action.error} />
       <header>
         <PageTitle>Session</PageTitle>
       </header>
@@ -53,118 +55,71 @@ export function SessionPanel({
       <ToolkitContainer className="grid grid-cols-40 grid-rows-2 text-xs">
         <SingleColumn label="Board to Display" className="col-span-9">
           <SelectPrimitive
-            mode={"multi"}
+            mode="multi"
             disabled={disabled}
             options={boardDisplayOptions}
-            noOptionsMessage={"No boards in session."}
+            noOptionsMessage="No boards in session."
             value={boardDisplaySelected}
             onChange={onBoardDisplayChange}
-            placeholder="Choose a Board to diplay"
+            placeholder="Choose a board to display"
           />
         </SingleColumn>
 
         <SingleColumn label="Tare" className="col-span-2 items-center" labelMargin={false}>
-          <img
-            src={tareIcon}
-            className="size-7 cursor-pointer object-contain opacity-75 hover:-translate-y-[1px] hover:opacity-100"
-            onClick={async () => commands.session.tareDevices()}
-          />
+          <button
+            type="button"
+            aria-label="Tare selected boards"
+            disabled={action.isPending}
+            onClick={() => action.run(commands.session.tareDevices)}
+          >
+            <img src={tareIcon} alt="" className="size-7 object-contain opacity-75 hover:opacity-100" />
+          </button>
         </SingleColumn>
 
-        <SingleColumn label="User" className="col-span-7" tooltipId={"session_user"}>
+        <SingleColumn label="User" className="col-span-7" tooltipId="session_user">
           <SelectPrimitive<number>
             disabled={disabled}
             value={value?.selectedUser ?? 0}
-            onChange={(v) => update("selectedUser", v)}
+            onChange={(v) => fire(update("selectedUser", v))}
             options={userOptions}
           />
         </SingleColumn>
 
-        <SingleColumn label="Window Size (ms)" className="col-span-6" tooltipId={"session_window_size"}>
-          <InputPrimitive
-            disabled={disabled}
-            type="number"
-            value={value?.windowSizeMs}
-            onChange={(e) => update("windowSizeMs", Number(e.target.value))}
-          />
-        </SingleColumn>
-
-        <SingleColumn label="Window Slide (ms)" className="col-span-6" tooltipId={"session_window_slide"}>
-          <InputPrimitive
-            disabled={disabled}
-            type="number"
-            value={value?.windowSlideMs}
-            onChange={(e) => update("windowSlideMs", Number(e.target.value))}
-          />
-        </SingleColumn>
-        <SingleColumn label="Sampling Rate" className="col-span-5" tooltipId={"session_sampling_rate"}>
-          <InputPrimitive
-            disabled={disabled}
-            type="number"
-            value={value?.samplingRate}
-            onChange={(e) => update("samplingRate", Number(e.target.value))}
-          />
-        </SingleColumn>
-
-        <SingleColumn label="Interpolation" className="col-span-5" tooltipId={"session_interpolation"}>
-          <SelectPrimitive
-            disabled={disabled}
-            value={value?.interpolation ?? "Linear"}
-            onChange={(v) => update("interpolation", v as InterpolationOption)}
-            options={interpolationOptions.map((i) => ({ label: i, value: i }))}
-          />
-        </SingleColumn>
+        <ProcessingFields value={value} disabled={disabled} onChange={update} onDraftChange={onDraftChange} />
 
         <SingleColumn
           label="Activity"
           className="col-span-9"
           disabled={disabled}
           actionText="Clear"
-          onActionClick={() => update("activityId", null)}
+          onActionClick={() => fire(update("activityId", null))}
         >
           <SelectPrimitive
             disabled={disabled}
             value={value?.activityId ?? ""}
-            onChange={(v) => update("activityId", v || null)}
+            onChange={(v) => fire(update("activityId", v || null))}
             options={activityOptions}
             noneOption="None"
           />
         </SingleColumn>
 
-        <SingleColumn label="LSL" direction="row" tooltipId={"session_lsl_toggle"} className={"col-span-2"}>
-          <Checkbox
-            disabled={disabled}
-            className={"ml-2"}
-            checked={value?.lslEnabled ?? false}
-            onChange={(e) => update("lslEnabled", e.target.checked)}
-          />
-          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{value?.lslEnabled ? "ON" : "OFF"}</span>
-        </SingleColumn>
-
-        <SingleColumn label="TCP" direction="row" tooltipId={"session_tcp_toggle"} className={"col-span-2"}>
-          <Checkbox
-            disabled={disabled}
-            className={"ml-2"}
-            checked={value?.tcpEnabled ?? false}
-            onChange={(e) => update("tcpEnabled", e.target.checked)}
-          />
-          <span className={`font-semibold ${disabled ? "opacity-60" : ""}`}>{value?.tcpEnabled ? "ON" : "OFF"}</span>
-        </SingleColumn>
+        <StreamToggles value={value} disabled={disabled} onChange={update} />
 
         <SingleColumn
           label="Save Location"
+          disabled={disabled}
           backgroundType="transparent"
           className="col-start-19 col-end-41"
           actionText="Clear"
-          tooltipId={"session_save_location"}
-          onActionClick={() => update("outputDirectory", "")}
+          tooltipId="session_save_location"
+          onActionClick={() => fire(update("outputDirectory", ""))}
         >
-          <div className={"flex h-8 items-center gap-2"}>
+          <div className="flex h-8 items-center gap-2">
             <button
               type="button"
-              disabled={disabled}
+              disabled={disabled || action.isPending}
               className="h-8 rounded-lg border border-gray-300 px-3 text-sm hover:bg-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100/80 disabled:text-gray-600"
-              onClick={pickDirectory}
+              onClick={() => action.run(pickDirectory)}
             >
               Choose…
             </button>

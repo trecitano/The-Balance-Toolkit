@@ -35,7 +35,7 @@ const base =
   "enabled:hover:-translate-y-[1px] " +
   "enabled:active:translate-y-[1px] enabled:active:shadow-inner " +
   "disabled:opacity-60 disabled:cursor-not-allowed " +
-  "enabled:focus:outline-none";
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600";
 
 const byColor: Record<Color, string> = {
   grey: "bg-(--secondary) text-[var(--white)] enabled:hover:bg-[var(--secondary-dark)]",
@@ -85,9 +85,10 @@ export function ToolkitButton({
     );
   }
 
+  // Buttons default to `type="button"` so they never submit an enclosing form by accident.
   const buttonProps = props as ButtonAsButton;
   return (
-    <button className={classes} {...buttonProps}>
+    <button type="button" className={classes} {...buttonProps}>
       {content}
     </button>
   );

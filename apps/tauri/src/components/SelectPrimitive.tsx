@@ -1,270 +1,207 @@
-import React, { useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useId, useRef, useState } from "react";
+import type { Key, KeyboardEvent, ReactElement } from "react";
+import { FieldLabelContext } from "./FieldLabelContext";
 
-export type BaseOption<T = string> = {
-  value: T;
-  label: string;
+export type BaseOption<T = string> = { value: T; label: string; disabled?: boolean };
+type Shared<T> = {
+  options: BaseOption<T>[];
+  placeholder?: string;
+  className?: string;
   disabled?: boolean;
+  maxHeight?: number;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 };
+type Props<T> = Shared<T> &
+  (
+    | { mode?: "single"; value: T; onChange: (next: T) => void; noneOption?: false }
+    | { mode?: "single"; value: T | undefined; onChange: (next: T | undefined) => void; noneOption: string }
+    | { mode: "multi"; value: T[]; onChange: (next: T[]) => void; noOptionsMessage?: string }
+  );
 
-export function SelectPrimitive<T extends React.Key = string>(props: {
-  mode?: "single";
-  value: T;
-  onChange: (next: T) => void;
-  options: BaseOption<T>[];
-  placeholder?: string;
-  noneOption?: false;
-  className?: string;
-  disabled?: boolean;
-  maxHeight?: number;
-}): React.ReactElement;
-
-export function SelectPrimitive<T extends React.Key = string>(props: {
-  mode?: "single";
-  value: T | undefined;
-  onChange: (next: T | undefined) => void;
-  options: BaseOption<T>[];
-  placeholder?: string;
-  noneOption: string;
-  className?: string;
-  disabled?: boolean;
-  maxHeight?: number;
-}): React.ReactElement;
-
-export function SelectPrimitive<T extends React.Key = string>(props: {
-  mode: "multi";
-  value: T[];
-  onChange: (next: T[]) => void;
-  options: BaseOption<T>[];
-  placeholder?: string;
-  noOptionsMessage?: string;
-  className?: string;
-  disabled?: boolean;
-  maxHeight?: number;
-}): React.ReactElement;
-
-// Implementation
-export function SelectPrimitive<T extends React.Key = string>(props: any) {
-  const { options, value, onChange, className = "", disabled = false, maxHeight = 260, mode = "single" } = props;
-
-  const [open, setOpen] = useState(false);
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [dropUp, setDropUp] = useState(false);
-
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const listRef = useRef<HTMLDivElement | null>(null);
-  const computeDropUp = () => {
-    const btn = buttonRef.current;
-    if (!btn) return false;
-    const rect = btn.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    return spaceBelow < maxHeight + 8 && spaceAbove > spaceBelow;
+export function SelectPrimitive<T extends Key = string>(
+  props: Shared<T> & { mode?: "single"; value: T; onChange: (next: T) => void; noneOption?: false },
+): ReactElement;
+export function SelectPrimitive<T extends Key = string>(
+  props: Shared<T> & {
+    mode?: "single";
+    value: T | undefined;
+    onChange: (next: T | undefined) => void;
+    noneOption: string;
+  },
+): ReactElement;
+export function SelectPrimitive<T extends Key = string>(
+  props: Shared<T> & { mode: "multi"; value: T[]; onChange: (next: T[]) => void; noOptionsMessage?: string },
+): ReactElement;
+export function SelectPrimitive<T extends Key = string>(props: Props<T>) {
+  const { options, className, maxHeight = 260 } = props;
+  const labelId = useContext(FieldLabelContext);
+  const listId = useId();
+  const trigger = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const [menu, setMenu] = useState({ open: false, above: false, active: 0 });
+  const none = props.mode !== "multi" && typeof props.noneOption === "string" ? props.noneOption : null;
+  const enabledIndices = [
+    ...(none !== null ? [-1] : []),
+    ...options.flatMap((option, index) => (option.disabled ? [] : [index])),
+  ];
+  const disabled = props.disabled || enabledIndices.length === 0;
+  const isSelected = (value: T) => (props.mode === "multi" ? props.value.includes(value) : props.value === value);
+  const selectedLabels = options.filter((option) => isSelected(option.value)).map((option) => option.label);
+  const display =
+    props.mode === "multi"
+      ? !options.length
+        ? (props.noOptionsMessage ?? "No options available")
+        : selectedLabels.length > 1
+          ? `${selectedLabels.length} selected`
+          : (selectedLabels[0] ?? props.placeholder ?? "None selected")
+      : (selectedLabels[0] ?? none ?? props.placeholder ?? "Select an option");
+  const close = () => {
+    setMenu((previous) => ({ ...previous, open: false }));
+    trigger.current?.focus();
   };
-
-  const hasOptions = options.length > 0;
-  const isDisabled = disabled || !hasOptions;
-  const hasNoneOptionProp = "noneOption" in props && props.noneOption !== false && typeof props.noneOption === "string";
-
-  const selectedLabels = useMemo(() => {
-    const map = new Map(options.map((o: BaseOption<T>) => [o.value, o.label]));
-    if (mode === "multi") {
-      return (value as T[]).map((v) => map.get(v) ?? String(v));
-    } else {
-      return value ? [map.get(value) ?? String(value)] : [];
-    }
-  }, [options, value, mode]);
-
-  const toggleValue = (v: T) => {
-    if (mode === "multi") {
-      const currentValue = value as T[];
-      if (currentValue.includes(v)) {
-        onChange(currentValue.filter((x) => x !== v));
-      } else {
-        onChange([...currentValue, v]);
-      }
-    } else {
-      onChange(v);
-      setOpen(false);
-      buttonRef.current?.focus();
-    }
-  };
-
-  const handleBlur: React.FocusEventHandler<HTMLDivElement> = (e) => {
-    const next = e.relatedTarget as Node | null;
-    const root = rootRef.current;
-    if (root && next && root.contains(next)) return;
-    setOpen(false);
-  };
-
-  const onTriggerKeyDown: React.KeyboardEventHandler<HTMLButtonElement> = (e) => {
-    if (isDisabled) return;
-    if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      setDropUp(computeDropUp());
-      setActiveIdx(0);
-      setOpen(true);
-      requestAnimationFrame(() => {
-        listRef.current?.focus();
-      });
-    }
-  };
-
-  const onListKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
-    if (!open) return;
-    if (e.key === "Escape") {
-      e.preventDefault();
-      setOpen(false);
-      buttonRef.current?.focus();
+  const choose = (index: number) => {
+    if (disabled) return;
+    if (index === -1 && props.mode !== "multi" && typeof props.noneOption === "string") {
+      props.onChange(undefined);
+      close();
       return;
     }
-
-    const maxIdx = options.length - 1;
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActiveIdx((i) => Math.min(i + 1, maxIdx));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveIdx((i) => Math.max(i - 1, 0));
-    } else if (e.key === " " || e.key === "Enter") {
-      e.preventDefault();
-      const opt = options[activeIdx];
-      if (opt && !opt.disabled) {
-        toggleValue(opt.value);
-      }
+    const option = options[index];
+    if (!option || option.disabled) return;
+    if (props.mode === "multi")
+      props.onChange(
+        isSelected(option.value)
+          ? props.value.filter((value) => value !== option.value)
+          : [...props.value, option.value],
+      );
+    else {
+      props.onChange(option.value);
+      close();
     }
   };
-
-  const getDisplayText = () => {
-    if (mode === "single") {
-      const placeholder = props.placeholder ?? "Select an option";
-      return selectedLabels[0] ?? placeholder;
-    } else {
-      const placeholder = props.placeholder ?? "None selected";
-      const noOptionsMessage = props.noOptionsMessage ?? "No options available";
-
-      if (!hasOptions) return noOptionsMessage;
-      if (selectedLabels.length === 0) return placeholder;
-      if (selectedLabels.length === 1) return selectedLabels[0];
-      return `${selectedLabels.length} selected`;
+  const show = () => {
+    if (disabled) return;
+    const rect = trigger.current?.getBoundingClientRect();
+    const selected = options.findIndex((option) => !option.disabled && isSelected(option.value));
+    setMenu({
+      open: true,
+      active: selected >= 0 ? selected : (enabledIndices[0] ?? 0),
+      above: !!rect && window.innerHeight - rect.bottom < maxHeight + 8 && rect.top > window.innerHeight - rect.bottom,
+    });
+  };
+  const focusList = useCallback((element: HTMLDivElement | null) => {
+    list.current = element;
+    element?.focus();
+  }, []);
+  useEffect(() => {
+    if (menu.open)
+      list.current?.querySelector(`#${CSS.escape(`${listId}-${menu.active}`)}`)?.scrollIntoView({ block: "nearest" });
+  }, [menu.active, menu.open, listId]);
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      choose(menu.active);
+      return;
+    }
+    const current = enabledIndices.indexOf(menu.active);
+    let next: number | undefined;
+    if (event.key === "ArrowDown") next = enabledIndices[Math.min(current + 1, enabledIndices.length - 1)];
+    if (event.key === "ArrowUp") next = enabledIndices[Math.max(current - 1, 0)];
+    if (event.key === "Home") next = enabledIndices[0];
+    if (event.key === "End") next = enabledIndices[enabledIndices.length - 1];
+    if (next !== undefined) {
+      event.preventDefault();
+      setMenu((previous) => ({ ...previous, active: next }));
     }
   };
-
-  const displayText = getDisplayText();
-  const hasSelection = selectedLabels.length > 0;
-
   return (
-    <div ref={rootRef} className={className} onBlur={handleBlur} tabIndex={1}>
+    <div
+      className={className}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+          setMenu((previous) => ({ ...previous, open: false }));
+      }}
+    >
       <div className="relative">
-        {/* Trigger */}
         <button
-          ref={buttonRef}
+          ref={trigger}
           type="button"
-          disabled={isDisabled}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            if (isDisabled) return;
-            const willOpen = !open;
-            if (willOpen) {
-              setDropUp(computeDropUp());
-              setActiveIdx(0);
-            }
-            setOpen(willOpen);
-            if (willOpen) {
-              requestAnimationFrame(() => {
-                listRef.current?.focus();
-              });
+          disabled={disabled}
+          aria-haspopup="listbox"
+          aria-expanded={menu.open && !disabled}
+          aria-controls={menu.open ? listId : undefined}
+          aria-label={props["aria-label"]}
+          aria-labelledby={props["aria-labelledby"] ?? (props["aria-label"] ? undefined : labelId)}
+          onClick={() => (menu.open ? close() : show())}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+              event.preventDefault();
+              show();
             }
           }}
-          onKeyDown={onTriggerKeyDown}
-          className={`flex h-8 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 text-left text-sm focus:border-blue-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100/80 ${
-            open ? "ring-2 ring-blue-100" : ""
-          }`}
+          className="flex h-8 w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-3 text-left text-sm focus-visible:outline-2 focus-visible:outline-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100/80"
         >
-          <span
-            className={`truncate ${isDisabled ? "text-gray-600" : hasSelection ? "text-gray-900" : "text-gray-600"}`}
-          >
-            {displayText}
-          </span>
-          <svg className="ml-2 h-4 w-4 shrink-0 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fillRule="evenodd"
-              d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <span className="truncate">{display}</span>
+          <span aria-hidden="true">▾</span>
         </button>
-
-        {/* Dropdown */}
-        {open && hasOptions ? (
+        {menu.open && !disabled && (
           <div
-            ref={listRef}
+            ref={focusList}
+            id={listId}
             role="listbox"
-            tabIndex={0}
-            onKeyDown={onListKeyDown}
-            className={`absolute ${
-              dropUp ? "bottom-full mb-1" : "top-full mt-1"
-            } left-0 z-40 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg focus:outline-none`}
+            tabIndex={-1}
+            aria-label={props["aria-label"] ?? (labelId ? undefined : "Options")}
+            aria-labelledby={props["aria-labelledby"] ?? (props["aria-label"] ? undefined : labelId)}
+            aria-multiselectable={props.mode === "multi" || undefined}
+            aria-activedescendant={`${listId}-${menu.active}`}
+            onKeyDown={onKeyDown}
+            style={{ maxHeight }}
+            className={`absolute ${menu.above ? "bottom-full mb-1" : "top-full mt-1"} left-0 z-40 w-full overflow-auto rounded-lg border border-gray-300 bg-white py-1 shadow-lg outline-none`}
           >
-            <div className="max-h-[260px] overflow-auto py-1" style={{ maxHeight }}>
-              {/* None option for single select */}
-              {mode === "single" && hasNoneOptionProp && (
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onChange(undefined);
-                    setOpen(false);
-                    buttonRef.current?.focus();
-                  }}
-                  onMouseEnter={() => setActiveIdx(-1)}
-                  className={`flex w-full items-center px-3 py-2 text-left text-sm text-gray-400 italic ${
-                    activeIdx === -1 ? "bg-blue-50" : ""
-                  }`}
-                  role="option"
-                >
-                  {props.noneOption}
-                </button>
-              )}
-
-              {options.map((opt: BaseOption<T>, idx: number) => {
-                const active = idx === activeIdx;
-                const selected = mode === "single" ? value === opt.value : (value as T[]).includes(opt.value);
-
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    disabled={opt.disabled}
-                    onMouseEnter={() => setActiveIdx(idx)}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      if (!opt.disabled) {
-                        toggleValue(opt.value);
-                      }
-                    }}
-                    className={`flex w-full cursor-pointer items-center ${
-                      mode === "multi" ? "gap-2" : ""
-                    } px-3 py-2 text-left text-sm ${active ? "bg-blue-50" : ""} ${
-                      mode === "single" && selected ? "font-semibold text-blue-600" : ""
-                    } ${opt.disabled ? "cursor-not-allowed opacity-50" : ""}`}
-                    role="option"
-                  >
-                    {mode === "multi" && (
-                      <input
-                        type="checkbox"
-                        readOnly
-                        checked={selected}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600"
-                      />
-                    )}
-                    <span className="truncate">{opt.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {none !== null && (
+              <button
+                id={`${listId}--1`}
+                role="option"
+                aria-selected={props.value === undefined}
+                type="button"
+                tabIndex={-1}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => choose(-1)}
+                onMouseEnter={() => setMenu((previous) => ({ ...previous, active: -1 }))}
+                className={`w-full px-3 py-2 text-left text-sm ${menu.active === -1 ? "bg-blue-50" : ""}`}
+              >
+                {none}
+              </button>
+            )}
+            {options.map((option, index) => (
+              <button
+                key={String(option.value)}
+                id={`${listId}-${index}`}
+                role="option"
+                type="button"
+                tabIndex={-1}
+                disabled={option.disabled}
+                aria-selected={isSelected(option.value)}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => choose(index)}
+                onMouseEnter={() => {
+                  if (!option.disabled) setMenu((previous) => ({ ...previous, active: index }));
+                }}
+                className={`flex w-full gap-2 px-3 py-2 text-left text-sm disabled:opacity-50 ${menu.active === index ? "bg-blue-50" : ""} ${isSelected(option.value) ? "font-semibold text-blue-600" : ""}`}
+              >
+                {props.mode === "multi" && <span aria-hidden="true">{isSelected(option.value) ? "☑" : "☐"}</span>}
+                <span className="truncate">{option.label}</span>
+              </button>
+            ))}
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );
