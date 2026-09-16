@@ -17,9 +17,26 @@ run_windows = "powershell -NoProfile -ExecutionPolicy Bypass -File setup/setup.p
 description = "Check the pinned tools and dependencies for verification without hardware"
 run = "bun scripts/verify/doctor.mjs"
 
+# The app icons are generated from the logo SVG rather than committed: `tauri::generate_context!`
+# embeds them, so every task that compiles or bundles the Tauri shell depends on this one.
+# mise skips it when the outputs are newer than the source.
+[tasks."gen:icons"]
+description = "Generate apps/tauri/src-tauri/icons from the logo SVG"
+dir = "apps/tauri"
+sources = ["src/assets/logo/icon.svg"]
+outputs = [
+  "src-tauri/icons/32x32.png",
+  "src-tauri/icons/128x128.png",
+  "src-tauri/icons/128x128@2x.png",
+  "src-tauri/icons/icon.icns",
+  "src-tauri/icons/icon.ico",
+]
+run = "bun run tauri icon src/assets/logo/icon.svg"
+
 [tasks."dev:desktop"]
 description = "Launch the desktop app in development mode"
 dir = "apps/tauri"
+depends = ["gen:icons"]
 run = "bun run tauri dev"
 
 [tasks."dev:cli"]
@@ -30,6 +47,7 @@ run = "cargo run --locked -p toolkit-cli --"
 [tasks."build:desktop"]
 description = "Build the release desktop app and platform packages"
 dir = "apps/tauri"
+depends = ["gen:icons"]
 run = "bun run tauri build"
 
 [tasks."build:cli"]
@@ -63,6 +81,7 @@ run = ["mise run doctor", "mise run check", "mise run test", "mise run smoke"]
 
 [tasks."check:desktop"]
 description = "Compile the Tauri shell and verify the generated TypeScript bindings are current (requires platform Tauri dependencies)"
+depends = ["gen:icons"]
 run = [
   "cargo check --locked -p the-balance-toolkitapp",
   "cargo test --locked -p the-balance-toolkitapp committed_bindings_are_current",
@@ -70,6 +89,7 @@ run = [
 
 [tasks."gen:bindings"]
 description = "Regenerate apps/tauri/src/bindings.ts from the Tauri commands and events"
+depends = ["gen:icons"]
 run = "cargo test --locked -p the-balance-toolkitapp export_bindings -- --ignored"
 
 [tasks."test:android"]
@@ -85,7 +105,7 @@ run = "./gradlew --console=plain lintKotlin detekt :app:assembleDebug"
 # `mise run clean` removes every generated/cached directory. Rerun
 # `mise run setup` (or `bun install` in apps/tauri, `cargo build`, `uv sync`) to restore them.
 [tasks.clean]
-description = "Remove build artifacts and dependency caches (target/, desktop node_modules/ and dist/, .venv, gradle)"
+description = "Remove build artifacts and dependency caches (target/, desktop node_modules/, dist/ and icons/, .venv, gradle)"
 run = """
 set -eu
 cd "$MISE_PROJECT_ROOT"
@@ -95,6 +115,7 @@ for dir in \
   apps/tauri/dist \
   apps/tauri/dist-ssr \
   apps/tauri/src-tauri/gen/schemas \
+  apps/tauri/src-tauri/icons \
   scripts/.venv \
   apps/android/build \
   apps/android/.gradle \

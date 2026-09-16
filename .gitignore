@@ -6,6 +6,8 @@ logs
 node_modules
 target
 dist
+# Generated from the logo SVG by `mise run gen:icons`
+apps/tauri/src-tauri/icons/
 
 # Local settings
 *.local

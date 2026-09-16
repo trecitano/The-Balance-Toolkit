@@ -69,6 +69,7 @@ desktop executable or install a generated package. For Android, use
 | `mise run verify` | `doctor`, `check`, `test`, then `smoke`, stopping on failure |
 | `mise run check:desktop` | Tauri shell compilation with platform GUI development libraries installed, and the committed TypeScript bindings match the Rust commands |
 | `mise run gen:bindings` | Regenerates `apps/tauri/src/bindings.ts` from the Tauri bridge (also happens on every debug desktop launch) |
+| `mise run gen:icons` | Regenerates the git-ignored `apps/tauri/src-tauri/icons/` from `apps/tauri/src/assets/logo/icon.svg`; the desktop dev, check, bindings and build tasks run it automatically, but a bare `cargo check -p the-balance-toolkitapp` needs it first |
 | `mise run test:android` | Android JVM tests, including the shared sensor fixtures; no emulator needed |
 | `mise run check:android` | Android lint, Detekt and debug APK build |
 
