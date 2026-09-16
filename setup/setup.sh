@@ -182,4 +182,4 @@ if ((${#failed[@]} > 0)); then
   fail "${#failed[@]} item(s) failed. See INSTALL.md for manual steps."
 fi
 printf '\n'
-ok 'Done. Next: cd apps/tauri && bun install && bun run tauri dev'
+ok 'Done. Next: mise dev:desktop'
