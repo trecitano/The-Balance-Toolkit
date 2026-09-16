@@ -62,7 +62,7 @@ export function ProcessingFields({
 /** The LSL and TCP on/off switches. */
 export function StreamToggles({ value, disabled, onChange }: FieldsProps) {
   const toggle = (key: "lslEnabled" | "tcpEnabled", label: string, tooltipId: string) => (
-    <SingleColumn label={label} direction="row" tooltipId={tooltipId} className="col-span-2">
+    <SingleColumn label={label} direction="row" tooltipId={tooltipId} className="col-span-4">
       <Checkbox
         disabled={disabled}
         className="ml-2"

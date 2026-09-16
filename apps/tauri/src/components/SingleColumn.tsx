@@ -41,7 +41,7 @@ export function SingleColumn({
     <FieldLabelContext value={label ? labelId : undefined}>
       <div
         className={clsx(
-          "box-border flex flex-col gap-(--space-xs) rounded-lg p-2",
+          "box-border flex min-w-0 flex-col gap-(--space-xs) rounded-lg p-2",
           {
             "bg-gray-100": backgroundType === "default",
             "bg-transparent": backgroundType === "transparent",
