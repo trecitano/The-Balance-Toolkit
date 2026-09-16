@@ -48,9 +48,10 @@ function Require-Winget {
 
 function Winget-Install([string]$id, [string[]]$extra = @()) {
   Require-Winget
-  & winget install --id $id --exact --accept-source-agreements --accept-package-agreements @extra
-  if ($LASTEXITCODE -ne 0) { throw "winget install $id failed ($LASTEXITCODE)" }
+  & winget install --id $id --exact --source winget --accept-source-agreements --accept-package-agreements @extra
+  $installExitCode = $LASTEXITCODE
   Refresh-Path
+  if ($installExitCode -ne 0) { throw "winget install $id failed (exit $installExitCode). See the installer output above; for logs run winget --logs." }
 }
 
 # --- Checks -------------------------------------------------------------------
@@ -89,8 +90,6 @@ function Check-Mise {
 }
 function Install-Mise {
   Winget-Install 'jdx.mise'
-  $script:PostNotes += 'mise was installed. Activate it in PowerShell so bun/cargo resolve automatically:'
-  $script:PostNotes += '  Add-Content $PROFILE ''mise activate pwsh | Out-String | Invoke-Expression'''
 }
 
 # Tools declared in the repository mise.toml that are not installed at the pinned version.
@@ -126,9 +125,16 @@ function Install-Toolchain {
 function Check-CMake {
   $c = Get-Command cmake -ErrorAction SilentlyContinue
   if (-not $c) { return @{ Ok = $false; Detail = 'cmake not found' } }
-  return @{ Ok = $true; Detail = "cmake $(Get-VersionFrom (& cmake --version))" }
+  $output = & cmake --version 2>&1
+  $version = Get-VersionFrom ($output -join "`n")
+  if ($LASTEXITCODE -ne 0 -or -not $version) { return @{ Ok = $false; Detail = 'cmake --version failed' } }
+  return @{ Ok = $true; Detail = "cmake $version" }
 }
-function Install-CMake { Winget-Install 'Kitware.CMake' }
+function Install-CMake {
+  # Select the MSI rather than a portable installer. Its manifest adds CMake to
+  # the machine PATH; --silent avoids an unfinished interactive installer.
+  Winget-Install 'Kitware.CMake' @('--installer-type', 'wix', '--scope', 'machine', '--silent')
+}
 
 function Check-TauriDriver {
   $t = Get-Command tauri-driver -ErrorAction SilentlyContinue
@@ -279,7 +285,7 @@ else {
 
 $selected = @()
 for ($i = 0; $i -lt $rows.Count; $i++) { if ($null -ne $rows[$i] -and $picked[$i]) { $selected += $rows[$i] } }
-if ($selected.Count -eq 0) { Warn 'Nothing selected. Nothing was installed.'; exit 0 }
+if ($selected.Count -eq 0) { Warn 'Nothing selected. Nothing was installed.'; exit [int]($requiredMissing -gt 0) }
 
 Write-Host ''
 $failed = @()
@@ -289,10 +295,10 @@ foreach ($d in $selected) {
     & $d.Install
     $r = & $d.Check
     if ($r.Ok) { Ok "$($d.Label)  $($r.Detail)" }
-    else { Warn "$($d.Label): installed, but the check still fails ($($r.Detail)). A new terminal may be needed." }
+    else { throw "Installation returned successfully, but verification failed: $($r.Detail)" }
   } catch {
     Bad "$($d.Label) failed: $($_.Exception.Message)"
-    $failed += $d
+    $failed += "$($d.Label): $($_.Exception.Message)"
   }
   Write-Host ''
 }
@@ -301,6 +307,13 @@ Info 'Summary'
 Run-Checks
 Report
 if ($script:PostNotes.Count -gt 0) { Write-Host ''; foreach ($n in $script:PostNotes) { Warn $n } }
-if ($failed.Count -gt 0) { Write-Host ''; Write-Host "Error: $($failed.Count) item(s) failed. See INSTALL.md for manual steps." -ForegroundColor Red; exit 1 }
+$requiredMissing = @($Deps | Where-Object { $_.Kind -eq 'required' -and -not $_.Ok })
+if ($failed.Count -gt 0 -or $requiredMissing.Count -gt 0) {
+  Write-Host ''
+  foreach ($failure in $failed) { Bad $failure }
+  foreach ($d in $requiredMissing) { Bad "Required dependency unavailable: $($d.Label) ($($d.Detail))" }
+  Write-Host 'Setup incomplete. Resolve the errors above, then rerun setup\setup.ps1; installed dependencies will be skipped.' -ForegroundColor Red
+  exit 1
+}
 Write-Host ''
-Ok 'Done. Next: cd apps/tauri; bun install; bun run tauri dev'
+Ok 'Required dependencies verified. From the repository root, run: mise run dev:desktop'

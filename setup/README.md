@@ -19,6 +19,19 @@ Windows, from PowerShell:
 powershell -ExecutionPolicy Bypass -File setup\setup.ps1    # same flags: -Check, -Yes, -All
 ```
 
+Windows setup installs CMake using its machine-wide MSI and refreshes its own
+PATH before verifying it. Accept any Windows elevation prompts. Success requires
+every required dependency to pass its final check; failed installations and
+required items left unselected produce a nonzero exit status. The summary repeats
+installer errors. Fix the reported cause and rerun setup to resume; dependencies
+that pass their checks are skipped. A Visual Studio installation may still require
+a restart, which setup reports separately.
+
+After setup, run `mise run dev:desktop` from the repository root. PowerShell
+profile activation is not required for this command. If setup ran in a child
+PowerShell process, open a new terminal to pick up newly installed programs on
+PATH. The desktop task installs the frontend packages automatically.
+
 Once mise is installed, `mise run setup` runs the right script for the current
 platform and forwards any arguments (`mise run setup -- --check`). The scripts
 are what bootstrap mise in the first place, so the direct invocations above are
@@ -30,7 +43,7 @@ Run as your normal user; sudo (or winget/UAC on Windows) is requested where
 needed. Bun and Rust are pinned in `../mise.toml` and installed by mise; the script
 installs mise and runs `mise install`. When it installs mise, the Unix script
 prints the activation command for your current shell (bash, zsh or fish).
-Run that command, then `mise dev:desktop` from the repository root, as shown
+Run that command, then `mise run dev:desktop` from the repository root, as shown
 in the final setup message. The desktop task installs frontend dependencies
 from the committed lockfile before generating icons and launching Tauri.
 An outdated Bun or Rust shows up as "missing or outdated" and
@@ -76,6 +89,16 @@ Unity Editors are installed from inside the Hub, since the version depends on
 the Unity project.
 
 ## Adding a dependency
+
+The Windows setup control-flow regression checks can run without installing
+packages, on any platform with PowerShell:
+
+```powershell
+pwsh -NoProfile -File scripts/verify/windows-setup.Tests.ps1
+```
+
+These use simulated installers to check failure and success exit statuses; an
+actual Windows installation is still needed to validate WinGet and MSI behavior.
 
 Add a check function and an install function to the platform module (or to
 `lib/common.sh` if shared), then register them:
