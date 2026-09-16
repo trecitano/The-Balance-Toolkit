@@ -48,6 +48,10 @@ run = "cargo run --locked -p toolkit-cli --"
 description = "Build the release desktop app and platform packages"
 dir = "apps/tauri"
 depends = ["gen:icons"]
+# NO_STRIP: linuxdeploy ships an old binutils `strip` that chokes on RELR
+# relocations (`.relr.dyn`) in modern distro libraries, which breaks the
+# AppImage bundle. Skipping strip only affects bundled system libraries.
+env = { NO_STRIP = "true" }
 run = "bun run tauri build"
 
 [tasks."build:cli"]
