@@ -1,22 +1,17 @@
-import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Outlet } from "react-router-dom";
 import Navigation from "@/components/navigation/Navigation";
 import Home from "@/pages/home/Home.tsx";
+import DevicesPage from "@/pages/devices/Devices";
+import UsersPage from "@/pages/users/Users";
+import SessionPage from "@/pages/session/session/SessionPage.tsx";
+import ReplayPage from "@/pages/session/replay/ReplayPage.tsx";
+import Activities from "@/pages/activities/Activities";
+import ActivityPopup from "./pages/session-activity-pop-up/activityPopup.tsx";
 import "./App.css";
 import { QueryClient, QueryClientProvider, usePrefetchQuery } from "@tanstack/react-query";
 import { SettingsQuery, DevicesQuery } from "@/queries/toolkit";
 import { ToolkitEvents } from "@/services/ToolkitEvents";
 import { PageErrorBoundary } from "@/components/PageErrorBoundary";
-import { QueryStatus } from "@/components/QueryStatus";
-
-// Each page is its own chunk, so the plotting code (uPlot and the canvas overlays) only loads
-// when a session or replay page is opened.
-const DevicesPage = lazy(() => import("@/pages/devices/Devices"));
-const UsersPage = lazy(() => import("@/pages/users/Users"));
-const SessionPage = lazy(() => import("@/pages/session/session/SessionPage.tsx"));
-const ReplayPage = lazy(() => import("@/pages/session/replay/ReplayPage.tsx"));
-const Activities = lazy(() => import("@/pages/activities/Activities"));
-const ActivityPopup = lazy(() => import("./pages/session-activity-pop-up/activityPopup.tsx"));
 
 function DefaultLayout() {
   const location = useLocation();
@@ -28,9 +23,7 @@ function DefaultLayout() {
       <Navigation />
       <main className="h-screen min-h-120 min-w-330 grow overflow-auto bg-(--bg-primary) px-20 py-8">
         <PageErrorBoundary key={location.pathname}>
-          <Suspense fallback={<QueryStatus pending />}>
-            <Outlet />
-          </Suspense>
+          <Outlet />
         </PageErrorBoundary>
       </main>
     </div>
@@ -42,9 +35,7 @@ function BareLayout() {
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-(--bg-primary)">
       <PageErrorBoundary key={location.pathname}>
-        <Suspense fallback={<QueryStatus pending />}>
-          <Outlet />
-        </Suspense>
+        <Outlet />
       </PageErrorBoundary>
     </div>
   );
