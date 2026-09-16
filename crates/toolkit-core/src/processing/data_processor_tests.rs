@@ -110,3 +110,93 @@ fn fft_finds_known_frequency_after_reusing_its_state() {
         assert!(spectrum.amplitude_y.iter().all(|value| value.abs() < 1e-5));
     }
 }
+
+#[test]
+fn readings_are_converted_to_millimetres_using_half_board_sizes() {
+    let settings = ProcessingSettings {
+        balance_board_x_size: 400.0,
+        balance_board_y_size: 200.0,
+        ..ProcessingSettings::default()
+    };
+    let scale = BoardScale::from_settings(&settings);
+    // Left sensors carry 30 kg, right sensors 10 kg: normalised CoP x = -0.5.
+    // Front sensors carry 30 kg, back sensors 10 kg: normalised CoP y = +0.5.
+    let reading = BalanceBoardCalibratedReading {
+        timestamp: DateTime::from_timestamp_millis(1_700_000_000_000).unwrap(),
+        mac_address: 0,
+        top_right: 5.0,
+        bottom_right: 5.0,
+        top_left: 25.0,
+        bottom_left: 5.0,
+    };
+    let cop = balance_board_reading_to_cop(reading, scale);
+    close(cop.x, -0.5 * 200.0);
+    close(cop.y, 0.5 * 100.0);
+    close(cop.z, 40.0);
+}
+
+#[test]
+fn area_polygons_are_reported_in_normalized_board_coordinates() {
+    let settings = ProcessingSettings {
+        balance_board_x_size: 400.0,
+        balance_board_y_size: 200.0,
+        ..ProcessingSettings::default()
+    };
+    let scale = BoardScale::from_settings(&settings);
+    // A circle of radius 50 mm in the millimetre frame.
+    let points: Vec<_> = (0..64)
+        .map(|i| {
+            let t = 2.0 * PI * i as f32 / 64.0;
+            point(i * 10, 50.0 * t.cos(), 50.0 * t.sin())
+        })
+        .collect();
+    let area = calculate_area_metrics(&points, scale).unwrap();
+    // The hull touches x = ±50 mm and y = ±50 mm, which is ±0.25 and ±0.5 when normalised.
+    let max_x = area
+        .convex_hull_polygon
+        .iter()
+        .map(|p| p.0)
+        .fold(f32::MIN, f32::max);
+    let max_y = area
+        .convex_hull_polygon
+        .iter()
+        .map(|p| p.1)
+        .fold(f32::MIN, f32::max);
+    assert!((max_x - 0.25).abs() < 1e-3, "{max_x}");
+    assert!((max_y - 0.5).abs() < 1e-3, "{max_y}");
+    // The ellipse of a circular cloud has equal semi-axes in millimetres, so the normalised
+    // outline is twice as tall as it is wide.
+    let ell_x = area
+        .confidence_ellipse_polygon
+        .iter()
+        .map(|p| p.0)
+        .fold(f32::MIN, f32::max);
+    let ell_y = area
+        .confidence_ellipse_polygon
+        .iter()
+        .map(|p| p.1)
+        .fold(f32::MIN, f32::max);
+    assert!((ell_y / ell_x - 2.0).abs() < 1e-2, "{ell_x} {ell_y}");
+}
+
+#[test]
+fn dpsi_vertical_term_is_a_fraction_of_the_baseline_weight() {
+    let mut points: Vec<_> = (0..4).map(|i| point(i * 10, 3.0, 4.0)).collect();
+    // Load alternates 10% above and below the baseline.
+    for (i, p) in points.iter_mut().enumerate() {
+        p.z = if i % 2 == 0 { 88.0 } else { 72.0 };
+    }
+    let dpsi = calculate_dpsi_metrics(&points, Some(80.0)).unwrap();
+    close(dpsi.mlsi, 3.0);
+    close(dpsi.apsi, 4.0);
+    close(dpsi.vsi, 0.1);
+    close(dpsi.dpsi, (9.0_f32 + 16.0 + 0.01).sqrt());
+}
+
+#[test]
+fn dpsi_is_undefined_for_an_empty_board() {
+    let mut points: Vec<_> = (0..4).map(|i| point(i * 10, 0.0, 0.0)).collect();
+    points.iter_mut().for_each(|p| p.z = 0.0);
+    assert!(calculate_dpsi_metrics(&points, None).is_none());
+    assert!(calculate_dpsi_metrics(&points, Some(0.0)).is_none());
+}

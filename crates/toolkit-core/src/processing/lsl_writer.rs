@@ -174,28 +174,36 @@ fn lsl_stream_loop_processed(
         "identifier",
         "Device MAC address",
     );
-    add_channel("v_cop_x", "1/s", "velocity", "Normalized CoP velocity X");
-    add_channel("v_cop_y", "1/s", "velocity", "Normalized CoP velocity Y");
+    add_channel(
+        "v_cop_x",
+        "mm/s",
+        "velocity",
+        "Mean absolute CoP velocity X",
+    );
+    add_channel(
+        "v_cop_y",
+        "mm/s",
+        "velocity",
+        "Mean absolute CoP velocity Y",
+    );
     add_channel(
         "stability_index",
-        "unitless",
+        "mm",
         "index",
-        "Overall stability index",
+        "RMS radial CoP distance from the window mean",
     );
-    add_channel("dpsi_mlsi", "unitless", "index", "DPSI - Medial-Lateral");
-    add_channel(
-        "dpsi_apsi",
-        "unitless",
-        "index",
-        "DPSI - Anterior-Posterior",
-    );
+    add_channel("dpsi_mlsi", "mm", "index", "DPSI - Medial-Lateral");
+    add_channel("dpsi_apsi", "mm", "index", "DPSI - Anterior-Posterior");
     add_channel("dpsi_vsi", "unitless", "index", "DPSI - Vertical");
     add_channel("dpsi_overall", "unitless", "index", "DPSI - Overall");
 
     // Stream-level metadata
     let mut general = desc.append_child("general");
     general.append_child_value("cop_normalization", "[-1,1] of board width/length");
-    general.append_child_value("notes", "v_cop_* in normalized units per second");
+    general.append_child_value(
+        "notes",
+        "processed metrics use CoP in mm (board size from settings); dpsi_vsi is load deviation as a fraction of baseline weight",
+    );
 
     let outlet = StreamOutlet::new(&stream_info, 0, 360)?;
 
