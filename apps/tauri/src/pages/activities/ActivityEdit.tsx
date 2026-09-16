@@ -172,12 +172,14 @@ export default function ActivityEdit({ activity, onClose, existingActionImages }
               {newActionImage === "logo-flamingo-blue" && (
                 <InputPrimitive
                   aria-label="Action name"
+                  placeholder="Action name"
+                  className="w-56"
                   value={newActionName}
                   onChange={(e) => setNewActionName(e.target.value)}
                 />
               )}
 
-              <div>
+              <div className="flex items-center gap-1">
                 <InputPrimitive
                   type="number"
                   min={1}
@@ -187,7 +189,7 @@ export default function ActivityEdit({ activity, onClose, existingActionImages }
                   value={newActionDuration}
                   onChange={(e) => setNewActionDuration(Number(e.target.value))}
                 />
-                <span className="ml-1 text-base font-medium">secs</span>
+                <span className="text-base font-medium whitespace-nowrap">secs</span>
               </div>
 
               <ToolkitButton
