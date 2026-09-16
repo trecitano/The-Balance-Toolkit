@@ -31,8 +31,8 @@ needed. Bun and Rust are pinned in `../mise.toml` and installed by mise; the scr
 installs mise and runs `mise install`. When it installs mise, the Unix script
 prints the activation command for your current shell (bash, zsh or fish).
 Run that command, then `mise dev:desktop` from the repository root, as shown
-in the final setup message. Frontend dependencies must already be installed
-(see [INSTALL.md](../INSTALL.md)).
+in the final setup message. The desktop task installs frontend dependencies
+from the committed lockfile before generating icons and launching Tauri.
 An outdated Bun or Rust shows up as "missing or outdated" and
 `mise install` fetches the pinned version.
 

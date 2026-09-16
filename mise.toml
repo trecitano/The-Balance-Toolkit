@@ -17,12 +17,18 @@ run_windows = "powershell -NoProfile -ExecutionPolicy Bypass -File setup/setup.p
 description = "Check the pinned tools and dependencies for verification without hardware"
 run = "bun scripts/verify/doctor.mjs"
 
+[tasks."install:frontend"]
+description = "Install desktop frontend dependencies from the committed lockfile"
+dir = "apps/tauri"
+run = "bun install --frozen-lockfile"
+
 # The app icons are generated from the logo SVG rather than committed: `tauri::generate_context!`
 # embeds them, so every task that compiles or bundles the Tauri shell depends on this one.
 # mise skips it when the outputs are newer than the source.
 [tasks."gen:icons"]
 description = "Generate apps/tauri/src-tauri/icons from the logo SVG"
 dir = "apps/tauri"
+depends = ["install:frontend"]
 sources = ["src/assets/logo/icon.svg"]
 outputs = [
   "src-tauri/icons/32x32.png",
@@ -69,6 +75,7 @@ run = ["cargo fmt --all -- --check", "cargo check --locked -p toolkit-core -p to
 [tasks."check:frontend"]
 description = "Lint and build the desktop frontend without launching Tauri"
 dir = "apps/tauri"
+depends = ["install:frontend"]
 run = ["bun run lint", "bun run build"]
 
 [tasks.test]
