@@ -43,8 +43,11 @@ After setup, run these tasks from the repository root:
 | `mise run build:desktop` | Build the release desktop executable in `target/release/` and platform packages in `target/release/bundle/` |
 | `mise run build:cli` | Build the release CLI at `target/release/tbt` (`tbt.exe` on Windows) |
 
-Desktop tasks run in `apps/tauri/` automatically and require the frontend
-dependencies and platform GUI prerequisites from [INSTALL.md](../INSTALL.md).
+Desktop tasks run in `apps/tauri/` automatically and require the platform GUI
+prerequisites from [INSTALL.md](../INSTALL.md). They run `install:frontend`
+(`bun install --frozen-lockfile`) before generating icons, so a fresh checkout
+does not need a separate frontend dependency installation. `check:frontend`
+also runs this installation task.
 The desktop build also builds the frontend and packages for the current platform.
 
 Extra arguments are forwarded to the underlying command. For example:
