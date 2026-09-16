@@ -99,12 +99,29 @@ check_mise() {
 }
 
 install_mise() {
-  platform_install_mise
+  platform_install_mise || return $?
   refresh_path
-  post_note 'mise was installed. Activate it in your shell so bun/cargo resolve automatically:' \
-    '  bash:  echo '"'"'eval "$(mise activate bash)"'"'"' >> ~/.bashrc' \
-    '  zsh:   echo '"'"'eval "$(mise activate zsh)"'"'"'  >> ~/.zshrc' \
-    '  fish:  echo '"'"'mise activate fish | source'"'"'   >> ~/.config/fish/config.fish'
+  local current_shell mise_bin activation
+  # This script runs in bash even when invoked from another interactive shell.
+  current_shell=$(ps -p "$PPID" -o comm= 2>/dev/null) || current_shell=
+  current_shell=${current_shell##*/}
+  current_shell=${current_shell#-}
+  case "$current_shell" in
+    bash|zsh|fish) ;;
+    *) current_shell=${SHELL:-}; current_shell=${current_shell##*/} ;;
+  esac
+  # The installer's PATH changes do not reach the calling shell.
+  printf -v mise_bin '%q' "$(command -v mise)"
+  case "$current_shell" in
+    bash|zsh) activation="eval \"\$($mise_bin activate $current_shell)\"" ;;
+    fish) activation="$mise_bin activate fish | source" ;;
+    *)
+      post_note 'mise was installed. See INSTALL.md for shell activation instructions.'
+      return 0
+      ;;
+  esac
+  post_note "mise was installed. Activate it in your current $current_shell session:" \
+    "  $activation"
 }
 
 # Tools declared in the repository mise.toml that are not installed at the pinned version.

@@ -28,8 +28,12 @@ In the checklist use ↑/↓ (or j/k) to move, space to toggle, `a`/`n` to selec
 all/none, enter to install the selection and `q` to quit without installing.
 Run as your normal user; sudo (or winget/UAC on Windows) is requested where
 needed. Bun and Rust are pinned in `../mise.toml` and installed by mise; the script
-installs mise, runs `mise install`, and prints the `mise activate` line to add
-to your shell. An outdated Bun or Rust shows up as "missing or outdated" and
+installs mise and runs `mise install`. When it installs mise, the Unix script
+prints the activation command for your current shell (bash, zsh or fish).
+Run that command, then `mise dev:desktop` from the repository root, as shown
+in the final setup message. Frontend dependencies must already be installed
+(see [INSTALL.md](../INSTALL.md)).
+An outdated Bun or Rust shows up as "missing or outdated" and
 `mise install` fetches the pinned version.
 
 ## Layout
