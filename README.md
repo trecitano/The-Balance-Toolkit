@@ -137,7 +137,7 @@ the default stream name `the-balance-toolkit` and publishes two suffixed streams
 - **`the-balance-toolkit_basic`** (8 channels): `timestamp`, `mac_address`, `top_right`, `bottom_right`, `top_left`, `bottom_left`, `cop_x`, `cop_y`.
 - **`the-balance-toolkit_complex`** (9 channels): `timestamp`, `mac_address`, `v_cop_x`, `v_cop_y`, `stability_index`, `dpsi_mlsi`, `dpsi_apsi`, `dpsi_vsi`, `dpsi_overall`.
 
-Force values are in kilograms. Timestamps are in microseconds. CoP values are normalized to roughly -1 to +1. Processed velocity values are normalized units per second.
+Force values are in kilograms. Timestamps are in microseconds. Raw CoP values are normalized to roughly -1 to +1. Processed metrics are computed from the CoP scaled to millimetres using the board dimensions in the processing settings: velocities are in mm/s, and the stability index, `dpsi_mlsi` and `dpsi_apsi` are in mm. `dpsi_vsi` is the RMS load deviation as a fraction of the baseline weight, and `dpsi_overall` pools the three terms.
 
 Session output is written to the configured session directory as:
 

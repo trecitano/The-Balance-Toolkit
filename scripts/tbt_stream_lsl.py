@@ -53,8 +53,8 @@ the-balance-toolkit_basic (100 Hz, 8 channels)
 the-balance-toolkit_complex (100 Hz, 9 channels)
 - timestamp - Sample timestamp
 - mac_address - Device MAC address
-- v_cop_x, v_cop_y - Velocity of center of pressure
-- stability_index - Overall stability measure
+- v_cop_x, v_cop_y - Mean absolute CoP velocity (mm/s)
+- stability_index - RMS radial CoP distance from the window mean (mm)
 - dpsi_mlsi - Medio-lateral stability index
 - dpsi_apsi - Anterior-posterior stability index
 - dpsi_vsi - Vertical stability index

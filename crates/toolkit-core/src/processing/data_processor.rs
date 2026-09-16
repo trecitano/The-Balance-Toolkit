@@ -16,6 +16,7 @@ use crate::types::MacAddress;
 #[path = "data_processor_tests.rs"]
 mod tests;
 
+/// CoP sample: `x`/`y` in mm from the board centre, `z` total load in kg.
 #[derive(Debug, Clone)]
 struct CenterOfPressurePoint {
     timestamp: DateTime<Utc>,
@@ -24,10 +25,32 @@ struct CenterOfPressurePoint {
     z: f32,
 }
 
+/// Half sensor spacing per axis in mm. Converts normalised [-1, 1] CoP to millimetres.
+#[derive(Debug, Clone, Copy)]
+struct BoardScale {
+    half_x_mm: f32,
+    half_y_mm: f32,
+}
+
+impl BoardScale {
+    fn from_settings(settings: &ProcessingSettings) -> BoardScale {
+        BoardScale {
+            half_x_mm: settings.balance_board_x_size / 2.0,
+            half_y_mm: settings.balance_board_y_size / 2.0,
+        }
+    }
+
+    fn normalize(self, (x, y): (f32, f32)) -> (f32, f32) {
+        (x / self.half_x_mm, y / self.half_y_mm)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ProcessingSettings {
+    /// Left-to-right sensor spacing in mm.
     pub balance_board_x_size: f32,
+    /// Front-to-back sensor spacing in mm.
     pub balance_board_y_size: f32,
     pub window_size_ms: u64,
     pub window_slide_ms: u64,
@@ -134,13 +157,14 @@ fn data_process_loop(
     let window_size = std::time::Duration::from_millis(settings.window_size_ms);
     let window_slide_size = std::time::Duration::from_millis(settings.window_slide_ms);
 
+    let scale = BoardScale::from_settings(&settings);
     let sr_hz = settings.sampling_rate as f32;
     let dt_ms = (1_000.0 / sr_hz).max(1.0).round();
     let sampling_size_time_delta = TimeDelta::milliseconds(dt_ms as i64);
 
-    // FFT plans and the Hann window are reused across iterations.
+    // Reused across iterations.
     let mut spectrum_state = SpectrumState::default();
-    // Sleep until a fixed deadline so the slide cadence does not drift by the processing time.
+    // Fixed deadline keeps the slide cadence from drifting.
     let mut next_tick = std::time::Instant::now();
     let mut warned_about_drops = false;
 
@@ -148,7 +172,7 @@ fn data_process_loop(
         while let Ok(item) = rx.try_recv() {
             match item {
                 BalanceBoardOutput::Raw(data) => {
-                    buffer.push(balance_board_reading_to_cop(data));
+                    buffer.push(balance_board_reading_to_cop(data, scale));
                 }
                 BalanceBoardOutput::Processed(_) => {
                     log::warn!("Data processor received already-processed data; ignoring it.");
@@ -193,7 +217,7 @@ fn data_process_loop(
 
         let sway_calculation = calculate_basic_sway_metrics(&points);
         let stability_index = calculate_stability_index(&points);
-        let area_calculation = calculate_area_metrics(&points);
+        let area_calculation = calculate_area_metrics(&points, scale);
         let amplitude_spectrum = compute_fft_amplitude_spectrum(&points, 2.0, &mut spectrum_state);
         let dpsi_metrics = calculate_dpsi_metrics(&points, settings.baseline_weight);
 
@@ -222,7 +246,7 @@ fn data_process_loop(
         if next_tick > now {
             thread::sleep(next_tick - now);
         } else {
-            // Processing overran the slide interval; resynchronise instead of catching up.
+            // Overran the slide interval; resynchronise.
             next_tick = now;
         }
     }
@@ -231,13 +255,16 @@ fn data_process_loop(
     Ok(())
 }
 
-fn balance_board_reading_to_cop(data: BalanceBoardCalibratedReading) -> CenterOfPressurePoint {
+fn balance_board_reading_to_cop(
+    data: BalanceBoardCalibratedReading,
+    scale: BoardScale,
+) -> CenterOfPressurePoint {
     let cop = data.calculate_cop();
     let total_force = data.total_force();
     CenterOfPressurePoint {
         timestamp: data.timestamp,
-        x: cop.x,
-        y: cop.y,
+        x: cop.x * scale.half_x_mm,
+        y: cop.y * scale.half_y_mm,
         // Same empty-board threshold as `calculate_cop`.
         z: if total_force.abs() < 0.1 {
             0.0
@@ -341,7 +368,6 @@ fn polynomial_interpolation(
         return Vec::new();
     }
 
-    // Use cubic interpolation for small datasets
     if points.len() <= 4 {
         return cubic_interpolation(points, start_time, end_time, time_step);
     }
@@ -350,7 +376,6 @@ fn polynomial_interpolation(
     let mut current_time = start_time;
 
     while current_time <= end_time {
-        // Find nearby points for local polynomial interpolation
         let nearby_points = find_nearby_points(points, current_time, 4); // Use 4 points for cubic
 
         if nearby_points.len() >= 2 {
@@ -398,7 +423,7 @@ fn find_nearby_points(
         return points;
     }
 
-    // Points are in arrival order, so the closest one is adjacent to the insertion point.
+    // Points are time-ordered, so the closest is adjacent to the insertion point.
     let upper = points.partition_point(|p| p.timestamp < target_time);
     let closest_idx = if upper == 0 {
         0
@@ -411,11 +436,10 @@ fn find_nearby_points(
         let after = (points[upper].timestamp - target_time)
             .num_milliseconds()
             .abs();
-        // On a tie the linear scan kept the earlier point.
+        // Ties keep the earlier point.
         if after < before { upper } else { upper - 1 }
     };
 
-    // Collect points around the closest point
     let half = max_points / 2;
     let start_idx = closest_idx.saturating_sub(half);
     let end_idx = (closest_idx + half + 1).min(points.len());
@@ -431,7 +455,7 @@ fn find_interpolation_points(
         return None;
     }
 
-    // First point at or after the target; the bracketing pair is (idx - 1, idx).
+    // Bracketing pair is (idx - 1, idx).
     let idx = points.partition_point(|p| p.timestamp < target_time);
     if idx == 0 {
         return (points[0].timestamp == target_time).then(|| (&points[0], &points[1]));
@@ -491,7 +515,7 @@ fn create_cubic_spline(x: &[f32], y: &[f32]) -> CubicSpline {
 }
 
 fn evaluate_cubic_spline(spline: &CubicSpline, x_points: &[f32], x: f32) -> f32 {
-    // Segment i satisfies x_points[i] <= x <= x_points[i + 1]; clamp outside the knots.
+    // Clamp to the nearest segment outside the knots.
     let upper = x_points.partition_point(|&p| p < x);
     let i = upper.saturating_sub(1).min(spline.b.len() - 1);
 
@@ -520,6 +544,7 @@ fn lagrange_interpolate(x_points: &[f32], y_points: &[f32], x: f32) -> f32 {
 // CALCULATIONS
 // ============================================================================
 
+/// RMS radial distance from the window mean, in mm.
 fn calculate_stability_index(points: &[CenterOfPressurePoint]) -> Option<f32> {
     if points.len() < 3 {
         return None;
@@ -527,7 +552,6 @@ fn calculate_stability_index(points: &[CenterOfPressurePoint]) -> Option<f32> {
 
     let n = points.len() as f32;
 
-    // 1. Calculate RMS (Root Mean Square) of COP displacement
     let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n;
     let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n;
 
@@ -545,12 +569,18 @@ fn calculate_stability_index(points: &[CenterOfPressurePoint]) -> Option<f32> {
 // BASIC SWAY METRICS
 // ============================================================================
 
+/// Distances in mm, velocities in mm/s.
 #[derive(Debug, Clone)]
 pub struct SwayMetrics {
+    /// Mean absolute velocity along x.
     pub v_cop_x: f32,
+    /// Mean absolute velocity along y.
     pub v_cop_y: f32,
+    /// Mean resultant velocity.
     pub mean_velocity: f32,
+    /// Total path length.
     pub total_path_length: f32,
+    /// Path length over elapsed time.
     pub velocity_moment: f32,
 }
 
@@ -610,11 +640,17 @@ fn calculate_basic_sway_metrics(points: &[CenterOfPressurePoint]) -> Option<Sway
 // DPSI METRICS
 // ============================================================================
 
+/// Dynamic Postural Stability Index (Wikstrom et al. 2005), using CoP in mm for the
+/// horizontal terms and load deviation as a fraction of baseline weight for the vertical term.
 #[derive(Debug, Clone)]
 pub struct DpsiMetrics {
+    /// RMS x displacement from centre, mm.
     pub mlsi: f32,
+    /// RMS y displacement from centre, mm.
     pub apsi: f32,
+    /// RMS of `(baseline - load) / baseline`.
     pub vsi: f32,
+    /// Pooled RMS of the three terms.
     pub dpsi: f32,
 }
 
@@ -631,6 +667,10 @@ fn calculate_dpsi_metrics(
         Some(b) => b,
         None => points.iter().map(|p| p.z).sum::<f32>() / n,
     };
+    // Same empty-board threshold as `calculate_cop`.
+    if baseline.abs() < 0.1 {
+        return None;
+    }
 
     let mut sum_x2 = 0.0_f32;
     let mut sum_y2 = 0.0_f32;
@@ -639,7 +679,7 @@ fn calculate_dpsi_metrics(
     for p in points {
         sum_x2 += p.x * p.x;
         sum_y2 += p.y * p.y;
-        let dz = baseline - p.z;
+        let dz = (baseline - p.z) / baseline;
         sum_zdiff2 += dz * dz;
     }
 
@@ -660,19 +700,29 @@ fn calculate_dpsi_metrics(
 // AREA-BASED METRICS
 // ============================================================================
 
+/// Outlines fitted in mm, returned in normalised [-1, 1] coordinates for plotting.
 #[derive(Debug, Clone)]
 pub struct AreaMetrics {
     pub confidence_ellipse_polygon: Vec<(f32, f32)>,
     pub convex_hull_polygon: Vec<(f32, f32)>,
 }
 
-fn calculate_area_metrics(points: &[CenterOfPressurePoint]) -> Option<AreaMetrics> {
+fn calculate_area_metrics(
+    points: &[CenterOfPressurePoint],
+    scale: BoardScale,
+) -> Option<AreaMetrics> {
     if points.len() < 3 {
         return None;
     }
 
-    let confidence_ellipse_polygon = generate_confidence_ellipse_points(points, 0.95, 180)?;
-    let convex_hull_polygon = calculate_convex_hull_polygon(points)?;
+    let confidence_ellipse_polygon = generate_confidence_ellipse_points(points, 0.95, 180)?
+        .into_iter()
+        .map(|p| scale.normalize(p))
+        .collect();
+    let convex_hull_polygon = calculate_convex_hull_polygon(points)?
+        .into_iter()
+        .map(|p| scale.normalize(p))
+        .collect();
 
     Some(AreaMetrics {
         confidence_ellipse_polygon,
@@ -685,7 +735,7 @@ fn convex_hull_graham_scan(points: &mut [(f32, f32)]) -> Vec<(f32, f32)> {
         return points.to_vec();
     }
 
-    // Find bottom-most point (or left most in case of tie)
+    // Pivot: lowest y, then lowest x.
     let mut bottom_idx = 0;
     for i in 1..points.len() {
         if points[i].1 < points[bottom_idx].1
@@ -697,7 +747,7 @@ fn convex_hull_graham_scan(points: &mut [(f32, f32)]) -> Vec<(f32, f32)> {
     points.swap(0, bottom_idx);
     let bottom = points[0];
 
-    // Sort points by polar angle with respect to bottom point
+    // Sort by polar angle around the pivot.
     points[1..].sort_by(|a, b| {
         let angle_a = (a.1 - bottom.1).atan2(a.0 - bottom.0);
         let angle_b = (b.1 - bottom.1).atan2(b.0 - bottom.0);
@@ -754,12 +804,10 @@ fn generate_confidence_ellipse_points(
         return None;
     }
 
-    // Means
     let n = points.len() as f32;
     let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n;
     let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n;
 
-    // Sample covariance
     let mut cov_xx = 0.0_f32;
     let mut cov_yy = 0.0_f32;
     let mut cov_xy = 0.0_f32;
@@ -775,34 +823,30 @@ fn generate_confidence_ellipse_points(
     cov_yy /= denom;
     cov_xy /= denom;
 
-    // Eigen decomposition of covariance (2x2 closed-form)
+    // 2x2 eigenvalues.
     let trace = cov_xx + cov_yy;
     let det = cov_xx * cov_yy - cov_xy * cov_xy;
     let disc = (trace * trace - 4.0 * det).max(0.0);
     let lambda1 = 0.5 * (trace + disc.sqrt());
     let lambda2 = 0.5 * (trace - disc.sqrt());
 
-    // Orientation (angle of first eigenvector)
+    // Major-axis angle.
     let theta = 0.5 * (2.0 * cov_xy).atan2(cov_xx - cov_yy);
     let cos_t = theta.cos();
     let sin_t = theta.sin();
 
-    // Chi-square quantile for 2 DOF at given confidence
     let chi2 = chi_square_quantile_2df(confidence)?;
 
-    // Semi-axes (radii) along principal components
+    // Semi-axes.
     let r1 = (chi2 * lambda1).max(0.0).sqrt();
     let r2 = (chi2 * lambda2).max(0.0).sqrt();
 
-    // Sample the ellipse
     let mut poly = Vec::with_capacity(num_points);
     for k in 0..num_points {
         let t = 2.0 * PI * (k as f32) / (num_points as f32);
         let ct = t.cos();
         let st = t.sin();
 
-        // x = cx + r1*ct*cosθ - r2*st*sinθ
-        // y = cy + r1*ct*sinθ + r2*st*cosθ
         let x = mean_x + r1 * ct * cos_t - r2 * st * sin_t;
         let y = mean_y + r1 * ct * sin_t + r2 * st * cos_t;
         poly.push((x, y));
@@ -811,7 +855,6 @@ fn generate_confidence_ellipse_points(
     Some(poly)
 }
 
-/// Chi-square quantile for 2 degrees of freedom:
 /// χ²₂(p) = -2 ln(1 - p)
 fn chi_square_quantile_2df(p: f32) -> Option<f32> {
     if p <= 0.0 || p >= 1.0 {
@@ -832,8 +875,7 @@ pub struct AmplitudeSpectrum {
     pub amplitude_xy: Vec<f32>, // Combined amplitude (sqrt(x^2 + y^2))
 }
 
-/// Reusable FFT state: `rustfft` planning is far more expensive than a 500-point transform,
-/// and the Hann window only depends on the window length.
+/// FFT plan and Hann window cached across iterations.
 #[derive(Default)]
 struct SpectrumState {
     planner: Option<FftPlanner<f32>>,
@@ -847,7 +889,7 @@ impl SpectrumState {
             self.window.clear();
             self.window
                 .extend((0..n).map(|i| 0.5 - 0.5 * (2.0 * PI * i as f32 / (n as f32 - 1.0)).cos()));
-            // Coherent gain of the window (0.5 for Hann), used to correct amplitudes.
+            // Coherent gain (0.5 for Hann).
             self.coherent_gain = self.window.iter().sum::<f32>() / n as f32;
         }
         (&self.window, self.coherent_gain)
@@ -863,12 +905,11 @@ fn compute_fft_amplitude_spectrum(
         return None;
     }
 
-    // Demean the signals
     let n = points.len();
     let mean_x = points.iter().map(|p| p.x).sum::<f32>() / n as f32;
     let mean_y = points.iter().map(|p| p.y).sum::<f32>() / n as f32;
 
-    // Assume uniform sampling after interpolation
+    // Sampling is uniform after interpolation.
     let dt = (points[1].timestamp - points[0].timestamp)
         .num_microseconds()
         .unwrap_or(0) as f32
@@ -886,7 +927,7 @@ fn compute_fft_amplitude_spectrum(
         .plan_fft_forward(n);
     let (window, coherent_gain) = state.window_for(n);
 
-    // Demean, apply the Hann window, and convert to complex in one pass
+    // Demean and window.
     let mut x_complex: Vec<Complex<f32>> = points
         .iter()
         .zip(window)
@@ -901,8 +942,7 @@ fn compute_fft_amplitude_spectrum(
     fft.process(&mut x_complex);
     fft.process(&mut y_complex);
 
-    // Compute amplitude spectrum (not PSD)
-    // For real signals, we only need the first half
+    // One-sided amplitude spectrum.
     let n_half = n / 2 + 1;
     let mut freqs = Vec::with_capacity(n_half);
     let mut amp_x = Vec::with_capacity(n_half);
@@ -912,20 +952,17 @@ fn compute_fft_amplitude_spectrum(
     for k in 0..n_half {
         let freq = k as f32 * fs / n as f32;
 
-        // Only include up to max_hz
         if freq > max_hz {
             break;
         }
 
-        // One-sided amplitude scaling. For even N, Nyquist is k == N/2.
-        // For odd N there is no Nyquist bin, so only DC uses 1/N.
+        // DC and Nyquist (even N only) are not doubled.
         let is_nyquist = n.is_multiple_of(2) && k == n / 2;
         let scale = if k == 0 || is_nyquist {
             1.0 / n as f32
         } else {
             2.0 / n as f32
         };
-        // Correct for window coherent gain
         let scale = scale / coherent_gain;
 
         let ax = x_complex[k].norm() * scale;
