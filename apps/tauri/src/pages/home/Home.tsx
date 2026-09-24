@@ -63,12 +63,14 @@ function Home() {
   const lastSessionDetails = lastSessionQuery.data;
 
   return (
-    <>
+    // Fill the page so the cards share the remaining height and the bottom margin matches
+    // the other pages instead of leaving a blank band under content-sized rows.
+    <div className="flex h-full flex-col">
       {/* Header */}
       <Header />
 
       {/* Main Content */}
-      <div className="mt-6 grid grid-cols-3 grid-rows-6 gap-8">
+      <div className="mt-6 grid min-h-0 flex-1 grid-cols-3 grid-rows-6 gap-8">
         <ToolkitContainer className="row-span-3">
           <LastSessionCard sessionDetails={lastSessionDetails} />
         </ToolkitContainer>
@@ -93,7 +95,7 @@ function Home() {
           <OtherResourcesCard />
         </ToolkitContainer>
       </div>
-    </>
+    </div>
   );
 }
 
