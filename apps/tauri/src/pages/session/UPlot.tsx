@@ -237,7 +237,8 @@ function standardPlot(color: string): uPlot.Options {
         grid: { show: false },
         ticks: { show: true, size: 6, stroke: "#b2b2b2" },
         border: axisBorder,
-        size: 35,
+        font: "10px sans-serif",
+        size: fitAxisToLabels(35),
       },
     ],
     series: [{}, { stroke: color, width: 2 }],
@@ -246,6 +247,35 @@ function standardPlot(color: string): uPlot.Options {
 }
 
 /* ---------------- Helper functions ---------------- */
+
+/**
+ * Sizes an axis to its widest tick label so labels are never clipped as the scale grows; the y
+ * range of the velocity plots follows the data and can reach four or five digits. Axes are drawn
+ * inside the canvas and labels are right-aligned against the plot, so a fixed width silently loses
+ * the leading digits. `minSize` keeps the plot area steady while the values are small.
+ */
+export function fitAxisToLabels(minSize: number): uPlot.Axis.Size {
+  let lastSize = minSize;
+  return (u, values, axisIdx, cycleNum) => {
+    // uPlot re-runs sizing when the new size changes the layout; on the second pass the labels
+    // are the same, so returning the previous answer stops the loop.
+    if (cycleNum > 1) return lastSize;
+    const axis = u.axes[axisIdx];
+    if (!axis) return lastSize;
+    const tickSize = typeof axis.ticks?.size === "number" ? axis.ticks.size : 0;
+    const gap = typeof axis.gap === "number" ? axis.gap : 5;
+    const widest = (values ?? []).reduce((acc, v) => (v.length > acc.length ? v : acc), "");
+    let size = tickSize + gap;
+    if (widest !== "") {
+      // The canvas is scaled by the device pixel ratio; uPlot stores the scaled font in `font[0]`.
+      const font = axis.font as unknown as [string, number] | string | undefined;
+      u.ctx.font = Array.isArray(font) ? font[0] : (font ?? "12px sans-serif");
+      size += u.ctx.measureText(widest).width / devicePixelRatio;
+    }
+    lastSize = Math.max(minSize, Math.ceil(size));
+    return lastSize;
+  };
+}
 
 /**
  * Visits the frames from the last `seconds` of a ring buffer, oldest to newest. The buffer
