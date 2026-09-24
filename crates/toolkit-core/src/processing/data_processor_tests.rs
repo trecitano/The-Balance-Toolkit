@@ -92,11 +92,20 @@ fn insufficient_or_duplicate_timestamps_do_not_produce_velocity() {
 }
 
 #[test]
-fn fft_finds_known_frequency_after_reusing_its_state() {
+fn fft_recovers_known_frequency_and_amplitude_after_reusing_its_state() {
     let mut state = SpectrumState::default();
+    // 10 ms samples: 100 points give 1 Hz bins, 200 points give 0.5 Hz bins. A 1 Hz sine
+    // lands exactly on a bin either way, so its amplitude must come back unattenuated. The
+    // offset checks that the mean is removed before windowing.
     for count in [100, 200, 100] {
         let points: Vec<_> = (0..count)
-            .map(|i| point(i * 10, (2.0 * PI * i as f32 / 100.0).sin(), 0.0))
+            .map(|i| {
+                point(
+                    i * 10,
+                    12.0 + 3.0 * (2.0 * PI * i as f32 / 100.0).sin(),
+                    0.0,
+                )
+            })
             .collect();
         let spectrum = compute_fft_amplitude_spectrum(&points, 2.0, &mut state).unwrap();
         let peak = spectrum
@@ -107,7 +116,20 @@ fn fft_finds_known_frequency_after_reusing_its_state() {
             .unwrap()
             .0;
         close(spectrum.freqs_hz[peak], 1.0);
+        assert!(
+            (spectrum.amplitude_x[peak] - 3.0).abs() < 1e-3,
+            "peak amplitude {} != 3.0 mm",
+            spectrum.amplitude_x[peak]
+        );
+        assert!(
+            spectrum.amplitude_x[0].abs() < 1e-3,
+            "DC leaked: {}",
+            spectrum.amplitude_x[0]
+        );
         assert!(spectrum.amplitude_y.iter().all(|value| value.abs() < 1e-5));
+        for (x, xy) in spectrum.amplitude_x.iter().zip(&spectrum.amplitude_xy) {
+            close(*x, *xy);
+        }
     }
 }
 

@@ -887,8 +887,9 @@ impl SpectrumState {
     fn window_for(&mut self, n: usize) -> (&[f32], f32) {
         if self.window.len() != n {
             self.window.clear();
+            // Periodic Hann (period n, not n - 1) so an on-bin tone is not attenuated.
             self.window
-                .extend((0..n).map(|i| 0.5 - 0.5 * (2.0 * PI * i as f32 / (n as f32 - 1.0)).cos()));
+                .extend((0..n).map(|i| 0.5 - 0.5 * (2.0 * PI * i as f32 / n as f32).cos()));
             // Coherent gain (0.5 for Hann).
             self.coherent_gain = self.window.iter().sum::<f32>() / n as f32;
         }
