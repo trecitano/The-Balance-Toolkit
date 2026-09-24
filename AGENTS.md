@@ -43,6 +43,10 @@ Run from the repository root. All commands below are noninteractive.
 | Android | `mise run test:android` and `mise run check:android` |
 | Full default verification profile | `mise run verify` |
 
+To check a change in the running desktop UI (click through pages, read the DOM,
+screenshot), drive the app over WebDriver with `tauri-driver`; see
+[Driving the desktop UI with WebDriver](docs/DEVELOPMENT.md#driving-the-desktop-ui-with-webdriver).
+
 `verify` covers the core, CLI and frontend without a board, display or Bluetooth
 service. The Tauri shell and Android have separate checks with native SDK
 prerequisites. A passing build is not evidence of physical Bluetooth behavior.

@@ -184,6 +184,82 @@ Gradle needs writable wrapper/dependency caches. Missing SDKs, JDKs or dependenc
 are setup failures, not passing tests. See [apps/android/README.md](../apps/android/README.md)
 for device setup and app operation.
 
+## Driving the desktop UI with WebDriver
+
+The desktop app can be automated and inspected through the WebDriver protocol.
+Use this when a change must be checked in the real UI rather than through unit
+tests, `mise run smoke` or backend logs: click through pages, read the DOM,
+evaluate JavaScript inside the webview and take screenshots. Support is limited
+to Linux and Windows; macOS has no WKWebView driver.
+
+Prerequisites are `tauri-driver` plus the platform WebDriver
+(`WebKitWebDriver` on Linux, `msedgedriver` on Windows). Installation is covered
+in [INSTALL.md](../INSTALL.md#end-to-end-testing-tools-optional); on Arch Linux
+run `setup/setup.sh webdriver`. Check with `tauri-driver --version` and
+`which WebKitWebDriver`.
+
+1. Build a debug binary with the frontend embedded. `mise run dev:desktop`
+   is not suitable because that binary loads the UI from the Vite dev server.
+
+   ```bash
+   cd apps/tauri && mise exec -- bun run tauri build --debug --no-bundle
+   ```
+
+   The binary is `target/debug/the-balance-toolkitapp` at the repository root.
+
+2. Start the driver in its own terminal. It listens on port 4444 and forwards
+   to the native driver on 4445:
+
+   ```bash
+   mise exec -- tauri-driver
+   ```
+
+3. Create a session from any WebDriver client. The only Tauri-specific part is
+   the `tauri:options` capability naming the binary. Pass a fresh `TBT_APP_DIR`
+   in `env` so the run does not touch the real settings and recordings:
+
+   ```json
+   {
+     "capabilities": {
+       "alwaysMatch": {
+         "tauri:options": {
+           "application": "/abs/path/to/target/debug/the-balance-toolkitapp",
+           "env": { "TBT_APP_DIR": "/tmp/tbt-webdriver", "TBT_LOG": "debug" }
+         }
+       }
+     }
+   }
+   ```
+
+   With plain `curl`:
+
+   ```bash
+   curl -s -X POST localhost:4444/session -H 'Content-Type: application/json' \
+     -d "{\"capabilities\":{\"alwaysMatch\":{\"tauri:options\":{\"application\":\"$PWD/target/debug/the-balance-toolkitapp\",\"env\":{\"TBT_APP_DIR\":\"/tmp/tbt-webdriver\"}}}}}"
+   ```
+
+   The response contains a `sessionId`. Standard endpoints then work, for
+   example `GET /session/<id>/screenshot`, `POST /session/<id>/element`
+   (`{"using":"css selector","value":"..."}`) and
+   `POST /session/<id>/execute/sync` (`{"script":"return document.title","args":[]}`).
+   `DELETE /session/<id>` closes the app. Node clients such as WebdriverIO or
+   Selenium work the same way; give them `hostname: 'localhost'`, `port: 4444`
+   and the capability above.
+
+Notes:
+
+- A fresh `TBT_APP_DIR` starts with demo mode off and no boards. Enable demo
+  mode from the Settings modal in the driven UI, or reuse a directory where it
+  was enabled once; demo settings persist. Bluetooth behavior is not exercised.
+- Backend logs go to stderr of the process `tauri-driver` spawns; run
+  `tauri-driver` in a visible terminal to read them.
+- The Tauri bridge is reachable from `execute/sync` through
+  `window.__TAURI_INTERNALS__.invoke(name, args)`, which is useful to call
+  commands from `apps/tauri/src/bindings.ts` directly.
+- There is no e2e test suite in the repository yet; this is a manual and
+  agent-driven debugging workflow. Reference:
+  [Tauri WebDriver](https://v2.tauri.app/develop/tests/webdriver/).
+
 ## Troubleshooting
 
 - Wrong Rust or Bun version: use `mise exec -- rustc --version` / `mise exec -- bun --version`, then `mise install` if missing.
