@@ -136,16 +136,40 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, manager_rx: Receiver<Toolk
                     })
                 });
 
+            // Smallest logical window in which the Session and Replay pages fit without
+            // scrolling: the navigation rail plus the main column's minimum width, and the
+            // header, settings panel, timeline and the board grid's minimum height plus
+            // padding. Measured at 1400 x 862 over WebDriver; keep in step with the layout.
+            const MIN_WINDOW_WIDTH: f64 = 1408.0;
+            const MIN_WINDOW_HEIGHT: f64 = 862.0;
+
             let (initial_width, initial_height) = monitor_dimensions
                 .map(|(width, height)| (width * 0.55, height * 0.6))
                 .unwrap_or((800.0, 600.0));
+            let initial_width = initial_width.max(MIN_WINDOW_WIDTH);
+            let initial_height = initial_height.max(MIN_WINDOW_HEIGHT);
 
-            tauri::WebviewWindowBuilder::new(app.handle(), "main", tauri::WebviewUrl::default())
-                .title("The Balance Toolkit")
-                .resizable(true)
-                .maximizable(true)
-                .inner_size(initial_width, initial_height)
-                .build()?;
+            let builder = tauri::WebviewWindowBuilder::new(
+                app.handle(),
+                "main",
+                tauri::WebviewUrl::default(),
+            )
+            .title("The Balance Toolkit")
+            .resizable(true)
+            .maximizable(true)
+            .inner_size(initial_width, initial_height);
+            // On Linux the window minimum counts client-side decorations under Wayland,
+            // so the content box is constrained instead; GTK adds the frame on top of it.
+            #[cfg(not(target_os = "linux"))]
+            let builder = builder.min_inner_size(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT);
+            let window = builder.build()?;
+            #[cfg(target_os = "linux")]
+            {
+                use gtk::prelude::WidgetExt;
+                window
+                    .default_vbox()?
+                    .set_size_request(MIN_WINDOW_WIDTH as i32, MIN_WINDOW_HEIGHT as i32);
+            }
 
             Ok(())
         })

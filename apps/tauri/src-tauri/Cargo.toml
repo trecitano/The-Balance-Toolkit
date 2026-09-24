@@ -22,3 +22,6 @@ specta-typescript = "0.0.12"
 specta = { version = "2.0.0-rc.25", features = ["derive", "chrono"] }
 tauri-specta = { version = "2.0.0-rc.25", features = ["derive", "typescript"] }
 chrono = { version = "0.4.45", features = ["serde"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"
