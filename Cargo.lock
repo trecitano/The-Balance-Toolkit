@@ -4745,6 +4745,7 @@ dependencies = [
  "chrono",
  "gtk",
  "log",
+ "objc2-app-kit",
  "serde",
  "specta",
  "specta-typescript",

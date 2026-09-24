@@ -140,6 +140,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, manager_rx: Receiver<Toolk
             // scrolling: the navigation rail plus the main column's minimum width, and the
             // header, settings panel, timeline and the board grid's minimum height plus
             // padding. Measured at 1400 x 862 over WebDriver; keep in step with the layout.
+            // These are web viewport sizes; the platform blocks below add window frames.
             const MIN_WINDOW_WIDTH: f64 = 1408.0;
             const MIN_WINDOW_HEIGHT: f64 = 862.0;
 
@@ -163,6 +164,24 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, manager_rx: Receiver<Toolk
             #[cfg(not(target_os = "linux"))]
             let builder = builder.min_inner_size(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT);
             let window = builder.build()?;
+            // Tauri gives macOS windows a full-size content view (its default title bar
+            // style), so the window's inner size counts the title bar and the WKWebView
+            // insets its layout by that height. Measure the inset and add it to the minimum.
+            #[cfg(target_os = "macos")]
+            {
+                use objc2_app_kit::NSWindow;
+                // SAFETY: setup runs on the main thread and the pointer comes from the live window.
+                let ns_window = unsafe { &*(window.ns_window()? as *mut NSWindow) };
+                let content = ns_window
+                    .contentRectForFrameRect(ns_window.frame())
+                    .size
+                    .height;
+                let title_bar = (content - ns_window.contentLayoutRect().size.height).max(0.0);
+                window.set_min_size(Some(tauri::LogicalSize::new(
+                    MIN_WINDOW_WIDTH,
+                    MIN_WINDOW_HEIGHT + title_bar,
+                )))?;
+            }
             #[cfg(target_os = "linux")]
             {
                 use gtk::prelude::WidgetExt;

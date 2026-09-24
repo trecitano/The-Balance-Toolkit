@@ -23,5 +23,8 @@ specta = { version = "2.0.0-rc.25", features = ["derive", "chrono"] }
 tauri-specta = { version = "2.0.0-rc.25", features = ["derive", "typescript"] }
 chrono = { version = "0.4.45", features = ["serde"] }
 
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSWindow", "NSResponder"] }
+
 [target.'cfg(target_os = "linux")'.dependencies]
 gtk = "0.18"
