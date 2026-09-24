@@ -310,7 +310,9 @@ export type User = {
 	gender: string | null,
 	height: number | null,
 	heightMetric: string | null,
+	/**  Always kilograms; this is the session baseline weight. */
 	weight: number | null,
+	/**  Display unit only (`kg` or `lb`). The frontend converts at its edge. */
 	weightMetric: string | null,
 	dominantHand: string | null,
 	color: string | null,

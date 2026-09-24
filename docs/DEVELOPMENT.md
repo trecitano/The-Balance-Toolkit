@@ -140,7 +140,9 @@ Settings drafts exist only while the settings form is mounted.
 
 The Users page composes `UserCarousel`, `UserEditor`, and `WeightMeasureModal`.
 Measurement readings update only the mounted modal, at most once per animation
-frame. Readings arrive in kilograms and are converted for a pounds display. The
+frame. User weight is stored in kilograms everywhere; `weightMetric` is only a
+display preference, and the editor and modal convert at the UI edge with
+`utils/weight.ts`. Readings arrive in kilograms and are converted for display. The
 shared modal uses the browser's modal dialog API for focus containment, Escape,
 and focus restoration, with an accessible name supplied by each caller.
 

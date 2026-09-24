@@ -7,6 +7,7 @@ import ToolkitContainer from "@/components/ToolkitContainer";
 import { QueryStatus } from "@/components/QueryStatus";
 import { useSaveUser } from "@/queries/toolkit";
 import WeightMeasureModal from "./WeightMeasureModal";
+import { formatWeight, unitToKg } from "@/utils/weight";
 
 const genders = ["Male", "Female", "Non-binary", "Prefer not to say"];
 const genderOptions = [...genders, "Other"].map((value) => ({ value, label: value }));
@@ -35,6 +36,9 @@ export default function UserEditor({
   const [genderChoice, setGenderChoice] = useState(
     user.gender == null ? "" : genders.includes(user.gender) ? user.gender : "Other",
   );
+  // Weight is stored in kilograms; the input shows it in the chosen unit. Typing keeps its own
+  // text so the stored value does not round the field under the user.
+  const [weightText, setWeightText] = useState(() => formatWeight(user.weight, user.weightMetric ?? "kg"));
   const [measuring, setMeasuring] = useState(false);
   const save = useSaveUser();
   const displayed = draft ?? user;
@@ -50,6 +54,7 @@ export default function UserEditor({
   };
   const start = () => {
     setDraft({ ...user });
+    setWeightText(formatWeight(user.weight, user.weightMetric ?? "kg"));
     setGenderChoice(user.gender == null ? "" : genders.includes(user.gender) ? user.gender : "Other");
     onEditingChange(true);
   };
@@ -187,15 +192,24 @@ export default function UserEditor({
                 type="number"
                 min={0.01}
                 step="any"
-                value={displayed.weight ?? ""}
-                onChange={(e) => update("weight", e.target.value === "" ? null : Number(e.target.value))}
+                value={editing ? weightText : formatWeight(displayed.weight, displayed.weightMetric ?? "kg")}
+                onChange={(e) => {
+                  setWeightText(e.target.value);
+                  update(
+                    "weight",
+                    e.target.value === "" ? null : unitToKg(Number(e.target.value), displayed.weightMetric ?? "kg"),
+                  );
+                }}
               />
               <SelectPrimitive
                 aria-label="Weight unit"
                 value={displayed.weightMetric ?? "kg"}
                 options={options(["kg", "lb"])}
                 disabled={!editing || locked}
-                onChange={(value) => update("weightMetric", value)}
+                onChange={(value) => {
+                  update("weightMetric", value);
+                  setWeightText(formatWeight(displayed.weight, value));
+                }}
               />
               <ToolkitButton
                 type="button"
@@ -242,8 +256,9 @@ export default function UserEditor({
           sessionDevices={sessionDevices}
           weightMetric={displayed.weightMetric ?? "kg"}
           onClose={() => setMeasuring(false)}
-          onSave={(weight) => {
-            update("weight", weight);
+          onSave={(weightKg) => {
+            update("weight", weightKg);
+            setWeightText(formatWeight(weightKg, displayed.weightMetric ?? "kg"));
             setMeasuring(false);
           }}
         />

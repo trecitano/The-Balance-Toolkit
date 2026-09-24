@@ -5,6 +5,7 @@ import { ToolkitButton } from "@/components/ToolkitButton";
 import { SelectPrimitive } from "@/components/SelectPrimitive";
 import { QueryStatus, errorMessage } from "@/components/QueryStatus";
 import { commands } from "@/utils/requests";
+import { kgToUnit } from "@/utils/weight";
 
 type Measurement = { id: string; started: Promise<unknown>; frame: number | null };
 export default function WeightMeasureModal({
@@ -14,7 +15,8 @@ export default function WeightMeasureModal({
   sessionDevices,
 }: {
   onClose: () => void;
-  onSave: (weight: number) => void;
+  /** Receives the measured weight in kilograms regardless of the display unit. */
+  onSave: (weightKg: number) => void;
   weightMetric: string;
   sessionDevices: Array<{ name: string; macAddress: number }>;
 }) {
@@ -95,7 +97,7 @@ export default function WeightMeasureModal({
       setBusy(false);
     }
   };
-  const weight = weightKg === null ? null : weightKg * (weightMetric === "lb" ? 2.2046226218 : 1);
+  const weight = weightKg === null ? null : kgToUnit(weightKg, weightMetric);
   const close = () => {
     if (!busy)
       void run(async () => {
@@ -150,7 +152,7 @@ export default function WeightMeasureModal({
               onClick={() =>
                 void run(async () => {
                   await stop();
-                  if (weight !== null) onSave(Number(weight.toFixed(2)));
+                  if (weightKg !== null && weight !== null) onSave(Number(weightKg.toFixed(2)));
                 })
               }
             >

@@ -165,7 +165,9 @@ pub struct User {
     pub gender: Option<String>,
     pub height: Option<f64>,
     pub height_metric: Option<String>,
+    /// Always kilograms; this is the session baseline weight.
     pub weight: Option<f32>,
+    /// Display unit only (`kg` or `lb`). The frontend converts at its edge.
     pub weight_metric: Option<String>,
     pub dominant_hand: Option<String>,
     pub color: Option<String>,
