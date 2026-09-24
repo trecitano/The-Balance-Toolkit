@@ -73,91 +73,97 @@
     "id": "session_cop_z",
     "name": "Total Force",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>COP</mi><mi>z</mi></msub><mo>=</mo><mi>TR</mi><mo>+</mo><mi>BR</mi><mo>+</mo><mi>TL</mi><mo>+</mo><mi>BL</mi></mrow></math>",
-    "tooltip": "Total load on the board (Newtons).",
+    "tooltip": "Total load on the board (kg).",
     "description": []
   },
   {
     "id": "session_stability_index",
     "name": "Stability Index",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>SI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><mo>[</mo><mrow><msup><mrow><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover accent=\"true\"><mi>x</mi><mo>¯</mo></mover><mo>)</mo></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover accent=\"true\"><mi>y</mi><mo>¯</mo></mover><mo>)</mo></mrow><mn>2</mn></msup></mrow><mo>]</mo></mrow></msqrt></mrow></math>",
-    "tooltip": "RMS distance of COP from its mean (unitless).",
-    "description": ["N: number of samples", "x̄: mean COP X", "ȳ: mean COP Y."]
+    "tooltip": "RMS distance of COP from its mean (mm).",
+    "description": ["N: number of samples", "x_i, y_i: COP position (mm)", "x̄: mean COP X", "ȳ: mean COP Y."]
   },
   {
     "id": "session_mean_velocity_x",
     "name": "Mean Velocity (X)",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>v</mi><mrow><mi>cop</mi><mo>,</mo><mi>x</mi></mrow></msub><mo>=</mo><mi>mean</mi><mo>(</mo><mfrac><mrow><mo>|</mo><mo>Δ</mo><msub><mi>x</mi><mi>i</mi></msub><mo>|</mo></mrow><mrow><mo>Δ</mo><msub><mi>t</mi><mi>i</mi></msub></mrow></mfrac><mo>)</mo></mrow></math>",
-    "tooltip": "Average absolute COP velocity along X (units: ratio/s).",
-    "description": ["Δx_i: COP X change", "Δt_i: time step (s)."]
+    "tooltip": "Average absolute COP velocity along X (mm/s).",
+    "description": ["Δx_i: COP X change (mm)", "Δt_i: time step (s)."]
   },
   {
     "id": "session_mean_velocity_y",
     "name": "Mean Velocity (Y)",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>v</mi><mrow><mi>cop</mi><mo>,</mo><mi>y</mi></mrow></msub><mo>=</mo><mi>mean</mi><mo>(</mo><mfrac><mrow><mo>|</mo><mo>Δ</mo><msub><mi>y</mi><mi>i</mi></msub><mo>|</mo></mrow><mrow><mo>Δ</mo><msub><mi>t</mi><mi>i</mi></msub></mrow></mfrac><mo>)</mo></mrow></math>",
-    "tooltip": "Average absolute COP velocity along Y (units: ratio/s).",
-    "description": ["Δy_i: COP Y change", "Δt_i: time step (s)."]
+    "tooltip": "Average absolute COP velocity along Y (mm/s).",
+    "description": ["Δy_i: COP Y change (mm)", "Δt_i: time step (s)."]
   },
   {
     "id": "session_mean_velocity",
     "name": "Mean Velocity",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>mean_velocity</mi><mo>=</mo><mi>mean</mi><mo>(</mo><mfrac><mrow><msqrt><mrow><msup><mrow><mo>Δ</mo><msub><mi>x</mi><mi>i</mi></msub></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>Δ</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mn>2</mn></msup></mrow></msqrt></mrow><mrow><mo>Δ</mo><msub><mi>t</mi><mi>i</mi></msub></mrow></mfrac><mo>)</mo></mrow></math>",
-    "tooltip": "Average resultant COP speed (units: ratio/s).",
-    "description": ["Δx_i, Δy_i: COP changes", "Δt_i: time step (s)."]
+    "tooltip": "Average resultant COP speed (mm/s).",
+    "description": ["Δx_i, Δy_i: COP changes (mm)", "Δt_i: time step (s)."]
   },
   {
     "id": "session_total_path_length",
     "name": "Total Path Length",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>L</mi><mo>=</mo><msub><mo>∑</mo><mi>i</mi></msub><msqrt><mrow><msup><mrow><mo>Δ</mo><msub><mi>x</mi><mi>i</mi></msub></mrow><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>Δ</mo><msub><mi>y</mi><mi>i</mi></msub></mrow><mn>2</mn></msup></mrow></msqrt></mrow></math>",
-    "tooltip": "Total distance traveled by COP (unitless path length in ratio units).",
+    "tooltip": "Total distance traveled by COP over the window (mm).",
     "description": []
   },
   {
     "id": "session_velocity_moment",
     "name": "Velocity Moment",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>velocity_moment</mi><mo>=</mo><mfrac><mi>total_path_length</mi><mi>total_time</mi></mfrac></mrow></math>",
-    "tooltip": "Average speed of COP over time (units: ratio/s).",
+    "tooltip": "Total path length divided by elapsed window time (mm/s).",
     "description": []
   },
   {
     "id": "session_mlsi",
     "name": "Medio-Lateral Stability Index",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>MLSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><msup><msub><mi>x</mi><mi>i</mi></msub><mn>2</mn></msup></mrow></msqrt></mrow></math>",
-    "tooltip": "RMS COP excursion along X (unitless ratio).",
-    "description": []
+    "tooltip": "RMS COP excursion along X from the board centre (mm).",
+    "description": ["x_i: COP X position (mm)."]
   },
   {
     "id": "session_apsi",
     "name": "Anterior–Posterior Stability Index",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>APSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><msup><msub><mi>y</mi><mi>i</mi></msub><mn>2</mn></msup></mrow></msqrt></mrow></math>",
-    "tooltip": "RMS COP excursion along Y (unitless ratio).",
-    "description": []
+    "tooltip": "RMS COP excursion along Y from the board centre (mm).",
+    "description": ["y_i: COP Y position (mm)."]
   },
   {
     "id": "session_vsi",
     "name": "Vertical Stability Index",
-    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>VSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><msup><mrow><mo>(</mo><mi>baseline</mi><mo>−</mo><msub><mi>z</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup></mrow></msqrt></mrow></math>",
-    "tooltip": "RMS deviation of force from baseline load (Newtons).",
-    "description": ["zᵢ: total force", "baseline: User weight (Kg)"]
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>VSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><msup><mrow><mo>(</mo><mfrac><mrow><mi>baseline</mi><mo>−</mo><msub><mi>z</mi><mi>i</mi></msub></mrow><mi>baseline</mi></mfrac><mo>)</mo></mrow><mn>2</mn></msup></mrow></msqrt></mrow></math>",
+    "tooltip": "RMS deviation of load from the baseline, as a fraction of the baseline (unitless).",
+    "description": [
+      "z_i: total load (kg)",
+      "baseline: user weight (kg), or the mean load of the window when no user weight is set."
+    ]
   },
   {
     "id": "session_dpsi",
     "name": "Dynamic Postural Stability Index",
-    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>DPSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><mo>[</mo><mrow><msup><msub><mi>x</mi><mi>i</mi></msub><mn>2</mn></msup><mo>+</mo><msup><msub><mi>y</mi><mi>i</mi></msub><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>(</mo><mi>baseline</mi><mo>−</mo><msub><mi>z</mi><mi>i</mi></msub><mo>)</mo></mrow><mn>2</mn></msup></mrow><mo>]</mo></mrow></msqrt></mrow></math>",
+    "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>DPSI</mi><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>⋅</mo><msub><mo>∑</mo><mi>i</mi></msub><mo>[</mo><mrow><msup><msub><mi>x</mi><mi>i</mi></msub><mn>2</mn></msup><mo>+</mo><msup><msub><mi>y</mi><mi>i</mi></msub><mn>2</mn></msup><mo>+</mo><msup><mrow><mo>(</mo><mfrac><mrow><mi>baseline</mi><mo>−</mo><msub><mi>z</mi><mi>i</mi></msub></mrow><mi>baseline</mi></mfrac><mo>)</mo></mrow><mn>2</mn></msup></mrow><mo>]</mo></mrow></msqrt></mrow></math>",
     "tooltip": "Combined RMS of medio-lateral, anterior–posterior, and vertical components.",
-    "description": ["Mixed units: ratio + Newtons."]
+    "description": [
+      "Mixed units: x_i, y_i in mm; the vertical term is a unitless fraction of baseline.",
+      "baseline: user weight (kg), or the mean load of the window when no user weight is set."
+    ]
   },
   {
     "id": "session_confidence_ellipse",
     "name": "Confidence Ellipse (95%)",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><msub><mi>r</mi><mn>1</mn></msub><mo>=</mo><msqrt><mrow><msubsup><mi>χ</mi><mn>2</mn><mn>2</mn></msubsup><mo>(</mo><mn>0.95</mn><mo>)</mo><mo>·</mo><msub><mi>λ</mi><mn>1</mn></msub></mrow></msqrt><mo>,</mo><msub><mi>r</mi><mn>2</mn></msub><mo>=</mo><msqrt><mrow><msubsup><mi>χ</mi><mn>2</mn><mn>2</mn></msubsup><mo>(</mo><mn>0.95</mn><mo>)</mo><mo>·</mo><msub><mi>λ</mi><mn>2</mn></msub></mrow></msqrt></mrow></math>",
     "tooltip": "Ellipse enclosing ~95% of COP points (unitless).",
-    "description": ["r1, r2: semi-axes", "θ: rotation angle (rad)."]
+    "description": ["r1, r2: semi-axes", "λ1, λ2: eigenvalues of the COP covariance."]
   },
   {
     "id": "session_convex_hull",
     "name": "Convex Hull",
     "equation": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"inline\"><mrow><mi>CH</mi><mo>=</mo><mi>conv</mi><mo>(</mo><mo>{</mo><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><msub><mi>y</mi><mi>i</mi></msub><mo>)</mo><mo>}</mo><mo>)</mo></mrow></math>",
-    "tooltip": "Polygon enclosing all {(x_i, y_i)} with minimal convex boundary",
+    "tooltip": "Smallest convex polygon enclosing all COP points in the window.",
     "description": []
   },
   {
@@ -191,14 +197,16 @@
     "id": "settings_raw_data",
     "name": "Raw Data",
     "equation": "",
-    "tooltip": "Toggle to send raw sensor readings from the Wii Balance Board. The format is:",
+    "tooltip": "Toggle to send raw sensor readings from the Wii Balance Board. Each sample is big-endian binary in this order:",
     "description": [
-      "Timestamp",
-      "TR: Top right force",
-      "BR: Bottom right force",
-      "TL: Top left force",
-      "BL: Bottom left force",
-      "Units: sensor force in Newtons."
+      "Timestamp (Unix microseconds, i64)",
+      "MAC address (u64)",
+      "TR: Top right load (f32)",
+      "BR: Bottom right load (f32)",
+      "TL: Top left load (f32)",
+      "BL: Bottom left load (f32)",
+      "COP X, COP Y (f32, normalized −1 to +1)",
+      "Units: sensor load in kg."
     ]
   },
   {
@@ -247,22 +255,22 @@
     "id": "settings_window_size",
     "name": "Window Size",
     "equation": "",
-    "tooltip": "Set the size of the analysis window.",
-    "description": ["Units: samples."]
+    "tooltip": "Duration of data used per computation window.",
+    "description": ["Units: milliseconds (ms)."]
   },
   {
     "id": "settings_slide_size",
     "name": "Slide Size",
     "equation": "",
-    "tooltip": "Set the size of the sliding window.",
-    "description": ["Units: samples."]
+    "tooltip": "Time step between consecutive windows.",
+    "description": ["Units: milliseconds (ms)."]
   },
   {
     "id": "settings_sampling_rate",
     "name": "Sampling Rate",
     "equation": "",
-    "tooltip": "Set the sampling rate for data acquisition.",
-    "description": ["Units: Hz."]
+    "tooltip": "Uniform resampling rate applied after interpolation. The board's own rate is fixed.",
+    "description": ["Units: Hertz (Hz)."]
   },
   {
     "id": "settings_interpolation_method",
