@@ -55,8 +55,12 @@ pick_items() {
   while :; do
     IFS= read -rsn1 key || break
     if [[ $key == $'\033' ]]; then
+      # Let the tty driver time out instead of `read -t`: bash 3.2 (macOS)
+      # rejects fractional timeouts, and `-n` retries on an empty read.
       local rest=
-      IFS= read -rsn2 -t 0.05 rest || true
+      stty min 0 time 1
+      IFS= read -rs rest || true
+      stty min 1 time 0
       key+=$rest
     fi
     case "$key" in
