@@ -82,6 +82,14 @@ Arch and Debian derivatives are routed to the matching module.
 | Python streaming clients, `scripts/` (optional) | `uv sync` | `uv sync` | `uv sync` | `uv sync` |
 | Unity Hub (optional) | Unity apt repo | AUR (`paru`/`yay`) | brew cask | winget |
 
+On Windows the toolchain row also runs `rustup set auto-self-update disable`
+when rustup is already present: rustup's post-install self-update check can
+fail to launch its updater there, which would otherwise make `mise install`
+exit nonzero after every pinned tool was installed. Update rustup itself with
+`rustup self update` when you want to. If `mise install` still exits nonzero
+but `mise ls --missing` reports nothing, the row is treated as installed with
+a warning.
+
 The toolchain row installs `uv` too; the Python clients row runs `uv sync
 --locked` in `scripts/`, which downloads the Python pinned in
 `scripts/.python-version` if needed. The Unity Hub row installs only the Hub;

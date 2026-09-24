@@ -40,6 +40,17 @@ function Refresh-Path {
   }
 }
 
+# Run a native command and collect its stdout and stderr lines with its exit code.
+# Windows PowerShell 5.1 turns anything a native command writes to stderr into a
+# terminating error when that stream is redirected while $ErrorActionPreference is
+# 'Stop', even if the command exits 0. Every native call whose output is captured
+# or discarded goes through here so a chatty tool cannot abort the script.
+function Invoke-Native([string]$Exe, [string[]]$Arguments) {
+  $ErrorActionPreference = 'Continue'
+  $output = @(& $Exe @Arguments 2>&1 | ForEach-Object { "$_" })
+  return @{ ExitCode = $LASTEXITCODE; Output = $output }
+}
+
 function Require-Winget {
   if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     throw 'winget is required. Install "App Installer" from the Microsoft Store, then rerun.'
@@ -60,8 +71,9 @@ $script:PostNotes = @()
 function Check-BuildTools {
   $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
   if (-not (Test-Path $vswhere)) { return @{ Ok = $false; Detail = 'Visual Studio Installer not found' } }
-  $path = & $vswhere -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath -latest 2>$null
-  if ($path) { return @{ Ok = $true; Detail = $path } }
+  $r = Invoke-Native $vswhere @('-products', '*', '-requires', 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64', '-property', 'installationPath', '-latest')
+  $path = $r.Output | Where-Object { $_ } | Select-Object -First 1
+  if ($r.ExitCode -eq 0 -and $path) { return @{ Ok = $true; Detail = $path } }
   return @{ Ok = $false; Detail = '"Desktop development with C++" workload not installed' }
 }
 function Install-BuildTools {
@@ -86,7 +98,8 @@ function Install-WebView2 { Winget-Install 'Microsoft.EdgeWebView2Runtime' }
 function Check-Mise {
   $m = Get-Command mise -ErrorAction SilentlyContinue
   if (-not $m) { return @{ Ok = $false; Detail = 'mise not found' } }
-  return @{ Ok = $true; Detail = "mise $(Get-VersionFrom (& mise --version))" }
+  $r = Invoke-Native mise @('--version')
+  return @{ Ok = $true; Detail = "mise $(Get-VersionFrom ($r.Output -join "`n"))" }
 }
 function Install-Mise {
   Winget-Install 'jdx.mise'
@@ -97,7 +110,7 @@ function Get-MissingTools {
   Push-Location $RepoRoot
   try {
     $missing = @()
-    foreach ($l in @(& mise ls --missing 2>$null)) {
+    foreach ($l in (Invoke-Native mise @('ls', '--missing')).Output) {
       if ($l -match '^(\S+)\s+(\S+)\s+\(missing\)' -and $l -like '*mise.toml*') { $missing += "$($Matches[1])@$($Matches[2])" }
     }
     return $missing
@@ -108,26 +121,45 @@ function Check-Toolchain {
   $missing = Get-MissingTools
   if ($missing.Count -gt 0) { return @{ Ok = $false; Detail = "missing or outdated: $($missing -join ' ')" } }
   Push-Location $RepoRoot
-  try { $bun = & mise current bun 2>$null; $rust = & mise current rust 2>$null } finally { Pop-Location }
+  try {
+    $bun = (Invoke-Native mise @('current', 'bun')).Output -join ''
+    $rust = (Invoke-Native mise @('current', 'rust')).Output -join ''
+  } finally { Pop-Location }
   return @{ Ok = $true; Detail = "bun $bun, rust $rust" }
 }
 function Install-Toolchain {
   if (-not (Get-Command mise -ErrorAction SilentlyContinue)) { throw 'Install mise before the toolchain.' }
+  # mise installs Rust through rustup. After installing a toolchain, rustup checks
+  # for a newer rustup and, on Windows, that self-updater sometimes cannot launch
+  # ("unable to run updater: The system cannot find the file specified"), which
+  # makes rustup exit nonzero and mise report the install as failed even though
+  # the toolchain is in place. Turn the check off; `rustup self update` still works.
+  if (Get-Command rustup -ErrorAction SilentlyContinue) {
+    $r = Invoke-Native rustup @('set', 'auto-self-update', 'disable')
+    if ($r.ExitCode -ne 0) { Warn "Could not disable rustup's self-update check; continuing: $($r.Output -join ' ')" }
+  }
   Push-Location $RepoRoot
   try {
     & mise trust --quiet mise.toml
     & mise install --yes
-    if ($LASTEXITCODE -ne 0) { throw 'mise install failed' }
+    $installExitCode = $LASTEXITCODE
   } finally { Pop-Location }
   Refresh-Path
+  if ($installExitCode -ne 0) {
+    # Trust what is on disk over the exit status: a post-install step (such as
+    # the rustup self-update above) can fail after every pinned tool is installed.
+    $missing = Get-MissingTools
+    if ($missing.Count -gt 0) { throw "mise install failed; still missing: $($missing -join ' ')" }
+    Warn "mise install exited with code $installExitCode, but every tool pinned in mise.toml is installed. See the output above."
+  }
 }
 
 function Check-CMake {
   $c = Get-Command cmake -ErrorAction SilentlyContinue
   if (-not $c) { return @{ Ok = $false; Detail = 'cmake not found' } }
-  $output = & cmake --version 2>&1
-  $version = Get-VersionFrom ($output -join "`n")
-  if ($LASTEXITCODE -ne 0 -or -not $version) { return @{ Ok = $false; Detail = 'cmake --version failed' } }
+  $r = Invoke-Native cmake @('--version')
+  $version = Get-VersionFrom ($r.Output -join "`n")
+  if ($r.ExitCode -ne 0 -or -not $version) { return @{ Ok = $false; Detail = 'cmake --version failed' } }
   return @{ Ok = $true; Detail = "cmake $version" }
 }
 function Install-CMake {
@@ -162,7 +194,7 @@ function Check-PythonClients {
   if (-not (Test-Path $venv)) { return @{ Ok = $false; Detail = 'scripts\.venv not created (uv sync)' } }
   if (-not (Get-Command mise -ErrorAction SilentlyContinue)) { return @{ Ok = $false; Detail = 'needs mise' } }
   Push-Location (Join-Path $RepoRoot 'scripts')
-  try { & mise exec -- uv sync --locked --check *> $null; $ok = ($LASTEXITCODE -eq 0) } finally { Pop-Location }
+  try { $ok = (Invoke-Native mise @('exec', '--', 'uv', 'sync', '--locked', '--check')).ExitCode -eq 0 } finally { Pop-Location }
   if (-not $ok) { return @{ Ok = $false; Detail = 'scripts\.venv is out of date with uv.lock' } }
   $py = (Get-Content (Join-Path $RepoRoot 'scripts\.python-version') -ErrorAction SilentlyContinue | Select-Object -First 1)
   return @{ Ok = $true; Detail = "scripts\.venv, python $py" }
@@ -235,6 +267,11 @@ function Pick-Items([string[]]$labels, [bool[]]$defaults) {
         Write-Host (" {0}" -f $labels[$i]).PadRight([Console]::WindowWidth - 8)
       }
       Write-Host '  Up/Down move - Space toggle - A all - N none - Enter confirm - Q quit'.PadRight([Console]::WindowWidth - 1) -ForegroundColor DarkGray
+      # Re-anchor on the rows just drawn. Under ConPTY (Windows Terminal, current
+      # conhost) the console buffer is only the visible window, so drawing at the
+      # bottom scrolls it and the row remembered before drawing no longer points at
+      # the checklist; redrawing there appended a new copy on every key press.
+      $top = [Math]::Max(0, [Console]::CursorTop - ($n + 1))
       $key = [Console]::ReadKey($true)
       switch ($key.Key) {
         'UpArrow'   { $cursor = Move-Cursor $cursor -1 }
