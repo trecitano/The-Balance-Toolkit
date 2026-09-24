@@ -37,7 +37,7 @@ export function ComplexBoardPanel({
 
         <div className="col-span-3 bg-gray-100 p-2">
           <FFTAmplitudePlot
-            title="FFT Amplitude Spectrum (Normalized)"
+            title="FFT Amplitude Spectrum"
             tooltipId="session_amplitude_spectrum"
             macAddress={macAddress}
             store={store}
