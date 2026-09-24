@@ -41,8 +41,9 @@ function niceCeiling(value: number): number {
 
 /** Amplitude in mm against frequency in Hz; the y ceiling follows the data, see `CEILING_DECAY`. */
 function createOptions(ceilingRef: { readonly current: number }): uPlot.Options {
-  // Axis sizes add to the plot's outer height and width, so they stay as they were; the units
-  // go on the outermost tick label instead of a separate axis label.
+  // Axes are drawn inside the chart canvas, so their size trims the plot area rather than
+  // growing the panel. The units go on the outermost tick label instead of a separate axis
+  // label; the y axis is wide enough for "1000 mm" at this font.
   const axis = { grid: { show: false }, ticks: { show: false }, border: axisBorder, font: "10px sans-serif" };
   const withUnit =
     (unit: string) =>
@@ -56,7 +57,7 @@ function createOptions(ceilingRef: { readonly current: number }): uPlot.Options 
     },
     axes: [
       { ...axis, scale: "x", size: 20, values: withUnit("Hz") },
-      { ...axis, scale: "y", size: 40, values: withUnit("mm") },
+      { ...axis, scale: "y", size: 52, values: withUnit("mm") },
     ],
     series: [
       {}, // bin frequencies
