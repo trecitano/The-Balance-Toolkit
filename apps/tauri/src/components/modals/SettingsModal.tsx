@@ -18,14 +18,28 @@ interface SettingsProps {
   onClose: () => void;
 }
 
-function SettingField({ label, tooltipId, children }: { label: string; tooltipId: string; children: ReactNode }) {
+function SettingField({
+  label,
+  tooltipId,
+  children,
+}: {
+  /** A string stays on one line; pass an array to render one line per entry. */
+  label: string | string[];
+  tooltipId: string;
+  children: ReactNode;
+}) {
   const labelId = useId();
+  const lines = Array.isArray(label) ? label : [label];
   return (
     <FieldLabelContext value={labelId}>
       <div className="mb-3 flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-gray-700">
-        <div className="flex items-center gap-2">
-          <span id={labelId} className="text-sm">
-            {label}
+        <div className="flex shrink-0 items-center gap-2">
+          <span id={labelId} className="text-sm whitespace-nowrap">
+            {lines.map((line, i) => (
+              <span key={i} className="block">
+                {line}
+              </span>
+            ))}
           </span>
           <Tooltip tooltipId={tooltipId} />
         </div>
@@ -130,7 +144,7 @@ function SettingsForm({ initial, onClose }: { initial: GeneralSettings; onClose:
                   onChange={(e) => updateGeneral("tcpSendRawData", e.target.checked)}
                 />
               </SettingField>
-              <SettingField label="TCP Connection String (Processed data)" tooltipId="settings_tcp">
+              <SettingField label={["TCP Connection String", "(Processed data)"]} tooltipId="settings_tcp">
                 <InputPrimitive
                   type="text"
                   value={tempSettings.tcpConnectionStringProcessed}

@@ -88,7 +88,7 @@ export default function DeviceRow({
         ✕
       </button>
 
-      <div>
+      <div className="flex flex-col items-center">
         <img src={device.isConnected ? wbbIconBlue : wbbIcon} alt="" className="size-10 object-contain" />
 
         {inSession ? (

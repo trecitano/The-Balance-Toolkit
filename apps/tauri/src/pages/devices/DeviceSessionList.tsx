@@ -41,10 +41,24 @@ export default function DeviceSessionList({ sessionDevices, onLeaveSession }: De
 
                 <div className="flex justify-end gap-(--space-sm)">
                   <ToolkitButton type="button" color="red" onClick={() => onLeaveSession(device.macAddress)}>
-                    Remove from session
+                    Disconnect
                   </ToolkitButton>
                   <ToolkitButton to="/session" color="blue" iconUrl={sessionIcon}>
-                    Session →
+                    <span className="inline-flex items-center gap-1.5">
+                      Session
+                      <svg
+                        aria-hidden="true"
+                        viewBox="0 0 16 16"
+                        className="size-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M3 8h10M9 4l4 4-4 4" />
+                      </svg>
+                    </span>
                   </ToolkitButton>
                 </div>
               </>

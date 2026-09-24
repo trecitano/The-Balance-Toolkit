@@ -61,7 +61,7 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
         type="button"
         aria-label={`About ${tooltipData.name}`}
         aria-describedby={tooltipContentId}
-        className="block rounded focus-visible:outline-2 focus-visible:outline-blue-500"
+        className="block shrink-0 rounded focus-visible:outline-2 focus-visible:outline-blue-500"
       >
         <InfoIcon className="size-4 cursor-help text-gray-400 hover:text-gray-600" />
       </button>
@@ -73,7 +73,7 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
           "pointer-events-none absolute left-1/2 z-30 min-w-60 px-3 py-2 text-sm",
           "-translate-x-1/2 transform rounded-md bg-gray-900 text-white",
           "opacity-0 shadow-lg transition-opacity duration-200",
-          "group-hover:opacity-100 group-focus-within:opacity-100",
+          "group-hover:opacity-100 group-has-focus-visible:opacity-100",
           showBelow ? "top-full mt-2" : "bottom-full mb-2",
         )}
       >
