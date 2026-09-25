@@ -3,6 +3,7 @@
   "productName": "The Balance Toolkit",
   "version": "0.1.0",
   "identifier": "com.the-balance-toolkit",
+  "mainBinaryName": "the-balance-toolkit",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",

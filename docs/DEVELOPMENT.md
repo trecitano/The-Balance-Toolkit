@@ -205,7 +205,7 @@ run `setup/setup.sh webdriver`. Check with `tauri-driver --version` and
    cd apps/tauri && mise exec -- bun run tauri build --debug --no-bundle
    ```
 
-   The binary is `target/debug/the-balance-toolkitapp` at the repository root.
+   The binary is `target/debug/the-balance-toolkit` at the repository root.
 
 2. Start the driver in its own terminal. It listens on port 4444 and forwards
    to the native driver on 4445:
@@ -223,7 +223,7 @@ run `setup/setup.sh webdriver`. Check with `tauri-driver --version` and
      "capabilities": {
        "alwaysMatch": {
          "tauri:options": {
-           "application": "/abs/path/to/target/debug/the-balance-toolkitapp",
+           "application": "/abs/path/to/target/debug/the-balance-toolkit",
            "env": { "TBT_APP_DIR": "/tmp/tbt-webdriver", "TBT_LOG": "debug" }
          }
        }
@@ -235,7 +235,7 @@ run `setup/setup.sh webdriver`. Check with `tauri-driver --version` and
 
    ```bash
    curl -s -X POST localhost:4444/session -H 'Content-Type: application/json' \
-     -d "{\"capabilities\":{\"alwaysMatch\":{\"tauri:options\":{\"application\":\"$PWD/target/debug/the-balance-toolkitapp\",\"env\":{\"TBT_APP_DIR\":\"/tmp/tbt-webdriver\"}}}}}"
+     -d "{\"capabilities\":{\"alwaysMatch\":{\"tauri:options\":{\"application\":\"$PWD/target/debug/the-balance-toolkit\",\"env\":{\"TBT_APP_DIR\":\"/tmp/tbt-webdriver\"}}}}}"
    ```
 
    The response contains a `sessionId`. Standard endpoints then work, for
