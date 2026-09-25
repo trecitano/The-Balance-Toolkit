@@ -180,13 +180,69 @@ function Install-TauriDriver {
   if ($LASTEXITCODE -ne 0) { throw 'cargo install tauri-driver failed' }
 }
 
+# Edge WebDriver: msedgedriver.exe must have the same major version as the
+# installed Edge. Microsoft publishes the driver on its own CDN, so the script
+# downloads the build that matches Edge instead of sending the user to a page.
+$EdgeDriverDir = Join-Path $env:LOCALAPPDATA 'the-balance-toolkit\msedgedriver'
+$EdgeDriverPage = 'https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/'
+
+# Edge and its driver carry four-part versions (153.0.4234.48); the driver download
+# URL needs all four, so these helpers do not go through Get-VersionFrom.
+function Get-FullVersionFrom([string]$text) {
+  if ($text -match '\d+\.\d+\.\d+\.\d+') { return [version]$Matches[0] }
+  return Get-VersionFrom $text
+}
+function Get-EdgeVersion {
+  foreach ($exe in @("${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe",
+                     "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
+                     "$env:LOCALAPPDATA\Microsoft\Edge\Application\msedge.exe")) {
+    if (Test-Path $exe) { return Get-FullVersionFrom (Get-Item $exe).VersionInfo.ProductVersion }
+  }
+  return $null
+}
+function Get-EdgeDriverVersion([string]$exe) {
+  $r = Invoke-Native $exe @('--version')
+  if ($r.ExitCode -ne 0) { return $null }
+  return Get-FullVersionFrom ($r.Output -join "`n")
+}
 function Check-EdgeDriver {
   $d = Get-Command msedgedriver.exe -ErrorAction SilentlyContinue
   if (-not $d) { return @{ Ok = $false; Detail = 'needed only for end-to-end tests' } }
-  return @{ Ok = $true; Detail = $d.Source }
+  $edge = Get-EdgeVersion
+  $driver = Get-EdgeDriverVersion $d.Source
+  if ($edge -and $driver -and $edge.Major -ne $driver.Major) {
+    return @{ Ok = $false; Detail = "msedgedriver $driver does not match Edge $edge ($($d.Source))" }
+  }
+  return @{ Ok = $true; Detail = "msedgedriver $driver, $($d.Source)" }
 }
 function Install-EdgeDriver {
-  throw 'msedgedriver.exe must match your Edge version. Download it from https://developer.microsoft.com/microsoft-edge/tools/webdriver/ and put it on PATH.'
+  $edge = Get-EdgeVersion
+  if (-not $edge) { throw "Microsoft Edge was not found, so the matching msedgedriver.exe cannot be chosen. Download it from $EdgeDriverPage and put it on PATH." }
+  $arch = switch ($env:PROCESSOR_ARCHITECTURE) { 'ARM64' { 'arm64' } 'x86' { 'win32' } default { 'win64' } }
+  [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+  # The release endpoint answers with UTF-16 text, so decode it explicitly.
+  $releaseUrl = "https://msedgedriver.microsoft.com/LATEST_RELEASE_$($edge.Major)_WINDOWS"
+  try {
+    $bytes = (Invoke-WebRequest -UseBasicParsing -Uri $releaseUrl).Content
+    $version = Get-FullVersionFrom ([Text.Encoding]::Unicode.GetString($bytes))
+  } catch { throw "Could not look up the msedgedriver release for Edge $($edge.Major) at $releaseUrl ($($_.Exception.Message)). Download it from $EdgeDriverPage and put it on PATH." }
+  if (-not $version) { throw "No msedgedriver release is published for Edge $($edge.Major). Download one from $EdgeDriverPage and put it on PATH." }
+  Info "Edge $edge; downloading msedgedriver $version ($arch) to $EdgeDriverDir"
+  $zip = Join-Path $env:TEMP "edgedriver_$arch.zip"
+  try {
+    Invoke-WebRequest -UseBasicParsing -Uri "https://msedgedriver.microsoft.com/$version/edgedriver_$arch.zip" -OutFile $zip
+    New-Item -ItemType Directory -Force $EdgeDriverDir | Out-Null
+    Expand-Archive -Path $zip -DestinationPath $EdgeDriverDir -Force
+  } finally { Remove-Item $zip -ErrorAction SilentlyContinue }
+  $exe = Join-Path $EdgeDriverDir 'msedgedriver.exe'
+  if (-not (Test-Path $exe)) { throw "The download did not contain msedgedriver.exe (looked in $EdgeDriverDir)." }
+  $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+  if (($userPath -split ';') -notcontains $EdgeDriverDir) {
+    [Environment]::SetEnvironmentVariable('Path', ($userPath.TrimEnd(';') + ';' + $EdgeDriverDir), 'User')
+    $script:PostNotes += "$EdgeDriverDir was added to your user PATH for msedgedriver.exe. Open a new terminal to pick it up."
+  }
+  if ($env:Path -notlike "*$EdgeDriverDir*") { $env:Path = "$EdgeDriverDir;$env:Path" }
+  Ok "msedgedriver $(Get-EdgeDriverVersion $exe) installed. Rerun this script after Edge updates to a new major version."
 }
 
 function Check-PythonClients {

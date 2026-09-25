@@ -253,7 +253,11 @@ Use `--build-only` to build without installing the binary, and
 [Arch WebKitWebDriver guide](https://gist.github.com/jamesmeneghello/37fc7988ec94edc962969ade428cd710).
 
 Windows needs `msedgedriver.exe` matching the installed Edge version, on the
-`PATH` or passed to `tauri-driver --native-driver`:
+`PATH` or passed to `tauri-driver --native-driver`. The optional
+"msedgedriver (e2e tests)" row of `setup\setup.ps1` downloads the build that
+matches the installed Edge into `%LOCALAPPDATA%\the-balance-toolkit\msedgedriver`
+and adds that directory to the user `PATH`; rerun the script after Edge moves
+to a new major version. To install it by hand instead:
 
 - [Microsoft Edge WebDriver](https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/)
 

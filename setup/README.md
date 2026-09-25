@@ -78,7 +78,7 @@ Arch and Debian derivatives are routed to the matching module.
 | Balance Board hidraw udev rule | ✔ | ✔ | | |
 | User in `input` group | ✔ | ✔ | | |
 | `tauri-driver` (optional) | ✔ | ✔ | ✔ | ✔ |
-| Platform WebDriver (optional) | `webkit2gtk-driver` | source build | n/a | `msedgedriver` (manual) |
+| Platform WebDriver (optional) | `webkit2gtk-driver` | source build | n/a | `msedgedriver` (downloaded to match Edge) |
 | Python streaming clients, `scripts/` (optional) | `uv sync` | `uv sync` | `uv sync` | `uv sync` |
 | Unity Hub (optional) | Unity apt repo | AUR (`paru`/`yay`) | brew cask | winget |
 
