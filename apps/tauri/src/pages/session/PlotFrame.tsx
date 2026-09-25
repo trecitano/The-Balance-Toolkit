@@ -52,7 +52,7 @@ export function PlotFrame({
 
 export function SeriesToggles({ series, onToggle }: { series: SeriesToggle[]; onToggle: (key: string) => void }) {
   return (
-    <div className="ml-auto flex gap-3">
+    <div className="ml-auto flex gap-2 whitespace-nowrap">
       {series.map((entry) => (
         <label key={entry.key} className="flex cursor-pointer items-center gap-1">
           <input type="checkbox" checked={entry.enabled} onChange={() => onToggle(entry.key)} className="size-3" />

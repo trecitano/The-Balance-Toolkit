@@ -132,7 +132,7 @@ export function TimelinePanel({
           )}
         </button>
         {activity && (
-          <div className="flex flex-col items-center font-medium text-gray-700">
+          <div className="flex flex-col items-center font-medium text-gray-700 tabular-nums">
             <p>
               Loop {displayLoop}/{displayTotalLoops}
             </p>

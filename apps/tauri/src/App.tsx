@@ -21,7 +21,7 @@ function DefaultLayout() {
   return (
     <div className="flex flex-row">
       <Navigation />
-      <main className="h-screen min-h-120 min-w-330 grow overflow-auto bg-(--bg-primary) px-20 py-8">
+      <main className="h-screen min-h-120 min-w-346 grow overflow-auto bg-(--bg-primary) px-20 py-8">
         <PageErrorBoundary key={location.pathname}>
           <Outlet />
         </PageErrorBoundary>

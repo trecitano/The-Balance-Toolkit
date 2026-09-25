@@ -139,9 +139,9 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, manager_rx: Receiver<Toolk
             // Smallest logical window in which the Session and Replay pages fit without
             // scrolling: the navigation rail plus the main column's minimum width, and the
             // header, settings panel, timeline and the board grid's minimum height plus
-            // padding. Measured at 1400 x 862 over WebDriver; keep in step with the layout.
+            // padding. Measured at 1472 x 862 over WebDriver; keep in step with the layout.
             // These are web viewport sizes; the platform blocks below add window frames.
-            const MIN_WINDOW_WIDTH: f64 = 1408.0;
+            const MIN_WINDOW_WIDTH: f64 = 1472.0;
             const MIN_WINDOW_HEIGHT: f64 = 862.0;
 
             let (initial_width, initial_height) = monitor_dimensions
