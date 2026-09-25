@@ -65,7 +65,7 @@ function Home() {
   return (
     // Fill the page so the cards share the remaining height and the bottom margin matches
     // the other pages instead of leaving a blank band under content-sized rows.
-    <div className="flex h-full flex-col">
+    <div className="page-fade-in flex h-full flex-col">
       {/* Header */}
       <Header />
 

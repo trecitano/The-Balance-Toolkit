@@ -24,12 +24,9 @@ export function QueryStatus({
         )}
       </div>
     );
-  if (pending)
-    return (
-      <p role="status" className="p-4 text-gray-600">
-        Loading…
-      </p>
-    );
+  // Queries are local IPC calls that resolve within a few frames, so any visible indicator
+  // reads as flicker. Leave the area blank and let the page appear once the data arrives.
+  if (pending) return <div aria-busy="true" />;
   if (empty) return <p className="p-4 text-gray-600">{empty}</p>;
   return null;
 }

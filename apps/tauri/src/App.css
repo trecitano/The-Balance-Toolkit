@@ -71,6 +71,25 @@ body {
   -webkit-user-select: none;
 }
 
+/* The home page is blank while its first queries resolve on launch; fade the content in
+   instead of snapping from empty to full. */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.page-fade-in {
+  animation: page-fade-in var(--transition-slow) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-fade-in {
+    animation: none;
+  }
+}
+
 /* Match the board's two short flashes and pause; finish with the LED lit. */
 @keyframes identify-led {
   0%,
