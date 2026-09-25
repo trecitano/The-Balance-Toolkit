@@ -5,6 +5,7 @@ import { ReplayInformation, SessionSettings } from "@/types.ts";
 import PageTitle from "@/components/PageTitle.tsx";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import { ProcessingFields, StreamToggles } from "@/pages/session/ProcessingFields.tsx";
+import { useRef } from "react";
 
 export function ReplayPanel({
   config,
@@ -27,9 +28,16 @@ export function ReplayPanel({
   onPickSessionFile: (defaultPath?: string | null) => void;
   onResetFile: () => void;
 }) {
+  // The panel stays interactive while a save is pending, so a second change must merge onto
+  // the settings last submitted rather than the stale fetched value, or it would drop the first.
+  const submitted = useRef({ base: config, latest: config });
+  if (submitted.current.base !== config) submitted.current = { base: config, latest: config };
   const update = <K extends keyof SessionSettings>(key: K, val: SessionSettings[K]) => {
-    if (!config) return Promise.reject(new Error("No replay is loaded."));
-    return onChange({ ...config, core: { ...config.core, [key]: val } });
+    const current = submitted.current.latest;
+    if (!current) return Promise.reject(new Error("No replay is loaded."));
+    const next = { ...current, core: { ...current.core, [key]: val } };
+    submitted.current.latest = next;
+    return onChange(next);
   };
 
   const disabled = saving || config === null || config.hasOngoingSession;

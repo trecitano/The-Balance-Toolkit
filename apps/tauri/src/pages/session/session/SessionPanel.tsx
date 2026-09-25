@@ -9,6 +9,7 @@ import tareIcon from "@/assets/tare.svg";
 import { commands } from "@/utils/requests.ts";
 import { useAction } from "@/hooks/useAction";
 import { ProcessingFields, StreamToggles } from "@/pages/session/ProcessingFields.tsx";
+import { useRef } from "react";
 
 // The owner's mutation exposes any rejection, so fire-and-forget controls only need to swallow it.
 const fire = (promise: Promise<unknown>) => void promise.catch(() => undefined);
@@ -35,9 +36,16 @@ export function SessionPanel({
   onChange: (v: SessionSettings) => Promise<unknown>;
 }) {
   const action = useAction();
+  // The panel stays interactive while a save is pending, so a second change must merge onto
+  // the settings last submitted rather than the stale fetched value, or it would drop the first.
+  const submitted = useRef({ base: value, latest: value });
+  if (submitted.current.base !== value) submitted.current = { base: value, latest: value };
   const update = <K extends keyof SessionSettings>(key: K, val: SessionSettings[K]) => {
-    if (!value) return Promise.reject(new Error("The session configuration has not loaded yet."));
-    return onChange({ ...value, [key]: val });
+    const current = submitted.current.latest;
+    if (!current) return Promise.reject(new Error("The session configuration has not loaded yet."));
+    const next = { ...current, [key]: val };
+    submitted.current.latest = next;
+    return onChange(next);
   };
 
   const pickDirectory = async () => {

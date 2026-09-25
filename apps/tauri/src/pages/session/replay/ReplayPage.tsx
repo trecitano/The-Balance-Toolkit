@@ -57,14 +57,13 @@ export default function ReplayPage() {
         key={`${replayInformation?.filePath ?? "empty"}:${panelRevision}`}
         config={replayInformation}
         {...display}
-        saving={busy}
+        saving={fileAction.isPending}
         onChange={(newState) => updateReplay.mutateAsync(newState.core)}
         onPickSessionFile={pickSessionFile}
         onResetFile={() => fileAction.run(commands.replay.clearReplay)}
       />
 
       <QueryStatus error={updateReplay.error || fileAction.error || query.error} />
-      {busy && <p role="status">Saving replay configuration…</p>}
       <DraftNotice show={drafts.hasDrafts} />
       <TimelinePanel
         activity={chosenActivity}

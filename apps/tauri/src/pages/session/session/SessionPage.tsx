@@ -44,12 +44,11 @@ export default function SessionPage() {
         onDraftChange={drafts.onDraftChange}
         activityOptions={activities.map((activity) => ({ label: activity.title, value: activity.id }))}
         userOptions={information?.availableUsers ?? []}
-        disabled={running || save.isPending || !information}
+        disabled={running || !information}
         value={information?.core ?? null}
         onChange={save.mutateAsync}
       />
       <QueryStatus error={save.error || query.error || activityQuery.error} />
-      {save.isPending && <p role="status">Saving configuration…</p>}
       <DraftNotice show={drafts.hasDrafts} />
       <TimelinePanel
         activity={activities.find((activity) => activity.id === information?.core.activityId)}
