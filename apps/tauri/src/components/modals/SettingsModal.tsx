@@ -21,11 +21,14 @@ interface SettingsProps {
 function SettingField({
   label,
   tooltipId,
+  detail,
   children,
 }: {
-  /** A string stays on one line; pass an array to render one line per entry. */
+  /** A string wraps as needed; pass an array to force one line per entry. */
   label: string | string[];
   tooltipId: string;
+  /** Secondary text shown under the label, such as the current value of a picker. */
+  detail?: ReactNode;
   children: ReactNode;
 }) {
   const labelId = useId();
@@ -33,17 +36,21 @@ function SettingField({
   return (
     <FieldLabelContext value={labelId}>
       <div className="mb-3 flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50 p-3 text-gray-700">
-        <div className="flex shrink-0 items-center gap-2">
-          <span id={labelId} className="text-sm whitespace-nowrap">
-            {lines.map((line, i) => (
-              <span key={i} className="block">
-                {line}
-              </span>
-            ))}
-          </span>
-          <Tooltip tooltipId={tooltipId} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span id={labelId} className="text-sm">
+              {lines.map((line, i) => (
+                <span key={i} className="block">
+                  {line}
+                </span>
+              ))}
+            </span>
+            <Tooltip tooltipId={tooltipId} />
+          </div>
+          {detail}
         </div>
-        {children}
+        {/* Every control shares one fixed column so widths do not follow label length. */}
+        <div className="flex w-52 shrink-0 items-center justify-end">{children}</div>
       </div>
     </FieldLabelContext>
   );
@@ -188,23 +195,26 @@ function SettingsForm({ initial, onClose }: { initial: GeneralSettings; onClose:
             </SettingsSection>
 
             <SettingsSection title="Save Session Data">
-              <SettingField label="Default save location" tooltipId="settings_default_save_location">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-xs text-gray-500" title={tempSettings.storeFilesDefaultDirectory}>
+              <SettingField
+                label="Default save location"
+                tooltipId="settings_default_save_location"
+                detail={
+                  <div className="truncate text-xs text-gray-500" title={tempSettings.storeFilesDefaultDirectory}>
                     {tempSettings.storeFilesDefaultDirectory || "Not set"}
-                  </span>
-                  <ToolkitButton
-                    type="button"
-                    color="white"
-                    size="sm"
-                    onClick={async () => {
-                      const selected = await open({ directory: true, multiple: false, title: "Select save directory" });
-                      if (typeof selected === "string") updateGeneral("storeFilesDefaultDirectory", selected);
-                    }}
-                  >
-                    Browse
-                  </ToolkitButton>
-                </div>
+                  </div>
+                }
+              >
+                <ToolkitButton
+                  type="button"
+                  color="white"
+                  size="sm"
+                  onClick={async () => {
+                    const selected = await open({ directory: true, multiple: false, title: "Select save directory" });
+                    if (typeof selected === "string") updateGeneral("storeFilesDefaultDirectory", selected);
+                  }}
+                >
+                  Browse
+                </ToolkitButton>
               </SettingField>
               <SettingField label="Store Raw Data" tooltipId="settings_store_raw_data">
                 <Checkbox
@@ -232,7 +242,7 @@ function SettingsForm({ initial, onClose }: { initial: GeneralSettings; onClose:
               </SettingField>
               <SettingField label="Interpolation Method" tooltipId="settings_interpolation_method">
                 <SelectPrimitive<InterpolationSetting>
-                  className="min-w-35"
+                  className="w-full"
                   value={tempSettings.processingSettings.interpolation}
                   onChange={(v) => updateProcessing("interpolation", v)}
                   options={interpolationOptions.map((i) => ({ label: i, value: i }))}

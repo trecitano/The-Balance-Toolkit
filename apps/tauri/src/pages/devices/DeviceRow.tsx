@@ -88,7 +88,8 @@ export default function DeviceRow({
         ✕
       </button>
 
-      <div className="flex flex-col items-center">
+      {/* Fixed width, wide enough for either status label, so the icon is centered in the same place with or without one. */}
+      <div className="flex w-22 shrink-0 flex-col items-center">
         <img src={device.isConnected ? wbbIconBlue : wbbIcon} alt="" className="size-10 object-contain" />
 
         {inSession ? (
@@ -98,7 +99,7 @@ export default function DeviceRow({
         )}
       </div>
 
-      <div className="ml-8 flex flex-col justify-center">
+      <div className="ml-4 flex flex-col justify-center">
         {isEditing ? (
           <div className="flex">
             <input
