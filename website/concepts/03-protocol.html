@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 Protocol · The Balance Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --paper: #f7f5ef; --sheet: #fffefb; --ink: #1d2433; --muted: #5d6475; --rule: #d8d4c8; --blue: #2457a6; --red: #e50012; --tint: #e9eef8; }
+body { background: var(--paper); color: var(--ink); font: 400 16px/1.55 'Inter', sans-serif; }
+.serif { font-family: 'Source Serif 4', serif; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 16px clamp(16px, 4vw, 48px); border-bottom: 1px solid var(--rule); }
+header b { font: 600 18px 'Source Serif 4', serif; }
+.btn { display: inline-block; padding: 12px 18px; background: var(--blue); color: #fff; text-decoration: none; font-weight: 500; border: 0; border-radius: 3px; cursor: pointer; transition: background .15s, transform .1s; }
+.btn:hover { background: #1b4686; } .btn:active { transform: translateY(1px); }
+.btn-line { background: transparent; color: var(--blue); box-shadow: inset 0 0 0 1.5px var(--blue); }
+.btn-line:hover { background: var(--tint); }
+
+.intro { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(24px, 5vw, 80px); padding: clamp(32px, 5vw, 72px) clamp(16px, 4vw, 48px) 32px; align-items: end; }
+h1 { font: 400 clamp(38px, 4.8vw, 72px)/1.04 'Source Serif 4', serif; margin: 0; letter-spacing: -.01em; }
+.intro p { margin: 0 0 18px; color: var(--muted); font-size: 18px; }
+
+.sheet { margin: 0 clamp(16px, 4vw, 48px); background: var(--sheet); border: 1px solid var(--rule); padding: clamp(16px, 3vw, 36px); display: grid; gap: 24px; }
+.form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; border: 1px solid var(--rule); }
+.form > * { padding: 10px 14px; border-right: 1px solid var(--rule); }
+.form > *:last-child { border-right: 0; }
+.form label, .form .k { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 4px; }
+.form select { width: 100%; border: 0; background: transparent; font: 600 17px 'Source Serif 4', serif; padding: 0; }
+.form .v { font: 600 17px 'Source Serif 4', serif; }
+.player { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: clamp(16px, 3vw, 40px); align-items: center; }
+.tb-body { fill: #fff; stroke: var(--ink); stroke-width: 2.5; }
+.tb-s { fill: var(--blue); stroke: var(--blue); fill-opacity: .18; }
+.tb-trail { stroke: var(--blue); stroke-opacity: .6; }
+.tb-dot { fill: var(--red); }
+.step { text-align: center; }
+.step img { width: min(100%, 260px); margin: 0 auto; transition: opacity .25s; }
+.step .now { font: 600 clamp(22px, 2.2vw, 30px)/1.2 'Source Serif 4', serif; margin: 10px 0 2px; }
+.step .count { font: 500 56px/1 'Inter', sans-serif; font-variant-numeric: tabular-nums; color: var(--blue); }
+.step .loop { color: var(--muted); font-size: 14px; }
+.controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.controls label { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-left: 8px; }
+.timeline { display: flex; gap: 4px; position: relative; }
+.blk { flex: var(--s) 1 0; min-width: 0; background: var(--tint); border: 1px solid #c8d4ea; padding: 8px 8px 6px; font-size: 12px; line-height: 1.25; position: relative; overflow: hidden; }
+.blk b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.blk span { color: var(--muted); }
+.blk i { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--blue); }
+.blk.on { background: #d6e1f5; border-color: var(--blue); }
+.blk.done i { width: 100%; }
+.results table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.results th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; padding: 8px 10px 8px 0; border-bottom: 1.5px solid var(--ink); }
+.results td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--rule); }
+.results td:not(:first-child), .results th:not(:first-child) { text-align: right; }
+.results .empty td { color: var(--muted); }
+.results h2, .lib h2 { font: 600 22px 'Source Serif 4', serif; margin: 0 0 10px; }
+
+.lib { padding: clamp(48px, 8vw, 110px) clamp(16px, 4vw, 48px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr); gap: clamp(24px, 4vw, 64px); }
+.lib h2 { font-size: clamp(30px, 3vw, 44px); font-weight: 400; line-height: 1.1; }
+.lib .intro-t { color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.card { background: var(--sheet); border: 1px solid var(--rule); padding: 18px; }
+.card header { all: unset; display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.card h3 { font: 600 19px 'Source Serif 4', serif; margin: 0; }
+.card .tot { font-variant-numeric: tabular-nums; color: var(--blue); font-weight: 600; }
+.card ol { margin: 0; padding-left: 20px; font-size: 14px; color: var(--muted); }
+.card ol li span { float: right; font-variant-numeric: tabular-nums; }
+.card button { margin-top: 10px; background: none; border: 0; color: var(--blue); font-weight: 500; cursor: pointer; padding: 4px 0; }
+.card button:hover { text-decoration: underline; }
+footer { padding: 28px clamp(16px, 4vw, 48px); border-top: 1px solid var(--rule); color: var(--muted); font-size: 14px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+@media (max-width: 860px) {
+  .intro, .player, .lib { grid-template-columns: 1fr; }
+  .form { grid-template-columns: 1fr 1fr; } .form > *:nth-child(2) { border-right: 0; } .form > *:nth-child(-n+2) { border-bottom: 1px solid var(--rule); }
+  .cards { grid-template-columns: 1fr; }
+  .blk { font-size: 0; padding: 10px 0; } .blk b, .blk span { display: none; }
+}
+</style>
+</head>
+<body data-concept="3">
+<header><b>The Balance Toolkit</b><a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download the apps</a></header>
+
+<section class="intro">
+  <h1 data-pick="3A" data-pick-name="Calm clinical serif headline">Run a balance protocol on a Wii Balance Board</h1>
+  <div>
+    <p>Six guided posturography activities, step by step, with centre of pressure recorded at about 100 Hz and written to plain CSV.</p>
+    <a class="btn btn-line" href="https://github.com/trecitano/The-Balance-Toolkit">Read the source</a>
+  </div>
+</section>
+
+<section class="sheet" aria-label="Activity player" data-pick="3B" data-pick-name="Activity player that runs the real timeline">
+  <div class="form" data-pick="3C" data-pick-name="Protocol form header">
+    <div><label for="act">Activity</label><select id="act"></select></div>
+    <div><span class="k">Steps per loop</span><span class="v" id="f-steps">–</span></div>
+    <div><span class="k">Loops</span><span class="v" id="f-loops">–</span></div>
+    <div><span class="k">Total</span><span class="v" id="f-total">–</span></div>
+  </div>
+  <div class="player">
+    <div id="board"></div>
+    <div class="step" data-pick="3D" data-pick-name="Big step illustration + countdown">
+      <img id="pic" src="../assets/art/steps/step-onto-board.svg" alt="" width="264" height="269">
+      <p class="now" id="now">Press Run to start</p>
+      <div class="count" id="count">0:00</div>
+      <p class="loop" id="loop">Loop 1 of 2</p>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="btn" id="run" type="button">Run</button>
+    <button class="btn btn-line" id="stop" type="button">Stop</button>
+    <label><input type="checkbox" id="fast" checked> Preview at 4× speed</label>
+  </div>
+  <div class="timeline" id="tl" aria-label="Timeline"></div>
+  <div class="results" data-pick="3E" data-pick-name="Per-step results table">
+    <h2>Per-step sway</h2>
+    <table><thead><tr><th>Step</th><th>Seconds</th><th>Path, mm</th><th>Velocity, mm/s</th><th>ML range, mm</th><th>AP range, mm</th></tr></thead><tbody id="res"><tr class="empty"><td colspan="6">Rows appear as each step finishes.</td></tr></tbody></table>
+  </div>
+</section>
+
+<section class="lib" data-pick="3F" data-pick-name="Protocol library cards with step lists">
+  <div><h2>The protocol library</h2><p class="intro-t">Durations come straight from the toolkit’s activity definitions. Every step is one of the 32 step types the toolkit defines, each with its own drawing.</p></div>
+  <div class="cards" id="cards"></div>
+</section>
+
+<footer><span>The Balance Toolkit · Empathic Computing Laboratory · CHI PLAY 2026</span><a href="https://github.com/trecitano/The-Balance-Toolkit">GitHub</a></footer>
+
+<script src="../board.js"></script>
+<script src="shared/kit.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const A = TBT.ACTIVITIES.filter((a) => a.boards === 1);
+const b = new TBT.Board($('board'), { trail: 120, history: 4000 });
+$('act').innerHTML = A.map((a, i) => `<option value="${i}">${a.title}</option>`).join('');
+let act = A[2], run = null;
+const show = () => {
+  $('f-steps').textContent = act.blocks.length; $('f-loops').textContent = act.loops; $('f-total').textContent = TBT.mmss(act.totalS);
+  $('tl').innerHTML = act.blocks.map((k) => `<div class="blk" style="--s:${k.s}"><b>${k.title}</b><span>${k.s} s</span><i></i></div>`).join('');
+};
+$('act').value = 2; show();
+$('act').addEventListener('change', () => { stop(); act = A[$('act').value]; show(); });
+const stop = () => { run = null; b.setStance('both'); $('now').textContent = 'Press Run to start'; $('count').textContent = '0:00'; document.querySelectorAll('.blk').forEach((e) => { e.className = 'blk'; e.querySelector('i').style.width = ''; }); };
+$('stop').addEventListener('click', stop);
+$('run').addEventListener('click', () => {
+  stop(); $('res').innerHTML = '';
+  run = { t0: b.state.t, block: -1, loop: 0, bt: b.state.t };
+});
+const speed = () => ($('fast').checked ? 4 : 1);
+let lastT = 0, el = 0;
+b.on((s) => {
+  if (!run) { lastT = s.t; return; }
+  el += (s.t - lastT) * speed(); lastT = s.t;
+  const total = act.loopS * act.loops;
+  if (run.block === -1) { el = 0; run.block = 0; run.bt = s.t; }
+  const inLoop = el % act.loopS, loop = Math.floor(el / act.loopS);
+  let acc = 0, i = 0;
+  while (i < act.blocks.length - 1 && inLoop >= acc + act.blocks[i].s) acc += act.blocks[i++].s;
+  const blk = act.blocks[i];
+  if (i !== run.block || loop !== run.loop || el >= total) {
+    const prev = act.blocks[run.block];
+    const pts = b.hist.filter((p) => p.t >= run.bt);
+    const m = TBT.metrics(pts);
+    const on = prev.stance !== 'off';
+    $('res').insertAdjacentHTML('beforeend', `<tr><td>${run.loop + 1}.${run.block + 1} ${prev.title}</td><td>${prev.s}</td><td>${on ? m.path.toFixed(0) : '–'}</td><td>${on ? m.vel.toFixed(1) : '–'}</td><td>${on ? m.ml.toFixed(1) : '–'}</td><td>${on ? m.ap.toFixed(1) : '–'}</td></tr>`);
+    run.block = i; run.loop = loop; run.bt = s.t;
+    if (el >= total) { $('now').textContent = 'Done. Saved as CSV in the real app.'; run = null; b.setStance('both'); return; }
+  }
+  b.setStance(blk.stance);
+  $('pic').src = `../assets/art/steps/${blk.id}.svg`;
+  $('now').textContent = blk.title;
+  $('count').textContent = TBT.mmss(Math.ceil(acc + blk.s - inLoop));
+  $('loop').textContent = `Loop ${loop + 1} of ${act.loops} · ${TBT.mmss(total - el)} left`;
+  document.querySelectorAll('.blk').forEach((e, j) => {
+    e.classList.toggle('on', j === i); e.classList.toggle('done', j < i);
+    e.querySelector('i').style.width = j === i ? `${((inLoop - acc) / blk.s) * 100}%` : '';
+  });
+});
+$('cards').innerHTML = TBT.ACTIVITIES.map((a) => `<article class="card"><header><h3>${a.title}</h3><span class="tot">${TBT.mmss(a.totalS)}</span></header><ol>${a.blocks.map((k) => `<li>${k.title}<span>${k.s} s</span></li>`).join('')}</ol><p style="margin:8px 0 0;font-size:13px;color:var(--muted)">${a.loops} loops · ${a.boards} board${a.boards > 1 ? 's' : ''}</p>${a.boards === 1 ? `<button type="button" data-id="${a.id}">Preview above</button>` : ''}</article>`).join('');
+document.querySelectorAll('.card button').forEach((x) => x.addEventListener('click', () => {
+  const i = A.findIndex((a) => a.id === x.dataset.id); $('act').value = i; $('act').dispatchEvent(new Event('change'));
+  document.querySelector('.sheet').scrollIntoView({ behavior: 'smooth' });
+}));
+</script>
+</body>
+</html>

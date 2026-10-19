@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 Instrument · The Balance Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --bg: #0d1013; --panel: #151a1f; --line: #26303a; --ink: #e8edf2; --muted: #8a97a5; --green: #5bf0a5; --red: #ff3b46; --blue: #5aa9e6; }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.55 'IBM Plex Sans', sans-serif; }
+.mono { font-family: 'IBM Plex Mono', monospace; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 18px clamp(16px, 4vw, 48px); border-bottom: 1px solid var(--line); }
+header b { font-weight: 500; letter-spacing: .01em; }
+header a.btn { font-size: 14px; }
+.btn { display: inline-block; padding: 12px 18px; background: var(--green); color: #06130c; font-weight: 500; text-decoration: none; border-radius: 2px; transition: transform .12s, filter .12s; }
+.btn:hover { filter: brightness(1.1); } .btn:active { transform: translateY(1px); }
+.ghost { color: var(--ink); padding: 12px 4px; }
+
+.hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 0; min-height: calc(100vh - 66px); }
+.scope { padding: clamp(16px, 3vw, 40px); border-right: 1px solid var(--line); display: grid; grid-template-rows: auto 1fr auto; gap: 18px; }
+.scope-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); }
+.scope-head .live { color: var(--green); }
+.scope-head .live::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 8px; animation: blink 1.2s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.board-wrap { display: grid; place-items: center; }
+.board-wrap .tb { max-width: 760px; }
+.tb-body { fill: var(--panel); stroke: #3a4652; stroke-width: 2; }
+.tb-pad { stroke: #fff; stroke-opacity: .07; }
+.tb-grid line { stroke: var(--green); stroke-opacity: .25; }
+.tb-s { fill: var(--blue); fill-opacity: .2; stroke: var(--blue); }
+.tb-trail { stroke: var(--green); stroke-opacity: .8; stroke-width: 2; }
+.tb-dot { fill: var(--red); }
+.postures { display: flex; flex-wrap: wrap; gap: 8px; }
+.postures button { padding: 10px 14px; border: 1px solid var(--line); background: transparent; border-radius: 2px; cursor: pointer; font-size: 14px; transition: border-color .15s, background .15s; }
+.postures button:hover { border-color: var(--muted); }
+.postures button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.side { display: grid; grid-template-rows: auto auto 1fr; }
+.side-intro { padding: clamp(20px, 3vw, 40px); border-bottom: 1px solid var(--line); }
+h1 { font-weight: 300; font-size: clamp(34px, 3.6vw, 56px); line-height: 1.05; margin: 0 0 18px; letter-spacing: -.01em; }
+.side-intro p { color: var(--muted); max-width: 40ch; margin: 0 0 24px; }
+.read { display: grid; grid-template-columns: repeat(2, 1fr); border-bottom: 1px solid var(--line); }
+.read div { padding: 16px clamp(16px, 2vw, 28px); border-right: 1px solid var(--line); border-top: 1px solid var(--line); }
+.read div:nth-child(2n) { border-right: 0; } .read div:nth-child(-n+2) { border-top: 0; }
+.read span { display: block; font-size: 12px; color: var(--muted); }
+.read b { font: 500 clamp(22px, 2vw, 30px)/1.2 'IBM Plex Mono', monospace; }
+.read .x b, .read .y b { color: var(--green); }
+.charts { padding: 16px clamp(16px, 2vw, 28px); display: grid; gap: 10px; align-content: start; }
+.charts label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+.charts canvas { width: 100%; height: 70px; background: var(--panel); border-radius: 2px; }
+
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.metrics > div { padding: clamp(24px, 4vw, 56px) clamp(16px, 3vw, 40px); border-right: 1px solid var(--line); }
+.metrics > div:last-child { border-right: 0; }
+.metrics span { color: var(--muted); font-size: 14px; display: block; margin-bottom: 8px; }
+.metrics b { font: 400 clamp(36px, 5vw, 76px)/1 'IBM Plex Mono', monospace; letter-spacing: -.03em; }
+.metrics small { font-size: .4em; color: var(--muted); margin-left: 4px; }
+.metrics-note { padding: 18px clamp(16px, 4vw, 48px); color: var(--muted); font-size: 14px; border-bottom: 1px solid var(--line); }
+
+.spec { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: clamp(24px, 4vw, 64px); padding: clamp(48px, 8vw, 120px) clamp(16px, 4vw, 48px); }
+.spec h2 { font-weight: 300; font-size: clamp(30px, 3vw, 44px); line-height: 1.1; margin: 0; }
+.spec table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.spec td { padding: 14px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.spec td:first-child { color: var(--muted); width: 40%; padding-right: 16px; }
+.spec td:last-child { font-family: 'IBM Plex Mono', monospace; }
+.shot { padding: 0 clamp(16px, 4vw, 48px) clamp(48px, 8vw, 120px); }
+.shot img { width: 100%; border: 1px solid var(--line); border-radius: 4px; }
+.shot p { color: var(--muted); font-size: 14px; }
+footer { padding: 32px clamp(16px, 4vw, 48px); border-top: 1px solid var(--line); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; color: var(--muted); font-size: 14px; }
+
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; min-height: 0; }
+  .scope { border-right: 0; border-bottom: 1px solid var(--line); }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .metrics > div:nth-child(2) { border-right: 0; } .metrics > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .spec { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body data-concept="1">
+<header><b>The Balance Toolkit</b><a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download</a></header>
+
+<section class="hero">
+  <div class="scope" data-pick="1A" data-pick-name="Instrument board with sway trail">
+    <div class="scope-head mono"><span class="live">LIVE · simulated · 100 Hz</span><span>Nintendo RVL-WBC-01</span></div>
+    <div class="board-wrap" id="board"></div>
+    <div class="postures" role="group" aria-label="Posture" data-pick="1B" data-pick-name="Posture buttons change the sway">
+      <button type="button" data-st="both" aria-pressed="true">Both feet</button>
+      <button type="button" data-st="eyes-closed" aria-pressed="false">Eyes closed</button>
+      <button type="button" data-st="left-leg-up" aria-pressed="false">Left leg up</button>
+      <button type="button" data-st="left-foot-in-front" aria-pressed="false">Tandem</button>
+      <button type="button" data-st="off" aria-pressed="false">Step off</button>
+    </div>
+  </div>
+  <div class="side">
+    <div class="side-intro">
+      <h1>Your Wii Balance Board is a force plate</h1>
+      <p>Open-source software that pairs the board, computes centre of pressure from its four sensors, and records or streams it. Hover the board to lean on it.</p>
+      <a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download the apps</a> <a class="ghost" href="https://github.com/trecitano/The-Balance-Toolkit">Read the source</a>
+    </div>
+    <div class="read mono" data-pick="1C" data-pick-name="Sensor and CoP readout grid">
+      <div><span>Top left · kg</span><b id="tl">0</b></div><div><span>Top right · kg</span><b id="tr">0</b></div>
+      <div><span>Bottom left · kg</span><b id="bl">0</b></div><div><span>Bottom right · kg</span><b id="br">0</b></div>
+      <div class="x"><span>cop_x</span><b id="cx">0</b></div><div class="y"><span>cop_y</span><b id="cy">0</b></div>
+    </div>
+    <div class="charts" data-pick="1D" data-pick-name="Scrolling strip charts of CoP x and y">
+      <label class="mono"><span>cop_x, medio-lateral</span><span>last 6 s</span></label><canvas id="chx" width="600" height="140"></canvas>
+      <label class="mono"><span>cop_y, antero-posterior</span><span>last 6 s</span></label><canvas id="chy" width="600" height="140"></canvas>
+    </div>
+  </div>
+</section>
+
+<section aria-label="Sway over the last ten seconds">
+  <div class="metrics" data-pick="1E" data-pick-name="Live sway metrics, giant numbers">
+    <div><span>Path length</span><b id="m-path">0</b><b><small>mm</small></b></div>
+    <div><span>Mean velocity</span><b id="m-vel">0</b><b><small>mm/s</small></b></div>
+    <div><span>Medio-lateral range</span><b id="m-ml">0</b><b><small>mm</small></b></div>
+    <div><span>Antero-posterior range</span><b id="m-ap">0</b><b><small>mm</small></b></div>
+  </div>
+  <p class="metrics-note">Computed over the last 10 s of the simulated board above, with the default 446 × 238 mm sensor spacing. Try “Eyes closed”, then “Left leg up”, and watch the numbers climb.</p>
+</section>
+
+<section class="spec" data-pick="1F" data-pick-name="Spec sheet table">
+  <h2>Specification</h2>
+  <table>
+    <tr><td>Sensors</td><td>4 load cells: TR, BR, TL, BL</td></tr>
+    <tr><td>Raw rate</td><td>~100 Hz</td></tr>
+    <tr><td>Processed results</td><td>~10 per second (100 ms window slide)</td></tr>
+    <tr><td>Boards per session</td><td>1 or 2</td></tr>
+    <tr><td>Recording</td><td>CSV, RFC 3339 timestamps</td></tr>
+    <tr><td>TCP</td><td>11223 raw · 11224 processed · 40-byte packets</td></tr>
+    <tr><td>LSL</td><td>the-balance-toolkit_basic (8 ch) · _complex (9 ch)</td></tr>
+    <tr><td>Platforms</td><td>Windows · macOS · Linux · Android</td></tr>
+  </table>
+</section>
+
+<section class="shot" data-pick="1G" data-pick-name="Full-width real app screenshot">
+  <img src="../assets/own/app-session.png" alt="The desktop app recording a single leg stance session" width="1472" height="900" loading="lazy">
+  <p>The desktop app during a Single leg stance recording (demo mode).</p>
+</section>
+
+<footer><span>The Balance Toolkit · CHI PLAY 2026</span><a href="https://github.com/trecitano/The-Balance-Toolkit">GitHub</a></footer>
+
+<script src="../board.js"></script>
+<script src="shared/kit.js"></script>
+<script>
+const b = new TBT.Board(document.getElementById('board'), { trail: 140, history: 600 });
+const $ = (id) => document.getElementById(id);
+const f = (v) => v.toFixed(2), sg = (v) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(3);
+const charts = [[$('chx'), 'x'], [$('chy'), 'y']];
+let n = 0;
+b.on((s) => {
+  ['tl', 'tr', 'bl', 'br'].forEach((k) => ($(k).textContent = f(s[k])));
+  $('cx').textContent = sg(s.x); $('cy').textContent = sg(s.y);
+  charts.forEach(([c, k]) => {
+    const g = c.getContext('2d'), h = b.hist.slice(-360), W = c.width, H = c.height;
+    g.clearRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(91,240,165,.18)'; g.beginPath(); g.moveTo(0, H / 2); g.lineTo(W, H / 2); g.stroke();
+    g.strokeStyle = '#5bf0a5'; g.lineWidth = 2; g.beginPath();
+    h.forEach((p, i) => { const X = W - (h.length - i) * (W / 360), Y = H / 2 - p[k] * H * 4; i ? g.lineTo(X, Y) : g.moveTo(X, Y); });
+    g.stroke();
+  });
+  if (n++ % 10 === 0) {
+    const m = TBT.metrics(b.hist.filter((p) => p.t > s.t - 10));
+    $('m-path').textContent = m.path.toFixed(0); $('m-vel').textContent = m.vel.toFixed(1);
+    $('m-ml').textContent = m.ml.toFixed(1); $('m-ap').textContent = m.ap.toFixed(1);
+  }
+});
+document.querySelectorAll('.postures button').forEach((btn) => btn.addEventListener('click', () => {
+  b.setStance(btn.dataset.st);
+  document.querySelectorAll('.postures button').forEach((o) => o.setAttribute('aria-pressed', o === btn));
+}));
+</script>
+</body>
+</html>

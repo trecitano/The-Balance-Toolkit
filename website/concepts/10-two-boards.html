@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 Two boards · The Balance Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --l: #397aac; --r: #e50012; --ink: #111; --paper: #f5f5f3; --muted: #5a5a5a; }
+body { background: var(--paper); color: var(--ink); font: 400 17px/1.55 'Sora', sans-serif; }
+.hero { position: relative; display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; color: #fff; overflow: hidden; }
+.half { padding: clamp(16px, 3vw, 40px); display: grid; grid-template-rows: auto 1fr auto; transition: flex-basis .2s; }
+.half.l { background: var(--l); } .half.r { background: var(--r); }
+.top { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.half.r .top { justify-content: flex-end; gap: 16px; }
+.top a:not(.btn) { color: #fff; }
+.btn { display: inline-block; padding: 13px 20px; background: #fff; color: var(--ink); text-decoration: none; font-weight: 600; border: 0; cursor: pointer; transition: transform .1s, background .15s; }
+.btn:hover { background: #f0f0f0; } .btn:active { transform: translateY(1px); }
+.btn-dark { background: var(--ink); color: #fff; } .btn-dark:hover { background: #333; }
+.share { align-self: end; }
+.share b { display: block; font: 800 clamp(64px, 12vw, 200px)/.85 'Sora', sans-serif; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
+.share span { font-size: 15px; opacity: .85; }
+.half.r .share { text-align: right; }
+.mid { position: absolute; inset: 0; display: grid; grid-template-rows: 1fr auto 1fr; justify-items: center; padding: 80px 16px 32px; pointer-events: none; }
+h1 { grid-row: 1; align-self: center; font: 800 clamp(40px, 5.6vw, 92px)/.92 'Sora', sans-serif; letter-spacing: -.04em; text-align: center; margin: 0; max-width: 14ch; }
+.boards { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(12px, 3vw, 48px); width: 100%; pointer-events: auto; touch-action: none; cursor: ew-resize; }
+.tb { cursor: inherit; }
+.tb-body { fill: #fff; stroke: none; }
+.tb-pad { stroke: var(--ink); stroke-opacity: .1; }
+.tb-grid line { stroke: var(--ink); stroke-opacity: .12; }
+.tb-s { fill: var(--ink); fill-opacity: .1; stroke: var(--ink); stroke-width: 1.5; }
+.tb-trail { stroke: var(--ink); stroke-opacity: .4; }
+.tb-dot { fill: var(--ink); }
+.ctrl { grid-row: 3; align-self: end; display: flex; gap: 10px; align-items: center; pointer-events: auto; flex-wrap: wrap; justify-content: center; }
+.ctrl p { margin: 0; font-size: 15px; background: rgba(0,0,0,.25); padding: 10px 14px; }
+.gauge { height: 14px; width: 100%; background: var(--ink); outline: 2px solid #fff; position: relative; margin-top: 18px; }
+.gauge i { position: absolute; inset: 0 auto 0 0; background: #fff; transition: width .08s linear; }
+.gauge::after { content: ''; position: absolute; left: 50%; top: -6px; bottom: -6px; width: 2px; background: #fff; }
+
+.squat { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: clamp(24px, 4vw, 64px); padding: clamp(48px, 7vw, 100px) clamp(16px, 4vw, 48px); align-items: center; }
+.squat h2, .one h2 { font: 800 clamp(32px, 4vw, 60px)/.95 'Sora', sans-serif; letter-spacing: -.03em; margin: 0 0 14px; }
+.squat p { color: var(--muted); }
+.strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.strip figure { margin: 0; background: #fff; padding: 14px 10px; text-align: center; font-size: 14px; border-bottom: 4px solid transparent; transition: border-color .2s, transform .2s; }
+.strip figure.on { border-color: var(--r); transform: translateY(-4px); }
+.strip img { height: 150px; width: auto; margin: 0 auto 8px; }
+.strip b { display: block; }
+.one { display: grid; grid-template-columns: 1fr 1fr; }
+.one > div { padding: clamp(40px, 6vw, 88px) clamp(16px, 4vw, 48px); }
+.one > div:first-child { background: #fff; }
+.one ul { padding-left: 20px; margin: 0; } .one li { margin-bottom: 8px; }
+footer { padding: 28px clamp(16px, 4vw, 48px); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 14px; }
+@media (max-width: 760px) {
+  .hero { min-height: 0; grid-template-columns: 1fr 1fr; }
+  .mid { position: static; grid-column: 1 / -1; grid-row: 2; background: var(--ink); padding: 24px 16px; gap: 18px; }
+  .half { grid-row: 1; min-height: 240px; } .share b { font-size: 56px; }
+  .squat, .one { grid-template-columns: 1fr; } .strip { grid-template-columns: 1fr 1fr; }
+  .btn-dark { background: #fff; color: var(--ink); }
+}
+</style>
+</head>
+<body data-concept="10">
+<section class="hero" data-pick="10A" data-pick-name="Split blue/red hero with left/right weight share">
+  <div class="half l"><div class="top"><span>The Balance Toolkit</span></div><div></div><div class="share"><b id="pl">50%</b><span>Left board</span></div></div>
+  <div class="half r"><div class="top"><a href="https://github.com/trecitano/The-Balance-Toolkit">Source</a><a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download</a></div><div></div><div class="share"><b id="pr">50%</b><span>Right board</span></div></div>
+  <div class="mid">
+    <h1>One foot on each board</h1>
+    <div style="grid-row:2;display:grid;width:min(100%,1100px);pointer-events:auto">
+      <div class="boards" id="boards" data-pick="10B" data-pick-name="Two linked boards; drag to shift weight between them"><div id="bl"></div><div id="br"></div></div>
+      <div class="gauge" data-pick="10C" data-pick-name="Left/right asymmetry gauge"><i id="gauge" style="width:50%"></i></div>
+    </div>
+    <div class="ctrl"><p id="say">Move across the boards to shift your weight from one to the other.</p><button class="btn btn-dark" id="squat" type="button">Run the Squat activity</button></div>
+  </div>
+</section>
+
+<section class="squat" data-pick="10D" data-pick-name="Squat timeline that lights up step by step">
+  <div><h2>The Squat activity</h2><p>Four 3-second steps, looped twice, across two boards. The toolkit records both boards in the same session.</p></div>
+  <div class="strip" id="strip"></div>
+</section>
+
+<section class="one" data-pick="10E" data-pick-name="One board vs two boards comparison">
+  <div><h2>One board</h2><ul><li>Five single-board activities: eyes open-close, reach, single leg, tandem, Timed Up and Go</li><li>CoP, velocity and stability metrics</li><li>Stream over TCP and LSL</li></ul></div>
+  <div><h2>Two boards</h2><ul><li>Pair both and add them to the same session</li><li>Pick which board the plots follow</li><li>Identify a board by blinking its LED</li></ul></div>
+</section>
+<footer><span>The Balance Toolkit · CHI PLAY 2026</span><a href="https://github.com/trecitano/The-Balance-Toolkit">GitHub</a></footer>
+
+<script src="../board.js"></script>
+<script src="shared/kit.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const L = new TBT.Board($('bl'), { interactive: false, weight: 36, trail: 70 });
+const R = new TBT.Board($('br'), { interactive: false, weight: 36, trail: 70 });
+let share = 0.5, fy = 0, target = 0.5, squatRun = null;
+const area = $('boards');
+const fromPointer = (e) => { const r = area.getBoundingClientRect(); target = TBT.clamp((e.clientX - r.left) / r.width, 0.05, 0.95); fy = TBT.clamp(-((e.clientY - r.top) / r.height - 0.5) * 1.6); };
+area.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' || e.buttons) fromPointer(e); });
+area.addEventListener('pointerdown', (e) => { fromPointer(e); area.setPointerCapture?.(e.pointerId); });
+area.addEventListener('pointerleave', () => { target = 0.5; fy = 0; });
+const blocks = TBT.ACTIVITIES.find((a) => a.id === 'squat-two-boards').blocks;
+$('strip').innerHTML = blocks.map((k, i) => `<figure data-i="${i}"><img src="../assets/art/steps/${k.id}.svg" alt="" width="148" height="150" loading="lazy"><b>${k.title}</b>${k.s} s</figure>`).join('');
+const figs = [...$('strip').children];
+$('squat').addEventListener('click', () => { squatRun = { t0: L.state.t }; $('squat').disabled = true; });
+L.on((s) => {
+  let squatting = false;
+  if (squatRun) {
+    const el = s.t - squatRun.t0, i = Math.floor(el / 3) % 4;
+    squatting = blocks[i].stance === 'squat';
+    figs.forEach((f, j) => f.classList.toggle('on', j === i));
+    $('say').textContent = `Loop ${Math.floor(el / 12) + 1} of 2 · ${blocks[i].title} · ${Math.ceil(24 - el)} s left`;
+    if (el >= 24) { squatRun = null; figs.forEach((f) => f.classList.remove('on')); $('say').textContent = 'Done. Both boards were recorded in one session.'; $('squat').disabled = false; }
+  }
+  share += (target - share) * 0.1;
+  const left = 1 - share;
+  // In a squat the weight moves back towards the heels on both boards.
+  const y = squatting ? -0.35 : fy;
+  L.setWeight(72 * left); R.setWeight(72 * share);
+  L.setTarget({ x: 0.15, y }); R.setTarget({ x: -0.15, y });
+  $('pl').textContent = `${Math.round(left * 100)}%`; $('pr').textContent = `${Math.round(share * 100)}%`;
+  $('gauge').style.width = `${left * 100}%`;
+});
+</script>
+</body>
+</html>

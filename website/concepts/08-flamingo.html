@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08 Flamingo · The Balance Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --pink: #ffd9de; --red: #e50012; --ink: #2a0a0e; --cream: #fff6f2; --muted: #7a4a51; }
+body { background: var(--pink); color: var(--ink); font: 400 18px/1.5 'Bricolage Grotesque', sans-serif; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 18px clamp(16px, 4vw, 48px); font-weight: 800; }
+.btn { display: inline-block; padding: 14px 22px; background: var(--ink); color: var(--cream); font-weight: 600; text-decoration: none; border: 0; border-radius: 14px; cursor: pointer; transition: transform .15s; }
+.btn:hover { transform: rotate(-2deg); } .btn:active { transform: scale(.96); }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 24px; padding: 0 clamp(16px, 4vw, 48px) clamp(40px, 6vw, 80px); min-height: 88vh; }
+h1 { font: 800 clamp(52px, 8vw, 140px)/.86 'Bricolage Grotesque', sans-serif; letter-spacing: -.04em; margin: 0 0 22px; }
+h1 span { color: var(--red); }
+.hero p { font-size: 20px; max-width: 34ch; margin: 0 0 26px; }
+.bird { display: grid; justify-items: center; gap: 0; }
+.bird .fl { height: min(46vh, 440px); width: auto; transform-origin: 50% 100%; transition: transform .1s linear; position: relative; z-index: 1; margin-bottom: -6%; }
+.bird #board { width: min(100%, 560px); }
+.tb-body { fill: var(--cream); stroke: var(--ink); stroke-width: 3; }
+.tb-pad { stroke: var(--red); stroke-opacity: .2; }
+.tb-grid line { stroke: none; }
+.tb-s { fill: var(--red); fill-opacity: .2; stroke: var(--red); }
+.tb-trail { stroke: var(--red); stroke-opacity: .5; stroke-width: 3; }
+.tb-dot { fill: var(--ink); }
+.toggle { display: inline-flex; background: var(--cream); border-radius: 16px; padding: 5px; margin-top: 18px; }
+.toggle button { border: 0; background: none; padding: 10px 16px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: background .2s, color .2s; }
+.toggle button[aria-pressed="true"] { background: var(--red); color: #fff; }
+
+.romberg { background: var(--red); color: var(--cream); padding: clamp(48px, 7vw, 100px) clamp(16px, 4vw, 48px); }
+.romberg h2 { font: 800 clamp(38px, 5vw, 80px)/.92 'Bricolage Grotesque', sans-serif; letter-spacing: -.03em; margin: 0 0 12px; }
+.romberg > p { max-width: 56ch; margin: 0 0 32px; }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, .8fr); gap: 20px; align-items: stretch; }
+.trial { background: var(--cream); color: var(--ink); border-radius: 22px; padding: 18px; display: grid; gap: 10px; align-content: start; }
+.trial header { all: unset; display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 20px; }
+.trial img { width: 64px; height: 66px; }
+.trial .p { font-size: 15px; color: var(--muted); }
+.trial .p b { color: var(--ink); font-size: 26px; font-variant-numeric: tabular-nums; }
+.trial .tb-trail { stroke-width: 2; stroke-opacity: .9; }
+.q { background: var(--ink); border-radius: 22px; padding: 22px; display: grid; align-content: space-between; gap: 16px; }
+.q b { font: 800 clamp(60px, 7vw, 120px)/.9 'Bricolage Grotesque', sans-serif; font-variant-numeric: tabular-nums; }
+.q p { margin: 0; font-size: 15px; opacity: .85; }
+.q .btn { background: var(--cream); color: var(--ink); justify-self: start; }
+
+.wall { padding: clamp(48px, 7vw, 100px) clamp(16px, 4vw, 48px); }
+.wall h2 { font: 800 clamp(34px, 4.4vw, 68px)/.95 'Bricolage Grotesque', sans-serif; letter-spacing: -.03em; margin: 0 0 28px; }
+.drawings { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.drawings figure { margin: 0; background: var(--cream); border-radius: 16px; padding: 10px 8px 8px; text-align: center; font-size: 13px; transition: transform .2s, background .2s; }
+.drawings figure:hover { transform: translateY(-4px) rotate(-1.5deg); background: #fff; }
+.drawings img { width: 100%; height: 110px; object-fit: contain; }
+footer { background: var(--ink); color: var(--cream); padding: 40px clamp(16px, 4vw, 48px); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: 15px; }
+footer .btn { background: var(--red); }
+@media (max-width: 860px) { .hero, .pair { grid-template-columns: 1fr; } .hero { min-height: 0; } .bird .fl { height: 220px; } }
+@media (prefers-reduced-motion: reduce) { .btn:hover, .drawings figure:hover { transform: none; } }
+</style>
+</head>
+<body data-concept="8">
+<header><span>The Balance Toolkit</span><a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download</a></header>
+
+<section class="hero">
+  <div>
+    <h1 data-pick="8A" data-pick-name="Chunky playful headline">Stand like a <span>flamingo</span></h1>
+    <p>Then see exactly how much you wobbled. Free, open-source balance software for the Wii Balance Board.</p>
+    <a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download the apps</a>
+    <div><div class="toggle" role="group" aria-label="Stance" data-pick="8B" data-pick-name="Flamingo mode toggle">
+      <button type="button" data-st="both" aria-pressed="false">Two feet</button>
+      <button type="button" data-st="left-leg-up" aria-pressed="true">Flamingo</button>
+      <button type="button" data-st="eyes-closed" aria-pressed="false">Eyes closed</button>
+    </div></div>
+  </div>
+  <div class="bird" data-pick="8C" data-pick-name="Flamingo mascot that leans with the CoP">
+    <img class="fl" id="fl" src="../assets/art/logo-flamingo-red.svg" alt="The flamingo logo, leaning with the centre of pressure" width="200" height="300">
+    <div id="board"></div>
+  </div>
+</section>
+
+<section class="romberg" data-pick="8D" data-pick-name="Eyes open vs closed: two trials side by side">
+  <h2>Close your eyes. Sway more.</h2>
+  <p>The Eyes open-close activity compares the same stance with and without sight. Here are two simulated 10-second trials, run at the same time.</p>
+  <div class="pair">
+    <div class="trial"><header>Eyes open <img src="../assets/art/steps/eyes-open.svg" alt="" width="64" height="66"></header><div id="b-open"></div><p class="p">Path <b id="p-open">0</b> mm</p></div>
+    <div class="trial"><header>Eyes closed <img src="../assets/art/steps/eyes-close.svg" alt="" width="64" height="66"></header><div id="b-closed"></div><p class="p">Path <b id="p-closed">0</b> mm</p></div>
+    <div class="q"><div><p>Closed ÷ open</p><b id="ratio">–</b></div><p id="q-note">Running… 10 s</p><button class="btn" id="again" type="button">Run again</button></div>
+  </div>
+</section>
+
+<section class="wall" data-pick="8E" data-pick-name="Wall of all 32 step illustrations">
+  <h2>32 steps, each with its own drawing</h2>
+  <div class="drawings" id="drawings"></div>
+</section>
+
+<footer><span>The Balance Toolkit · CHI PLAY 2026 · Empathic Computing Laboratory</span><a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit">Read the source</a></footer>
+
+<script src="../board.js"></script>
+<script src="shared/kit.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const b = new TBT.Board($('board'), { stance: 'left-leg-up', trail: 120 });
+const fl = $('fl');
+b.on((s) => { fl.style.transform = `translateX(${(s.x * 30).toFixed(1)}px) rotate(${(s.x * 14).toFixed(2)}deg)`; });
+document.querySelectorAll('.toggle button').forEach((btn) => btn.addEventListener('click', () => {
+  b.setStance(btn.dataset.st);
+  document.querySelectorAll('.toggle button').forEach((o) => o.setAttribute('aria-pressed', o === btn));
+}));
+// Two trials: no pointer, same length, different posture.
+const open = new TBT.Board($('b-open'), { stance: 'both', interactive: false, trail: 2000, history: 2000, sensorScale: false });
+const closed = new TBT.Board($('b-closed'), { stance: 'eyes-closed', interactive: false, trail: 2000, history: 2000, sensorScale: false });
+let start = null;
+const restart = () => { open.clearTrail(); closed.clearTrail(); start = closed.state ? closed.state.t : 0; $('ratio').textContent = '–'; $('q-note').textContent = 'Running… 10 s'; };
+closed.on((s) => {
+  if (start === null) start = s.t;
+  const el = s.t - start;
+  if (el > 10) {
+    if ($('q-note').textContent.startsWith('Running')) {
+      const mo = TBT.metrics(open.hist.filter((p) => p.t >= start && p.t <= start + 10));
+      const mc = TBT.metrics(closed.hist.filter((p) => p.t >= start && p.t <= start + 10));
+      $('p-open').textContent = mo.path.toFixed(0); $('p-closed').textContent = mc.path.toFixed(0);
+      $('ratio').textContent = `${(mc.path / mo.path).toFixed(1)}×`;
+      $('q-note').textContent = 'More sway with eyes closed, as in the Romberg test.';
+    }
+    open.o.trail = open.pts.length; closed.o.trail = closed.pts.length; // freeze the drawn paths
+    return;
+  }
+  open.o.trail = closed.o.trail = 2000;
+  $('p-open').textContent = TBT.metrics(open.hist.filter((p) => p.t >= start)).path.toFixed(0);
+  $('p-closed').textContent = TBT.metrics(closed.hist.filter((p) => p.t >= start)).path.toFixed(0);
+});
+$('again').addEventListener('click', restart);
+const steps = ['step-onto-board', 'stand-on-the-board', 'stand-upright', 'eyes-open', 'eyes-close', 'left-leg-up', 'right-leg-up', 'left-foot-in-front', 'right-foot-in-front', 'left-arm-up', 'left-arm-reach', 'left-arm-down', 'right-arm-up', 'right-arm-reach', 'right-arm-down', 'stand-on-the-board-reach', 'lean-forward', 'lean-backwards', 'lean-to-the-left', 'lean-to-the-right', 'sit', 'stand', 'walk-forward', 'turn-around', 'walk-back', 'sit-again', 'tare', 'dual-board-tare', 'dual-board-step-on-the-boards', 'dual-board-one-foot-on-each-board', 'dual-board-squat-on-the-boards', 'dual-board-stand-on-the-boards'];
+const nice = (id) => id.replace('dual-board-', '').replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
+$('drawings').innerHTML = steps.map((id) => `<figure><img src="../assets/art/steps/${id}.svg" alt="" width="130" height="110" loading="lazy"><figcaption>${nice(id)}${id.startsWith('dual') ? ' (2 boards)' : ''}</figcaption></figure>`).join('');
+</script>
+</body>
+</html>

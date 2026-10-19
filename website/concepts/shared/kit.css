@@ -1,0 +1,37 @@
+/* Shared reset and the concept-page chrome. Each concept sets its own look on top. */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; }
+img, svg { display: block; max-width: 100%; }
+button, input, select { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+
+/* The board's default drawing; concepts restyle these classes. */
+.tb { width: 100%; height: auto; overflow: visible; cursor: crosshair; user-select: none; }
+.tb-body { fill: #fff; stroke: #121212; stroke-width: 3; }
+.tb-pad { fill: none; stroke: #121212; stroke-opacity: .18; stroke-width: 2; }
+.tb-grid line { stroke: #121212; stroke-opacity: .12; stroke-width: 1.5; stroke-dasharray: 4 6; }
+.tb-s { fill: #397aac; fill-opacity: .25; stroke: #397aac; stroke-width: 2; transition: r .12s; }
+.tb-trail { fill: none; stroke: #e50012; stroke-opacity: .55; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.tb-dot { fill: #e50012; transition: opacity .3s; }
+.tb-dot.is-off { opacity: 0; }
+
+.pick-tag {
+  position: absolute; z-index: 30; top: 0; left: 0; transform: translate(6px, -50%);
+  font: 600 12px/1 system-ui, sans-serif; letter-spacing: .02em;
+  padding: 5px 7px; border-radius: 3px;
+  background: #ffe14d; color: #121212; pointer-events: auto; cursor: help;
+}
+.no-picks .pick-tag, .in-frame .pick-tag, .in-frame .kit-bar { display: none; }
+
+.kit-bar {
+  position: fixed; z-index: 40; right: 12px; bottom: 12px;
+  display: flex; align-items: center; gap: 2px;
+  font: 500 13px/1 system-ui, sans-serif;
+  background: #121212; color: #fff; padding: 4px; border-radius: 6px;
+}
+.kit-bar a, .kit-bar span, .kit-bar button { padding: 8px 10px; text-decoration: none; border: 0; background: none; border-radius: 4px; }
+.kit-bar a:hover, .kit-bar button:hover { background: #333; }
+.kit-bar button[aria-pressed="true"] { background: #ffe14d; color: #121212; }
+@media print { .kit-bar, .pick-tag { display: none; } }

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>09 Poster · The Balance Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --bg: #ffffff; --ink: #111; --muted: #5f6368; --blue: #397aac; --tint: #eef2f8; --red: #e50012; --rule: #111; }
+body { background: #d9dde3; color: var(--ink); font: 400 16px/1.5 'Inter Tight', sans-serif; padding: clamp(0px, 2vw, 32px); }
+.poster { background: var(--bg); max-width: 1500px; margin: 0 auto; padding: clamp(16px, 3vw, 48px); }
+.banner { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: clamp(16px, 3vw, 40px); align-items: center; border-bottom: 6px solid var(--ink); padding-bottom: 24px; }
+.banner img { height: clamp(70px, 9vw, 140px); width: auto; }
+h1 { font: 800 clamp(30px, 3.8vw, 60px)/1 'Inter Tight', sans-serif; letter-spacing: -.03em; margin: 0 0 10px; }
+.authors { margin: 0; font-size: clamp(15px, 1.3vw, 19px); }
+.authors span { color: var(--muted); }
+.venue { text-align: right; font-weight: 700; font-size: 18px; }
+.venue a { display: inline-block; margin-top: 10px; background: var(--blue); color: #fff; padding: 12px 16px; text-decoration: none; transition: background .15s; }
+.venue a:hover { background: #2a5c84; }
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 2.4vw, 36px); margin-top: 28px; }
+.box { margin-bottom: clamp(16px, 2.4vw, 36px); }
+.box h2 { font: 800 22px/1.1 'Inter Tight', sans-serif; margin: 0 0 12px; display: flex; gap: 10px; align-items: baseline; border-top: 2px solid var(--rule); padding-top: 10px; }
+.box h2 i { font-style: normal; color: var(--blue); }
+.box p { margin: 0 0 10px; }
+.big { grid-column: span 2; }
+.figlive { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 16px; align-items: center; background: var(--tint); padding: 16px; }
+.tb-body { fill: #fff; stroke: var(--ink); stroke-width: 2.5; }
+.tb-s { fill: var(--blue); stroke: var(--blue); fill-opacity: .2; }
+.tb-trail { stroke: var(--red); stroke-opacity: .6; }
+.tb-dot { fill: var(--red); }
+.bars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; height: 200px; align-items: end; }
+.bars div { display: grid; grid-template-rows: 1fr auto auto; height: 100%; text-align: center; font-size: 11px; }
+.bars i { align-self: end; display: block; background: var(--blue); transition: height .08s linear; }
+.bars b { font-variant-numeric: tabular-nums; font-size: 12px; }
+.cap { font-size: 14px; color: var(--muted); margin-top: 8px; }
+.cap b { color: var(--ink); }
+.arch { display: grid; gap: 8px; font-size: 14px; }
+.arch .row { display: grid; gap: 8px; }
+.arch .r3 { grid-template-columns: repeat(3, 1fr); } .arch .r2 { grid-template-columns: repeat(2, 1fr); }
+.arch div div { padding: 10px; text-align: center; background: var(--tint); }
+.arch .core { background: var(--ink); color: #fff; font-weight: 700; }
+.arch .out { background: #fff; outline: 1.5px solid var(--blue); }
+.arch .sep { background: none; color: var(--muted); font-size: 13px; padding: 0; }
+.chart { display: grid; gap: 12px; }
+.chart div { display: grid; grid-template-columns: 1fr; gap: 4px; font-size: 14px; }
+.chart .track { height: 22px; background: var(--tint); position: relative; }
+.chart .fill { position: absolute; inset: 0 auto 0 0; background: var(--blue); width: 0; transition: width 1.2s cubic-bezier(.2, .7, .2, 1); }
+.chart .fill.red { background: var(--red); }
+.chart b { font-variant-numeric: tabular-nums; }
+.acts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.acts figure { margin: 0; background: var(--tint); padding: 8px; font-size: 13px; text-align: center; }
+.acts img { height: 84px; width: auto; margin: 0 auto; }
+.acts b { display: block; font-size: 13px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+td { padding: 6px 0; border-bottom: 1px solid #ddd; vertical-align: top; }
+td:last-child { text-align: right; color: var(--muted); }
+pre { background: var(--ink); color: #eee; padding: 14px; font-size: 12px; overflow-x: auto; margin: 0 0 10px; }
+.copy { border: 0; background: var(--blue); color: #fff; padding: 10px 14px; font-weight: 700; cursor: pointer; transition: background .15s; }
+.copy:hover { background: #2a5c84; }
+.shot img { width: 100%; outline: 1px solid #ddd; }
+@media (max-width: 1000px) { .cols { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 700px) { .cols { grid-template-columns: 1fr; } .big { grid-column: auto; } .banner { grid-template-columns: 1fr; } .venue { text-align: left; } .banner img { display: none; } .figlive { grid-template-columns: 1fr; } .bars { height: 120px; } }
+</style>
+</head>
+<body data-concept="9">
+<main class="poster">
+  <div class="banner" data-pick="9A" data-pick-name="Poster banner with real title and authors">
+    <img src="../assets/art/logo-flamingo-red.svg" alt="" width="93" height="140">
+    <div>
+      <h1>The Balance Toolkit: Democratizing Balance-Based Interaction Through Open-Source Software for Repurposed Wii Balance Boards</h1>
+      <p class="authors">Andreia Valente, Nidhi Kothari, Hana Ahmed-Mahmoud, Augusto Esteves, Mark Billinghurst <span>· Empathic Computing Laboratory</span></p>
+    </div>
+    <div class="venue">CHI PLAY ’26<br>York, UK<br><a href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download the apps</a></div>
+  </div>
+
+  <div class="cols" data-pick="9B" data-pick-name="Three-column academic poster grid">
+    <div>
+      <section class="box"><h2><i>1</i> Motivation</h2>
+        <p>Force plates measure balance well but cost a laboratory budget. The Wii Balance Board has four load sensors and is already in many homes, but pairing it and getting usable data out of it is hard.</p></section>
+      <section class="box"><h2><i>2</i> What experts told us</h2>
+        <p>26 balance and rehabilitation experts in 6 regions answered our survey.</p>
+        <div class="chart" id="chart" data-pick="9C" data-pick-name="Animated survey bar chart">
+          <div><span>Named cost as a barrier <b>17 / 26</b></span><div class="track"><span class="fill" data-w="65.4"></span></div></div>
+          <div><span>Board users who struggled to pair <b>13 / 18</b></span><div class="track"><span class="fill red" data-w="72.2"></span></div></div>
+          <div><span>Board users who lost Bluetooth in use <b>9 / 18</b></span><div class="track"><span class="fill red" data-w="50"></span></div></div>
+        </div></section>
+      <section class="box"><h2><i>3</i> Architecture</h2>
+        <div class="arch" data-pick="9D" data-pick-name="Architecture diagram in boxes">
+          <div class="row r2"><div>Desktop app<br><small>Windows · macOS · Linux</small></div><div>tbt CLI<br><small>tables, JSON, dashboard</small></div></div>
+          <div class="row"><div class="core">toolkit-core (Rust): Bluetooth, HID, processing, recording, replay</div></div>
+          <div class="row r3"><div class="out">CSV</div><div class="out">TCP 11223 / 11224</div><div class="out">LSL ×2</div></div>
+          <div class="row"><div class="sep">Android is a separate Kotlin app.</div></div>
+        </div></section>
+    </div>
+    <div class="big">
+      <section class="box"><h2><i>4</i> Centre of pressure, live</h2>
+        <div class="figlive" data-pick="9E" data-pick-name="Live figure with four sensor bars">
+          <div id="board"></div>
+          <div class="bars" aria-label="Sensor loads">
+            <div><i id="bar-tl"></i><b id="v-tl">0</b><span>TL</span></div><div><i id="bar-tr"></i><b id="v-tr">0</b><span>TR</span></div>
+            <div><i id="bar-bl"></i><b id="v-bl">0</b><span>BL</span></div><div><i id="bar-br"></i><b id="v-br">0</b><span>BR</span></div>
+          </div>
+        </div>
+        <p class="cap"><b>Fig. 1.</b> Move the pointer over the board. CoP x = (TR + BR − TL − BL) / W and y = (TR + TL − BR − BL) / W, the formula in toolkit-core. Now: <b id="cop">x +0.000, y +0.000</b>.</p></section>
+      <div class="cols" style="grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0">
+        <section class="box"><h2><i>5</i> Six guided activities</h2>
+          <div class="acts" id="acts" data-pick="9F" data-pick-name="Compact activity figure grid"></div></section>
+        <section class="box"><h2><i>6</i> Data out</h2>
+          <table>
+            <tr><td>Raw samples</td><td>~100 Hz</td></tr>
+            <tr><td>Processed results</td><td>~10 / s</td></tr>
+            <tr><td>Recording</td><td>CSV, RFC 3339</td></tr>
+            <tr><td>TCP packet</td><td>40 bytes, &gt;qQ6f</td></tr>
+            <tr><td>LSL basic</td><td>8 channels</td></tr>
+            <tr><td>LSL complex</td><td>9 channels</td></tr>
+            <tr><td>Metrics</td><td>CoP velocity, stability index, DPSI</td></tr>
+          </table></section>
+      </div>
+      <section class="box shot"><h2><i>7</i> The desktop app</h2><img src="../assets/own/app-session.png" alt="The Session page during a Single leg stance recording" width="1472" height="900" loading="lazy"><p class="cap">Session page in demo mode.</p></section>
+      <section class="box" data-pick="9G" data-pick-name="BibTeX with copy button"><h2><i>8</i> Cite</h2>
+<pre><code id="bib">@inproceedings{valente2026balancetoolkit,
+  title     = {The Balance Toolkit: Democratizing Balance-Based Interaction
+               Through Open-Source Software for Repurposed Wii Balance Boards},
+  author    = {Valente, Andreia and Kothari, Nidhi and Ahmed-Mahmoud, Hana
+               and Esteves, Augusto and Billinghurst, Mark},
+  booktitle = {Annual Symposium on Computer-Human Interaction in Play (CHI PLAY '26)},
+  year      = {2026}, address = {York, UK}, publisher = {ACM}
+}</code></pre>
+        <button class="copy" id="copy" type="button">Copy BibTeX</button></section>
+    </div>
+  </div>
+</main>
+
+<script src="../board.js"></script>
+<script src="shared/kit.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const b = new TBT.Board($('board'), { trail: 100 });
+const sg = (v) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(3);
+b.on((s) => {
+  for (const k of ['tl', 'tr', 'bl', 'br']) { $(`bar-${k}`).style.height = `${Math.min(100, (s[k] / 40) * 100)}%`; $(`v-${k}`).textContent = s[k].toFixed(1); }
+  $('cop').textContent = `x ${sg(s.x)}, y ${sg(s.y)}`;
+});
+$('acts').innerHTML = TBT.ACTIVITIES.map((a) => `<figure><img src="../assets/art/steps/${a.pic}.svg" alt="" width="82" height="84" loading="lazy"><b>${a.title}</b>${TBT.mmss(a.totalS)}</figure>`).join('');
+new IntersectionObserver((es, io) => es.forEach((e) => { if (e.isIntersecting) { e.target.querySelectorAll('.fill').forEach((f) => (f.style.width = `${f.dataset.w}%`)); io.disconnect(); } }), { threshold: .3 }).observe($('chart'));
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('bib').textContent); $('copy').textContent = 'Copied'; } catch { $('copy').textContent = 'Select and copy'; }
+  setTimeout(() => ($('copy').textContent = 'Copy BibTeX'), 2000);
+});
+</script>
+</body>
+</html>

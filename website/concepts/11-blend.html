@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Balance Toolkit</title>
+<link rel="icon" href="../assets/art/logo-flamingo-red.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+/* The app's colours (white ground, ink, one red), the editorial type of concept 04 and the flamingo of concept 08. */
+:root {
+  --bg: #f4f4f2; --paper: #fff; --ink: #121212; --muted: #5b5a56; --rule: #d9d6cf;
+  --red: #e50012; --red-dark: #b8000e; --blush: #fdecee;
+  --pad: clamp(16px, 4vw, 56px);
+}
+body { background: var(--bg); color: var(--ink); font: 400 19px/1.6 'Newsreader', serif; }
+h1, h2, h3 { font-family: 'Fraunces', serif; font-weight: 300; margin: 0; letter-spacing: -.02em; }
+p { margin: 0; }
+.link { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .25em; transition: text-underline-offset .16s, color .16s; }
+.link:hover { color: var(--red); text-underline-offset: .4em; }
+
+/* Masthead: the name and four links, nothing to buy */
+
+/* Cover */
+.cover { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: auto 1fr auto; column-gap: clamp(24px, 4vw, 64px); padding: 22px var(--pad) 28px; min-height: 100svh; }
+.byline { grid-column: 1 / -1; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 24px; font-size: 16px; color: var(--muted); }
+.intro { align-self: center; }
+.stage { align-self: center; padding-block: 24px; }
+.live { grid-column: 1 / -1; margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink); }
+.live div { padding: 14px 20px 0 0; }
+.live div + div { border-left: 1px solid var(--rule); padding-left: 20px; }
+.live dt { font-size: 15px; color: var(--muted); }
+.live dd { margin: 0; font: 300 clamp(30px, 3vw, 48px)/1.1 'Fraunces', serif; font-variant-numeric: tabular-nums; }
+.hint { grid-column: 1 / -1; max-width: 70ch; margin-top: 14px; font-size: 15px; color: var(--muted); }
+.cover h1 { font-size: clamp(52px, 7vw, 120px); line-height: .92; letter-spacing: -.035em; margin-bottom: 28px; }
+.lead { font-size: clamp(19px, 1.5vw, 23px); max-width: 40ch; margin-bottom: 28px; }
+.go { display: flex; flex-wrap: wrap; gap: 10px 28px; font-weight: 500; }
+
+.stage { display: grid; justify-items: center; }
+.bird { height: clamp(180px, 30vh, 320px); width: auto; transform-origin: 50% 100%; transition: transform .1s linear, opacity .4s; position: relative; z-index: 1; margin-bottom: -5%; }
+#board { width: min(100%, 600px); }
+.tb-body { fill: var(--paper); stroke: var(--ink); stroke-width: 2.5; }
+.tb-pad { stroke: var(--ink); stroke-opacity: .14; }
+.tb-grid line { stroke: var(--ink); stroke-opacity: .14; }
+.tb-s { fill: var(--red); fill-opacity: .14; stroke: var(--red); stroke-width: 1.8; }
+.tb-trail { stroke: var(--red); stroke-opacity: .55; stroke-width: 2.2; }
+.tb-dot { fill: var(--red); }
+.tb-kg { font: 500 17px 'Newsreader', serif; fill: var(--ink); font-variant-numeric: tabular-nums; }
+.tb-kg tspan { fill: var(--muted); font-size: 13px; }
+
+
+/* Shared section frame */
+.sec { padding: clamp(64px, 8vw, 120px) var(--pad); border-top: 1px solid var(--ink); }
+.sec-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 32px; align-items: end; margin-bottom: clamp(32px, 4vw, 56px); }
+.sec-head h2 { font-size: clamp(40px, 5vw, 76px); line-height: .95; }
+.sec-head p { max-width: 48ch; }
+
+/* Specification: a small table, as in concept 01 */
+.spec { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 32px; padding-block: clamp(48px, 6vw, 88px); }
+.spec h2 { font-size: clamp(30px, 3vw, 44px); line-height: 1.1; }
+.spec table { width: 100%; border-collapse: collapse; font-size: 17px; }
+.spec th, .spec td { text-align: left; vertical-align: top; padding: 11px 0; border-bottom: 1px solid var(--rule); }
+.spec th { font-weight: 400; color: var(--muted); width: 34%; padding-right: 16px; }
+.spec td { font-variant-numeric: tabular-nums; }
+.spec-note { margin-top: 16px; max-width: 34ch; font-size: 17px; color: var(--muted); }
+.spec td.c { text-align: right; padding-left: 16px; width: 1%; }
+.cfg { display: inline-block; padding: 1px 9px; border-radius: 999px; background: var(--blush); color: var(--red-dark); font-size: 14px; white-space: nowrap; vertical-align: 1px; }
+.spec-note .cfg { margin: 0 2px; }
+@media (max-width: 600px) { .spec th { display: block; width: auto; border: 0; padding-bottom: 0; } .spec tr { display: grid; grid-template-columns: 1fr auto; } .spec th { grid-column: 1 / -1; } }
+
+/* Activities: the app's own drawings */
+.acts { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; list-style: none; padding: 0; margin: 0; }
+.acts li { background: var(--paper); border-radius: 20px; padding: 16px 16px 18px; display: grid; gap: 6px; align-content: start; transition: transform .2s; }
+.acts li:hover { transform: translateY(-4px) rotate(-1deg); }
+.acts img { width: 100%; height: 150px; object-fit: contain; margin-bottom: 8px; }
+.acts h3 { font-size: 22px; line-height: 1.1; letter-spacing: -.01em; }
+.acts p { font-size: 15px; color: var(--muted); }
+.acts .t { font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+
+/* 32 steps: the wall of drawings from concept 08 */
+.sub { font-size: clamp(26px, 2.4vw, 34px); margin: clamp(56px, 7vw, 96px) 0 24px; }
+.drawings { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.drawings figure { margin: 0; background: var(--paper); border-radius: 16px; padding: 10px 8px; text-align: center; font-size: 14px; line-height: 1.3; transition: transform .2s; }
+.drawings figure:hover { transform: translateY(-4px) rotate(-1.5deg); }
+.drawings img { width: 100%; height: 110px; object-fit: contain; margin-bottom: 6px; }
+
+/* Apps: screenshots */
+.shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: clamp(32px, 4vw, 56px); }
+.shots img { width: 100%; height: auto; border-radius: 16px; background: var(--paper); }
+
+/* Entrances: content is visible without script; with it, parts rise in turn */
+.js .rv { opacity: 0; transform: translateY(24px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); transition-delay: var(--d, 0ms); }
+.js .rv.in { opacity: 1; transform: none; }
+
+/* Apps: the link rows of the current site */
+.rows { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--ink); }
+.rows a { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 20px; align-items: baseline; padding: 18px 0; border-bottom: 1px solid var(--rule); text-decoration: none; transition: padding .2s, color .16s; }
+.rows a:hover { color: var(--red); padding-left: 10px; }
+.rows .n { font: 300 clamp(24px, 2.4vw, 34px)/1.1 'Fraunces', serif; }
+.rows .k { color: var(--muted); font-size: 17px; }
+
+/* Paper */
+.bib { background: var(--paper); border-radius: 20px; overflow: hidden; }
+.bib-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 12px 22px; border-bottom: 1px solid var(--rule); font-size: 15px; color: var(--muted); }
+.bib pre { margin: 0; padding: 22px; font-size: clamp(13px, 1.05vw, 16px); line-height: 1.6; overflow-x: auto; }
+.copy { border: 0; background: var(--ink); color: #fff; padding: 9px 18px; border-radius: 10px; font-size: 16px; cursor: pointer; transition: background .16s, transform .1s; }
+.copy:hover { background: var(--red); } .copy:active { transform: scale(.96); }
+
+/* Footer: one line */
+.end { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px 24px; padding: 22px var(--pad); border-top: 1px solid var(--rule); font-size: 15px; color: var(--muted); }
+.end span { display: flex; align-items: center; gap: 10px; }
+.end img { height: 21px; width: auto; }
+.end nav { display: flex; gap: 22px; }
+
+@media (max-width: 1100px) { .acts { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 860px) {
+  .cover, .sec-head, .spec { grid-template-columns: 1fr; }
+  .cover { min-height: 0; grid-template-rows: none; }
+  .byline { flex-direction: column; margin-bottom: 28px; }
+  .live { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .live div:nth-child(3) { border-left: 0; padding-left: 0; }
+  .bird { height: 150px; }
+  .shots { grid-template-columns: 1fr; }
+  .acts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rows a { grid-template-columns: 1fr; gap: 4px; }
+}
+@media (prefers-reduced-motion: reduce) { .drawings figure:hover { transform: none; } .js .rv { opacity: 1; transform: none; transition: none; } .acts li:hover { transform: none; } .bird { transition: opacity .4s; } }
+</style>
+</head>
+<body data-concept="11">
+
+<main id="top">
+<section class="cover">
+  <p class="byline"><span>Valente, Kothari, Ahmed-Mahmoud, Esteves and Billinghurst</span><span>CHI PLAY 2026 · York, UK</span></p>
+  <div class="intro">
+    <h1>The Balance Toolkit</h1>
+    <p class="lead">Open-source software for the Wii Balance Board</p>
+    <p class="go"><a class="link" href="#apps">The apps</a><a class="link" href="#paper">The paper</a><a class="link" href="https://github.com/trecitano/The-Balance-Toolkit">The source</a></p>
+  </div>
+  <div class="stage">
+    <img class="bird" id="bird" src="../assets/art/logo-flamingo-red.svg" alt="The toolkit's flamingo, leaning with the centre of pressure" width="200" height="300">
+    <div id="board"></div>
+  </div>
+  <dl class="live" aria-live="off">
+    <div><dt>On the board</dt><dd id="r-w">72.0 kg</dd></div>
+    <div><dt>Left · right</dt><dd id="r-x">+0.00</dd></div>
+    <div><dt>Back · front</dt><dd id="r-y">+0.00</dd></div>
+    <div><dt>Sway, last 5 s</dt><dd id="r-p">0 mm</dd></div>
+    <p class="hint">Simulated with the toolkit’s formula. Move your pointer over the board to shift the weight.</p>
+  </dl>
+</section>
+
+<section class="sec" id="apps">
+  <div class="sec-head">
+    <h2>What’s in the toolkit</h2>
+  </div>
+  <div class="shots">
+    <img src="../assets/own/app-session.png" alt="The desktop app recording a session, with live plots of the centre of pressure" width="1472" height="900" loading="lazy">
+    <img src="../assets/own/app-activities.png" alt="The desktop app's list of activities" width="1472" height="900" loading="lazy">
+  </div>
+  <ul class="rows">
+    <li><a href="https://github.com/trecitano/The-Balance-Toolkit-Apps"><span class="n">Desktop app</span><span class="k">Windows, macOS and Linux</span></a></li>
+    <li><a href="https://youtu.be/_8UwrUgqUao"><span class="n">Video walkthrough</span><span class="k">YouTube</span></a></li>
+    <li><a href="https://github.com/trecitano/The-Balance-Toolkit/tree/main/apps/android"><span class="n">Android app</span><span class="k">Companion and capture</span></a></li>
+    <li><a href="https://github.com/trecitano/The-Balance-Toolkit/tree/main/scripts"><span class="n">Stream inspectors</span><span class="k">Python, TCP and LSL</span></a></li>
+    <li><a href="https://github.com/trecitano/The-Balance-Toolkit/tree/main/resources"><span class="n">Expert survey results</span><span class="k">CSV, 26 responses</span></a></li>
+  </ul>
+</section>
+
+<section class="sec spec" id="data" aria-labelledby="spec-h">
+  <div>
+    <h2 id="spec-h">Specification</h2>
+    <p class="spec-note">The values shown are the defaults. Rows marked <span class="cfg">Configurable</span> can be changed in the settings or for each session.</p>
+  </div>
+  <table>
+    <tr><th scope="row">Board</th><td>Nintendo Wii Balance Board (RVL-WBC-01)</td><td class="c"></td></tr>
+    <tr><th scope="row">Boards per session</th><td>1 or 2</td><td class="c"><span class="cfg">Configurable</span></td></tr>
+    <tr><th scope="row">Sensors</th><td>4 load cells: top right, bottom right, top left, bottom left</td><td class="c"></td></tr>
+    <tr><th scope="row">Board rate</th><td>About 100 Hz</td><td class="c"></td></tr>
+    <tr><th scope="row">Resampling</th><td>100 Hz with cubic interpolation; linear and polynomial also available</td><td class="c"><span class="cfg">Configurable</span></td></tr>
+    <tr><th scope="row">Analysis window</th><td>5000 ms, sliding every 100 ms (about 10 results per second)</td><td class="c"><span class="cfg">Configurable</span></td></tr>
+    <tr><th scope="row">Sensor spacing</th><td>446 × 238 mm</td><td class="c"><span class="cfg">Configurable</span></td></tr>
+    <tr><th scope="row">Metrics</th><td>Centre of pressure, CoP velocity, stability index, dynamic postural stability indices</td><td class="c"></td></tr>
+    <tr><th scope="row">Recording</th><td>CSV with RFC 3339 timestamps; raw and processed data can each be turned off; output folder</td><td class="c"><span class="cfg">Configurable</span></td></tr>
+    <tr><th scope="row">TCP</th><td>localhost:11223 raw, localhost:11224 processed; addresses and each stream</td><td class="c"><span class="cfg">Configurable</span></td></tr>
+    <tr><th scope="row">LSL</th><td>Stream name and source ID the-balance-toolkit; raw and processed streams</td><td class="c"><span class="cfg">Configurable</span></td></tr>
+    <tr><th scope="row">Activities</th><td>Steps, durations and repeats can be edited, or reset to the default</td><td class="c"><span class="cfg">Configurable</span></td></tr>
+    <tr><th scope="row">Demo mode</th><td>A simulated board, to try the toolkit without one</td><td class="c"><span class="cfg">Configurable</span></td></tr>
+    <tr><th scope="row">Platforms</th><td>Windows, macOS and Linux; Android companion</td><td class="c"></td></tr>
+  </table>
+</section>
+
+<section class="sec" id="activities">
+  <div class="sec-head">
+    <h2>Activities</h2>
+    <p>Each activity is a sequence of steps. Each step has its own drawing and a countdown.</p>
+  </div>
+  <ul class="acts">
+    <li><img src="../assets/art/steps/eyes-open.svg" alt="" width="148" height="150" loading="lazy"><h3>Eyes open-close</h3><p>Quiet standing with eyes open, then closed</p><p class="t">3 steps · 0:40 · 1 board</p></li>
+    <li><img src="../assets/art/steps/left-arm-reach.svg" alt="" width="148" height="150" loading="lazy"><h3>Functional Reach Test</h3><p>Reaching forward while keeping balance</p><p class="t">8 steps · 2:24 · 1 board</p></li>
+    <li><img src="../assets/art/steps/left-leg-up.svg" alt="" width="148" height="150" loading="lazy"><h3>Single leg stance</h3><p>Left leg up, then right, with rests between</p><p class="t">6 steps · 2:08 · 1 board</p></li>
+    <li><img src="../assets/art/steps/left-foot-in-front.svg" alt="" width="148" height="150" loading="lazy"><h3>Tandem stance</h3><p>Feet heel to toe, each foot in front in turn</p><p class="t">6 steps · 2:08 · 1 board</p></li>
+    <li><img src="../assets/art/steps/turn-around.svg" alt="" width="148" height="150" loading="lazy"><h3>Timed Up and Go</h3><p>Sit, stand, walk, turn, walk back, sit</p><p class="t">6 steps · 2:24 · 1 board</p></li>
+    <li><img src="../assets/art/steps/dual-board-squat-on-the-boards.svg" alt="" width="148" height="150" loading="lazy"><h3>Squat</h3><p>Controlled weight shift across two boards</p><p class="t">4 steps · 0:24 · 2 boards</p></li>
+  </ul>
+  <h3 class="sub">Steps</h3>
+  <div class="drawings" id="drawings"></div>
+</section>
+
+<section class="sec cite" id="paper" aria-labelledby="cite-h">
+  <div class="sec-head"><h2 id="cite-h">Cite the paper</h2></div>
+  <div class="bib">
+    <div class="bib-bar"><span>BibTeX</span><button class="copy" type="button" id="copy">Copy</button></div>
+<pre><code id="bibtex">@inproceedings{valente2026balancetoolkit,
+  title     = {The Balance Toolkit: Democratizing Balance-Based Interaction
+               Through Open-Source Software for Repurposed Wii Balance Boards},
+  author    = {Valente, Andreia and Kothari, Nidhi and Ahmed-Mahmoud, Hana
+               and Esteves, Augusto and Billinghurst, Mark},
+  booktitle = {Annual Symposium on Computer-Human Interaction in Play (CHI PLAY '26)},
+  year      = {2026},
+  address   = {York, UK},
+  publisher = {ACM}
+}</code></pre>
+  </div>
+</section>
+</main>
+
+<footer class="end">
+  <span><img src="../assets/art/logo-flamingo-red.svg" alt="" width="14" height="21">Empathic Computing Laboratory, University of Auckland</span>
+  <nav aria-label="Links"><a class="link" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download the apps</a><a class="link" href="https://github.com/trecitano/The-Balance-Toolkit">Source</a><a class="link" href="https://youtu.be/_8UwrUgqUao">Video</a></nav>
+</footer>
+
+<script src="../board.js"></script>
+<script>
+const steps = ['step-onto-board', 'stand-on-the-board', 'stand-upright', 'eyes-open', 'eyes-close', 'left-leg-up', 'right-leg-up', 'left-foot-in-front', 'right-foot-in-front', 'left-arm-up', 'left-arm-reach', 'left-arm-down', 'right-arm-up', 'right-arm-reach', 'right-arm-down', 'stand-on-the-board-reach', 'lean-forward', 'lean-backwards', 'lean-to-the-left', 'lean-to-the-right', 'sit', 'stand', 'walk-forward', 'turn-around', 'walk-back', 'sit-again', 'tare', 'dual-board-tare', 'dual-board-step-on-the-boards', 'dual-board-one-foot-on-each-board', 'dual-board-squat-on-the-boards', 'dual-board-stand-on-the-boards'];
+const nice = (id) => id.replace('dual-board-', '').replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
+document.getElementById('drawings').innerHTML = steps.map((id) => `<figure><img src="../assets/art/steps/${id}.svg" alt="" width="130" height="110" loading="lazy"><figcaption>${nice(id)}${id.startsWith('dual') ? ' (2 boards)' : ''}</figcaption></figure>`).join('');
+
+// Section entrances: each part rises in turn when its section comes into view.
+document.documentElement.classList.add('js');
+const parts = document.querySelectorAll('.intro, .stage, .live, .sec-head > *, .acts li, .spec > *, .drawings, .shots img, .rows li, .bib');
+parts.forEach((el) => { el.classList.add('rv'); el.style.setProperty('--d', `${[...el.parentNode.children].indexOf(el) * 70}ms`); });
+const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
+parts.forEach((el) => io.observe(el));
+
+const $ = (id) => document.getElementById(id);
+
+// Cover: the board shows the weight on each corner, and the flamingo leans with the centre of pressure.
+const b = new TBT.Board($('board'), { stance: 'left-leg-up', trail: 120 });
+const NS = 'http://www.w3.org/2000/svg';
+const corners = { tl: [62, 46, 'start'], tr: [458, 46, 'end'], bl: [62, 284, 'start'], br: [458, 284, 'end'] };
+const kg = {};
+for (const [k, [x, y, anchor]] of Object.entries(corners)) {
+  const t = document.createElementNS(NS, 'text');
+  t.setAttribute('class', 'tb-kg'); t.setAttribute('x', x); t.setAttribute('y', y); t.setAttribute('text-anchor', anchor);
+  b.extra.append(t); kg[k] = t;
+}
+const bird = $('bird');
+b.on((s) => {
+  for (const k in kg) kg[k].innerHTML = `${Math.max(s[k], 0).toFixed(1)}<tspan> kg</tspan>`;
+  const sg = (v) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2);
+  $('r-w').textContent = s.on ? `${s.w.toFixed(1)} kg` : '0.0 kg';
+  $('r-x').textContent = sg(s.x); $('r-y').textContent = sg(s.y);
+  $('r-p').textContent = `${TBT.metrics(b.hist.filter((h) => h.t > s.t - 5)).path.toFixed(0)} mm`;
+  bird.style.transform = `translateX(${(s.x * 40).toFixed(1)}px) rotate(${(s.x * 14).toFixed(2)}deg)`;
+});
+
+
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('bibtex').textContent); $('copy').textContent = 'Copied'; }
+  catch { $('copy').textContent = 'Select the text to copy'; }
+  setTimeout(() => { $('copy').textContent = 'Copy'; }, 2000);
+});
+</script>
+</body>
+</html>

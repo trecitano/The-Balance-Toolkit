@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Website concepts · The Balance Toolkit</title>
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --bg: #ecebe7; --card: #fff; --ink: #121212; --muted: #5d5d5d; --hi: #ffe14d; --red: #e50012; }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+.wrap { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; padding: 24px clamp(16px, 3vw, 40px) 60px; align-items: start; }
+header { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; }
+h1 { font-size: clamp(28px, 3vw, 42px); line-height: 1.05; margin: 0 0 6px; letter-spacing: -.02em; }
+header p { margin: 0; color: var(--muted); max-width: 70ch; }
+.size { display: flex; gap: 4px; background: var(--card); padding: 4px; border-radius: 8px; }
+.size button { border: 0; background: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+.size button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.grid { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 20px; }
+.card { background: var(--card); border-radius: 12px; overflow: hidden; display: grid; }
+.frame { position: relative; aspect-ratio: 1440 / 900; overflow: hidden; background: #ddd; border-bottom: 1px solid #e3e3e3; }
+.frame iframe { position: absolute; top: 0; left: 0; width: 1440px; height: 900px; border: 0; transform-origin: 0 0; transform: scale(var(--k, .3)); pointer-events: auto; }
+.frame a.open { position: absolute; right: 10px; top: 10px; background: var(--ink); color: #fff; padding: 7px 11px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .15s; }
+.card:hover .frame a.open, .frame a.open:focus-visible { opacity: 1; }
+.body { padding: 16px 18px 18px; }
+.body h2 { margin: 0; font-size: 20px; display: flex; gap: 10px; align-items: baseline; }
+.body h2 span { background: var(--hi); padding: 1px 7px; border-radius: 4px; font-size: 14px; }
+.body h2 a { color: inherit; text-decoration: none; } .body h2 a:hover { text-decoration: underline; }
+.idea { margin: 4px 0 2px; }
+.feel { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+.els { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.els label { display: grid; grid-template-columns: 20px 42px 1fr; gap: 6px; align-items: baseline; padding: 5px 6px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.els label:hover { background: #f4f4f1; }
+.els input { margin: 0; accent-color: var(--ink); }
+.els b { font-size: 12px; background: #f0eee6; border-radius: 3px; text-align: center; padding: 1px 0; }
+.els input:checked ~ b { background: var(--hi); }
+aside { position: sticky; top: 16px; background: var(--ink); color: #fff; border-radius: 12px; padding: 18px; display: grid; gap: 12px; }
+aside h2 { margin: 0; font-size: 18px; }
+aside p { margin: 0; color: #bbb; font-size: 14px; }
+aside ol { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 4px; font-size: 14px; max-height: 50vh; overflow: auto; }
+aside li { display: grid; grid-template-columns: 40px 1fr auto; gap: 6px; align-items: baseline; }
+aside li b { color: var(--hi); }
+aside li button { background: none; border: 0; color: #999; cursor: pointer; font-size: 16px; line-height: 1; }
+aside li button:hover { color: #fff; }
+aside textarea { width: 100%; min-height: 70px; border-radius: 8px; border: 0; padding: 10px; font: 14px/1.4 system-ui, sans-serif; resize: vertical; }
+.row { display: flex; gap: 8px; }
+.row button { flex: 1; border: 0; padding: 11px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.copy { background: var(--hi); color: var(--ink); }
+.clear { background: #333; color: #fff; }
+.empty { color: #888; font-size: 14px; display: block !important; }
+@media (max-width: 1100px) { .wrap { grid-template-columns: 1fr; } header { order: -2; } aside { position: static; order: -1; } .grid { --cols: 1 !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Ten website concepts for The Balance Toolkit</h1>
+      <p>Every preview is live: hover a board to lean on it. Open a concept to see the whole page; the yellow labels on each page (1A, 1B…) match the checkboxes here. Tick the parts you like and copy the list back to me.</p>
+    </div>
+    <div class="size" role="group" aria-label="Preview size"><button type="button" data-cols="1" aria-pressed="false">Large</button><button type="button" data-cols="2" aria-pressed="true">Medium</button><button type="button" data-cols="3" aria-pressed="false">Small</button></div>
+  </header>
+  <main class="grid" id="grid"></main>
+  <aside aria-label="Your picks">
+    <h2>Your picks</h2>
+    <p>Ticked parts collect here. Add a note, then copy it into the chat.</p>
+    <ol id="picks"></ol>
+    <textarea id="note" placeholder="Notes, e.g. ‘3B but in the colours of 5’"></textarea>
+    <div class="row"><button class="copy" id="copy" type="button">Copy picks</button><button class="clear" id="clear" type="button">Clear</button></div>
+  </aside>
+</div>
+<script>
+const C = [
+  ['00', '00-original/index.html', 'Current site', 'The page built earlier: the board leads, then the session panel, activities, pinned setup, raw CSV and the letter.', 'Light grey, Stack Sans, brand red and blue.', [
+    ['0A', 'Hero board with Both feet / Left leg up switch'], ['0B', 'Trial-length slider → raw rows'], ['0C', 'Session panel with margin notes'], ['0D', 'Activity photo tiles with label strips'], ['0E', 'Pinned “From box to stream” steps'], ['0F', 'Editable raw CSV → sway'], ['0G', 'Wire layout (TCP + LSL)'], ['0H', 'Toolkit ledger with screenshot preview'], ['0I', 'Team letter with survey figures'], ['0J', 'Citation field + BibTeX copy']]],
+  ['01', '01-instrument.html', 'Instrument', 'The page is a lab readout: sensors, strip charts and sway metrics that climb when you pick a harder posture.', 'Dark, IBM Plex, oscilloscope green.', [
+    ['1A', 'Instrument board with sway trail'], ['1B', 'Posture buttons change the sway'], ['1C', 'Sensor and CoP readout grid'], ['1D', 'Scrolling strip charts of CoP x and y'], ['1E', 'Live sway metrics, giant numbers'], ['1F', 'Spec sheet table'], ['1G', 'Full-width real app screenshot']]],
+  ['02', '02-arcade.html', 'Arcade', 'For the CHI PLAY crowd: the board is a game controller. Keep the dot in a drifting ring for 30 seconds.', 'Indigo and yellow, Bungee, chunky buttons.', [
+    ['2A', 'Loud display headline'], ['2B', 'Playable 30-second balance game'], ['2C', 'Score HUD with time-in-zone meter'], ['2D', 'Activities as game levels'], ['2E', 'Plug it into your game: code + ports']]],
+  ['03', '03-protocol.html', 'Protocol', 'For clinicians: run a real activity timeline on the simulated board and get a per-step sway table.', 'Paper white, Source Serif, clinical blue.', [
+    ['3A', 'Calm clinical serif headline'], ['3B', 'Activity player that runs the real timeline'], ['3C', 'Protocol form header'], ['3D', 'Big step illustration + countdown'], ['3E', 'Per-step results table'], ['3F', 'Protocol library cards with step lists']]],
+  ['04', '04-editorial.html', 'Editorial', 'A magazine story about why a toy can be a force plate, with the board as Fig. 1 and the survey as huge numerals.', 'Cream, Fraunces, red italics.', [
+    ['4A', 'Magazine cover: giant serif + swaying flamingo'], ['4B', 'Long-form essay with drop cap'], ['4C', 'Live board as a numbered figure with caption'], ['4D', 'Survey figures as huge numerals'], ['4E', 'Full-bleed photo spread with credits'], ['4F', 'Citation as a closing block']]],
+  ['05', '05-pocket.html', 'Pocket', 'Phone-first: tilt your phone like the board. The board fills a red screen and two numbers fill the next.', 'Brand red, Archivo condensed, sticky download bar.', [
+    ['5A', 'Full-bleed red hero, board fills the screen'], ['5B', 'Phone tilt control (device orientation)'], ['5C', 'Two giant live numbers'], ['5D', 'Swipeable activity cards'], ['5E', 'Three red fact blocks'], ['5F', 'Sticky bottom download bar']]],
+  ['06', '06-terminal.html', 'Terminal', 'For developers: real tbt output types itself, and the 40-byte TCP packet changes live as you lean.', 'Warm paper and black terminal, JetBrains Mono.', [
+    ['6A', 'Self-typing terminal with real tbt output'], ['6B', 'Board with colour-coded sensors'], ['6C', 'Live 40-byte hex packet + decoded fields'], ['6D', 'Command reference list'], ['6E', 'Two code recipes side by side']]],
+  ['07', '07-unboxing.html', 'Unboxing', 'Do the setup yourself: press SYNC, watch the empty board read non-zero, tare it, step on, stream.', 'Pale app blue, Figtree, rounded and friendly.', [
+    ['7A', 'Friendly centred headline'], ['7B', 'Step rail that ticks off as you go'], ['7C', 'Interactive setup: SYNC, tare, step on, stream'], ['7D', 'Per-sensor tare readout (red until zeroed)'], ['7E', 'Three app screenshots as next-step cards']]],
+  ['08', '08-flamingo.html', 'Flamingo', 'The logo becomes the mascot: it leans with your weight, and an eyes open/closed race shows the Romberg effect.', 'Pink and red, Bricolage Grotesque, playful.', [
+    ['8A', 'Chunky playful headline'], ['8B', 'Flamingo mode toggle'], ['8C', 'Flamingo mascot that leans with the CoP'], ['8D', 'Eyes open vs closed: two trials side by side'], ['8E', 'Wall of all 32 step illustrations']]],
+  ['09', '09-poster.html', 'Poster', 'The site is the conference poster: real title and authors, numbered boxes, a live Fig. 1 and the citation.', 'White on grey, Inter Tight, Swiss grid.', [
+    ['9A', 'Poster banner with real title and authors'], ['9B', 'Three-column academic poster grid'], ['9C', 'Animated survey bar chart'], ['9D', 'Architecture diagram in boxes'], ['9E', 'Live figure with four sensor bars'], ['9F', 'Compact activity figure grid'], ['9G', 'BibTeX with copy button']]],
+  ['10', '10-two-boards.html', 'Two boards', 'Split screen, one colour per board. Move across them to shift your weight, or run the Squat activity.', 'Board blue | brand red, Sora.', [
+    ['10A', 'Split blue/red hero with left/right weight share'], ['10B', 'Two linked boards; drag to shift weight between them'], ['10C', 'Left/right asymmetry gauge'], ['10D', 'Squat timeline that lights up step by step'], ['10E', 'One board vs two boards comparison']]],
+];
+const names = Object.fromEntries(C.flatMap((c) => c[5].map(([id, n]) => [id, `${n} (${c[2]})`])));
+const grid = document.getElementById('grid');
+grid.innerHTML = C.map(([n, file, title, idea, feel, els]) => `
+<article class="card">
+  <div class="frame"><iframe src="${file}" title="${title} preview" loading="lazy" tabindex="-1"></iframe><a class="open" href="${file}">Open ${n} ↗</a></div>
+  <div class="body">
+    <h2><span>${n}</span><a href="${file}">${title}</a></h2>
+    <p class="idea">${idea}</p><p class="feel">${feel}</p>
+    <ul class="els">${els.map(([id, t]) => `<li><label><input type="checkbox" value="${id}"><b>${id}</b><span>${t}</span></label></li>`).join('')}</ul>
+  </div>
+</article>`).join('');
+
+// Scale each 1440 x 900 preview to its card.
+const ro = new ResizeObserver((es) => es.forEach((e) => e.target.style.setProperty('--k', e.contentRect.width / 1440)));
+document.querySelectorAll('.frame').forEach((f) => ro.observe(f));
+document.querySelectorAll('.size button').forEach((b) => b.addEventListener('click', () => {
+  grid.style.setProperty('--cols', b.dataset.cols);
+  document.querySelectorAll('.size button').forEach((o) => o.setAttribute('aria-pressed', o === b));
+}));
+
+// Picks, kept in this browser only.
+const boxes = [...document.querySelectorAll('.els input')];
+const save = () => { try { localStorage.setItem('tbt-picks', JSON.stringify({ ids: boxes.filter((x) => x.checked).map((x) => x.value), note: note.value })); } catch {} };
+const note = document.getElementById('note');
+const list = document.getElementById('picks');
+const render = () => {
+  const ids = boxes.filter((x) => x.checked).map((x) => x.value);
+  list.innerHTML = ids.length ? ids.map((id) => `<li><b>${id}</b><span>${names[id]}</span><button type="button" data-id="${id}" aria-label="Remove ${id}">×</button></li>`).join('') : '<li class="empty">Nothing ticked yet.</li>';
+};
+try { const s = JSON.parse(localStorage.getItem('tbt-picks') || '{}'); (s.ids || []).forEach((id) => { const x = boxes.find((b) => b.value === id); if (x) x.checked = true; }); note.value = s.note || ''; } catch {}
+render();
+boxes.forEach((x) => x.addEventListener('change', () => { render(); save(); }));
+note.addEventListener('input', save);
+list.addEventListener('click', (e) => { const id = e.target.dataset?.id; if (!id) return; boxes.find((b) => b.value === id).checked = false; render(); save(); });
+document.getElementById('clear').addEventListener('click', () => { boxes.forEach((x) => (x.checked = false)); note.value = ''; render(); save(); });
+document.getElementById('copy').addEventListener('click', async (e) => {
+  const ids = boxes.filter((x) => x.checked).map((x) => x.value);
+  const text = `My picks:\n${ids.map((id) => `- ${id} ${names[id]}`).join('\n')}${note.value ? `\n\nNotes: ${note.value}` : ''}`;
+  try { await navigator.clipboard.writeText(text); e.target.textContent = 'Copied'; }
+  catch { note.value = text; note.select(); e.target.textContent = 'Selected, press Ctrl+C'; }
+  setTimeout(() => (e.target.textContent = 'Copy picks'), 2200);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02 Arcade · The Balance Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --bg: #1a1d6e; --deep: #10124a; --ink: #fff; --sun: #ffd23f; --red: #e50012; --mint: #3df2c4; --muted: #b7baf0; }
+body { background: var(--bg); color: var(--ink); font: 400 17px/1.5 'Space Grotesk', sans-serif; }
+.disp { font-family: 'Bungee', sans-serif; font-weight: 400; letter-spacing: .01em; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 18px clamp(16px, 4vw, 48px); }
+header .disp { font-size: 18px; }
+.btn { display: inline-block; padding: 14px 22px; background: var(--sun); color: var(--deep); font-weight: 700; text-decoration: none; border: 0; border-radius: 0; cursor: pointer; box-shadow: 0 5px 0 #b88f00; transition: transform .08s, box-shadow .08s; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 6px 0 #b88f00; }
+.btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #b88f00; }
+.btn-red { background: var(--red); color: #fff; box-shadow: 0 5px 0 #8a000b; }
+
+.hero { padding: clamp(8px, 2vw, 24px) clamp(16px, 4vw, 48px) clamp(40px, 6vw, 80px); }
+h1 { font-size: clamp(40px, 6.4vw, 104px); line-height: .95; margin: 0 0 12px; }
+h1 span { color: var(--sun); }
+.lead { max-width: 52ch; color: var(--muted); margin: 0 0 28px; font-size: 19px; }
+.cab { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; background: var(--deep); padding: clamp(14px, 2vw, 28px); border: 4px solid var(--sun); }
+.screen { position: relative; }
+.tb-body { fill: #f6f6fb; stroke: none; }
+.tb-pad { stroke: #1a1d6e; stroke-opacity: .12; }
+.tb-grid line { stroke: #1a1d6e; stroke-opacity: .15; }
+.tb-s { fill: var(--bg); fill-opacity: .15; stroke: var(--bg); }
+.tb-trail { stroke: var(--red); stroke-opacity: .4; stroke-width: 3; }
+.tb-dot { fill: var(--red); }
+.ring { fill: var(--mint); fill-opacity: .25; stroke: #0b9c78; stroke-width: 4; stroke-dasharray: 10 8; transition: fill-opacity .2s; }
+.ring.in { fill-opacity: .6; stroke-dasharray: none; }
+.overlay { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; background: rgba(16, 18, 74, .72); transition: opacity .3s; }
+.overlay[hidden] { display: grid; opacity: 0; pointer-events: none; }
+.overlay p { margin: 0 0 16px; font-size: 18px; }
+.hud { display: grid; gap: 12px; align-content: start; }
+.hud div { background: var(--bg); padding: 14px 16px; }
+.hud span { display: block; color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
+.hud b { font: 400 44px/1.1 'Bungee', sans-serif; }
+.hud .score b { color: var(--mint); }
+.hud .meter { height: 10px; background: var(--deep); margin-top: 8px; }
+.hud .meter i { display: block; height: 100%; width: 0; background: var(--sun); }
+.how { color: var(--muted); font-size: 14px; margin: 0; }
+
+.levels { padding: clamp(48px, 8vw, 110px) clamp(16px, 4vw, 48px); background: var(--sun); color: var(--deep); }
+.levels h2 { font-size: clamp(32px, 4vw, 60px); margin: 0 0 8px; line-height: 1; }
+.levels > p { margin: 0 0 36px; max-width: 56ch; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.lvl { background: #fff; padding: 18px; display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center; transition: transform .15s; }
+.lvl:hover { transform: rotate(-1deg) scale(1.02); }
+.lvl img { width: 96px; height: 98px; object-fit: contain; }
+.lvl small { font-family: 'Bungee', sans-serif; color: var(--red); font-size: 14px; }
+.lvl h3 { margin: 2px 0 4px; font-size: 20px; }
+.lvl p { margin: 0; font-size: 14px; }
+
+.plug { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: clamp(24px, 4vw, 64px); padding: clamp(48px, 8vw, 110px) clamp(16px, 4vw, 48px); align-items: center; }
+.plug h2 { font-size: clamp(30px, 3.6vw, 52px); line-height: 1; margin: 0 0 16px; }
+.plug p { color: var(--muted); }
+pre { background: var(--deep); padding: 22px; overflow-x: auto; font: 14px/1.6 ui-monospace, monospace; border-left: 6px solid var(--mint); margin: 0; }
+.ports { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+.ports span { background: var(--deep); padding: 10px 14px; font-size: 14px; }
+.ports b { color: var(--sun); }
+footer { padding: 32px clamp(16px, 4vw, 48px); background: var(--deep); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+@media (max-width: 860px) { .cab { grid-template-columns: 1fr; } .hud { grid-template-columns: repeat(3, 1fr); } .hud b { font-size: 26px; } .grid { grid-template-columns: 1fr; } .plug { grid-template-columns: 1fr; } .how { grid-column: 1 / -1; } }
+@media (prefers-reduced-motion: reduce) { .lvl:hover { transform: none; } }
+</style>
+</head>
+<body data-concept="2">
+<header><span class="disp">Balance Toolkit</span><a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Get the apps</a></header>
+
+<section class="hero">
+  <h1 class="disp" data-pick="2A" data-pick-name="Loud display headline">The board is <span>your controller</span></h1>
+  <p class="lead">The Balance Toolkit streams a Wii Balance Board’s centre of pressure into your game over TCP or LSL. Try it: keep the red dot inside the green ring for 30 seconds.</p>
+  <div class="cab" data-pick="2B" data-pick-name="Playable 30-second balance game">
+    <div class="screen">
+      <div id="board"></div>
+      <div class="overlay" id="overlay">
+        <div><p id="ov-text">Lean with your mouse, or drag on a phone.</p><button class="btn btn-red" id="go" type="button">Start</button></div>
+      </div>
+    </div>
+    <div class="hud" data-pick="2C" data-pick-name="Score HUD with time-in-zone meter">
+      <div class="score"><span>In the ring</span><b id="score">0.0</b><div class="meter"><i id="meter"></i></div></div>
+      <div><span>Time left</span><b id="left">30</b></div>
+      <div><span>Best</span><b id="best">–</b></div>
+      <p class="how">The ring drifts. Your weight is the pointer, smoothed like a body. Scores are seconds inside the ring.</p>
+    </div>
+  </div>
+</section>
+
+<section class="levels" data-pick="2D" data-pick-name="Activities as game levels">
+  <h2 class="disp">Six levels, built in</h2>
+  <p>The toolkit ships six guided activities. Each one runs a timeline of steps with an illustration, and records the whole thing.</p>
+  <div class="grid" id="grid"></div>
+</section>
+
+<section class="plug" data-pick="2E" data-pick-name="Plug it into your game: code + ports">
+  <div>
+    <h2 class="disp">Read it in a few lines</h2>
+    <p>Every sample goes out as a 40-byte packet. Unity, Godot, Python or anything with a socket can read it. LSL streams line it up with EEG or eye tracking.</p>
+    <div class="ports"><span>TCP raw <b>11223</b></span><span>TCP processed <b>11224</b></span><span>LSL <b>basic</b> · <b>complex</b></span></div>
+  </div>
+<pre><code>sock = socket.create_connection(("::1", 11223))
+while True:
+    t, mac, tr, br, tl, bl, x, y = \
+        struct.unpack("&gt;qQ6f", sock.recv(40))
+    player.lean(x, y)   # your game here</code></pre>
+</section>
+
+<footer><span>The Balance Toolkit · CHI PLAY 2026</span><a href="https://github.com/trecitano/The-Balance-Toolkit">Source on GitHub</a></footer>
+
+<script src="../board.js"></script>
+<script src="shared/kit.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const b = new TBT.Board($('board'), { trail: 40, sensorScale: false });
+const NS = 'http://www.w3.org/2000/svg';
+const ring = document.createElementNS(NS, 'circle');
+ring.setAttribute('class', 'ring'); ring.setAttribute('r', 42);
+b.extra.append(ring);
+let playing = false, t0 = 0, score = 0, last = 0, best = null;
+try { best = Number(localStorage.getItem('tbt-best')) || null; } catch {}
+if (best) $('best').textContent = best.toFixed(1);
+const ringAt = (t) => ({ x: Math.sin(t * 0.45) * 0.6, y: Math.sin(t * 0.7 + 1) * 0.55 });
+b.on((s) => {
+  const t = s.t;
+  const r = ringAt(playing ? t - t0 : t * 0.5);
+  const [rx, ry] = TBT.toSvg(r.x, r.y);
+  ring.setAttribute('cx', rx); ring.setAttribute('cy', ry);
+  const inside = Math.hypot((s.x - r.x) * 223, (s.y - r.y) * 119) < 42;
+  ring.classList.toggle('in', inside);
+  if (!playing) return;
+  const dt = t - last; last = t;
+  if (inside) score += dt;
+  const left = Math.max(0, 30 - (t - t0));
+  $('score').textContent = score.toFixed(1); $('left').textContent = Math.ceil(left);
+  $('meter').style.width = `${(score / 30) * 100}%`;
+  if (left <= 0) {
+    playing = false;
+    if (!best || score > best) { best = score; try { localStorage.setItem('tbt-best', score); } catch {} }
+    $('best').textContent = best.toFixed(1);
+    $('ov-text').textContent = `${score.toFixed(1)} s of 30 in the ring. Again?`;
+    $('go').textContent = 'Play again';
+    $('overlay').hidden = false;
+  }
+});
+$('go').addEventListener('click', () => {
+  $('overlay').hidden = true; playing = true; score = 0; t0 = last = b.state.t;
+});
+$('grid').innerHTML = TBT.ACTIVITIES.map((a, i) => `<article class="lvl"><img src="../assets/art/steps/${a.pic}.svg" alt="" width="96" height="98" loading="lazy"><div><small>Level ${i + 1} · ${TBT.mmss(a.totalS)}</small><h3>${a.title}</h3><p>${a.blocks.length} steps · ${a.boards} board${a.boards > 1 ? 's' : ''}</p></div></article>`).join('');
+</script>
+</body>
+</html>

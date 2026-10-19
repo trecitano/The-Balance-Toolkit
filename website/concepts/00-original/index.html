@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Balance Toolkit</title>
+<meta name="description" content="Open-source software that turns a Wii Balance Board into a balance lab: pairing, centre of pressure, posturography activities, recording and TCP/LSL streaming. CHI PLAY 2026.">
+<link rel="icon" href="../../assets/art/logo-flamingo-red.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Stack+Sans+Headline:wght@300&family=Stack+Sans+Text:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="bar">
+  <a class="wordmark" href="#top" aria-label="The Balance Toolkit, top of page">
+    <img src="../../assets/art/logo-flamingo-red.svg" alt="" width="20" height="30">
+    <span>The Balance Toolkit</span>
+  </a>
+  <nav class="bar-links" aria-label="Sections">
+    <a href="#activities">Activities</a>
+    <a href="#data">Data</a>
+    <a href="#apps">Apps</a>
+    <a href="#paper">Paper</a>
+  </nav>
+  <a class="button button-small" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download the apps</a>
+</header>
+
+<main id="top">
+
+<!-- Hero: the board reads the visitor's pointer -->
+<section class="hero">
+  <div class="hero-copy">
+    <h1 class="reveal">A balance lab from<br class="br-wide"> a Wii Balance Board</h1>
+    <p class="hero-lead reveal">Open-source software that pairs the board, measures sway and streams it to your games and analysis. From our CHI&nbsp;PLAY&nbsp;2026 paper.</p>
+    <div class="hero-actions reveal">
+      <a class="button" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download the apps</a>
+      <a class="text-link" href="https://github.com/trecitano/The-Balance-Toolkit">Read the source</a>
+    </div>
+  </div>
+
+  <div class="hero-stage reveal">
+    <div class="board-ui" data-ui id="board-ui">
+      <div class="ui-head">
+        <span class="ui-title">Nintendo RVL-WBC-01</span>
+        <span class="ui-mac">37:FE:A1:2B:FD:F4</span>
+        <span class="ui-live" id="board-state">Demo</span>
+      </div>
+      <div class="board-area" id="board-area" aria-label="Wii Balance Board, seen from above. Move the pointer over it to shift weight.">
+        <img class="board-outline" src="../../assets/art/wbb-topdown.svg" alt="" width="500" height="310">
+        <svg class="board-plot" viewBox="-1.15 -1.15 2.3 2.3" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="-1" y1="0" x2="1" y2="0" class="axis"/>
+          <line x1="0" y1="-1" x2="0" y2="1" class="axis"/>
+          <polyline id="board-trail" class="trail" points="0,0"/>
+          <ellipse id="board-dot" class="dot" cx="0" cy="0" rx="0.045" ry="0.084"/>
+        </svg>
+        <output class="sensor s-tl" id="s-tl"><span>Top left</span><b>18.00</b> kg</output>
+        <output class="sensor s-tr" id="s-tr"><span>Top right</span><b>18.00</b> kg</output>
+        <output class="sensor s-bl" id="s-bl"><span>Bottom left</span><b>18.00</b> kg</output>
+        <output class="sensor s-br" id="s-br"><span>Bottom right</span><b>18.00</b> kg</output>
+      </div>
+      <div class="ui-readout">
+        <div><span>Force</span><output id="r-w">72.00</output><small>kg</small></div>
+        <div><span>CoP x</span><output id="r-x">+0.000</output></div>
+        <div><span>CoP y</span><output id="r-y">+0.000</output></div>
+        <div class="stance" role="group" aria-label="Stance">
+          <button type="button" class="seg is-on" data-stance="both" aria-pressed="true">Both feet</button>
+          <button type="button" class="seg" data-stance="left" aria-pressed="false">Left leg up</button>
+        </div>
+      </div>
+    </div>
+    <p class="hero-note">Move over the board, or drag on a phone, to shift the weight. The numbers use the toolkit’s own centre-of-pressure formula.</p>
+  </div>
+</section>
+
+<!-- The walkthrough still, the one large photograph -->
+<section class="walk" aria-label="Video walkthrough">
+  <a class="walk-frame" href="https://youtu.be/_8UwrUgqUao">
+    <img src="../../assets/own/walkthrough.jpg" alt="A person stands on one leg on a Wii Balance Board on a sports field while the toolkit's Session screen records the trial" width="1280" height="720" loading="lazy">
+  </a>
+  <div class="walk-caption">
+    <h2>Watch it record a real trial</h2>
+    <p>A single leg stance, from pairing to the live plots, in the full walkthrough on YouTube.</p>
+    <a class="text-link" href="https://youtu.be/_8UwrUgqUao">Play the walkthrough</a>
+  </div>
+</section>
+
+<!-- Stats: the figure is the visitor's own -->
+<section class="rows-figure" aria-labelledby="rows-q">
+  <div class="rows-top">
+    <h2 id="rows-q">How long is your trial?</h2>
+    <div class="slider-ui" data-ui>
+      <label for="trial-s">Trial length</label>
+      <output id="trial-out" for="trial-s">128 s</output>
+      <input id="trial-s" type="range" min="10" max="300" step="1" value="128">
+      <div class="slider-presets">
+        <button type="button" data-s="40">Eyes open-close</button>
+        <button type="button" data-s="128" class="is-on">Single leg stance</button>
+        <button type="button" data-s="144">Timed Up and Go</button>
+      </div>
+    </div>
+  </div>
+  <div class="rows-bottom">
+    <p class="figure"><output id="rows-n">12,800</output><span class="unit">rows</span></p>
+    <p class="figure-how">The board is read about 100 times a second, so every second of a trial adds about 100 rows to the session’s raw CSV, one per sample.</p>
+  </div>
+</section>
+
+<!-- Features: the session panel as a plate with margin notes -->
+<section class="plate" aria-labelledby="plate-h">
+  <h2 id="plate-h" class="plate-h">The session panel</h2>
+
+  <div class="plate-notes plate-left">
+    <button type="button" class="note" data-for="p-board" style="--top: 64px">
+      <strong>Board to display</strong>
+      <span>One or two boards per session. Pick which one the plots follow.</span>
+    </button>
+    <button type="button" class="note" data-for="p-tare" style="--top: 152px">
+      <strong>Tare</strong>
+      <span>Subtracts a separate offset from each of the four sensors.</span>
+    </button>
+    <button type="button" class="note" data-for="p-window" style="--top: 252px">
+      <strong>Window size and slide</strong>
+      <span>5 s of data per window, a new result every 100 ms.</span>
+    </button>
+  </div>
+
+  <div class="panel-ui" data-ui id="panel-ui">
+    <div class="pu-head">Session</div>
+    <div class="pu-row" id="p-board">
+      <label for="pu-board">Board to display</label>
+      <select id="pu-board"><option>Nintendo RVL-WBC-01</option><option>Both boards</option></select>
+    </div>
+    <div class="pu-row" id="p-tare">
+      <span class="pu-label">Tare</span>
+      <div class="pu-tare">
+        <button type="button" id="pu-tare-btn">Tare board</button>
+        <output id="pu-tare-out">TR 0.42  BR 0.38  TL 0.51  BL 0.47</output>
+      </div>
+    </div>
+    <div class="pu-row pu-pair" id="p-window">
+      <div><label for="pu-ws">Window size (ms)</label><input id="pu-ws" type="number" value="5000" step="500" min="500"></div>
+      <div><label for="pu-sl">Window slide (ms)</label><input id="pu-sl" type="number" value="100" step="50" min="50"></div>
+    </div>
+    <div class="pu-row pu-pair" id="p-rate">
+      <div><label for="pu-sr">Sampling rate</label><input id="pu-sr" type="number" value="100" step="10" min="10"></div>
+      <div><label for="pu-in">Interpolation</label><select id="pu-in"><option>Cubic</option><option>Linear</option></select></div>
+    </div>
+    <div class="pu-row" id="p-activity">
+      <label for="pu-act">Activity</label>
+      <select id="pu-act">
+        <option>None</option><option>Eyes open-close</option><option>Functional Reach Test</option>
+        <option selected>Single leg stance</option><option>Tandem stance</option><option>Timed Up and Go (TUG)</option><option>Squat</option>
+      </select>
+    </div>
+    <div class="pu-row pu-pair" id="p-stream">
+      <label class="pu-check"><input type="checkbox" checked> LSL <em>ON</em></label>
+      <label class="pu-check"><input type="checkbox" checked> TCP <em>ON</em></label>
+    </div>
+    <div class="pu-row pu-rec">
+      <button type="button" class="pu-recbtn" id="pu-rec" aria-label="Start recording"><span></span></button>
+      <div><b id="pu-loop">Loop 1/2</b><br><span id="pu-time">00:00/02:08</span></div>
+    </div>
+  </div>
+
+  <div class="plate-notes plate-right">
+    <button type="button" class="note" data-for="p-rate" style="--top: 340px">
+      <strong>Sampling and interpolation</strong>
+      <span>Irregular samples are resampled to a uniform rate before the metrics.</span>
+    </button>
+    <button type="button" class="note" data-for="p-activity" style="--top: 430px">
+      <strong>Activity</strong>
+      <span>A guided timeline of poses runs above the plots while you record.</span>
+    </button>
+    <button type="button" class="note" data-for="p-stream" style="--top: 516px">
+      <strong>LSL and TCP</strong>
+      <span>The same session goes live to Lab Streaming Layer and a TCP socket.</span>
+    </button>
+  </div>
+</section>
+
+<!-- Gallery: activities as prints with swing tags -->
+<section class="tiles" id="activities" aria-labelledby="tiles-h">
+  <h2 id="tiles-h">Six activities, ready to run</h2>
+  <ul class="tile-grid">
+    <li class="tile t1">
+      <div class="tile-pic art"><img src="../../assets/art/eyes-open.svg" alt="Drawing of a person standing still on the board with eyes open" width="264" height="269" loading="lazy"></div>
+      <div class="tag"><p class="tag-4"><span>3 steps</span><span>20 s a loop</span><span>2 loops</span><span>1 board</span></p><p class="tag-2"><span>Eyes open-close</span><span>0:40</span></p><p>Quiet standing with eyes open, then closed</p></div>
+    </li>
+    <li class="tile t2">
+      <div class="tile-pic art"><img src="../../assets/art/left-arm-reach.svg" alt="Drawing of a person reaching forward with the left arm along a measuring bar" width="264" height="269" loading="lazy"></div>
+      <div class="tag"><p class="tag-4"><span>8 steps</span><span>72 s a loop</span><span>2 loops</span><span>1 board</span></p><p class="tag-2"><span>Functional Reach Test</span><span>2:24</span></p><p>Reaching forward while keeping balance</p></div>
+    </li>
+    <li class="tile t3">
+      <div class="tile-pic art"><img src="../../assets/art/left-leg-up.svg" alt="Drawing of a person standing on the board with the left leg raised" width="264" height="269" loading="lazy"></div>
+      <div class="tag"><p class="tag-4"><span>6 steps</span><span>64 s a loop</span><span>2 loops</span><span>1 board</span></p><p class="tag-2"><span>Single leg stance</span><span>2:08</span></p><p>Left leg up, then right, with rests between</p></div>
+    </li>
+    <li class="tile t4">
+      <div class="tile-pic art"><img src="../../assets/art/left-foot-in-front.svg" alt="Drawing of a person standing heel to toe with the left foot in front" width="264" height="269" loading="lazy"></div>
+      <div class="tag"><p class="tag-4"><span>6 steps</span><span>64 s a loop</span><span>2 loops</span><span>1 board</span></p><p class="tag-2"><span>Tandem stance</span><span>2:08</span></p><p>Feet heel to toe, each foot in front in turn</p></div>
+    </li>
+    <li class="tile t2">
+      <div class="tile-pic art"><img src="../../assets/art/turn-around.svg" alt="Drawing of a person walking forward towards a cone to turn around" width="264" height="269" loading="lazy"></div>
+      <div class="tag"><p class="tag-4"><span>6 steps</span><span>72 s a loop</span><span>2 loops</span><span>1 board</span></p><p class="tag-2"><span>Timed Up and Go</span><span>2:24</span></p><p>Sit, stand, walk, turn, walk back, sit</p></div>
+    </li>
+    <li class="tile t1">
+      <div class="tile-pic art"><img src="../../assets/art/dual-board-squat-on-the-boards.svg" alt="Drawing of a person squatting with one foot on each of two boards" width="264" height="269" loading="lazy"></div>
+      <div class="tag"><p class="tag-4"><span>4 steps</span><span>12 s a loop</span><span>2 loops</span><span>2 boards</span></p><p class="tag-2"><span>Squat</span><span>0:24</span></p><p>Controlled weight shift across two boards</p></div>
+    </li>
+    <li class="tile t4">
+      <div class="tile-pic"><img src="../../assets/found/wii-balance-board.jpg" alt="A white Wii Balance Board seen from above on a wooden floor" width="1920" height="1440" loading="lazy"></div>
+      <div class="tag"><p class="tag-4"><span>TR</span><span>BR</span><span>TL</span><span>BL</span></p><p class="tag-2"><span>The board, from above</span><span>446 × 238 mm</span></p><p>Photo: <a href="https://commons.wikimedia.org/w/index.php?curid=3168572">Dddeco</a>, <a href="https://creativecommons.org/licenses/by/2.5/">CC BY 2.5</a></p></div>
+    </li>
+    <li class="tile t3">
+      <div class="tile-pic"><img src="../../assets/found/wii-balance-board-2.jpg" alt="The underside of a Wii Balance Board showing its four round feet" width="1920" height="1440" loading="lazy"></div>
+      <div class="tag"><p class="tag-4"><span>4 feet</span><span>4 sensors</span><span>Bluetooth</span><span>4 AA</span></p><p class="tag-2"><span>Underneath</span><span>SYNC in the battery bay</span></p><p>Photo: <a href="https://commons.wikimedia.org/w/index.php?curid=3168578">Dddeco</a>, <a href="https://creativecommons.org/licenses/by/2.5/">CC BY 2.5</a></p></div>
+    </li>
+  </ul>
+</section>
+
+<!-- How it works: one pinned fragment, three states -->
+<section class="steps" aria-labelledby="steps-h">
+  <div class="steps-text">
+    <h2 id="steps-h">From box to stream</h2>
+    <ol class="step-list">
+      <li class="step is-active" data-state="pair">
+        <p class="step-big">First, press SYNC on the board.</p>
+        <p>Scan from the Devices page and press the red button in the battery bay. The board appears with its battery level.</p>
+      </li>
+      <li class="step" data-state="tare">
+        <p class="step-big">Then step off, tare, and step on.</p>
+        <p>Tare stores an offset for each of the four sensors, so an empty board reads zero.</p>
+      </li>
+      <li class="step" data-state="stream">
+        <p class="step-big">Now record, or read it live.</p>
+        <p>Every sample lands in CSV and goes out over TCP and LSL. Python reads it in a few lines.</p>
+      </li>
+    </ol>
+  </div>
+  <div class="steps-stage">
+    <div class="stage-ui" data-ui id="stage-ui" data-state="pair">
+      <div class="st st-pair">
+        <div class="st-title">Devices</div>
+        <div class="dev-row is-new">
+          <img src="../../assets/art/wbb-topdown.svg" alt="" width="50" height="31">
+          <div><b>Nintendo RVL-WBC-01</b><span>MAC: 37:FE:A1:2B:FD:F4</span></div>
+          <span class="dev-batt">Battery 75%</span>
+          <span class="dev-add">Add to session</span>
+        </div>
+        <div class="dev-row is-off">
+          <img src="../../assets/art/wbb-topdown.svg" alt="" width="50" height="31">
+          <div><b>Nintendo RVL-WBC-01</b><span>Disconnected</span></div>
+        </div>
+        <p class="st-hint">Scanning… press SYNC on the board</p>
+      </div>
+      <div class="st st-tare">
+        <div class="st-title">Tare</div>
+        <div class="tare-grid">
+          <div><span>Top left</span><b>0.00</b></div>
+          <div><span>Top right</span><b>0.00</b></div>
+          <div><span>Bottom left</span><b>0.00</b></div>
+          <div><span>Bottom right</span><b>0.00</b></div>
+        </div>
+        <p class="st-hint">Offsets stored: TL 0.51, TR 0.42, BL 0.47, BR 0.38 kg</p>
+      </div>
+      <div class="st st-stream">
+        <div class="st-title">tbt_stream_tcp.py</div>
+<pre><code>sock = socket.create_connection(("::1", 11223))
+while True:
+    packet = sock.recv(40)
+    t, mac, tr, br, tl, bl, x, y = \
+        struct.unpack("&gt;qQ6f", packet)
+    print(f"{tr+br+tl+bl:6.2f} kg  {x:+.3f} {y:+.3f}")</code></pre>
+<pre class="st-out" aria-label="Example output"><code id="stream-out"> 71.94 kg  +0.043 -0.018
+ 71.97 kg  +0.047 -0.021
+ 72.02 kg  +0.051 -0.019</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Showcase: raw rows in, sway out -->
+<section class="split" aria-labelledby="split-h">
+  <div class="split-in">
+    <label class="split-label" for="csv-in">session-raw.csv, edit any value</label>
+    <pre class="csv"><code id="csv-in" contenteditable="true" spellcheck="false" role="textbox" aria-multiline="true">timestamp,top_right,bottom_right,top_left,bottom_left
+00:00:00.000,19.10,17.20,18.40,16.90
+00:00:00.010,19.30,17.10,18.20,16.80
+00:00:00.020,19.60,16.90,18.00,16.90
+00:00:00.030,19.80,16.70,17.90,17.20
+00:00:00.040,19.70,16.80,18.10,17.40
+00:00:00.050,19.40,17.10,18.30,17.30
+00:00:00.060,19.00,17.40,18.50,17.10
+00:00:00.070,18.80,17.60,18.60,16.90
+00:00:00.080,18.90,17.50,18.40,16.70
+00:00:00.090,19.20,17.20,18.20,16.80</code></pre>
+    <h2 id="split-h" class="split-h split-h-a">Raw rows</h2>
+  </div>
+  <div class="split-out">
+    <div class="sway-ui" data-ui>
+      <div class="sw-head">Centre of pressure on a 446 × 238 mm board, <span id="sw-zoom">path enlarged</span></div>
+      <svg class="sw-plot" id="sw-plot" viewBox="-223 -119 446 238" aria-label="Centre of pressure path computed from the rows">
+        <rect x="-223" y="-119" width="446" height="238" rx="20" class="sw-board"/>
+        <line x1="-223" y1="0" x2="223" y2="0" class="sw-axis"/>
+        <line x1="0" y1="-119" x2="0" y2="119" class="sw-axis"/>
+        <polyline id="sw-path" class="sw-path" points=""/>
+        <g id="sw-dots"></g>
+      </svg>
+      <dl class="sw-metrics">
+        <div><dt>Rows</dt><dd id="m-rows">10</dd></div>
+        <div><dt>Mean load</dt><dd id="m-load">71.98 kg</dd></div>
+        <div><dt>Path length</dt><dd id="m-path">0.0 mm</dd></div>
+        <div><dt>Mean velocity</dt><dd id="m-vel">0 mm/s</dd></div>
+        <div><dt>ML range</dt><dd id="m-ml">0.0 mm</dd></div>
+        <div><dt>AP range</dt><dd id="m-ap">0.0 mm</dd></div>
+      </dl>
+    </div>
+    <p class="split-h split-h-b" aria-hidden="true">become sway</p>
+  </div>
+</section>
+
+<!-- List: what goes down the wire -->
+<section class="wire" id="data" aria-labelledby="wire-h">
+  <h2 id="wire-h">What goes down the wire</h2>
+  <p class="wire-lead">Raw data goes to TCP port 11223 and processed results to 11224. LSL publishes two streams named after <code>the-balance-toolkit</code>.</p>
+  <div class="wire-group">
+    <p class="wire-g">TCP raw, 40 bytes a sample, big-endian</p>
+    <ul>
+      <li><i class="d d-ink"></i><span>timestamp</span><em>bytes 0–7, i64, µs</em></li>
+      <li><i class="d d-ink"></i><span>mac_address</span><em>bytes 8–15, u64</em></li>
+      <li><i class="d d-red"></i><span>top_right</span><em>bytes 16–19, f32, kg</em></li>
+      <li><i class="d d-red"></i><span>bottom_right</span><em>bytes 20–23, f32, kg</em></li>
+      <li><i class="d d-red"></i><span>top_left</span><em>bytes 24–27, f32, kg</em></li>
+      <li><i class="d d-red"></i><span>bottom_left</span><em>bytes 28–31, f32, kg</em></li>
+      <li><i class="d d-blue"></i><span>cop_x</span><em>bytes 32–35, f32, −1 to +1</em></li>
+      <li><i class="d d-blue"></i><span>cop_y</span><em>bytes 36–39, f32, −1 to +1</em></li>
+    </ul>
+  </div>
+  <div class="wire-group">
+    <p class="wire-g">LSL the-balance-toolkit_basic, 8 channels</p>
+    <ul>
+      <li><i class="d d-ink"></i><span>timestamp</span><em>µs</em></li>
+      <li><i class="d d-ink"></i><span>mac_address</span><em>board</em></li>
+      <li><i class="d d-red"></i><span>top_right, bottom_right, top_left, bottom_left</span><em>kg</em></li>
+      <li><i class="d d-blue"></i><span>cop_x, cop_y</span><em>−1 to +1</em></li>
+    </ul>
+  </div>
+  <div class="wire-group">
+    <p class="wire-g">LSL the-balance-toolkit_complex, 9 channels</p>
+    <ul>
+      <li><i class="d d-ink"></i><span>timestamp</span><em>µs</em></li>
+      <li><i class="d d-ink"></i><span>mac_address</span><em>board</em></li>
+      <li><i class="d d-blue"></i><span>v_cop_x, v_cop_y</span><em>mm/s</em></li>
+      <li><i class="d d-blue"></i><span>stability_index</span><em>mm</em></li>
+      <li><i class="d d-blue"></i><span>dpsi_mlsi, dpsi_apsi</span><em>mm</em></li>
+      <li><i class="d d-blue"></i><span>dpsi_vsi</span><em>fraction of body weight</em></li>
+      <li><i class="d d-blue"></i><span>dpsi_overall</span><em>pooled</em></li>
+    </ul>
+  </div>
+</section>
+
+<!-- Work: the parts of the toolkit, with a side preview -->
+<section class="ledger" id="apps" aria-labelledby="ledger-h">
+  <h2 id="ledger-h">What’s in the toolkit</h2>
+  <ul class="ledger-rows" id="ledger-rows">
+    <li class="lr is-active" data-preview="pv-desktop">
+      <a href="https://github.com/trecitano/The-Balance-Toolkit-Apps"><span class="lr-name">Desktop app</span><span class="lr-kind">Windows, macOS and Linux</span><span class="lr-val">0.2.0</span></a>
+      <div class="lr-pic pv-desktop-m"><img src="../../assets/own/app-session.png" alt="" width="1472" height="900" loading="lazy"></div>
+    </li>
+    <li class="lr" data-preview="pv-video">
+      <a href="https://youtu.be/_8UwrUgqUao"><span class="lr-name">Video walkthrough</span><span class="lr-kind">YouTube</span><span class="lr-val">2026</span></a>
+      <div class="lr-pic"><img src="../../assets/own/walkthrough.jpg" alt="" width="1280" height="720" loading="lazy"></div>
+    </li>
+    <li class="lr" data-preview="pv-cli">
+      <a href="https://github.com/trecitano/The-Balance-Toolkit/tree/main/apps/cli"><span class="lr-name">Headless CLI, <code>tbt</code></span><span class="lr-kind">Terminals and servers</span><span class="lr-val">Rust</span></a>
+    </li>
+    <li class="lr" data-preview="pv-android">
+      <a href="https://github.com/trecitano/The-Balance-Toolkit/tree/main/apps/android"><span class="lr-name">Android app</span><span class="lr-kind">Companion and capture</span><span class="lr-val">Kotlin</span></a>
+    </li>
+    <li class="lr" data-preview="pv-core">
+      <a href="https://github.com/trecitano/The-Balance-Toolkit/tree/main/crates/toolkit-core"><span class="lr-name">Rust core</span><span class="lr-kind">Bluetooth, processing, replay</span><span class="lr-val">MIT</span></a>
+    </li>
+    <li class="lr" data-preview="pv-py">
+      <a href="https://github.com/trecitano/The-Balance-Toolkit/tree/main/scripts"><span class="lr-name">Stream inspectors</span><span class="lr-kind">Python, TCP and LSL</span><span class="lr-val">uv</span></a>
+    </li>
+    <li class="lr" data-preview="pv-survey">
+      <a href="https://github.com/trecitano/The-Balance-Toolkit/tree/main/resources"><span class="lr-name">Expert survey results</span><span class="lr-kind">CSV, 26 responses</span><span class="lr-val">2026</span></a>
+    </li>
+  </ul>
+
+  <div class="ledger-preview" aria-hidden="true">
+    <div class="pv pv-desktop is-shown" id="pv-desktop">
+      <img class="xf is-on" src="../../assets/own/app-session.png" alt="" width="1472" height="900" loading="lazy">
+      <img class="xf" src="../../assets/own/app-devices.png" alt="" width="1472" height="900" loading="lazy">
+      <img class="xf" src="../../assets/own/app-activities.png" alt="" width="1472" height="900" loading="lazy">
+      <img class="xf" src="../../assets/own/app-home.png" alt="" width="1472" height="900" loading="lazy">
+    </div>
+    <div class="pv" id="pv-video"><img src="../../assets/own/walkthrough.jpg" alt="" width="1280" height="720" loading="lazy"></div>
+    <div class="pv pv-code" id="pv-cli"><pre><code>$ tbt devices scan
+$ tbt session run --tcp
+$ tbt tui</code></pre></div>
+    <div class="pv pv-code" id="pv-android"><pre><code>$ cd apps/android
+$ ./gradlew :app:assembleDebug</code></pre></div>
+    <div class="pv pv-code" id="pv-core"><pre><code>cop_x = (tr + br - tl - bl) / total
+cop_y = (tr + tl - br - bl) / total</code></pre></div>
+    <div class="pv pv-code" id="pv-py"><pre><code>$ uv run tbt_stream_tcp.py
+$ uv run tbt_stream_lsl.py</code></pre></div>
+    <div class="pv pv-code" id="pv-survey"><pre><code>expert_survey_results.csv
+26 participants, 176 questions</code></pre></div>
+  </div>
+</section>
+
+<!-- About: a letter from the team -->
+<section class="letter" aria-label="Why we built it">
+  <div class="letter-col">
+    <img class="letter-mark" src="../../assets/art/icon.svg" alt="" width="44" height="44" loading="lazy">
+    <p>We built The Balance Toolkit because balance research is expensive. Lab force plates cost more than most clinics, game studios and student projects can spend, while the Wii Balance Board is cheap, sturdy and already in many homes.</p>
+    <p>Before writing code we asked 26 balance experts, from physical therapists to HCI researchers in six regions, what gets in the way. Seventeen named cost. Of the eighteen who had used a Wii Balance Board, <mark>thirteen struggled just to pair it</mark>, and nine lost the Bluetooth connection during use.</p>
+    <p>So the toolkit starts there: pairing that works on Windows, macOS and Linux, one or two boards in a session, and the centre-of-pressure and stability metrics that clinicians already report, written to plain CSV.</p>
+    <p>We also make games, so every number goes out live over TCP and Lab Streaming Layer. A Unity scene or a Python notebook can react to a person’s sway while it happens.</p>
+    <p>It is all open source. Use it, change it, and tell us what you build.</p>
+    <p class="letter-sign">The Balance Toolkit team</p>
+    <p class="letter-role">Empathic Computing Laboratory, Auckland Bioengineering Institute, University of Auckland</p>
+  </div>
+</section>
+
+<!-- Contact: one field, the citation -->
+<section class="cite" id="paper" aria-labelledby="cite-h">
+  <div class="cite-col">
+    <h2 id="cite-h" class="cite-prompt"><span>Using the toolkit in a paper?</span> Copy the citation.</h2>
+    <div class="cite-field">
+      <input id="cite-text" type="text" readonly aria-label="Citation"
+        value="Valente, A., Kothari, N., Ahmed-Mahmoud, H., Esteves, A., &amp; Billinghurst, M. (2026). The Balance Toolkit: Democratizing balance-based interaction through open-source software for repurposed Wii Balance Boards. CHI PLAY ’26. ACM.">
+      <button type="button" id="cite-copy" aria-label="Copy the BibTeX entry">Copy</button>
+    </div>
+    <p class="cite-next" id="cite-status">Copies the BibTeX entry below. The DOI will be added on publication.</p>
+<pre class="bibtex"><code id="bibtex">@inproceedings{valente2026balancetoolkit,
+  title     = {The Balance Toolkit: Democratizing Balance-Based Interaction
+               Through Open-Source Software for Repurposed Wii Balance Boards},
+  author    = {Valente, Andreia and Kothari, Nidhi and Ahmed-Mahmoud, Hana
+               and Esteves, Augusto and Billinghurst, Mark},
+  booktitle = {Annual Symposium on Computer-Human Interaction in Play (CHI PLAY '26)},
+  year      = {2026},
+  address   = {York, UK},
+  publisher = {ACM}
+}</code></pre>
+    <dl class="cite-facts">
+      <div><dt>Paper</dt><dd>CHI PLAY ’26, York, UK</dd></div>
+      <div><dt>Code</dt><dd><a href="https://github.com/trecitano/The-Balance-Toolkit">github.com/trecitano/The-Balance-Toolkit</a></dd></div>
+      <div><dt>Lab</dt><dd>Empathic Computing Laboratory, University of Auckland</dd></div>
+    </dl>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p class="foot-what">Open-source balance toolkit</p>
+  <nav class="foot-links" aria-label="Footer">
+    <a href="https://github.com/trecitano/The-Balance-Toolkit">Source</a>
+    <a href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Apps</a>
+    <a href="https://youtu.be/_8UwrUgqUao">Video</a>
+    <a href="#paper">Cite</a>
+  </nav>
+  <p class="foot-end">2026, MIT licensed core. Board photos by Dddeco, CC BY 2.5.</p>
+</footer>
+
+<script src="main.js" defer></script>
+</body>
+</html>

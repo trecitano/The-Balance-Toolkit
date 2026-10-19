@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 Pocket · The Balance Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400;62..125,600;62..125,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --red: #e50012; --ink: #fff; --deep: #a8000d; --dark: #161616; --paper: #f2f2f0; }
+body { background: var(--paper); color: var(--dark); font: 400 17px/1.5 'Archivo', sans-serif; padding-bottom: 76px; }
+.hero { background: var(--red); color: var(--ink); min-height: 100svh; display: grid; grid-template-rows: auto 1fr auto; padding: 16px clamp(16px, 4vw, 48px) 24px; overflow: hidden; }
+.top { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.top img { width: 22px; filter: brightness(0) invert(1); }
+.top span { display: flex; align-items: center; gap: 10px; }
+.stage { display: grid; place-items: center; position: relative; }
+.stage .tb { width: min(92vw, 900px); transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .08s linear; }
+.tb-body { fill: #fff; stroke: none; }
+.tb-pad { stroke: var(--red); stroke-opacity: .15; stroke-width: 3; }
+.tb-grid line { stroke: var(--red); stroke-opacity: .2; }
+.tb-s { fill: var(--red); fill-opacity: .15; stroke: var(--red); }
+.tb-trail { stroke: var(--dark); stroke-opacity: .35; stroke-width: 3; }
+.tb-dot { fill: var(--dark); r: 13; }
+h1 { font: 800 clamp(48px, 9vw, 150px)/.86 'Archivo', sans-serif; font-stretch: 70%; text-transform: uppercase; margin: 0; letter-spacing: -.01em; }
+.bottom { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: end; }
+.tilt { display: inline-flex; align-items: center; gap: 10px; padding: 14px 20px; background: var(--dark); color: #fff; border: 0; font-weight: 600; cursor: pointer; transition: transform .1s; }
+.tilt:active { transform: scale(.97); }
+.tilt[hidden] { display: none; }
+.hint { font-size: 15px; opacity: .85; max-width: 38ch; margin: 10px 0 0; }
+.nums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: var(--dark); color: #fff; }
+.nums div { padding: clamp(20px, 4vw, 48px) clamp(16px, 4vw, 48px); }
+.nums div + div { border-left: 1px solid #333; }
+.nums span { font-size: 14px; opacity: .6; display: block; }
+.nums b { font: 800 clamp(56px, 12vw, 200px)/.9 'Archivo', sans-serif; font-stretch: 62%; font-variant-numeric: tabular-nums; }
+.swipe h2 { font: 800 clamp(34px, 5vw, 72px)/.95 'Archivo', sans-serif; font-stretch: 75%; text-transform: uppercase; margin: 0; padding: clamp(48px, 7vw, 96px) clamp(16px, 4vw, 48px) 20px; }
+.rail { display: grid; grid-auto-flow: column; grid-auto-columns: min(78vw, 340px); gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 clamp(16px, 4vw, 48px) 32px; scrollbar-width: none; }
+.rail article { scroll-snap-align: start; background: #fff; padding: 20px; display: grid; gap: 8px; }
+.rail img { height: 220px; width: auto; margin: 0 auto; }
+.rail h3 { margin: 0; font: 800 26px/1 'Archivo', sans-serif; font-stretch: 75%; text-transform: uppercase; }
+.rail p { margin: 0; color: #545454; font-size: 15px; }
+.rail .t { color: var(--red); font-weight: 600; }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0 clamp(16px, 4vw, 48px) clamp(48px, 7vw, 96px); }
+.three div { background: var(--red); color: #fff; padding: 22px; }
+.three b { display: block; font: 800 34px/1 'Archivo', sans-serif; font-stretch: 75%; text-transform: uppercase; margin-bottom: 8px; }
+.dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px clamp(16px, 4vw, 48px); background: var(--dark); color: #fff; }
+.dock a { background: var(--red); color: #fff; padding: 12px 20px; font-weight: 600; text-decoration: none; transition: background .15s; }
+.dock a:hover { background: var(--deep); }
+.kit-bar { bottom: 76px; }
+@media (max-width: 700px) { .bottom { grid-template-columns: 1fr; } .three { grid-template-columns: 1fr; } .dock span { font-size: 14px; } }
+</style>
+</head>
+<body data-concept="5">
+<section class="hero" data-pick="5A" data-pick-name="Full-bleed red hero, board fills the screen">
+  <div class="top"><span><img src="../assets/art/logo-flamingo-red.svg" alt="" width="22" height="33">The Balance Toolkit</span><span>CHI PLAY 2026</span></div>
+  <div class="stage" id="stage"><div id="board" style="width:100%;display:grid;place-items:center"></div></div>
+  <div class="bottom">
+    <div>
+      <h1>Tilt your phone.<br>Shift your weight.</h1>
+      <p class="hint" id="hint">On a phone, tilt it like the board. On a computer, lean with your mouse.</p>
+    </div>
+    <button class="tilt" id="tilt" type="button" data-pick="5B" data-pick-name="Phone tilt control (device orientation)">Use tilt</button>
+  </div>
+</section>
+
+<section class="nums" aria-label="Centre of pressure" data-pick="5C" data-pick-name="Two giant live numbers">
+  <div><span>Left · right (cop_x)</span><b id="nx">+0.00</b></div>
+  <div><span>Back · front (cop_y)</span><b id="ny">+0.00</b></div>
+</section>
+
+<section class="swipe" data-pick="5D" data-pick-name="Swipeable activity cards">
+  <h2>Six activities, guided</h2>
+  <div class="rail" id="rail"></div>
+  <div class="three" data-pick="5E" data-pick-name="Three red fact blocks">
+    <div><b>Pair</b>Press SYNC, scan, add the board to the session. Windows, macOS and Linux.</div>
+    <div><b>Record</b>Every sample at about 100 Hz, written to CSV you can open anywhere.</div>
+    <div><b>Stream</b>TCP 11223 and 11224, plus two LSL streams for your game or lab.</div>
+  </div>
+</section>
+
+<div class="dock" data-pick="5F" data-pick-name="Sticky bottom download bar"><span>Free and open source</span><a href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download the apps</a></div>
+
+<script src="../board.js"></script>
+<script src="shared/kit.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const b = new TBT.Board($('board'), { trail: 60 });
+const sg = (v) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2);
+b.on((s) => {
+  $('nx').textContent = sg(s.x); $('ny').textContent = sg(s.y);
+  b.svg.style.setProperty('--ry', `${(s.x * 10).toFixed(2)}deg`);
+  b.svg.style.setProperty('--rx', `${(s.y * 10).toFixed(2)}deg`);
+});
+const orient = (e) => {
+  if (e.gamma == null) return;
+  // Held in the hand at about 40° from flat; tilting 30° reaches the board's edge.
+  b.setTarget({ x: TBT.clamp(e.gamma / 30), y: TBT.clamp(-(e.beta - 40) / 30) });
+};
+const btn = $('tilt');
+if (!('DeviceOrientationEvent' in window) || !matchMedia('(pointer: coarse)').matches) btn.hidden = true;
+btn.addEventListener('click', async () => {
+  try {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+      if ((await DeviceOrientationEvent.requestPermission()) !== 'granted') throw new Error('denied');
+    }
+    addEventListener('deviceorientation', orient);
+    btn.textContent = 'Tilt is on'; $('hint').textContent = 'Hold the phone like a tray and tilt it.';
+  } catch { $('hint').textContent = 'Tilt is not available here; drag on the board instead.'; }
+});
+$('rail').innerHTML = TBT.ACTIVITIES.map((a) => `<article><img src="../assets/art/steps/${a.pic}.svg" alt="" width="216" height="220" loading="lazy"><h3>${a.title}</h3><p><span class="t">${TBT.mmss(a.totalS)}</span> · ${a.blocks.length} steps · ${a.boards} board${a.boards > 1 ? 's' : ''}</p></article>`).join('');
+</script>
+</body>
+</html>

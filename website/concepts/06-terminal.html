@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 Terminal · The Balance Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --bg: #f4f1ea; --term: #1c1b19; --tink: #ece6d8; --muted: #8f897c; --amber: #ffb84d; --green: #9be08a; --blue: #7cc4ff; --red: #ff6b6b; --pink: #f49ac1; --ink: #1c1b19; }
+body { background: var(--bg); color: var(--ink); font: 400 17px/1.55 'Instrument Sans', sans-serif; }
+code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 18px clamp(16px, 4vw, 48px); }
+header b { font-weight: 600; }
+.btn { display: inline-block; padding: 12px 18px; background: var(--ink); color: var(--bg); text-decoration: none; font-weight: 600; border-radius: 6px; transition: transform .1s, background .15s; }
+.btn:hover { background: #3a3833; } .btn:active { transform: translateY(1px); }
+.hero { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(24px, 4vw, 64px); padding: clamp(24px, 4vw, 64px) clamp(16px, 4vw, 48px); align-items: center; }
+h1 { font: 600 clamp(38px, 4.6vw, 70px)/1.02 'Instrument Sans', sans-serif; letter-spacing: -.025em; margin: 0 0 18px; }
+h1 code { font-size: .8em; background: var(--term); color: var(--amber); padding: 0 .2em; border-radius: 6px; }
+.hero p { color: #5a564e; max-width: 46ch; margin: 0 0 24px; }
+.term { background: var(--term); color: var(--tink); border-radius: 10px; padding: 0 0 18px; font-size: 14px; line-height: 1.6; box-shadow: 0 30px 60px -30px rgba(0,0,0,.5); overflow: hidden; }
+.term .chrome { display: flex; gap: 7px; padding: 12px 14px; border-bottom: 1px solid #2e2c28; }
+.term .chrome i { width: 11px; height: 11px; border-radius: 50%; background: #3a3833; }
+.term pre { margin: 0; padding: 16px 18px 0; white-space: pre; overflow-x: auto; min-height: 330px; }
+.term .p { color: var(--green); } .term .c { color: var(--amber); } .term .d { color: var(--muted); }
+.caret { display: inline-block; width: .6em; height: 1.1em; background: var(--amber); vertical-align: -.2em; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+.wire { background: var(--term); color: var(--tink); padding: clamp(48px, 7vw, 100px) clamp(16px, 4vw, 48px); }
+.wire h2 { font: 600 clamp(32px, 3.6vw, 54px)/1.05 'Instrument Sans', sans-serif; letter-spacing: -.02em; margin: 0 0 8px; color: #fff; }
+.wire > p { color: var(--muted); margin: 0 0 32px; max-width: 60ch; }
+.wire-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: clamp(24px, 4vw, 56px); align-items: start; }
+.tb-body { fill: #262521; stroke: #4a4740; stroke-width: 2; }
+.tb-pad { stroke: #fff; stroke-opacity: .05; }
+.tb-grid line { stroke: var(--amber); stroke-opacity: .2; }
+.tb-s { fill-opacity: .15; stroke-width: 2; }
+.tb-s[data-s="tr"] { fill: var(--red); stroke: var(--red); } .tb-s[data-s="br"] { fill: var(--amber); stroke: var(--amber); }
+.tb-s[data-s="tl"] { fill: var(--green); stroke: var(--green); } .tb-s[data-s="bl"] { fill: var(--pink); stroke: var(--pink); }
+.tb-trail { stroke: var(--blue); stroke-opacity: .6; }
+.tb-dot { fill: var(--blue); }
+.hex { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px 4px; font-size: clamp(13px, 1.3vw, 18px); }
+.hex span { text-align: center; padding: 6px 0; border-radius: 3px; background: #262521; transition: background .2s, color .2s; }
+.hex span.ch { background: #3d3a33; color: #fff; }
+.hex .f-ts { color: var(--muted); } .hex .f-mac { color: #c8bfae; }
+.hex .f-tr { color: var(--red); } .hex .f-br { color: var(--amber); } .hex .f-tl { color: var(--green); } .hex .f-bl { color: var(--pink); }
+.hex .f-x, .hex .f-y { color: var(--blue); }
+.hex span.hl { outline: 1.5px solid currentColor; }
+.dec { margin-top: 22px; width: 100%; border-collapse: collapse; font-size: 14px; }
+.dec td { padding: 7px 0; border-bottom: 1px solid #2e2c28; }
+.dec td:first-child { width: 34%; } .dec td:nth-child(2) { color: var(--muted); } .dec td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.dec tr { cursor: default; } .dec tr:hover td { color: #fff; }
+
+.cmds { padding: clamp(48px, 7vw, 100px) clamp(16px, 4vw, 48px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: clamp(24px, 4vw, 56px); }
+.cmds h2 { font: 600 clamp(30px, 3vw, 44px)/1.05 'Instrument Sans', sans-serif; margin: 0; letter-spacing: -.02em; }
+.cmds dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; }
+.cmds dt, .cmds dd { padding: 12px 0; border-bottom: 1px solid #d9d3c5; margin: 0; }
+.cmds dt { font-family: 'JetBrains Mono', monospace; font-size: 15px; padding-right: 28px; }
+.pipe { margin: 0 clamp(16px, 4vw, 48px) clamp(48px, 7vw, 100px); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pipe pre { background: var(--term); color: var(--tink); padding: 20px; border-radius: 10px; margin: 0; font-size: 14px; overflow-x: auto; }
+.pipe h3 { font-size: 15px; margin: 0 0 8px; }
+footer { padding: 28px clamp(16px, 4vw, 48px); border-top: 1px solid #d9d3c5; font-size: 14px; color: #5a564e; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+@media (max-width: 860px) { .hero, .wire-grid, .cmds, .pipe { grid-template-columns: 1fr; } .cmds dl { grid-template-columns: 1fr; } .cmds dt { border-bottom: 0; padding-bottom: 0; } .term pre { min-height: 260px; font-size: 12px; } }
+</style>
+</head>
+<body data-concept="6">
+<header><b>The Balance Toolkit</b><a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit">GitHub</a></header>
+
+<section class="hero">
+  <div>
+    <h1>A balance board in your <code>stdout</code></h1>
+    <p>Pair a Wii Balance Board, run an activity and stream centre of pressure from the terminal with <code>tbt</code>, or use the desktop app. Same core, same files.</p>
+    <a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download the apps</a>
+  </div>
+  <div class="term" data-pick="6A" data-pick-name="Self-typing terminal with real tbt output">
+    <div class="chrome"><i></i><i></i><i></i></div>
+    <pre id="term" aria-label="Terminal session"></pre>
+  </div>
+</section>
+
+<section class="wire">
+  <h2>Watch the packet change</h2>
+  <p>Every sample goes out on TCP port 11223 as 40 big-endian bytes, <code>&gt;qQ6f</code>. Lean on the board and the bytes that change light up.</p>
+  <div class="wire-grid">
+    <div id="board" data-pick="6B" data-pick-name="Board with colour-coded sensors"></div>
+    <div data-pick="6C" data-pick-name="Live 40-byte hex packet + decoded fields">
+      <div class="hex mono" id="hex" aria-label="Packet bytes"></div>
+      <table class="dec mono" id="dec"></table>
+    </div>
+  </div>
+</section>
+
+<section class="cmds" data-pick="6D" data-pick-name="Command reference list">
+  <h2>Every command</h2>
+  <dl>
+    <dt>tbt</dt><dd>Opens the interactive dashboard: boards, recording, replay and settings in one screen.</dd>
+    <dt>tbt devices scan</dt><dd>Pair new boards. Press the red SYNC button inside the battery compartment.</dd>
+    <dt>tbt devices tare</dt><dd>Zero a connected board’s sensors, with nothing on the board.</dd>
+    <dt>tbt devices identify</dt><dd>Blink a board’s LED for about ten seconds to tell boards apart.</dd>
+    <dt>tbt session run</dt><dd>Record until Ctrl-C, until the activity ends, or until <code>--duration</code> elapses.</dd>
+    <dt>tbt replay</dt><dd>Replay a recorded session through the processing pipeline and streams.</dd>
+    <dt>tbt activities list</dt><dd>List the posturography activity templates.</dd>
+    <dt>tbt settings path</dt><dd>Print where the toolkit keeps its data, shared with the desktop app.</dd>
+  </dl>
+</section>
+
+<section class="pipe" data-pick="6E" data-pick-name="Two code recipes side by side">
+  <div><h3>Pipe samples as JSON Lines</h3><pre><code>tbt session run --duration 30 --live samples \
+  | your-analysis-script</code></pre></div>
+  <div><h3>Read the TCP stream in Python</h3><pre><code>sock = socket.create_connection(("::1", 11223))
+while True:
+    t, mac, tr, br, tl, bl, x, y = \
+        struct.unpack("&gt;qQ6f", sock.recv(40))</code></pre></div>
+</section>
+<footer><span>The Balance Toolkit · CHI PLAY 2026</span><span>Output above is from <code>tbt</code> 0.2.0; the session lines are illustrative.</span></footer>
+
+<script src="../board.js"></script>
+<script src="shared/kit.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+/* Terminal: types two commands. The activities table is real tbt output. */
+const script = [
+  ['cmd', 'tbt activities list'],
+  ['out', 'ID                     TITLE                  BOARDS  LOOPS  DURATION\neyes-open-close        Eyes open-close        1       2      40s\nfunctional-reach-test  Functional Reach Test  1       2      2m 24s\nsingle-leg-stance      Single leg stance      1       2      2m 08s\ntandem-stance          Tandem stance          1       2      2m 08s\ntug                    Timed Up and Go (TUG)  1       2      2m 24s\nsquat-two-boards       Squat                  2       2      24s'],
+  ['cmd', 'tbt session run --activity single-leg-stance --tare --tcp'],
+  ['dim', 'Waiting for boards… connected\nTared. Recording Single leg stance (2m 08s)'],
+];
+const term = $('term');
+const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+let html = '';
+const typeAll = async () => {
+  const wait = (ms) => new Promise((r) => setTimeout(r, TBT.reduced ? 0 : ms));
+  for (const [k, text] of script) {
+    if (k === 'cmd') {
+      html += '<span class="p">$ </span><span class="c">';
+      for (const ch of text) { html += esc(ch); term.innerHTML = html + '</span><span class="caret"></span>'; await wait(38); }
+      html += '</span>\n'; await wait(400);
+    } else { html += `<span class="${k === 'dim' ? 'd' : ''}">${esc(text)}</span>\n`; term.innerHTML = html; await wait(900); }
+  }
+  live();
+};
+const live = () => {
+  const base = html;
+  b.on((s) => {
+    if (!s.on) return;
+    term.innerHTML = base + `<span class="d">${s.t.toFixed(1).padStart(6)} s </span>${s.w.toFixed(2)} kg  x ${s.x >= 0 ? '+' : '−'}${Math.abs(s.x).toFixed(3)}  y ${s.y >= 0 ? '+' : '−'}${Math.abs(s.y).toFixed(3)}<span class="caret"></span>`;
+  });
+};
+/* Packet */
+const b = new TBT.Board($('board'), { trail: 80 });
+const F = [['ts', 0, 8, 'timestamp', 'i64 µs'], ['mac', 8, 16, 'mac_address', 'u64'], ['tr', 16, 20, 'top_right', 'f32 kg'], ['br', 20, 24, 'bottom_right', 'f32 kg'], ['tl', 24, 28, 'top_left', 'f32 kg'], ['bl', 28, 32, 'bottom_left', 'f32 kg'], ['x', 32, 36, 'cop_x', 'f32'], ['y', 36, 40, 'cop_y', 'f32']];
+const field = (i) => F.find((f) => i >= f[1] && i < f[2])[0];
+$('hex').innerHTML = Array.from({ length: 40 }, (_, i) => `<span class="f-${field(i)}" data-f="${field(i)}">00</span>`).join('');
+$('dec').innerHTML = F.map((f) => `<tr data-f="${f[0]}"><td class="f-${f[0]}">${f[3]}</td><td>${f[1]}–${f[2] - 1} · ${f[4]}</td><td id="d-${f[0]}">0</td></tr>`).join('');
+const cells = [...$('hex').children];
+let prev = [], n = 0;
+b.on((s) => {
+  if (n++ % 6) return; // about 10 packets a second on screen, so the changes are readable
+  const bytes = TBT.packet(s);
+  bytes.forEach((v, i) => { const h = TBT.hex(v); cells[i].textContent = h; cells[i].classList.toggle('ch', prev[i] !== undefined && prev[i] !== v); });
+  prev = bytes;
+  $('d-ts').textContent = String(Date.now() * 1000).slice(-9); $('d-mac').textContent = '37:FE:A1:2B:FD:F4';
+  ['tr', 'br', 'tl', 'bl'].forEach((k) => ($(`d-${k}`).textContent = s[k].toFixed(3)));
+  $('d-x').textContent = s.x.toFixed(4); $('d-y').textContent = s.y.toFixed(4);
+});
+document.querySelectorAll('#dec tr').forEach((tr) => {
+  tr.addEventListener('mouseenter', () => cells.forEach((c) => c.classList.toggle('hl', c.dataset.f === tr.dataset.f)));
+  tr.addEventListener('mouseleave', () => cells.forEach((c) => c.classList.remove('hl')));
+});
+typeAll();
+</script>
+</body>
+</html>

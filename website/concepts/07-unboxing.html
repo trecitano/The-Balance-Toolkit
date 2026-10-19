@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07 Unboxing · The Balance Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --bg: #eef2f8; --card: #fff; --ink: #14233a; --muted: #5b6b82; --blue: #397aac; --deep: #234f74; --red: #e50012; --ok: #1f9d6a; }
+body { background: var(--bg); color: var(--ink); font: 400 17px/1.55 'Figtree', sans-serif; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 18px clamp(16px, 4vw, 48px); }
+header b { font-weight: 800; display: flex; gap: 10px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 20px; background: var(--blue); color: #fff; text-decoration: none; font-weight: 700; border: 0; border-radius: 999px; cursor: pointer; transition: background .15s, transform .1s, opacity .2s; }
+.btn:hover { background: var(--deep); } .btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+.btn-red { background: var(--red); } .btn-red:hover { background: #b3000e; }
+.intro { text-align: center; padding: clamp(24px, 4vw, 56px) 16px 32px; }
+h1 { font: 800 clamp(40px, 5.6vw, 84px)/1 'Figtree', sans-serif; letter-spacing: -.03em; margin: 0 auto 14px; max-width: 16ch; }
+.intro p { color: var(--muted); max-width: 52ch; margin: 0 auto; font-size: 19px; }
+
+.setup { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 24px; padding: 0 clamp(16px, 4vw, 48px) clamp(48px, 7vw, 96px); align-items: start; }
+.rail { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; position: sticky; top: 16px; }
+.rail li { background: var(--card); border-radius: 16px; padding: 16px 18px; display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: center; opacity: .5; transition: opacity .3s, box-shadow .3s; }
+.rail li.on { opacity: 1; box-shadow: 0 0 0 2px var(--blue); }
+.rail li.done { opacity: 1; }
+.rail .n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--bg); font-weight: 800; }
+.rail li.done .n { background: var(--ok); color: #fff; }
+.rail b { display: block; } .rail span { font-size: 14px; color: var(--muted); }
+.stage { background: var(--card); border-radius: 28px; padding: clamp(18px, 3vw, 40px); display: grid; gap: 22px; }
+.status { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pill { padding: 6px 14px; border-radius: 999px; background: var(--bg); font-weight: 700; font-size: 14px; }
+.pill.ok { background: #dcf3e8; color: var(--ok); }
+.pill.blink::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); margin-right: 8px; animation: bl .6s infinite alternate; }
+@keyframes bl { to { opacity: .1; } }
+.boardbox { position: relative; transition: opacity .4s, filter .4s; }
+.boardbox.asleep { opacity: .35; filter: grayscale(1); }
+.tb-body { fill: #fbfcfe; stroke: var(--ink); stroke-width: 2.5; }
+.tb-s { fill: var(--blue); stroke: var(--blue); fill-opacity: .2; }
+.tb-trail { stroke: var(--blue); stroke-opacity: .5; }
+.tb-dot { fill: var(--red); }
+.bay { fill: #e6ebf2; stroke: var(--ink); stroke-width: 2; }
+.sync { fill: var(--red); cursor: pointer; transition: r .1s; }
+.sync:hover { r: 13; }
+.led { fill: #9fb3c8; } .led.on { fill: var(--blue); }
+.sensors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.sensors div { background: var(--bg); border-radius: 14px; padding: 12px 14px; }
+.sensors span { font-size: 13px; color: var(--muted); display: block; }
+.sensors b { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; transition: color .3s; }
+.sensors .nz b { color: var(--red); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.say { margin: 0; font-size: 19px; font-weight: 500; }
+.log { background: var(--ink); color: #cfe0f2; border-radius: 16px; padding: 14px 16px; font: 13px/1.6 ui-monospace, monospace; height: 140px; overflow: hidden; display: none; }
+.log.on { display: block; }
+
+.after { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding: 0 clamp(16px, 4vw, 48px) clamp(48px, 7vw, 96px); }
+.after article { background: var(--card); border-radius: 24px; overflow: hidden; }
+.after img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: 62% 0; }
+.after div { padding: 18px 20px 22px; }
+.after h3 { margin: 0 0 6px; font-size: 21px; font-weight: 800; }
+.after p { margin: 0; color: var(--muted); font-size: 15px; }
+footer { padding: 28px clamp(16px, 4vw, 48px); color: var(--muted); font-size: 14px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+@media (max-width: 900px) { .setup { grid-template-columns: 1fr; } .rail { position: static; grid-auto-flow: column; overflow-x: auto; } .rail li { min-width: 200px; } .sensors { grid-template-columns: 1fr 1fr; } .after { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body data-concept="7">
+<header><b><img src="../assets/art/logo-flamingo-red.svg" alt="" width="18" height="27">The Balance Toolkit</b><a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download</a></header>
+<section class="intro">
+  <h1 data-pick="7A" data-pick-name="Friendly centred headline">From the box to live data in four steps</h1>
+  <p>Try the setup right here on a simulated board. In the real apps it takes about a minute.</p>
+</section>
+
+<section class="setup">
+  <ol class="rail" id="rail" data-pick="7B" data-pick-name="Step rail that ticks off as you go">
+    <li class="on"><span class="n">1</span><div><b>Pair</b><span>Press SYNC in the battery bay</span></div></li>
+    <li><span class="n">2</span><div><b>Tare</b><span>Zero each sensor, board empty</span></div></li>
+    <li><span class="n">3</span><div><b>Step on</b><span>Watch the load arrive</span></div></li>
+    <li><span class="n">4</span><div><b>Stream</b><span>CSV, TCP and LSL</span></div></li>
+  </ol>
+  <div class="stage" data-pick="7C" data-pick-name="Interactive setup: SYNC, tare, step on, stream">
+    <div class="status"><p class="say" id="say">Press the red SYNC button. On a real board it sits in the battery bay underneath.</p><span class="pill" id="pill">Not paired</span></div>
+    <div class="boardbox asleep" id="boardbox"><div id="board"></div></div>
+    <div class="sensors" id="sensors" data-pick="7D" data-pick-name="Per-sensor tare readout (red until zeroed)">
+      <div><span>Top left</span><b id="tl">–</b></div><div><span>Top right</span><b id="tr">–</b></div>
+      <div><span>Bottom left</span><b id="bl">–</b></div><div><span>Bottom right</span><b id="br">–</b></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-red" id="a-sync" type="button">Press SYNC</button>
+      <button class="btn" id="a-tare" type="button" disabled>Tare board</button>
+      <button class="btn" id="a-step" type="button" disabled>Step on</button>
+      <button class="btn" id="a-stream" type="button" disabled>Start streaming</button>
+    </div>
+    <div class="log" id="log" aria-live="off"></div>
+  </div>
+</section>
+
+<section class="after" data-pick="7E" data-pick-name="Three app screenshots as next-step cards">
+  <article><img src="../assets/own/app-devices.png" alt="The Devices page listing a paired board with its battery level" width="1472" height="900" loading="lazy"><div><h3>Devices</h3><p>Scan, pair, rename and identify boards. One or two per session.</p></div></article>
+  <article><img src="../assets/own/app-session.png" alt="A recording in progress on the Session page" width="1472" height="900" loading="lazy"><div><h3>Session</h3><p>Pick an activity, tare, record. Plots follow the board live.</p></div></article>
+  <article><img src="../assets/own/app-activities.png" alt="The Activities page with six activity cards" width="1472" height="900" loading="lazy"><div><h3>Activities</h3><p>Six guided protocols, each a timeline of illustrated steps.</p></div></article>
+</section>
+<footer><span>The Balance Toolkit · CHI PLAY 2026</span><span>Screenshots taken in demo mode. Tare offsets above are illustrative.</span></footer>
+
+<script src="../board.js"></script>
+<script src="shared/kit.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const b = new TBT.Board($('board'), { stance: 'off', trail: 90 });
+b.setDrift({ tr: 0.42, br: 0.38, tl: 0.51, bl: 0.47 });
+const NS = 'http://www.w3.org/2000/svg';
+// The battery bay with the SYNC button, drawn under the board's top edge.
+b.extra.innerHTML = `<rect class="bay" x="196" y="250" width="128" height="44" rx="10"/><circle class="led" id="led" cx="222" cy="272" r="6"/><circle class="sync" id="sync" cx="296" cy="272" r="11"><title>SYNC</title></circle>`;
+let stage = 0, paired = false;
+const rail = [...$('rail').children];
+const go = (n) => { stage = n; rail.forEach((li, i) => { li.classList.toggle('on', i === n); li.classList.toggle('done', i < n); }); };
+const pair = () => {
+  if (paired) return; paired = true;
+  $('pill').textContent = 'Scanning…'; $('pill').className = 'pill blink'; $('a-sync').disabled = true;
+  setTimeout(() => {
+    $('led').classList.add('on'); $('boardbox').classList.remove('asleep');
+    $('pill').textContent = 'Connected · battery 75%'; $('pill').className = 'pill ok';
+    $('say').textContent = 'The empty board does not read zero. Tare it.';
+    $('a-tare').disabled = false; go(1);
+  }, 1400);
+};
+$('a-sync').addEventListener('click', pair);
+b.svg.querySelector('#sync').addEventListener('click', (e) => { e.stopPropagation(); pair(); });
+$('a-tare').addEventListener('click', () => {
+  b.tare(); $('a-tare').disabled = true; $('a-step').disabled = false; go(2);
+  $('say').textContent = 'Each sensor stored its own offset. Now step on.';
+});
+$('a-step').addEventListener('click', () => {
+  b.setStance('both'); $('a-step').disabled = true; $('a-stream').disabled = false; go(3);
+  $('say').textContent = 'That dot is your centre of pressure. Lean on it with the pointer.';
+});
+const log = $('log'); const lines = [];
+$('a-stream').addEventListener('click', () => {
+  log.classList.add('on'); $('a-stream').disabled = true; go(4); rail[3].classList.add('done');
+  $('say').textContent = 'Streaming on TCP 11223 and LSL, and recording to CSV.';
+});
+let n = 0;
+b.on((s) => {
+  if (!paired || $('boardbox').classList.contains('asleep')) return;
+  for (const k of ['tl', 'tr', 'bl', 'br']) {
+    $(k).textContent = s[k].toFixed(2);
+    $(k).parentElement.classList.toggle('nz', stage === 1 && Math.abs(s[k]) > 0.05);
+  }
+  if (stage === 4 && n++ % 6 === 0) {
+    lines.push(`${new Date().toISOString()}  ${s.tr.toFixed(2)}  ${s.br.toFixed(2)}  ${s.tl.toFixed(2)}  ${s.bl.toFixed(2)}`);
+    if (lines.length > 7) lines.shift();
+    log.textContent = lines.join('\n');
+  }
+});
+</script>
+</body>
+</html>

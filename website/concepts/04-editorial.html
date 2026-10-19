@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 Editorial · The Balance Toolkit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared/kit.css">
+<style>
+:root { --bg: #f3ede2; --ink: #1b1915; --muted: #6b6457; --red: #e50012; --rule: #cfc5b3; }
+body { background: var(--bg); color: var(--ink); font: 400 19px/1.6 'Newsreader', serif; }
+.disp { font-family: 'Fraunces', serif; }
+.mast { display: flex; justify-content: space-between; align-items: baseline; padding: 18px clamp(16px, 4vw, 56px); border-bottom: 2px solid var(--ink); font-size: 15px; }
+.mast b { font: 600 22px 'Fraunces', serif; }
+.mast a { text-decoration: none; border-bottom: 1px solid; }
+.cover { position: relative; padding: clamp(24px, 4vw, 56px) clamp(16px, 4vw, 56px) 0; overflow: hidden; min-height: 86vh; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: end; gap: 24px; }
+.cover h1 { font: 300 clamp(56px, 10vw, 168px)/.88 'Fraunces', serif; letter-spacing: -.035em; margin: 0 0 clamp(24px, 4vw, 56px); }
+.cover h1 em { font-style: italic; color: var(--red); padding-right: .08em; }
+.cover .flamingo { align-self: stretch; display: grid; place-items: end center; }
+.cover .flamingo img { height: min(78vh, 720px); width: auto; animation: sway 5s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes sway { 50% { transform: rotate(1.4deg); } }
+.deck { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; border-top: 1px solid var(--ink); padding: 20px 0 28px; font-size: 17px; }
+.deck p { margin: 0; }
+.deck strong { font-family: 'Fraunces', serif; font-weight: 600; }
+.btn { display: inline-block; padding: 12px 20px; background: var(--ink); color: var(--bg); text-decoration: none; font: 500 16px 'Newsreader', serif; transition: background .15s; }
+.btn:hover { background: var(--red); }
+
+.essay { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 640px) minmax(0, 1fr); padding: clamp(56px, 8vw, 120px) clamp(16px, 4vw, 56px); gap: 32px; }
+.essay > * { grid-column: 2; }
+.essay .kicker { font: 600 15px 'Fraunces', serif; color: var(--red); margin: 0; }
+.essay h2 { font: 300 clamp(36px, 4.4vw, 64px)/1.02 'Fraunces', serif; letter-spacing: -.02em; margin: 0; }
+.essay p { margin: 0; }
+.essay .drop::first-letter { float: left; font: 600 5.2em/.8 'Fraunces', serif; margin: .06em .08em 0 0; color: var(--red); }
+.figure { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 32px; align-items: end; margin: 24px 0; }
+.figure .cap { font-size: 15px; color: var(--muted); border-top: 1px solid var(--ink); padding-top: 10px; }
+.figure .cap b { color: var(--ink); font-family: 'Fraunces', serif; }
+.figure .num { font: 300 34px/1.2 'Fraunces', serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tb-body { fill: #fbf8f2; stroke: var(--ink); stroke-width: 2; }
+.tb-pad { stroke: var(--ink); stroke-opacity: .2; }
+.tb-grid line { stroke: var(--ink); stroke-opacity: .15; }
+.tb-s { fill: var(--ink); fill-opacity: .08; stroke: var(--ink); stroke-width: 1.5; }
+.tb-trail { stroke: var(--red); stroke-width: 1.8; stroke-opacity: .7; }
+.tb-dot { fill: var(--red); }
+
+.figures { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 2px solid var(--ink); border-bottom: 1px solid var(--ink); margin: 24px 0; }
+.figures div { padding: 28px 24px 28px 0; }
+.figures div + div { border-left: 1px solid var(--rule); padding-left: 24px; }
+.figures b { display: block; font: 300 clamp(64px, 8vw, 128px)/.9 'Fraunces', serif; letter-spacing: -.04em; }
+.figures b sup { font-size: .35em; vertical-align: top; color: var(--muted); letter-spacing: 0; }
+.figures span { font-size: 16px; color: var(--muted); }
+
+.spread { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 4px; }
+.spread figure { margin: 0; position: relative; overflow: hidden; }
+.spread img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 4 / 3; transition: transform 1.2s; }
+.spread figure:hover img { transform: scale(1.03); }
+.spread figcaption { position: absolute; left: 16px; bottom: 14px; color: #fff; font-size: 14px; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+.spread figcaption a { color: #fff; }
+.cite { padding: clamp(56px, 8vw, 110px) clamp(16px, 4vw, 56px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 32px; border-bottom: 2px solid var(--ink); }
+.cite h2 { font: 300 clamp(32px, 3vw, 48px)/1 'Fraunces', serif; margin: 0; }
+.cite blockquote { margin: 0; font-size: 20px; }
+footer { padding: 24px clamp(16px, 4vw, 56px); font-size: 14px; color: var(--muted); }
+@media (max-width: 860px) {
+  .cover { grid-template-columns: 1fr; min-height: 0; } .cover .flamingo { display: none; }
+  .deck, .figures, .figure, .spread, .cite { grid-template-columns: 1fr; }
+  .figures div + div { border-left: 0; padding-left: 0; border-top: 1px solid var(--rule); }
+  .essay { grid-template-columns: 1fr; } .essay > *, .figure, .figures { grid-column: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .cover .flamingo img { animation: none; } }
+</style>
+</head>
+<body data-concept="4">
+<div class="mast"><b>The Balance Toolkit</b><span>CHI PLAY 2026 · York</span><a href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download</a></div>
+
+<section class="cover" data-pick="4A" data-pick-name="Magazine cover: giant serif + swaying flamingo">
+  <h1>Standing <em>still</em> is hard work</h1>
+  <div class="flamingo"><img src="../assets/art/logo-flamingo-red.svg" alt="The toolkit's flamingo logo, standing on one leg" width="200" height="300"></div>
+  <div class="deck">
+    <p><strong>A balance lab from a game accessory.</strong> The Balance Toolkit turns the Wii Balance Board into a research instrument.</p>
+    <p>It pairs the board on Windows, macOS and Linux, measures sway with the metrics clinicians report, and streams it live.</p>
+    <p><a class="btn" href="https://github.com/trecitano/The-Balance-Toolkit-Apps">Download the apps</a></p>
+  </div>
+</section>
+
+<article class="essay">
+  <p class="kicker">The problem</p>
+  <h2>Force plates cost a lab. This board was a toy.</h2>
+  <p class="drop" data-pick="4B" data-pick-name="Long-form essay with drop cap">Even when you think you are standing still, you are not. Your centre of pressure wanders a few millimetres every second, and how far it wanders says something about your balance. Measuring it usually takes a laboratory force plate. The Wii Balance Board has four load sensors, one in each corner, and that is enough to compute the same thing.</p>
+
+  <div class="figure" data-pick="4C" data-pick-name="Live board as a numbered figure with caption">
+    <div id="board"></div>
+    <div class="cap"><b>Fig. 1</b> Centre of pressure from four corner sensors, computed live with the toolkit’s formula. Lean on it with your pointer.
+      <p class="num" id="fig-num">x +0.000 · y +0.000</p></div>
+  </div>
+
+  <p>We asked 26 balance and rehabilitation experts in six regions what kept them from using the board. Most named the same few things.</p>
+  <div class="figures" data-pick="4D" data-pick-name="Survey figures as huge numerals">
+    <div><b>17<sup>/26</sup></b><span>named cost as a barrier to balance equipment</span></div>
+    <div><b>13<sup>/18</sup></b><span>board users had trouble pairing it over Bluetooth</span></div>
+    <div><b>9<sup>/18</sup></b><span>lost the Bluetooth connection during use</span></div>
+  </div>
+  <p>So the toolkit starts there: pairing that works, one or two boards in a session, six guided activities, and the centre-of-pressure and stability metrics clinicians already report, written to plain CSV and streamed over TCP and LSL.</p>
+</article>
+
+<section class="spread" data-pick="4E" data-pick-name="Full-bleed photo spread with credits">
+  <figure><img src="../assets/found/wii-balance-board.jpg" alt="A white Wii Balance Board seen from above" width="1920" height="1440" loading="lazy"><figcaption>The board from above. Photo: <a href="https://commons.wikimedia.org/w/index.php?curid=3168572">Dddeco</a>, CC BY 2.5</figcaption></figure>
+  <figure><img src="../assets/found/wii-balance-board-2.jpg" alt="The underside of a Wii Balance Board with its four feet" width="1920" height="1440" loading="lazy"><figcaption>Four feet, four sensors. Photo: <a href="https://commons.wikimedia.org/w/index.php?curid=3168578">Dddeco</a>, CC BY 2.5</figcaption></figure>
+</section>
+
+<section class="cite" data-pick="4F" data-pick-name="Citation as a closing block">
+  <h2>Cite the paper</h2>
+  <blockquote>Valente, A., Kothari, N., Ahmed-Mahmoud, H., Esteves, A. &amp; Billinghurst, M. (2026). The Balance Toolkit: Democratizing Balance-Based Interaction Through Open-Source Software for Repurposed Wii Balance Boards. In <i>CHI PLAY ’26</i>, York, UK. ACM. DOI to be added on publication.</blockquote>
+</section>
+<footer>Empathic Computing Laboratory · Source on <a href="https://github.com/trecitano/The-Balance-Toolkit">GitHub</a></footer>
+
+<script src="../board.js"></script>
+<script src="shared/kit.js"></script>
+<script>
+const b = new TBT.Board(document.getElementById('board'), { trail: 160 });
+const out = document.getElementById('fig-num');
+const sg = (v) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(3);
+b.on((s) => { out.textContent = `x ${sg(s.x)} · y ${sg(s.y)}`; });
+</script>
+</body>
+</html>
