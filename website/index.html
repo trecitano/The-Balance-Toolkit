@@ -101,6 +101,7 @@ p { margin: 0; }
 .rows { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--ink); }
 .rows a { display: block; padding: 18px 0; border-bottom: 1px solid var(--rule); font: 600 clamp(24px, 2.4vw, 34px)/1.1 var(--font); text-decoration: none; transition: padding .2s, color .16s; }
 .rows a:hover { color: var(--red); padding-left: 10px; }
+.note { margin-top: 20px; font-size: 17px; color: var(--muted); }
 
 /* Paper */
 .bib { background: var(--paper); border-radius: 20px; overflow: hidden; }
@@ -160,10 +161,11 @@ p { margin: 0; }
     <video src="assets/own/app-activities.webm" poster="assets/own/app-activities.webp" aria-label="The desktop app's list of activities, opening two of them to show their steps" width="1104" height="675" autoplay muted loop playsinline></video>
   </div>
   <ul class="rows">
-    <li><a href="https://github.com/AndreiaValente/The-Balance-Toolkit-Apps">Desktop app</a></li>
+    <li><a href="https://github.com/AndreiaValente/The-Balance-Toolkit-Apps/raw/main/windows/the-balance-toolkit.exe">Windows app</a></li>
+    <li><a href="https://github.com/AndreiaValente/The-Balance-Toolkit-Apps/raw/main/android/the-balance-toolkit.apk">Android app</a></li>
     <li><a href="https://youtu.be/_8UwrUgqUao">Video walkthrough</a></li>
-    <li><a href="https://github.com/trecitano/The-Balance-Toolkit/tree/main/apps/android">Android app</a></li>
   </ul>
+  <p class="note">On Linux and macOS, the desktop app can be compiled from the <a class="link" href="https://github.com/trecitano/The-Balance-Toolkit/blob/main/INSTALL.md">source code</a>.</p>
 </section>
 
 <section class="sec" id="paper" aria-labelledby="cite-h">
@@ -193,7 +195,7 @@ p { margin: 0; }
 <script>
 // Section entrances: each part rises in turn when its section comes into view.
 document.documentElement.classList.add('js');
-const parts = document.querySelectorAll('.intro, .stage, .live, .hint, .sec-head > *, .shots video, .rows li, .bib');
+const parts = document.querySelectorAll('.intro, .stage, .live, .hint, .sec-head > *, .shots video, .rows li, .note, .bib');
 parts.forEach((el) => { el.classList.add('rv'); el.style.setProperty('--d', `${[...el.parentNode.children].indexOf(el) * 70}ms`); });
 const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
 // The cover is the first view, so its parts rise on load (after a reflow, so they start hidden); the rest rise on scroll.
