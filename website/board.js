@@ -1,4 +1,4 @@
-// Shared simulation for the concept pages: a Wii Balance Board seen from above, its four
+// The cover's simulation: a Wii Balance Board seen from above, its four
 // corner sensors, and centre of pressure computed with the toolkit's own formula.
 (() => {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -138,7 +138,9 @@
       svgEl.addEventListener('pointerdown', (e) => { this.dragging = true; this.target = toCop(e); svgEl.setPointerCapture?.(e.pointerId); });
       svgEl.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') this.target = null; });
       svgEl.addEventListener('pointerup', (e) => { this.dragging = false; if (e.pointerType !== 'mouse') this.target = null; });
-      svgEl.style.touchAction = 'none';
+      // A vertical swipe scrolls the page (and cancels the drag) so the board never traps scrolling on a phone.
+      svgEl.addEventListener('pointercancel', () => { this.dragging = false; this.target = null; });
+      svgEl.style.touchAction = 'pan-y pinch-zoom';
     }
     loop(now) {
       const t = (now - this.t0) / 1000;
