@@ -24,7 +24,6 @@ const STOPS = [
   { phi: 1.05, theta: -0.45, desk: DESK, mob: MOB, twin: 0, cop: 1, link: 1, sync: 0, flamingo: 0 },
   { phi: 0.85, theta: 0.15,  desk: DESK, mob: MOB, twin: 0, cop: 1, link: 1, sync: 0, flamingo: 0 },
   { phi: 1.1,  theta: 0.6,   desk: DESK, mob: MOB, twin: 0, cop: 1, link: 1, sync: 0, flamingo: 0 },
-  { phi: 0.95, theta: -0.3,  desk: DESK, mob: MOB, twin: 0, cop: 1, link: 1, sync: 0, flamingo: 0 },
   { phi: 0.9,  theta: 0.25,  desk: [0.67, 1.5, 0.30, 0.27], mob: [0.5, 1.45, 0.62, 0.15], twin: 0, cop: 0, link: 0, sync: 0, flamingo: 0 },
 ];
 // Before the story pins: the board seen from straight above, like the cover's plan view, with the
@@ -83,7 +82,7 @@ const dots = steps.map((s) => {
   b.type = "button";
   b.setAttribute("aria-label", s.dataset.title);
   b.title = s.dataset.title;
-  b.addEventListener("click", () => s.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" }));
+  b.addEventListener("click", () => s.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" }));
   rail.appendChild(b);
   return b;
 });
@@ -287,33 +286,7 @@ function stepPhone(now) {
   phoneShots[phoneIndex].classList.add("is-on");
 }
 
-// ---- terminal, typed out with the commands from the README
-const TERM = [
-  { cmd: "cargo build --release -p toolkit-cli" },
-  { cmd: "./target/release/tbt devices scan", note: "# press the board's SYNC button, Ctrl-C when paired" },
-  { cmd: "./target/release/tbt session run --tcp", note: "# record every connected board until Ctrl-C" },
-];
-const termEl = root.querySelector(".tbf-term pre");
-const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-let typed = 0, typedShown = -1;
-function renderTerm(n) {
-  let left = Math.floor(n), html = "", cursor = false;
-  for (const line of TERM) {
-    if (left <= 0) break;
-    const shown = line.cmd.slice(0, left);
-    left -= line.cmd.length + 14;                 // a short pause after each command
-    const done = shown.length === line.cmd.length;
-    html += `<span class="p">$</span> ${esc(shown)}`;
-    if (!done) { html += '<span class="k"></span>'; cursor = true; break; }
-    html += "\n";
-    if (line.note) html += `<span class="c">${esc(line.note)}</span>\n`;
-  }
-  if (!cursor) html += '<span class="p">$</span> <span class="k"></span>';
-  termEl.innerHTML = html;
-}
-const TERM_TOTAL = TERM.reduce((s, l) => s + l.cmd.length + 14, 0);
-
-// ---- active stop: swap panels, play the right video, restart the terminal
+// ---- active stop: swap panels, play the right video
 let active = -1;
 function setActive(i) {
   if (i === active) return;
@@ -325,7 +298,6 @@ function setActive(i) {
     if (v) { if (on) v.play().catch(() => {}); else v.pause(); }
   });
   dots.forEach((d, k) => d.setAttribute("aria-current", k === i ? "true" : "false"));
-  if (i === 6) { typed = reduceMotion ? TERM_TOTAL : 0; typedShown = -1; }
   if (i === 4) phoneSince = performance.now();
 }
 
@@ -469,10 +441,6 @@ function frame(now) {
 
   // panels that follow the session
   if (active === 4) stepPhone(now);
-  if (active === 6) {
-    typed = Math.min(TERM_TOTAL, typed + dt * 38);
-    if (Math.floor(typed) !== typedShown) { typedShown = Math.floor(typed); renderTerm(typed); }
-  }
 
   renderer.render(scene, camera);
 }

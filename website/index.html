@@ -43,7 +43,7 @@ a { color: inherit; }
 :root {
   --bg: #f4f4f2; --paper: #fff; --ink: #121212; --muted: #5b5a56; --rule: #d9d6cf;
   --red: #e50012; --red-dark: #b8000e;
-  --pad: max(clamp(24px, 9vw, 180px), (100% - 1320px) / 2); /* side margins; content stops at 1320px and centres */
+  --pad: max(clamp(24px, 7vw, 180px), (100% - 1600px) / 2); /* side margins; content stops at 1600px and centres */
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Roboto", "Helvetica Neue", Arial, sans-serif;
 }
 body { background: var(--bg); color: var(--ink); font: 400 18px/1.6 var(--font); }
@@ -115,8 +115,8 @@ p { margin: 0; }
 
 
 /* Paper */
-.bib { max-width: 760px; margin-inline: auto; background: var(--paper); border-radius: 20px; overflow: hidden; }
-#paper .sec-head { max-width: 760px; margin-inline: auto; grid-template-columns: minmax(0, 1fr) auto; }   /* the heading lines up with the centred card */
+.bib { max-width: 960px; margin-inline: auto; background: var(--paper); border-radius: 20px; overflow: hidden; }
+#paper .sec-head { max-width: 960px; margin-inline: auto; grid-template-columns: minmax(0, 1fr) auto; }   /* the heading lines up with the centred card */
 /* What's next: side-by-side columns, ruled like the cover's stats row */
 .next { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; border-top: 2px solid var(--ink); }
 .next li { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px 24px 0 0; }
@@ -167,7 +167,7 @@ p { margin: 0; }
 /* Features: a sticky stage; the steps scroll over it. The 3D board sits low as the input,
    a device panel above it changes per feature, and a red line carries the data between them.
    Stops follow the paper's priorities: pairing, recording, Unity, replay, Android, activities. */
-.tbf { padding-block: 0; --tbf-term: #141414; --tbf-term-ink: #e9e7e1; --tbf-term-dim: #8d8a83; --tbf-device: #161616; --tbf-gl: #111215; --tbf-gl-edge: #2a2b31; }
+.tbf { padding-block: 0; --tbf-device: #161616; --tbf-gl: #111215; --tbf-gl-edge: #2a2b31; }
 .tbf-story { position: relative; }
 .tbf-stage { position: sticky; top: 0; height: 100vh; height: 100svh; }
 .tbf-canvas, .tbf-link { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
@@ -179,8 +179,8 @@ p { margin: 0; }
 .tbf-screens { position: absolute; left: 38%; right: 40px; top: 6%; height: 57%; container-type: size; }
 .tbf-screen { position: absolute; inset: 0; margin: 0; display: grid; place-items: center; opacity: 0; transform: translateY(18px) scale(.98); transition: opacity .5s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); pointer-events: none; }
 .tbf-screen.is-active { opacity: 1; transform: none; pointer-events: auto; }
-.tbf-screen[data-stop="7"] { inset: 0 0 -40% 0; }
-.tbf-screen[data-stop="7"] .film { width: min(100cqw, 140cqh * 16 / 9); }
+.tbf-screen[data-stop="6"] { inset: 0 0 -40% 0; }
+.tbf-screen[data-stop="6"] .film { width: min(100cqw, 140cqh * 16 / 9); }
 
 /* everyday laptop */
 .tbf-laptop { width: min(100cqw, 100cqh * 1.52); }
@@ -198,19 +198,7 @@ p { margin: 0; }
 .tbf-gl-glass { position: absolute; inset: 0; width: 100%; height: 100%; mix-blend-mode: screen; pointer-events: none; }   /* faint sheen over the display */
 
 
-/* windows, terminal, phone, downloads */
-.tbf-window { width: min(100cqw, 100cqh * 1.6); aspect-ratio: 1.6; display: flex; flex-direction: column; background: var(--paper, #fff); border: 1px solid var(--rule, #d9d6cf); border-radius: 12px; overflow: hidden; box-shadow: 0 18px 40px -24px rgba(0,0,0,.35); }
-.tbf-bar { display: flex; align-items: center; gap: 6px; padding: 0 12px; height: 34px; flex: none; border-bottom: 1px solid var(--rule, #d9d6cf); font-size: 13px; color: var(--muted, #5b5a56); }
-.tbf-bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--rule, #d9d6cf); }
-.tbf-bar span { margin-left: 8px; }
-.tbf-term { background: var(--tbf-term); border-color: var(--tbf-term); }
-.tbf-term .tbf-bar { border-color: #2a2a2a; color: var(--tbf-term-dim); }
-.tbf-term .tbf-bar i { background: #3a3a3a; }
-.tbf-term pre { margin: 0; padding: 14px 16px; flex: 1; overflow: hidden; white-space: pre-wrap; word-break: break-word; font: 13px/1.7 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; color: var(--tbf-term-ink); }
-.tbf-term .p { color: var(--red, #e50012); }
-.tbf-term .c { color: var(--tbf-term-dim); }
-.tbf-term .k { display: inline-block; width: .55em; height: 1.1em; vertical-align: -0.2em; background: var(--tbf-term-ink); animation: tbf-blink 1s steps(1) infinite; }
-@keyframes tbf-blink { 50% { opacity: 0; } }
+/* phone, downloads */
 
 .tbf-phone { position: relative; height: 100cqh; max-width: 100cqw; aspect-ratio: 9 / 19.5; background: var(--tbf-device); border-radius: 30px; padding: 9px; box-sizing: border-box; }
 .tbf-phone-screen { position: relative; height: 100%; border-radius: 22px; overflow: hidden; background: #fff; }
@@ -228,7 +216,7 @@ p { margin: 0; }
 .tbf-get a.tbf-primary { background: var(--red, #e50012); border-color: var(--red, #e50012); color: #fff; }
 .tbf-get a.tbf-primary small { color: rgba(255,255,255,.82); }
 
-.tbf { --tbf-step: 66svh; }   /* scroll length per stop */
+.tbf { --tbf-step: 45svh; }   /* scroll length per stop */
 .tbf-steps { position: relative; margin-top: -100vh; margin-top: -100svh; padding-block: calc((100svh - var(--tbf-step)) / 2); pointer-events: none; }
 .tbf-step { box-sizing: border-box; height: var(--tbf-step); display: grid; align-items: center; }
 .tbf-copy { max-width: min(25rem, 33%); pointer-events: auto; }
@@ -249,7 +237,7 @@ p { margin: 0; }
 @media (max-width: 860px) {
   .tbf-screens { left: 0; right: 0; top: 44px; height: 38%; }
   .tbf-status { left: 0; right: 0; bottom: auto; top: 55%; }
-  .tbf { --tbf-step: 80svh; }
+  .tbf { --tbf-step: 60svh; }
   .tbf-step { align-items: end; padding-block: 24px 32px; }
   .tbf-copy { max-width: none; padding-top: 20px; background: linear-gradient(to top, var(--bg, #f4f4f2) 80%, transparent); }
   .tbf-copy h2 { font-size: 10vw; margin-bottom: 12px; }
@@ -257,10 +245,9 @@ p { margin: 0; }
   .tbf-copy p { font-size: 16px; }
   .tbf-fact { margin-top: 10px; font-size: 13px; }
   .tbf-rail { top: 14px; right: 50%; transform: translateX(50%); flex-direction: row; }
-  .tbf-term pre { font-size: 11px; padding: 10px 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .tbf-link path, .tbf-term .k { animation: none; }
+  .tbf-link path { animation: none; }
   .tbf-screen { transition: opacity .2s; transform: none; }
 }
 </style>
@@ -360,13 +347,6 @@ p { margin: 0; }
           </figure>
   
           <figure class="tbf-screen" data-stop="6">
-            <div class="tbf-window tbf-term">
-              <div class="tbf-bar"><i></i><i></i><i></i><span>tbt · headless CLI</span></div>
-              <pre aria-label="Terminal commands: build the CLI, scan for devices, run a session with TCP streaming"></pre>
-            </div>
-          </figure>
-
-          <figure class="tbf-screen" data-stop="7">
             <a class="film" id="film" href="https://youtu.be/_8UwrUgqUao" aria-label="Play the video walkthrough"><img src="assets/own/walkthrough.webp" alt="" width="1280" height="720" loading="lazy"><span class="film-play" aria-hidden="true"><svg><use href="#i-play"/></svg></span></a>
           </figure>
   
@@ -380,67 +360,59 @@ p { margin: 0; }
         <article class="tbf-step" data-title="Pairing">
           <div class="tbf-copy">
             <p class="tbf-kicker">Windows · macOS · Linux · Android</p>
-            <h3>Pairs on its own</h3>
-            <p>Press SYNC and the toolkit pairs the board over Bluetooth for you, with no system dialogs. Use one board, or two at once.</p>
-            <span class="tbf-fact">r = 0.99 against lab force plates</span>
+            <h3>Scan and press Sync</h3>
+            <p>The toolkit finds and pairs the board for you.</p>
+            <span class="tbf-fact">No Bluetooth settings needed</span>
           </div>
         </article>
   
         <article class="tbf-step" data-title="Record">
           <div class="tbf-copy">
             <p class="tbf-kicker">Desktop app</p>
-            <h3>Record and see it live</h3>
-            <p>Centre of pressure with its 95% ellipse and convex hull, displacement, frequency spectrum, stability indices and velocity, updated as the person stands.</p>
-            <span class="tbf-fact">100 Hz, saved as CSV</span>
+            <h3>See balance as it happens</h3>
+            <p>Sway, stability and frequency, plotted live as the person stands. Every session saves as CSV.</p>
+            <span class="tbf-fact">r = 0.99 against lab force plates</span>
           </div>
         </article>
   
         <article class="tbf-step" data-title="Unity">
           <div class="tbf-copy">
-            <p class="tbf-kicker">LSL · TCP · Unity · Python</p>
+            <p class="tbf-kicker">Unity · Python · LSL</p>
             <h3>Stream into your game</h3>
-            <p>Sensor forces, centre of pressure and stability stream live over Lab Streaming Layer or TCP. The Unity sample puts them on a virtual board and avatar.</p>
+            <p>Forces and centre of pressure stream live to Unity, Python or any LSL tool.</p>
             <span class="tbf-fact">Under 0.5 ms processing latency</span>
           </div>
         </article>
   
         <article class="tbf-step" data-title="Replay">
           <div class="tbf-copy">
-            <p class="tbf-kicker">Post-hoc analysis</p>
+            <p class="tbf-kicker">After the session</p>
             <h3>Replay with new settings</h3>
-            <p>Load any recorded session, change the window size, overlap or interpolation, and play it again. Replays can stream over LSL or TCP too.</p>
+            <p>Reprocess any recording with different settings, and stream it as if it were live.</p>
           </div>
         </article>
   
         <article class="tbf-step" data-title="Android">
           <div class="tbf-copy">
-            <p class="tbf-kicker">Android companion</p>
+            <p class="tbf-kicker">Android app</p>
             <h3>Capture without a computer</h3>
-            <p>The phone app pairs the board, manages users, and runs live sessions with the same processing. Its CSV files open in the desktop app.</p>
+            <p>Run live sessions from a phone, with the same processing as the desktop app.</p>
           </div>
         </article>
   
         <article class="tbf-step" data-title="Activities">
           <div class="tbf-copy">
-            <p class="tbf-kicker">Six protocol templates</p>
-            <h3>Activities, ready to run</h3>
-            <p>Eyes Open-Close, Functional Reach, Single Leg Stance, Tandem Stance, Timed Up and Go, and Squat, with editable timelines and an instruction window for the participant.</p>
+            <p class="tbf-kicker">Desktop app</p>
+            <h3>Standard tests, ready to run</h3>
+            <p>Single leg stance, Timed Up and Go and four more, each with an instruction screen for the participant.</p>
           </div>
         </article>
   
-        <article class="tbf-step" data-title="Headless CLI">
-          <div class="tbf-copy">
-            <p class="tbf-kicker">Any OS · no display needed</p>
-            <h3>Run it from a terminal</h3>
-            <p><code>tbt</code> pairs boards, records, replays and streams from a terminal or a server, sharing settings and recordings with the desktop app.</p>
-          </div>
-        </article>
-
         <article class="tbf-step" data-title="Walkthrough">
           <div class="tbf-copy">
-            <p class="tbf-kicker">Video walkthrough</p>
+            <p class="tbf-kicker">Video</p>
             <h3>See it in action</h3>
-            <p>Watch the toolkit in use with a real board, from pairing to a recorded session.</p>
+            <p>From pairing to a finished recording, on a real board.</p>
           </div>
         </article>
   
