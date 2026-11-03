@@ -1,0 +1,18 @@
+// Cloudflare Worker that serves thebalancetoolkit.com from this directory.
+// Deploy from the repository root with `mise run website:deploy`.
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "the-balance-toolkit",
+  "account_id": "ecc722a61df38e42ccdcdd42ba811605",
+  "compatibility_date": "2026-10-19",
+  // Serve only on thebalancetoolkit.com, so search engines see one copy of the site.
+  "workers_dev": false,
+  "preview_urls": false,
+  "main": "worker.js",
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    // The home page goes through worker.js so it can be served as Markdown on request.
+    "run_worker_first": ["/", "/index.html"]
+  }
+}

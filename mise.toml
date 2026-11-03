@@ -54,6 +54,10 @@ run = "cargo run --locked -p toolkit-cli --"
 description = "Serve the project website from website/ at http://localhost:8000"
 run = "bun scripts/serve-website.mjs"
 
+[tasks."website:deploy"]
+description = "Deploy the project website to the Cloudflare Worker that serves thebalancetoolkit.com"
+run = "npx wrangler deploy -c website/wrangler.jsonc"
+
 [tasks."build:desktop"]
 description = "Build the release desktop app and platform packages"
 dir = "apps/tauri"

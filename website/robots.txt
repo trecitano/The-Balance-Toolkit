@@ -1,0 +1,7 @@
+# The Balance Toolkit is an open-source project. Crawling, indexing, AI answers
+# and AI training are all welcome.
+User-agent: *
+Allow: /
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+
+Sitemap: https://thebalancetoolkit.com/sitemap.xml
