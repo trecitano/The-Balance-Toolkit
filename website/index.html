@@ -136,7 +136,7 @@ p { margin: 0; }
 .paper-dl svg { width: 1em; height: 1em; fill: currentColor; flex: none; }
 @media (max-width: 860px) { .paper-dl { justify-self: start; } }
 .bib-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 12px 22px; border-bottom: 1px solid var(--rule); font-size: 15px; color: var(--muted); }
-.bib pre { margin: 0; padding: 22px; font-size: 13px; line-height: 1.6; overflow-x: auto; }
+.bib pre { margin: 0; padding: 22px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .copy { border: 0; background: var(--ink); color: #fff; padding: 9px 18px; border-radius: 10px; font-size: 16px; cursor: pointer; transition: background .16s, transform .1s; }
 .copy:hover { background: var(--red); } .copy:active { transform: scale(.96); }
 
@@ -423,18 +423,25 @@ p { margin: 0; }
 </section>
 
 <section class="sec" id="paper" aria-labelledby="cite-h">
-  <div class="sec-head"><h2 id="cite-h">Cite the paper</h2><a class="paper-dl" id="paper-dl" href="https://andreia-valente.com/#pub/valente2026balance"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download the paper</span></a></div>
+  <div class="sec-head"><h2 id="cite-h">Cite the paper</h2><a class="paper-dl" href="https://andreia-valente.com/#pub/valente2026balance"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download the paper</span></a></div>
   <div class="bib">
     <div class="bib-bar"><span>BibTeX</span><button class="copy" type="button" id="copy">Copy</button></div>
-<pre><code id="bibtex">@inproceedings{valente2026balancetoolkit,
-  title     = {The Balance Toolkit: Democratizing Balance-Based Interaction
-               Through Open-Source Software for Repurposed Wii Balance Boards},
-  author    = {Valente, Andreia and Kothari, Nidhi and Ahmed-Mahmoud, Hana
-               and Esteves, Augusto and Billinghurst, Mark},
-  booktitle = {Annual Symposium on Computer-Human Interaction in Play (CHI PLAY '26)},
-  year      = {2026},
-  address   = {York, UK},
-  publisher = {ACM}
+<pre><code id="bibtex">@article{10.1145/3831299,
+author = {Valente, Andreia and Kothari, Nidhi and Ahmed-Mahmoud, Hana and Esteves, Augusto and Billinghurst, Mark},
+title = {The Balance Toolkit: Democratizing Balance-Based Interaction Through Open-Source Software for Repurposed Wii Balance Boards},
+year = {2026},
+issue_date = {November 2026},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {10},
+number = {7},
+url = {https://doi.org/10.1145/3831299},
+doi = {10.1145/3831299},
+journal = {Proc. ACM Hum.-Comput. Interact.},
+month = nov,
+articleno = {GAMES067},
+numpages = {31},
+keywords = {Wii Balance Board, Balance-based interaction, Posturography, Exergaming, Open-source software, Windows, macOS, Linux, Android, Unity}
 }</code></pre>
   </div>
 </section>
@@ -442,6 +449,7 @@ p { margin: 0; }
 
 <footer class="end">
   <span><img src="assets/art/logo-flamingo-red.svg" alt="" width="14" height="21">Empathic Computing Laboratory, University of Auckland</span>
+  <p>Enquiries: <a class="link" href="mailto:andreia.valente@auckland.ac.nz">andreia.valente@auckland.ac.nz</a></p>
 </footer>
 
 <script src="board.js"></script>
@@ -456,12 +464,6 @@ document.body.offsetWidth;
 parts.forEach((el) => (el.closest('.cover') ? el.classList.add('in') : io.observe(el)));
 
 const $ = (id) => document.getElementById(id);
-
-// Download the paper: the author's publication page until the DOI is registered, then the DOI.
-fetch('https://doi.org/api/handles/10.1145/3831299')
-  .then((r) => (r.ok ? r.json() : null))
-  .then((j) => { if (j && j.responseCode === 1) $('paper-dl').href = 'https://doi.org/10.1145/3831299'; })
-  .catch(() => {});
 
 // Download: Android visitors are offered the Android app, everyone else the Windows app.
 if (/Android/i.test(navigator.userAgent)) {
