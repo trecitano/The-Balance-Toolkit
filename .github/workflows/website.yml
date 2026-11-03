@@ -1,0 +1,39 @@
+# Deploys website/ to the Cloudflare Worker behind https://thebalancetoolkit.com
+# whenever a push to main changes it. Same command as `mise run website:deploy`.
+#
+# Needs the repository secret CLOUDFLARE_API_TOKEN: a Cloudflare API token made
+# from the "Edit Cloudflare Workers" template. The account ID comes from
+# website/wrangler.jsonc.
+name: Deploy website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
+      - ".github/workflows/website.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never run two deploys at once; a newer push replaces a queued one.
+concurrency:
+  group: website-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Deploy to Cloudflare
+        run: npx --yes wrangler@4 deploy -c website/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
