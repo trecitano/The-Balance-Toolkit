@@ -50,6 +50,10 @@ description = "Launch the terminal dashboard or run a CLI command"
 raw = true
 run = "cargo run --locked -p toolkit-cli --"
 
+[tasks.website]
+description = "Serve the project website from website/ at http://localhost:8000"
+run = "bun scripts/serve-website.mjs"
+
 [tasks."build:desktop"]
 description = "Build the release desktop app and platform packages"
 dir = "apps/tauri"

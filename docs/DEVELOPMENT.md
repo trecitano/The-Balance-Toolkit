@@ -42,6 +42,7 @@ After setup, run these tasks from the repository root:
 | `mise run dev:cli` | Launch the interactive terminal dashboard; press `?` for controls and `q` to quit |
 | `mise run build:desktop` | Build the release desktop executable in `target/release/` and platform packages in `target/release/bundle/` |
 | `mise run build:cli` | Build the release CLI at `target/release/tbt` (`tbt.exe` on Windows) |
+| `mise run website` | Serve the static project website from `website/` at http://localhost:8000 (pass another port with `mise run website -- 8080`) |
 
 Desktop tasks run in `apps/tauri/` automatically and require the platform GUI
 prerequisites from [INSTALL.md](../INSTALL.md). They run `install:frontend`
