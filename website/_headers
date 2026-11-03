@@ -1,0 +1,9 @@
+# Response headers for the static assets (Cloudflare Workers static assets format).
+
+/*
+  Content-Signal: search=yes, ai-input=yes, ai-train=yes
+
+# The home page tells agents where its Markdown version and llms.txt are.
+/
+  Link: </index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"; type="text/markdown"
+  Vary: Accept

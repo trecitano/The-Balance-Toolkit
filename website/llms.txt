@@ -1,0 +1,20 @@
+# The Balance Toolkit
+
+> Open-source software for the Wii Balance Board: a desktop app for Windows, macOS and Linux, an Android companion app, and live TCP and LSL streams of forces and centre of pressure. Published at CHI PLAY 2026 (Valente, Kothari, Ahmed-Mahmoud, Esteves and Billinghurst, Empathic Computing Laboratory, University of Auckland).
+
+The toolkit pairs the board over Bluetooth without touching the operating system's Bluetooth settings, plots sway, stability and frequency live, saves every session as CSV, streams to Unity, Python or any Lab Streaming Layer (LSL) tool, replays recordings with new processing settings, and ships standard balance tests such as Single Leg Stance and Timed Up and Go.
+
+## Pages
+
+- [Home, as Markdown](https://thebalancetoolkit.com/index.md): the whole site in one page, including the downloads, features, roadmap and BibTeX.
+
+## Downloads and source
+
+- [Windows app](https://github.com/AndreiaValente/The-Balance-Toolkit-Apps/raw/main/windows/the-balance-toolkit.exe)
+- [Android app (APK)](https://github.com/AndreiaValente/The-Balance-Toolkit-Apps/raw/main/android/the-balance-toolkit.apk)
+- [Source code and build instructions for macOS and Linux](https://github.com/trecitano/The-Balance-Toolkit/blob/main/INSTALL.md)
+
+## Paper
+
+- [The Balance Toolkit: Democratizing Balance-Based Interaction Through Open-Source Software for Repurposed Wii Balance Boards](https://andreia-valente.com/#pub/valente2026balance): CHI PLAY 2026, York, UK. DOI 10.1145/3831299.
+- [Walkthrough video](https://youtu.be/_8UwrUgqUao): from pairing to a finished recording, on a real board.

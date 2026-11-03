@@ -1,2 +1,6 @@
 # Kept in the repo as the sources of the WebM recordings; not served.
 *.gif
+# The Worker itself and its configuration are not assets.
+worker.js
+wrangler.jsonc
+.wrangler/

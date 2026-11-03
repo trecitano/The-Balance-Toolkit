@@ -21,3 +21,6 @@ apps/tauri/src-tauri/icons/
 
 # Design-tool scratch output
 .taste-skill/
+
+# Wrangler build output next to website/wrangler.jsonc
+.wrangler/
