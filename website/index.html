@@ -43,7 +43,7 @@ a { color: inherit; }
 :root {
   --bg: #f4f4f2; --paper: #fff; --ink: #121212; --muted: #5b5a56; --rule: #d9d6cf;
   --red: #e50012; --red-dark: #b8000e;
-  --pad: max(clamp(18px, 5.5vw, 88px), (100% - 1640px) / 2); /* side margins; content stops at 1640px and centres */
+  --pad: max(clamp(24px, 9vw, 180px), (100% - 1320px) / 2); /* side margins; content stops at 1320px and centres */
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Roboto", "Helvetica Neue", Arial, sans-serif;
 }
 body { background: var(--bg); color: var(--ink); font: 400 18px/1.6 var(--font); }
@@ -115,9 +115,28 @@ p { margin: 0; }
 
 
 /* Paper */
-.bib { background: var(--paper); border-radius: 20px; overflow: hidden; }
+.bib { max-width: 760px; margin-inline: auto; background: var(--paper); border-radius: 20px; overflow: hidden; }
+#paper .sec-head { max-width: 760px; margin-inline: auto; grid-template-columns: minmax(0, 1fr) auto; }   /* the heading lines up with the centred card */
+/* What's next: side-by-side columns, ruled like the cover's stats row */
+.next { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; border-top: 2px solid var(--ink); }
+.next li { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px 24px 0 0; }
+.next li + li { border-left: 1px solid var(--rule); padding-left: 24px; }
+.next li:last-child { padding-right: 0; }
+.next h3 { font-size: 22px; line-height: 1.2; letter-spacing: -.01em; }
+.next p { color: var(--muted); font-size: 16px; line-height: 1.5; }
+.next-tag { order: -1; margin-bottom: 4px; padding: 2px 11px; border-radius: 999px; background: var(--blush, #fdecee); color: var(--red-dark); font-size: 14px; white-space: nowrap; }
+.next-tag.is-soon { background: var(--ink); color: #fff; }
+@media (max-width: 760px) {
+  .next { grid-template-columns: 1fr; }
+  .next li, .next li + li { border-left: 0; padding: 16px 0; border-bottom: 1px solid var(--rule); }
+}
+/* Download the paper: the cover's button, as an outline beside the heading */
+.paper-dl { justify-self: end; display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border: 1.5px solid var(--ink); border-radius: 12px; color: var(--ink); font: 600 17px/1 var(--font); white-space: nowrap; text-decoration: none; transition: background .16s, border-color .16s, color .16s, transform .1s; }
+.paper-dl:hover { background: var(--red); border-color: var(--red); color: #fff; } .paper-dl:active { transform: scale(.97); }
+.paper-dl svg { width: 1em; height: 1em; fill: currentColor; flex: none; }
+@media (max-width: 860px) { .paper-dl { justify-self: start; } }
 .bib-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 12px 22px; border-bottom: 1px solid var(--rule); font-size: 15px; color: var(--muted); }
-.bib pre { margin: 0; padding: 22px; font-size: clamp(13px, 1.05vw, 16px); line-height: 1.6; overflow-x: auto; }
+.bib pre { margin: 0; padding: 22px; font-size: 13px; line-height: 1.6; overflow-x: auto; }
 .copy { border: 0; background: var(--ink); color: #fff; padding: 9px 18px; border-radius: 10px; font-size: 16px; cursor: pointer; transition: background .16s, transform .1s; }
 .copy:hover { background: var(--red); } .copy:active { transform: scale(.96); }
 
@@ -143,6 +162,107 @@ p { margin: 0; }
   .plat svg { width: 18px; height: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .js .rv { opacity: 1; transform: none; transition: none; } .bird { transition: opacity .4s; } }
+
+/* What's in the toolkit: the scroll story (3D board + the apps) */
+/* Features: a sticky stage; the steps scroll over it. The 3D board sits low as the input,
+   a device panel above it changes per feature, and a red line carries the data between them.
+   Stops follow the paper's priorities: pairing, recording, Unity, replay, Android, activities. */
+.tbf { padding-block: 0; --tbf-term: #141414; --tbf-term-ink: #e9e7e1; --tbf-term-dim: #8d8a83; --tbf-device: #161616; --tbf-gl: #111215; --tbf-gl-edge: #2a2b31; }
+.tbf-story { position: relative; }
+.tbf-stage { position: sticky; top: 0; height: 100vh; height: 100svh; }
+.tbf-canvas, .tbf-link { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.tbf-link { pointer-events: none; overflow: visible; }
+.tbf-link path { fill: none; stroke: var(--red, #e50012); stroke-width: 2; stroke-dasharray: 2 8; stroke-linecap: round; animation: tbf-flow 0.9s linear infinite; }
+.tbf-link circle { fill: var(--red, #e50012); }
+@keyframes tbf-flow { to { stroke-dashoffset: -20; } }
+
+.tbf-screens { position: absolute; left: 38%; right: 40px; top: 6%; height: 57%; container-type: size; }
+.tbf-screen { position: absolute; inset: 0; margin: 0; display: grid; place-items: center; opacity: 0; transform: translateY(18px) scale(.98); transition: opacity .5s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); pointer-events: none; }
+.tbf-screen.is-active { opacity: 1; transform: none; pointer-events: auto; }
+.tbf-screen[data-stop="7"] { inset: 0 0 -40% 0; }
+.tbf-screen[data-stop="7"] .film { width: min(100cqw, 140cqh * 16 / 9); }
+
+/* everyday laptop */
+.tbf-laptop { width: min(100cqw, 100cqh * 1.52); }
+.tbf-lid { background: var(--tbf-device); border-radius: 12px 12px 4px 4px; padding: 2.2% 2.2% 2.6%; }
+.tbf-lid video { display: block; width: 100%; aspect-ratio: 1104 / 675; border-radius: 3px; background: #000; object-fit: cover; }
+.tbf-base { position: relative; height: clamp(8px, 1.6cqw, 16px); margin: 0 -6%; background: linear-gradient(#dcdbd6, #b5b4ae); border-radius: 0 0 16px 16px / 0 0 12px 12px; }
+.tbf-base::after { content: ""; position: absolute; left: 50%; top: 0; width: 14%; height: 35%; transform: translateX(-50%); background: #a9a8a2; border-radius: 0 0 6px 6px; }
+
+/* gaming laptop: a Blender render with a transparent background; the screen box sits on the
+   display rectangle measured in the render (laptop/gaming-laptop.json), as % of the image */
+.tbf-gaming { position: relative; width: min(100cqw, 100cqh * var(--tbf-gl-aspect)); aspect-ratio: var(--tbf-gl-aspect); --tbf-gl-aspect: 1.3617; }
+.tbf-gaming > img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tbf-gl-screen { position: absolute; left: 10.256%; top: 3.818%; width: 79.261%; height: 67.454%; overflow: hidden; border-radius: 2px; background: #000; }
+.tbf-gl-screen video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.tbf-gl-glass { position: absolute; inset: 0; width: 100%; height: 100%; mix-blend-mode: screen; pointer-events: none; }   /* faint sheen over the display */
+
+
+/* windows, terminal, phone, downloads */
+.tbf-window { width: min(100cqw, 100cqh * 1.6); aspect-ratio: 1.6; display: flex; flex-direction: column; background: var(--paper, #fff); border: 1px solid var(--rule, #d9d6cf); border-radius: 12px; overflow: hidden; box-shadow: 0 18px 40px -24px rgba(0,0,0,.35); }
+.tbf-bar { display: flex; align-items: center; gap: 6px; padding: 0 12px; height: 34px; flex: none; border-bottom: 1px solid var(--rule, #d9d6cf); font-size: 13px; color: var(--muted, #5b5a56); }
+.tbf-bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--rule, #d9d6cf); }
+.tbf-bar span { margin-left: 8px; }
+.tbf-term { background: var(--tbf-term); border-color: var(--tbf-term); }
+.tbf-term .tbf-bar { border-color: #2a2a2a; color: var(--tbf-term-dim); }
+.tbf-term .tbf-bar i { background: #3a3a3a; }
+.tbf-term pre { margin: 0; padding: 14px 16px; flex: 1; overflow: hidden; white-space: pre-wrap; word-break: break-word; font: 13px/1.7 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; color: var(--tbf-term-ink); }
+.tbf-term .p { color: var(--red, #e50012); }
+.tbf-term .c { color: var(--tbf-term-dim); }
+.tbf-term .k { display: inline-block; width: .55em; height: 1.1em; vertical-align: -0.2em; background: var(--tbf-term-ink); animation: tbf-blink 1s steps(1) infinite; }
+@keyframes tbf-blink { 50% { opacity: 0; } }
+
+.tbf-phone { position: relative; height: 100cqh; max-width: 100cqw; aspect-ratio: 9 / 19.5; background: var(--tbf-device); border-radius: 30px; padding: 9px; box-sizing: border-box; }
+.tbf-phone-screen { position: relative; height: 100%; border-radius: 22px; overflow: hidden; background: #fff; }
+.tbf-phone-screen img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; opacity: 0; transition: opacity .6s; }
+.tbf-phone-screen img.is-on { opacity: 1; }
+
+.tbf-screen .film { width: min(100cqw, 100cqh * 16 / 9); }
+.tbf-get { width: min(100cqw, 560px); display: grid; gap: 10px; }
+.tbf-get a { display: flex; align-items: center; gap: 16px; padding: 14px 18px; background: var(--paper, #fff); border: 1px solid var(--rule, #d9d6cf); border-radius: 10px; color: var(--ink, #121212); text-decoration: none; transition: border-color .2s, transform .2s; }
+.tbf-get a:hover { border-color: var(--ink, #121212); transform: translateY(-1px); }
+.tbf-get a:focus-visible { outline: 2px solid var(--red, #e50012); outline-offset: 2px; }
+.tbf-get strong { font-weight: 600; font-size: 17px; }
+.tbf-get small { display: block; color: var(--muted, #5b5a56); font-size: 14px; }
+.tbf-get span:last-child { margin-left: auto; font-size: 14px; white-space: nowrap; }
+.tbf-get a.tbf-primary { background: var(--red, #e50012); border-color: var(--red, #e50012); color: #fff; }
+.tbf-get a.tbf-primary small { color: rgba(255,255,255,.82); }
+
+.tbf { --tbf-step: 66svh; }   /* scroll length per stop */
+.tbf-steps { position: relative; margin-top: -100vh; margin-top: -100svh; padding-block: calc((100svh - var(--tbf-step)) / 2); pointer-events: none; }
+.tbf-step { box-sizing: border-box; height: var(--tbf-step); display: grid; align-items: center; }
+.tbf-copy { max-width: min(25rem, 33%); pointer-events: auto; }
+.tbf-kicker { margin: 0 0 12px; font-size: 15px; color: var(--muted, #5b5a56); }
+.tbf-copy h2 { font-size: clamp(40px, 4.6vw, 72px); line-height: .95; margin-bottom: 20px; }
+.tbf-copy h3 { font-size: clamp(28px, 2.8vw, 40px); line-height: 1.05; margin-bottom: 14px; }
+.tbf-copy p { margin: 0; color: var(--muted, #5b5a56); max-width: 34ch; }
+.tbf-copy code { font: .9em ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; color: var(--ink, #121212); }
+.tbf-fact { display: inline-block; margin-top: 16px; padding: 2px 11px; border-radius: 999px; background: var(--blush, #fdecee); color: var(--red-dark, #b8000e); font-size: 15px; font-variant-numeric: tabular-nums; }
+
+.tbf-rail { position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 2; }
+.tbf-rail button { width: 10px; height: 10px; padding: 0; border-radius: 50%; border: 1.5px solid var(--ink, #121212); background: transparent; cursor: pointer; transition: background .25s, border-color .25s, transform .25s; }
+.tbf-rail button[aria-current="true"] { background: var(--red, #e50012); border-color: var(--red, #e50012); transform: scale(1.25); }
+.tbf-rail button:focus-visible { outline: 2px solid var(--red-dark, #b8000e); outline-offset: 3px; }
+.tbf-status { position: absolute; left: 38%; right: 40px; bottom: 12%; text-align: center; font-size: 15px; color: var(--muted, #5b5a56); pointer-events: none; transition: opacity .4s; }
+.tbf-status.is-done { opacity: 0; }
+
+@media (max-width: 860px) {
+  .tbf-screens { left: 0; right: 0; top: 44px; height: 38%; }
+  .tbf-status { left: 0; right: 0; bottom: auto; top: 55%; }
+  .tbf { --tbf-step: 80svh; }
+  .tbf-step { align-items: end; padding-block: 24px 32px; }
+  .tbf-copy { max-width: none; padding-top: 20px; background: linear-gradient(to top, var(--bg, #f4f4f2) 80%, transparent); }
+  .tbf-copy h2 { font-size: 10vw; margin-bottom: 12px; }
+  .tbf-copy h3 { font-size: 7.4vw; margin-bottom: 10px; }
+  .tbf-copy p { font-size: 16px; }
+  .tbf-fact { margin-top: 10px; font-size: 13px; }
+  .tbf-rail { top: 14px; right: 50%; transform: translateX(50%); flex-direction: row; }
+  .tbf-term pre { font-size: 11px; padding: 10px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tbf-link path, .tbf-term .k { animation: none; }
+  .tbf-screen { transition: opacity .2s; transform: none; }
+}
 </style>
 </head>
 <body>
@@ -186,16 +306,152 @@ p { margin: 0; }
   <p class="hint">Simulated with the toolkit’s formula. Move your pointer over the board to shift the weight.</p>
 </section>
 
+<section class="sec" id="next" aria-labelledby="next-h">
+  <div class="sec-head"><h2 id="next-h">What’s next</h2></div>
+  <ul class="next">
+    <li><h3>Calibration</h3><span class="next-tag">In the works</span><p>Multi-point calibration with known weights, and monitoring for sensor drift.</p></li>
+    <li><h3>More than two boards</h3><span class="next-tag">In the works</span><p>Sessions that connect and record more than two boards at once.</p></li>
+    <li><h3>Documentation</h3><span class="next-tag is-soon">Coming soon</span><p>Guides to setting up, the metrics and the streams, in one place.</p></li>
+  </ul>
+</section>
+
 <section class="sec" id="apps" aria-label="The apps">
-  <div class="shots">
-    <video src="assets/own/app-session.webm" poster="assets/own/app-session.webp" aria-label="The desktop app recording a session, with live plots of the centre of pressure" width="1104" height="675" autoplay muted loop playsinline></video>
-    <video src="assets/own/app-activities.webm" poster="assets/own/app-activities.webp" aria-label="The desktop app's list of activities, opening two of them to show their steps" width="1104" height="675" autoplay muted loop playsinline></video>
-    <a class="film" id="film" href="https://youtu.be/_8UwrUgqUao" aria-label="Play the video walkthrough"><img src="assets/own/walkthrough.webp" alt="" width="1280" height="720" loading="lazy"><span class="film-play" aria-hidden="true"><svg><use href="#i-play"/></svg></span></a>
+  <div class="tbf" id="features" aria-label="The toolkit, feature by feature" data-model="features/wii_balance_board.glb">
+    <div class="tbf-story">
+      <div class="tbf-stage">
+        <canvas class="tbf-canvas" aria-hidden="true"></canvas>
+        <svg class="tbf-link" aria-hidden="true"><path d=""></path><circle r="3.5"></circle><circle r="3.5"></circle></svg>
+  
+        <div class="tbf-screens">
+          <figure class="tbf-screen" data-stop="1">
+            <div class="tbf-laptop"><div class="tbf-lid">
+              <video data-sim src="features/media/session-live.webm" poster="features/media/session-live.webp" muted loop playsinline preload="metadata" aria-label="The desktop app's Session page plotting a single leg stance live"></video>
+            </div><div class="tbf-base"></div></div>
+          </figure>
+  
+          <figure class="tbf-screen" data-stop="2">
+            <div class="tbf-gaming">
+              <img src="features/media/gaming-laptop.webp" alt="" width="1762" height="1294" loading="lazy">
+              <div class="tbf-gl-screen">
+                <video data-sim src="features/media/unity.webm" poster="features/media/unity.webp" muted loop playsinline preload="metadata" aria-label="Unity running the toolkit's sample scene: Balu holds Tree Pose and Dancer Pose as the weight shifts, beside The Balance Toolkit editor window and its live graphs"></video>
+              </div>
+              <img class="tbf-gl-glass" src="features/media/gaming-laptop-glass.webp" alt="" loading="lazy">
+            </div>
+          </figure>
+  
+          <figure class="tbf-screen" data-stop="3">
+            <div class="tbf-laptop"><div class="tbf-lid">
+              <video data-sim src="features/media/replay.webm" poster="features/media/replay.webp" muted loop playsinline preload="metadata" aria-label="The desktop app's Replay page playing back a recorded session"></video>
+            </div><div class="tbf-base"></div></div>
+          </figure>
+  
+          <figure class="tbf-screen" data-stop="4">
+            <div class="tbf-phone"><div class="tbf-phone-screen" aria-label="The Android app: users, devices and a live session">
+              <img src="features/media/android-session.webp" alt="" loading="lazy" class="is-on">
+              <img src="features/media/android-devices.webp" alt="" loading="lazy">
+              <img src="features/media/android-users.webp" alt="" loading="lazy">
+            </div></div>
+          </figure>
+  
+          <figure class="tbf-screen" data-stop="5">
+            <div class="tbf-laptop"><div class="tbf-lid">
+              <video src="assets/own/app-activities.webm" poster="assets/own/app-activities.webp" muted loop playsinline preload="metadata" aria-label="The desktop app's list of activities"></video>
+            </div><div class="tbf-base"></div></div>
+          </figure>
+  
+          <figure class="tbf-screen" data-stop="6">
+            <div class="tbf-window tbf-term">
+              <div class="tbf-bar"><i></i><i></i><i></i><span>tbt · headless CLI</span></div>
+              <pre aria-label="Terminal commands: build the CLI, scan for devices, run a session with TCP streaming"></pre>
+            </div>
+          </figure>
+
+          <figure class="tbf-screen" data-stop="7">
+            <a class="film" id="film" href="https://youtu.be/_8UwrUgqUao" aria-label="Play the video walkthrough"><img src="assets/own/walkthrough.webp" alt="" width="1280" height="720" loading="lazy"><span class="film-play" aria-hidden="true"><svg><use href="#i-play"/></svg></span></a>
+          </figure>
+  
+        </div>
+  
+        <div class="tbf-status">Loading the board…</div>
+        <nav class="tbf-rail" aria-label="Features"></nav>
+      </div>
+  
+      <div class="tbf-steps">
+        <article class="tbf-step" data-title="Pairing">
+          <div class="tbf-copy">
+            <p class="tbf-kicker">Windows · macOS · Linux · Android</p>
+            <h3>Pairs on its own</h3>
+            <p>Press SYNC and the toolkit pairs the board over Bluetooth for you, with no system dialogs. Use one board, or two at once.</p>
+            <span class="tbf-fact">r = 0.99 against lab force plates</span>
+          </div>
+        </article>
+  
+        <article class="tbf-step" data-title="Record">
+          <div class="tbf-copy">
+            <p class="tbf-kicker">Desktop app</p>
+            <h3>Record and see it live</h3>
+            <p>Centre of pressure with its 95% ellipse and convex hull, displacement, frequency spectrum, stability indices and velocity, updated as the person stands.</p>
+            <span class="tbf-fact">100 Hz, saved as CSV</span>
+          </div>
+        </article>
+  
+        <article class="tbf-step" data-title="Unity">
+          <div class="tbf-copy">
+            <p class="tbf-kicker">LSL · TCP · Unity · Python</p>
+            <h3>Stream into your game</h3>
+            <p>Sensor forces, centre of pressure and stability stream live over Lab Streaming Layer or TCP. The Unity sample puts them on a virtual board and avatar.</p>
+            <span class="tbf-fact">Under 0.5 ms processing latency</span>
+          </div>
+        </article>
+  
+        <article class="tbf-step" data-title="Replay">
+          <div class="tbf-copy">
+            <p class="tbf-kicker">Post-hoc analysis</p>
+            <h3>Replay with new settings</h3>
+            <p>Load any recorded session, change the window size, overlap or interpolation, and play it again. Replays can stream over LSL or TCP too.</p>
+          </div>
+        </article>
+  
+        <article class="tbf-step" data-title="Android">
+          <div class="tbf-copy">
+            <p class="tbf-kicker">Android companion</p>
+            <h3>Capture without a computer</h3>
+            <p>The phone app pairs the board, manages users, and runs live sessions with the same processing. Its CSV files open in the desktop app.</p>
+          </div>
+        </article>
+  
+        <article class="tbf-step" data-title="Activities">
+          <div class="tbf-copy">
+            <p class="tbf-kicker">Six protocol templates</p>
+            <h3>Activities, ready to run</h3>
+            <p>Eyes Open-Close, Functional Reach, Single Leg Stance, Tandem Stance, Timed Up and Go, and Squat, with editable timelines and an instruction window for the participant.</p>
+          </div>
+        </article>
+  
+        <article class="tbf-step" data-title="Headless CLI">
+          <div class="tbf-copy">
+            <p class="tbf-kicker">Any OS · no display needed</p>
+            <h3>Run it from a terminal</h3>
+            <p><code>tbt</code> pairs boards, records, replays and streams from a terminal or a server, sharing settings and recordings with the desktop app.</p>
+          </div>
+        </article>
+
+        <article class="tbf-step" data-title="Walkthrough">
+          <div class="tbf-copy">
+            <p class="tbf-kicker">Video walkthrough</p>
+            <h3>See it in action</h3>
+            <p>Watch the toolkit in use with a real board, from pairing to a recorded session.</p>
+          </div>
+        </article>
+  
+      </div>
+    </div>
   </div>
+
 </section>
 
 <section class="sec" id="paper" aria-labelledby="cite-h">
-  <div class="sec-head"><h2 id="cite-h">Cite the paper</h2></div>
+  <div class="sec-head"><h2 id="cite-h">Cite the paper</h2><a class="paper-dl" id="paper-dl" href="https://andreia-valente.com/#pub/valente2026balance"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download the paper</span></a></div>
   <div class="bib">
     <div class="bib-bar"><span>BibTeX</span><button class="copy" type="button" id="copy">Copy</button></div>
 <pre><code id="bibtex">@inproceedings{valente2026balancetoolkit,
@@ -220,7 +476,7 @@ p { margin: 0; }
 <script>
 // Section entrances: each part rises in turn when its section comes into view.
 document.documentElement.classList.add('js');
-const parts = document.querySelectorAll('.intro, .stage, .live, .hint, .sec-head > *, .shots > *, .bib');
+const parts = document.querySelectorAll('.intro, .stage, .live, .hint, .sec-head > *, .shots > *, .next li, .bib');
 parts.forEach((el) => { el.classList.add('rv'); el.style.setProperty('--d', `${[...el.parentNode.children].indexOf(el) * 70}ms`); });
 const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -8% 0px' });
 // The cover is the first view, so its parts rise on load (after a reflow, so they start hidden); the rest rise on scroll.
@@ -228,6 +484,12 @@ document.body.offsetWidth;
 parts.forEach((el) => (el.closest('.cover') ? el.classList.add('in') : io.observe(el)));
 
 const $ = (id) => document.getElementById(id);
+
+// Download the paper: the author's publication page until the DOI is registered, then the DOI.
+fetch('https://doi.org/api/handles/10.1145/3831299')
+  .then((r) => (r.ok ? r.json() : null))
+  .then((j) => { if (j && j.responseCode === 1) $('paper-dl').href = 'https://doi.org/10.1145/3831299'; })
+  .catch(() => {});
 
 // Download: Android visitors are offered the Android app, everyone else the Windows app.
 if (/Android/i.test(navigator.userAgent)) {
@@ -257,6 +519,7 @@ for (const [k, [x, y, anchor]] of Object.entries(corners)) {
 }
 const bird = $('bird');
 b.on((s) => {
+  window.tbtCover = s;   // the scroll story's 3D board picks this up
   for (const k in kg) kg[k].innerHTML = `${Math.max(s[k], 0).toFixed(1)}<tspan> kg</tspan>`;
   const sg = (v) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2);
   $('r-w').textContent = s.on ? `${s.w.toFixed(1)} kg` : '0.0 kg';
@@ -272,5 +535,13 @@ $('copy').addEventListener('click', async () => {
   setTimeout(() => { $('copy').textContent = 'Copy'; }, 2000);
 });
 </script>
+<script type="importmap">
+  { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  } }
+</script>
+<script type="module" src="features/features.js"></script>
+
 </body>
 </html>
