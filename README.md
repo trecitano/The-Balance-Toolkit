@@ -151,24 +151,29 @@ If you use The Balance Toolkit in your research, please cite our paper.
 
 **APA**
 
-> Valente, A., Kothari, N., Ahmed-Mahmoud, H., Esteves, A., & Billinghurst, M. (2026). The Balance Toolkit: Democratizing balance-based interaction through open-source software for repurposed Wii Balance Boards. In *Proceedings of the Annual Symposium on Computer-Human Interaction in Play (CHI PLAY '26)*. ACM.
+> Valente, A., Kothari, N., Ahmed-Mahmoud, H., Esteves, A., & Billinghurst, M. (2026). The Balance Toolkit: Democratizing balance-based interaction through open-source software for repurposed Wii Balance Boards. *Proceedings of the ACM on Human-Computer Interaction*, *10*(7), Article GAMES067. https://doi.org/10.1145/3831299
 
 **BibTeX**
 
 ```bibtex
-@inproceedings{valente2026balancetoolkit,
-  title     = {The Balance Toolkit: Democratizing Balance-Based Interaction
-               Through Open-Source Software for Repurposed Wii Balance Boards},
-  author    = {Valente, Andreia and Kothari, Nidhi and Ahmed-Mahmoud, Hana
-               and Esteves, Augusto and Billinghurst, Mark},
-  booktitle = {Annual Symposium on Computer-Human Interaction in Play (CHI PLAY '26)},
-  year      = {2026},
-  address   = {York, UK},
-  publisher = {ACM}
+@article{10.1145/3831299,
+author = {Valente, Andreia and Kothari, Nidhi and Ahmed-Mahmoud, Hana and Esteves, Augusto and Billinghurst, Mark},
+title = {The Balance Toolkit: Democratizing Balance-Based Interaction Through Open-Source Software for Repurposed Wii Balance Boards},
+year = {2026},
+issue_date = {November 2026},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {10},
+number = {7},
+url = {https://doi.org/10.1145/3831299},
+doi = {10.1145/3831299},
+journal = {Proc. ACM Hum.-Comput. Interact.},
+month = nov,
+articleno = {GAMES067},
+numpages = {31},
+keywords = {Wii Balance Board, Balance-based interaction, Posturography, Exergaming, Open-source software, Windows, macOS, Linux, Android, Unity}
 }
 ```
-
-DOI to be added on publication.
 
 ## License
 

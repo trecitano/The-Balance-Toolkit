@@ -57,14 +57,21 @@ Single Leg Stance, Timed Up and Go and four more, each with an instruction scree
 [Download the paper](https://andreia-valente.com/#pub/valente2026balance). DOI: 10.1145/3831299.
 
 ```bibtex
-@inproceedings{valente2026balancetoolkit,
-  title     = {The Balance Toolkit: Democratizing Balance-Based Interaction
-               Through Open-Source Software for Repurposed Wii Balance Boards},
-  author    = {Valente, Andreia and Kothari, Nidhi and Ahmed-Mahmoud, Hana
-               and Esteves, Augusto and Billinghurst, Mark},
-  booktitle = {Annual Symposium on Computer-Human Interaction in Play (CHI PLAY '26)},
-  year      = {2026},
-  address   = {York, UK},
-  publisher = {ACM}
+@article{10.1145/3831299,
+author = {Valente, Andreia and Kothari, Nidhi and Ahmed-Mahmoud, Hana and Esteves, Augusto and Billinghurst, Mark},
+title = {The Balance Toolkit: Democratizing Balance-Based Interaction Through Open-Source Software for Repurposed Wii Balance Boards},
+year = {2026},
+issue_date = {November 2026},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {10},
+number = {7},
+url = {https://doi.org/10.1145/3831299},
+doi = {10.1145/3831299},
+journal = {Proc. ACM Hum.-Comput. Interact.},
+month = nov,
+articleno = {GAMES067},
+numpages = {31},
+keywords = {Wii Balance Board, Balance-based interaction, Posturography, Exergaming, Open-source software, Windows, macOS, Linux, Android, Unity}
 }
 ```
