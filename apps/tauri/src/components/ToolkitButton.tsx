@@ -19,6 +19,7 @@ type BaseProps = {
 type ButtonAsButton = BaseProps &
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
     to?: undefined;
+    ref?: React.Ref<HTMLButtonElement>;
   };
 
 type ButtonAsLink = BaseProps &

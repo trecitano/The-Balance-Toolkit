@@ -1,9 +1,11 @@
 import { createContext, ReactNode, useContext, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
-// A page's area in the smallest window the app allows (1472 x 862, set in tauri.rs). Pages are
-// laid out for this size.
-const BASE_WIDTH = 1224;
-const BASE_HEIGHT = 798;
+// A page's area in the smallest window the app allows, which pages are laid out for: the
+// 1472 x 862 minimum (tauri.rs), less the navigation rail (88 px, Navigation.tsx) and the main
+// area's padding (80 px each side, 32 px top and bottom, App.tsx).
+const BASE_WIDTH = 1472 - 88 - 2 * 80;
+const BASE_HEIGHT = 862 - 2 * 32;
 
 const ZoomContext = createContext(1);
 
@@ -25,7 +27,8 @@ export default function ZoomToFill({ className, children }: { className?: string
     const observer = new ResizeObserver(([entry]) => {
       if (!entry) return;
       const { width, height } = entry.contentRect;
-      setZoom(Math.max(1, Math.min(width / BASE_WIDTH, height / BASE_HEIGHT)));
+      // Applied in the same frame as the resize, so the page doesn't wobble while the window is dragged.
+      flushSync(() => setZoom(Math.max(1, Math.min(width / BASE_WIDTH, height / BASE_HEIGHT))));
     });
     observer.observe(area);
     return () => observer.disconnect();

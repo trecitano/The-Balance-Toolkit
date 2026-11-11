@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 
-// Line icons for the welcome page. They draw in the current text colour, so a link's colour
-// (and its hover state) carries through to its icon.
+// Line icons. They draw in the current text colour, so a link's colour (and its hover state)
+// carries through to its icon.
 const paths = {
   play: (
     <>
@@ -78,11 +78,23 @@ const paths = {
       <path d="M9.5 8H16v6.5" />
     </>
   ),
+  warning: (
+    <>
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+      <path d="M12 9v4M12 17h.01" />
+    </>
+  ),
+  question: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17h.01" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
-export type HomeIconName = keyof typeof paths;
+export type IconName = keyof typeof paths;
 
-export function HomeIcon({ name, className = "size-5" }: { name: HomeIconName; className?: string }) {
+export function Icon({ name, className = "size-5" }: { name: IconName; className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"

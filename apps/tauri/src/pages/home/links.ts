@@ -1,9 +1,9 @@
-import type { HomeIconName } from "@/pages/home/HomeIcons.tsx";
+import type { IconName } from "@/components/Icons.tsx";
 
 // Everything the welcome page links to, in one place.
 export type HomeLink = {
   label: string;
-  icon: HomeIconName;
+  icon: IconName;
   /** Opened in the system browser. A link without one opens the citation dialog instead. */
   url?: string;
 };

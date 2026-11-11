@@ -97,6 +97,8 @@ fn specta_builder() -> Builder<tauri::Wry> {
             ReplayCompleted,
             SessionActivityChanged,
         ])
+        // The name a Wii Balance Board reports over Bluetooth, which boards keep until renamed.
+        .constant("NINTENDO_BOARD_ID", toolkit_core::NINTENDO_BOARD_ID)
 }
 
 fn typescript() -> Typescript {

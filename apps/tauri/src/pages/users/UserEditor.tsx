@@ -1,6 +1,6 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import type { User } from "@/types";
-import PersonIcon from "@/assets/user-icon.svg?react";
 import { InputPrimitive } from "@/components/InputPrimitive";
 import { SelectPrimitive } from "@/components/SelectPrimitive";
 import { ToolkitButton } from "@/components/ToolkitButton";
@@ -8,16 +8,14 @@ import ToolkitContainer from "@/components/ToolkitContainer";
 import { QueryStatus } from "@/components/QueryStatus";
 import { useSaveUser } from "@/queries/toolkit";
 import WeightMeasureModal from "./WeightMeasureModal";
+import UserIcon from "./UserIcon";
 import { formatWeight, unitToKg } from "@/utils/weight";
-import { formatRelativeDay } from "@/utils/dates.ts";
+import { formatDate, formatDateTime, formatRelativeDay } from "@/utils/dates.ts";
 import { USER_COLORS, userColor } from "@/utils/userColors.ts";
 
 const genders = ["Male", "Female", "Non-binary", "Prefer not to say"];
 const genderOptions = [...genders, "Other"].map((value) => ({ value, label: value }));
 const options = (values: string[]) => values.map((value) => ({ value, label: value }));
-
-const fullDate = (value: string) =>
-  new Date(value).toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" });
 
 function Meta({ label, value, title }: { label: string; value: string; title?: string }) {
   return (
@@ -30,26 +28,23 @@ function Meta({ label, value, title }: { label: string; value: string; title?: s
 
 export default function UserEditor({
   user,
-  initialEditing,
-  onEditingChange,
+  draft,
+  setDraft,
   onSavingChange,
-  onDraftChange,
   onDelete,
   sessionDevices,
   disabled,
 }: {
   user: User;
-  initialEditing: boolean;
-  onEditingChange: (editing: boolean) => void;
+  /** The edit in progress, or null when not editing. The page owns it, so it can preview it. */
+  draft: User | null;
+  setDraft: Dispatch<SetStateAction<User | null>>;
   onSavingChange: (saving: boolean) => void;
-  /** The edit in progress, or null when not editing, so the page can preview it. */
-  onDraftChange: (draft: User | null) => void;
   onDelete: () => void;
   sessionDevices: Array<{ name: string; macAddress: number }>;
   disabled: boolean;
 }) {
   const fieldId = useId();
-  const [draft, setDraft] = useState<User | null>(initialEditing ? { ...user } : null);
   const [genderChoice, setGenderChoice] = useState(
     user.gender == null ? "" : genders.includes(user.gender) ? user.gender : "Other",
   );
@@ -63,10 +58,6 @@ export default function UserEditor({
   // New users get a random colour from the backend. Show one from outside the palette as its own
   // swatch, so the picker always shows the user's colour as selected.
   const swatches = USER_COLORS.includes(color) ? USER_COLORS : [...USER_COLORS, color];
-  useEffect(() => {
-    onDraftChange(draft);
-    return () => onDraftChange(null);
-  }, [draft, onDraftChange]);
   const editing = draft !== null;
   const locked = disabled || save.isPending;
   const update = <K extends keyof User>(key: K, value: User[K]) =>
@@ -74,14 +65,12 @@ export default function UserEditor({
   const finish = () => {
     setDraft(null);
     setMeasuring(false);
-    onEditingChange(false);
     save.reset();
   };
   const start = () => {
     setDraft({ ...user });
     setWeightText(formatWeight(user.weight, user.weightMetric ?? "kg"));
     setGenderChoice(user.gender == null ? "" : genders.includes(user.gender) ? user.gender : "Other");
-    onEditingChange(true);
   };
   const choice = editing
     ? genderChoice
@@ -109,22 +98,17 @@ export default function UserEditor({
       >
         <header className="mb-5 flex items-center justify-between gap-4 border-b border-gray-300 pb-4">
           <div className="flex min-w-0 items-center gap-3">
-            <span
-              className="flex size-11 shrink-0 items-center justify-center rounded-full"
-              style={{ backgroundColor: color }}
-            >
-              <PersonIcon className="size-6 text-white" />
-            </span>
+            <UserIcon user={displayed} className="size-11" />
             <div className="min-w-0">
               <h2 className="truncate text-lg leading-tight font-bold">{displayed.name.trim() || "No name yet"}</h2>
               <dl className="mt-1 flex flex-wrap gap-x-4 text-xs text-gray-500">
                 <Meta label="ID" value={String(user.id)} />
+                <Meta label="Created" value={formatDate(user.createdAt)} title={formatDateTime(user.createdAt)} />
                 <Meta
-                  label="Created"
-                  value={new Date(user.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
-                  title={fullDate(user.createdAt)}
+                  label="Updated"
+                  value={formatRelativeDay(user.updatedAt)}
+                  title={formatDateTime(user.updatedAt)}
                 />
-                <Meta label="Updated" value={formatRelativeDay(user.updatedAt)} title={fullDate(user.updatedAt)} />
               </dl>
             </div>
           </div>

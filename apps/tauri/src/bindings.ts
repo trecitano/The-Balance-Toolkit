@@ -90,6 +90,9 @@ export const events = {
 	sessionStarted: makeEvent<SessionStarted>("session-started"),
 };
 
+/* Constants */
+export const NINTENDO_BOARD_ID = "Nintendo RVL-WBC-01" as const;
+
 /* Types */
 export type Activity = {
 	id: string,

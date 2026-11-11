@@ -23,3 +23,12 @@ export function formatRelativeDay(value: Date | string | null | undefined) {
 
   return date.toLocaleDateString();
 }
+
+const mediumDate = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+const fullDateTime = new Intl.DateTimeFormat(undefined, { dateStyle: "full", timeStyle: "short" });
+
+/** "Nov 11, 2026", in the user's locale. */
+export const formatDate = (value: Date | string) => mediumDate.format(new Date(value));
+
+/** "Wednesday, November 11, 2026 at 1:40 PM", for tooltips that show the exact time. */
+export const formatDateTime = (value: Date | string) => fullDateTime.format(new Date(value));

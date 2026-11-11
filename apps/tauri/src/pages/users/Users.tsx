@@ -9,23 +9,22 @@ import { QueryStatus } from "@/components/QueryStatus";
 import { useConfirm } from "@/hooks/useConfirm";
 import { useAction } from "@/hooks/useAction";
 import searchIcon from "@/assets/search-icon.svg";
-import PersonIcon from "@/assets/user-icon.svg?react";
 import type { User } from "@/types";
 import UserCarousel from "./UserCarousel";
 import UserEditor from "./UserEditor";
+import UserIcon from "./UserIcon";
 import ZoomToFill from "@/components/ZoomToFill.tsx";
-import { userColor } from "@/utils/userColors.ts";
 
 export default function Users() {
   const query = useQuery(UsersQuery);
   const client = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [createdId, setCreatedId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
-  // The edit in progress, shown on the user's card before it is saved (a new colour, say).
+  // The edit in progress, or null when not editing. The user's card shows it before it is saved
+  // (a new colour, say).
   const [draft, setDraft] = useState<User | null>(null);
+  const editing = draft !== null;
   const { confirm, ConfirmDialog } = useConfirm();
   const action = useAction(() => refreshUsers(client));
   const users = query.data?.users ?? [];
@@ -55,8 +54,7 @@ export default function Users() {
     if (!(await discard())) return;
     action.run(async () => {
       await commands.users.selectUser(id);
-      setEditing(false);
-      setCreatedId(null);
+      setDraft(null);
       setSearch("");
       setSearchOpen(false);
     });
@@ -77,8 +75,8 @@ export default function Users() {
             action.run(async () => {
               const user = await commands.users.createUser();
               await commands.users.selectUser(user.id);
-              setCreatedId(user.id);
-              setEditing(true);
+              // A new user opens ready to edit.
+              setDraft(user);
             });
           }}
         >
@@ -131,12 +129,7 @@ export default function Users() {
                         onClick={() => void select(user.id)}
                         className="flex w-full items-center gap-2 border-b border-gray-200 px-3 py-2 text-left hover:bg-blue-50 focus-visible:bg-blue-50"
                       >
-                        <span
-                          className="flex size-6 shrink-0 items-center justify-center rounded-full"
-                          style={{ backgroundColor: userColor(user) }}
-                        >
-                          <PersonIcon className="size-4 text-white" />
-                        </span>
+                        <UserIcon user={user} className="size-6" />
                         <span className="min-w-0 truncate font-semibold">{user.name}</span>
                         <span className="ml-auto shrink-0 text-xs text-gray-500">ID {user.id}</span>
                       </button>
@@ -165,13 +158,9 @@ export default function Users() {
           <UserEditor
             key={selected.id}
             user={selected}
-            initialEditing={createdId === selected.id}
+            draft={draft?.id === selected.id ? draft : null}
+            setDraft={setDraft}
             onSavingChange={setSaving}
-            onDraftChange={setDraft}
-            onEditingChange={(next) => {
-              setEditing(next);
-              if (!next) setCreatedId(null);
-            }}
             disabled={busy}
             sessionDevices={query.data?.sessionDevices ?? []}
             onDelete={async () => {
@@ -180,14 +169,13 @@ export default function Users() {
                   title: "Delete user",
                   message: `Delete ${selected.name}? This also discards any unsaved edits.`,
                   confirmText: "Delete",
-                  confirmColor: "red",
+                  destructive: true,
                 }))
               )
                 return;
               action.run(async () => {
                 await commands.users.deleteUser(selected.id);
-                setEditing(false);
-                setCreatedId(null);
+                setDraft(null);
               });
             }}
           />

@@ -6,7 +6,7 @@ import { Modal } from "@/components/Modal";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { commands } from "@/utils/requests.ts";
-import { HomeIcon, HomeIconName } from "@/pages/home/HomeIcons.tsx";
+import { Icon, IconName } from "@/components/Icons.tsx";
 import { tile } from "@/pages/home/tile.ts";
 import {
   CITATION_APA,
@@ -41,17 +41,17 @@ function linkProps(link: Pick<HomeLink, "label" | "url">, onCite?: () => void) {
   };
 }
 
-function Badge({ icon, tone, size }: { icon: HomeIconName; tone: string; size: string }) {
+function Badge({ icon, tone, size }: { icon: IconName; tone: string; size: string }) {
   return (
     <span className={clsx("flex shrink-0 items-center justify-center rounded-lg", size, tone)}>
-      <HomeIcon name={icon} className="size-[55%]" />
+      <Icon name={icon} className="size-[55%]" />
     </span>
   );
 }
 
 function OutArrow({ className }: { className?: string }) {
   return (
-    <HomeIcon
+    <Icon
       name="external"
       className={clsx("size-4 shrink-0 text-gray-300 transition-colors group-hover:text-(--primary)", className)}
     />

@@ -1,4 +1,8 @@
 import { NintendoDevice } from "@/types";
+import { NINTENDO_BOARD_ID } from "@/bindings";
+
+/** The name a Wii Balance Board reports over Bluetooth, which boards keep until renamed. */
+export const DEFAULT_BOARD_NAME = NINTENDO_BOARD_ID;
 
 /** Connected boards first, then the rest by name. Used wherever boards are listed. */
 export function sortDevices(devices: NintendoDevice[]): NintendoDevice[] {
