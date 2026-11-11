@@ -3,7 +3,7 @@ import uPlot from "uplot";
 import { useUPlot } from "@/hooks/useUPlot";
 import "uplot/dist/uPlot.min.css";
 import { BoardBuffer, SessionState, SessionStore } from "@/store/sessionDataStore.tsx";
-import { Tooltip } from "@/components/Tooltip.tsx";
+import { PlotTitle } from "@/pages/session/PlotFrame.tsx";
 
 /** Seconds of history the rolling plots show. */
 export const PLOT_WINDOW_SEC = 10;
@@ -14,6 +14,18 @@ export const PLOT_PAD_SEC = 1.5;
  * enters from the left edge; anything older is never drawn, so it is never mapped either.
  */
 export const PLOT_DATA_SEC = PLOT_WINDOW_SEC + 2;
+
+/** Size and colour of the text on every plot canvas. */
+const PLOT_FONT_PX = 11;
+const PLOT_TEXT_COLOUR = "#3d3d3d";
+
+/**
+ * The plots' canvas font: the app's font at PLOT_FONT_PX, so every plot's labels match each other
+ * and the page. Read when a plot is created, once the app's styles are loaded. uPlot scales axis
+ * fonts to the screen itself; text drawn in a hook passes `uPlot.pxRatio`.
+ */
+const plotFont = (pixelRatio = 1) =>
+  `${Math.round(PLOT_FONT_PX * pixelRatio)}px ${getComputedStyle(document.body).fontFamily}`;
 
 export const RED_COLOUR = "#ef4444";
 export const BLACK_COLOUR = "#000";
@@ -40,6 +52,19 @@ export const rollingXScale: uPlot.Scale = {
 };
 
 export const axisBorder: uPlot.Axis.Border = { show: true, stroke: BLACK_COLOUR, width: 2 };
+
+/**
+ * A y axis with labels in the plots' font and colour, short grey ticks and no grid. A function,
+ * because the font is read from the page's styles when each plot is created.
+ */
+export const labelAxis = (): uPlot.Axis => ({
+  scale: "y",
+  grid: { show: false },
+  ticks: { show: true, size: 6, stroke: "#b2b2b2" },
+  border: axisBorder,
+  font: plotFont(),
+  stroke: PLOT_TEXT_COLOUR,
+});
 
 /** An x axis that takes no space and draws no labels; the plots show a rolling window, not time. */
 export const hiddenXAxis: uPlot.Axis = {
@@ -97,19 +122,16 @@ const PLOT_KINDS: Record<PlotKind, (macAddress: number) => PlotSettings> = {
     ),
 };
 
-export function UPlot({
-  title,
-  tooltipId,
-  kind,
-  macAddress,
-  store,
-}: {
-  title: string;
-  tooltipId?: string;
-  kind: PlotKind;
-  macAddress: number;
-  store: SessionStore;
-}) {
+/** Each plot's title and the tooltip that explains it. */
+const PLOT_LABELS: Record<PlotKind, { title: string; tooltipId: string }> = {
+  copX: { title: "copX", tooltipId: "session_cop_x" },
+  copY: { title: "copY", tooltipId: "session_cop_y" },
+  vCopX: { title: "vCopX", tooltipId: "session_mean_velocity_x" },
+  vCopY: { title: "vCopY", tooltipId: "session_mean_velocity_y" },
+};
+
+export function UPlot({ kind, macAddress, store }: { kind: PlotKind; macAddress: number; store: SessionStore }) {
+  const { title, tooltipId } = PLOT_LABELS[kind];
   const settings = useMemo(() => PLOT_KINDS[kind](macAddress), [kind, macAddress]);
   // Options are captured on mount, so a panel that shows a different board must remount this
   // component (key it by board).
@@ -132,14 +154,7 @@ export function UPlot({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-5 items-center justify-center">
-        <div className="relative font-semibold">
-          {title}
-          {tooltipId && (
-            <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
-              <Tooltip tooltipId={tooltipId} />
-            </div>
-          )}
-        </div>
+        <PlotTitle title={title} tooltipId={tooltipId} />
       </div>
       <div ref={hostRef} className="min-h-0 flex-1" />
     </div>
@@ -154,11 +169,7 @@ function copYOptions(color: string): uPlot.Options {
     axes: [
       hiddenXAxis,
       {
-        scale: "y",
-        grid: { show: false },
-        border: axisBorder,
-        font: "10px sans-serif",
-        stroke: "#3d3d3d",
+        ...labelAxis(),
         values: (_, splits) =>
           splits.map((_, i) => {
             if (i === 0) return "Back (-1)"; // bottom tick
@@ -189,6 +200,8 @@ function copXOptions(color: string): uPlot.Options {
   // Horizontal domain (CoP-X)
   const X_MIN = -1;
   const X_MAX = 1;
+  // Read once here, not on every frame the plot draws.
+  const labelFont = plotFont(uPlot.pxRatio);
 
   return {
     ...basePlotOptions,
@@ -209,7 +222,7 @@ function copXOptions(color: string): uPlot.Options {
       draw: [
         (u) => {
           drawVerticalZeroAxis(u, BLACK_COLOUR, X_MIN, X_MAX);
-          drawTopAxisLabels(u);
+          drawTopAxisLabels(u, labelFont);
           drawLastPointAsCircle(u, color, { transposed: true });
         },
       ],
@@ -232,14 +245,7 @@ function standardPlot(color: string): uPlot.Options {
     },
     axes: [
       { ...hiddenXAxis, border: axisBorder },
-      {
-        scale: "y",
-        grid: { show: false },
-        ticks: { show: true, size: 6, stroke: "#b2b2b2" },
-        border: axisBorder,
-        font: "10px sans-serif",
-        size: fitAxisToLabels(35),
-      },
+      { ...labelAxis(), size: fitAxisToLabels(35) },
     ],
     series: [{}, { stroke: color, width: 2 }],
     hooks: { draw: [(u) => drawLastPointAsCircle(u, color)] },
@@ -269,8 +275,8 @@ export function fitAxisToLabels(minSize: number): uPlot.Axis.Size {
     if (widest !== "") {
       // The canvas is scaled by the device pixel ratio; uPlot stores the scaled font in `font[0]`.
       const font = axis.font as unknown as [string, number] | string | undefined;
-      u.ctx.font = Array.isArray(font) ? font[0] : (font ?? "12px sans-serif");
-      size += u.ctx.measureText(widest).width / devicePixelRatio;
+      u.ctx.font = Array.isArray(font) ? font[0] : (font ?? plotFont(uPlot.pxRatio));
+      size += u.ctx.measureText(widest).width / uPlot.pxRatio;
     }
     lastSize = Math.max(minSize, Math.ceil(size));
     return lastSize;
@@ -322,6 +328,13 @@ export function makeDataMapper<T extends { timestamp: number }>(selector: (data:
   };
 }
 
+/**
+ * Canvas pixels for a length in screen (CSS) pixels. The plot canvases have one pixel per device
+ * pixel, so on a scaled display (200% has two per CSS pixel) anything a hook draws must be scaled
+ * to match the lines and labels uPlot scales for itself.
+ */
+const px = (cssPixels: number) => cssPixels * uPlot.pxRatio;
+
 function drawHorizontalAxis(u: uPlot, color: string) {
   const { ctx } = u;
   const { left, width } = u.bbox;
@@ -329,7 +342,7 @@ function drawHorizontalAxis(u: uPlot, color: string) {
 
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = px(2);
   ctx.beginPath();
   ctx.moveTo(left, y0);
   ctx.lineTo(left + width, y0);
@@ -359,31 +372,31 @@ export function drawLastPointAsCircle(
   const ctx = u.ctx;
   ctx.save();
   ctx.beginPath();
-  ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+  ctx.arc(cx, cy, px(6), 0, Math.PI * 2);
   ctx.fillStyle = color;
   ctx.fill();
   ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 2;
+  ctx.lineWidth = px(2);
   ctx.stroke();
   ctx.restore();
 }
 
-function drawTopAxisLabels(u: uPlot) {
+function drawTopAxisLabels(u: uPlot, font: string) {
   const { ctx } = u;
   const { left, top, width } = u.bbox;
 
   ctx.save();
-  ctx.fillStyle = "#3d3d3d";
-  ctx.font = "12px sans-serif";
+  ctx.fillStyle = PLOT_TEXT_COLOUR;
+  ctx.font = font;
   ctx.textBaseline = "bottom";
 
   // Left
   ctx.textAlign = "left";
-  ctx.fillText("Left (-1)", left, top - 4);
+  ctx.fillText("Left (-1)", left, top - px(4));
 
   // Right
   ctx.textAlign = "right";
-  ctx.fillText("Right (1)", left + width, top - 4);
+  ctx.fillText("Right (1)", left + width, top - px(4));
 
   ctx.restore();
 }
@@ -396,7 +409,7 @@ function drawVerticalZeroAxis(u: uPlot, color: string, minX: number, maxX: numbe
 
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = px(2);
   ctx.beginPath();
   ctx.moveTo(xZero, top);
   ctx.lineTo(xZero, top + height);

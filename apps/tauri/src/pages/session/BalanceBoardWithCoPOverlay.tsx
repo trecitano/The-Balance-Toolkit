@@ -158,13 +158,14 @@ export function BalanceBoardWithCoPOverlay({
   }, []);
 
   return (
-    <div className={clsx("relative flex h-full w-full items-center justify-evenly gap-3", className)}>
-      <div className="relative h-full w-4/10">
+    // The controls and the gauge take the width they need; the board picture fills the rest.
+    <div className={clsx("relative flex h-full w-full items-center gap-4", className)}>
+      <div className="relative h-full min-w-0 flex-1">
         <img
           ref={imgRef}
           src={src}
           alt={alt}
-          className="pointer-events-none block h-full object-contain select-none"
+          className="pointer-events-none block h-full w-full object-contain select-none"
           draggable={false}
           onLoad={scheduleDraw}
         />
@@ -172,8 +173,8 @@ export function BalanceBoardWithCoPOverlay({
       </div>
 
       {/* Controls + Stability Index */}
-      <div className="flex w-22/100 flex-col gap-8 text-xs">
-        <div className={"flex flex-col gap-4"}>
+      <div className="flex shrink-0 flex-col gap-3 text-xs">
+        <div className="flex flex-col gap-2">
           <label className="flex flex-row items-center gap-2">
             <input
               type="checkbox"

@@ -1,7 +1,7 @@
 import { ReactNode, InputHTMLAttributes, useId } from "react";
 import { FieldLabelContext } from "./FieldLabelContext";
 import clsx from "clsx";
-import { Tooltip } from "@/components/Tooltip.tsx";
+import { Tooltip, TooltipDetail } from "@/components/Tooltip.tsx";
 
 type BackgroundType = "default" | "transparent" | "error";
 
@@ -18,6 +18,8 @@ interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   actionText?: string;
   onActionClick?: () => void;
   tooltipId?: string;
+  /** Live values shown in the tooltip under its text. */
+  tooltipDetails?: TooltipDetail[];
   labelMargin?: boolean;
 }
 
@@ -34,6 +36,7 @@ export function SingleColumn({
   actionText,
   onActionClick,
   tooltipId,
+  tooltipDetails,
   labelMargin = true,
 }: InputFieldProps) {
   const labelId = useId();
@@ -57,7 +60,7 @@ export function SingleColumn({
                 {icon && <span className="h-5 w-5 flex-shrink-0">{icon}</span>}
                 <span id={labelId}>{label}</span>
                 {requiredField && <span className="font-bold text-red-500">*</span>}
-                {tooltipId && <Tooltip tooltipId={tooltipId} />}
+                {tooltipId && <Tooltip tooltipId={tooltipId} details={tooltipDetails} />}
               </div>
             </div>
 

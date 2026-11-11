@@ -1,7 +1,7 @@
 import { SelectedBoard } from "@/types.ts";
 import ComplexBoardPanel from "@/pages/session/ComplexBoardPanel.tsx";
 import { SessionStore } from "@/store/sessionDataStore.tsx";
-import SimpleBoardPanel from "@/pages/session/SimpleBoardPanel.tsx";
+import { BoardRows } from "@/pages/session/BoardRows.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { devicesIcon } from "@/assets/icons";
 
@@ -40,16 +40,7 @@ export function BoardGrid({
           store={store}
         />
       ) : (
-        <div className="grid h-full grid-cols-2 gap-4">
-          {displayBoards.map((board) => (
-            <SimpleBoardPanel
-              key={board.macAddress}
-              boardName={board.name}
-              macAddress={board.macAddress}
-              store={store}
-            />
-          ))}
-        </div>
+        <BoardRows boards={displayBoards} store={store} />
       )}
     </div>
   );

@@ -249,20 +249,34 @@ export default function ActivityTimeline({ blocks, editable = false, onChange, o
                 </>
               )}
 
-              <div className={"flex h-full flex-col"}>
-                <div className="w-full overflow-hidden px-1 text-center font-semibold text-ellipsis whitespace-nowrap text-gray-800">
-                  {block.title}
-                </div>
+              {editable ? (
+                <div className={"flex h-full flex-col"}>
+                  <div className="w-full overflow-hidden px-1 text-center font-semibold text-ellipsis whitespace-nowrap text-gray-800">
+                    {block.title}
+                  </div>
 
-                <div className="mt-auto flex h-7/10 items-center justify-center">
+                  <div className="mt-auto flex h-7/10 items-center justify-center">
+                    <img
+                      src={getBlockImage(block.id)}
+                      onError={showLogoInstead}
+                      alt={block.title}
+                      className="h-full object-cover"
+                    />
+                  </div>
+                </div>
+              ) : (
+                // The read-only timeline is short, so the picture sits beside the title rather than
+                // under it, the two centred together in the block.
+                <div className="flex h-full min-w-0 items-center justify-center gap-1.5 px-1">
                   <img
                     src={getBlockImage(block.id)}
                     onError={showLogoInstead}
-                    alt={block.title}
-                    className="h-full object-cover"
+                    alt=""
+                    className="h-4/5 w-auto max-w-10 shrink-0 object-contain"
                   />
+                  <span className="min-w-0 truncate font-semibold text-gray-800">{block.title}</span>
                 </div>
-              </div>
+              )}
             </div>
           </React.Fragment>
         ))}
@@ -292,7 +306,8 @@ export default function ActivityTimeline({ blocks, editable = false, onChange, o
           })()}
       </div>
 
-      {/* Durations row */}
+      {/* Durations row. TimelinePanel pads above the blocks by this row's height (mt-1 + min-h-5,
+          its pt-6) to centre them on the Session page; keep the two in step. */}
       <div className="mt-1 flex min-h-5 w-full items-start">
         {blocks.map((block, idx) => (
           <div

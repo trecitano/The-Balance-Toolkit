@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import uPlot from "uplot";
 import { useUPlot } from "@/hooks/useUPlot";
 import "uplot/dist/uPlot.min.css";
-import { axisBorder, basePlotOptions, BLUE_COLOUR, RED_COLOUR, YELLOW_COLOUR } from "@/pages/session/UPlot.tsx";
+import { basePlotOptions, labelAxis, BLUE_COLOUR, RED_COLOUR, YELLOW_COLOUR } from "@/pages/session/UPlot.tsx";
 import { PlotFrame, SeriesToggle, SeriesToggles, useSeriesVisibility } from "@/pages/session/PlotFrame.tsx";
 import { SessionStore } from "@/store/sessionDataStore.tsx";
 
@@ -44,7 +44,7 @@ function createOptions(ceilingRef: { readonly current: number }): uPlot.Options 
   // Axes are drawn inside the chart canvas, so their size trims the plot area rather than
   // growing the panel. The units go on the outermost tick label instead of a separate axis
   // label; the y axis is wide enough for "1000 mm" at this font.
-  const axis = { grid: { show: false }, ticks: { show: false }, border: axisBorder, font: "10px sans-serif" };
+  const axis = { ...labelAxis(), ticks: { show: false } };
   const withUnit =
     (unit: string) =>
     (_: uPlot, splits: number[]): string[] =>

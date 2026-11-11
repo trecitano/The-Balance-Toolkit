@@ -41,6 +41,7 @@ export function ReplayPanel({
   };
 
   const disabled = saving || config === null || config.hasOngoingSession;
+  const fileLabel = config?.filePath || "No file selected";
 
   return (
     <>
@@ -96,8 +97,11 @@ export function ReplayPanel({
             >
               Choose…
             </button>
-            <div className={`min-w-0 flex-1 truncate text-sm ${disabled ? "text-gray-600" : "text-gray-800"}`}>
-              {config?.filePath || "No file selected"}
+            <div
+              title={fileLabel}
+              className={`min-w-0 flex-1 truncate text-sm ${disabled ? "text-gray-600" : "text-gray-800"}`}
+            >
+              {fileLabel}
             </div>
           </div>
         </SingleColumn>

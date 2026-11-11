@@ -8,6 +8,11 @@ use std::thread;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{Receiver, Sender};
 
+/// Appended to the stream name and source ID set in Settings: raw readings go out on one LSL
+/// stream and processed metrics on another.
+pub const LSL_RAW_SUFFIX: &str = "_basic";
+pub const LSL_PROCESSED_SUFFIX: &str = "_complex";
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LslConnectionSettings {
     pub stream_name: String,
@@ -75,8 +80,8 @@ fn lsl_stream_loop_raw(
     settings: LslConnectionSettings,
 ) -> Result<()> {
     log::debug!("LSL raw writer execution start.");
-    let stream_name = format!("{}_basic", settings.stream_name);
-    let source_id = format!("{}_basic", settings.source_id);
+    let stream_name = format!("{}{LSL_RAW_SUFFIX}", settings.stream_name);
+    let source_id = format!("{}{LSL_RAW_SUFFIX}", settings.source_id);
 
     let mut stream_info = StreamInfo::new(
         &stream_name,
@@ -146,8 +151,8 @@ fn lsl_stream_loop_processed(
     settings: LslConnectionSettings,
 ) -> Result<()> {
     log::debug!("LSL processed writer execution start.");
-    let stream_name = format!("{}_complex", settings.stream_name);
-    let source_id = format!("{}_complex", settings.source_id);
+    let stream_name = format!("{}{LSL_PROCESSED_SUFFIX}", settings.stream_name);
+    let source_id = format!("{}{LSL_PROCESSED_SUFFIX}", settings.source_id);
 
     let mut stream_info = StreamInfo::new(
         &stream_name,

@@ -99,6 +99,15 @@ fn specta_builder() -> Builder<tauri::Wry> {
         ])
         // The name a Wii Balance Board reports over Bluetooth, which boards keep until renamed.
         .constant("NINTENDO_BOARD_ID", toolkit_core::NINTENDO_BOARD_ID)
+        // How the LSL streams are named from Settings, shown in the Session page's LSL tooltip.
+        .constant(
+            "LSL_RAW_SUFFIX",
+            toolkit_core::processing::lsl_writer::LSL_RAW_SUFFIX,
+        )
+        .constant(
+            "LSL_PROCESSED_SUFFIX",
+            toolkit_core::processing::lsl_writer::LSL_PROCESSED_SUFFIX,
+        )
 }
 
 fn typescript() -> Typescript {

@@ -1,4 +1,4 @@
-import { useRef, useState, useId } from "react";
+import { Fragment, useRef, useState, useId } from "react";
 import { getTooltip } from "@/utils/tooltips";
 import clsx from "clsx";
 
@@ -32,25 +32,43 @@ function nearestOverflowAncestor(el: HTMLElement | null): HTMLElement | null {
   return null;
 }
 
-export function Tooltip({ tooltipId }: { tooltipId: string }) {
+/** A label and value shown under a tooltip's text, such as the port a stream uses. */
+export type TooltipDetail = { label: string; value: string };
+
+// Which edge of the tooltip lines up with its icon: centred, or pinned to the icon's side when
+// centring would push it past an edge.
+type Align = "start" | "center" | "end";
+const tooltipAlign: Record<Align, string> = { start: "left-0", center: "left-1/2 -translate-x-1/2", end: "right-0" };
+const arrowAlign: Record<Align, string> = { start: "left-1", center: "left-1/2 -translate-x-1/2", end: "right-1" };
+
+export function Tooltip({ tooltipId, details }: { tooltipId: string; details?: TooltipDetail[] }) {
   const tooltipContentId = useId();
   const tooltipData = getTooltip(tooltipId);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const [showBelow, setShowBelow] = useState(false);
+  const [placement, setPlacement] = useState<{ below: boolean; align: Align }>({ below: false, align: "center" });
 
-  // Decide the placement when the tooltip is about to appear: put it below the trigger if
-  // placing it above would be clipped by the viewport or the nearest scrolling ancestor.
+  // Decide the placement when the tooltip is about to appear: below the trigger if placing it
+  // above would be clipped, and pinned to one side if centring it would cross the left or right
+  // edge. The edges are those of the nearest scrolling ancestor, within the window.
   const choosePlacement = () => {
     if (!containerRef.current || !tooltipRef.current) return;
     const triggerRect = containerRef.current.getBoundingClientRect();
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
-    const overflowParent = nearestOverflowAncestor(containerRef.current);
-    const boundaryTop = Math.max(0, overflowParent ? overflowParent.getBoundingClientRect().top : 0);
-    const spaceAboveWithin = triggerRect.top - boundaryTop;
+    const boundary = nearestOverflowAncestor(containerRef.current)?.getBoundingClientRect();
+    const top = Math.max(0, boundary?.top ?? 0);
+    const left = Math.max(0, boundary?.left ?? 0);
+    const right = Math.min(document.documentElement.clientWidth, boundary?.right ?? Infinity);
     const tooltipHeight = tooltipRect.height || 200;
     const buffer = 20; // spacing + safety
-    setShowBelow(spaceAboveWithin < tooltipHeight + buffer);
+    const margin = 8;
+    const iconCentre = triggerRect.left + triggerRect.width / 2;
+    const halfWidth = tooltipRect.width / 2;
+    setPlacement({
+      below: triggerRect.top - top < tooltipHeight + buffer,
+      align:
+        iconCentre + halfWidth > right - margin ? "end" : iconCentre - halfWidth < left + margin ? "start" : "center",
+    });
   };
 
   if (!tooltipData) return null;
@@ -70,11 +88,13 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
         id={tooltipContentId}
         role="tooltip"
         className={clsx(
-          "pointer-events-none absolute left-1/2 z-30 min-w-60 px-3 py-2 text-sm",
-          "-translate-x-1/2 transform rounded-md bg-gray-900 text-white",
+          "pointer-events-none absolute z-30 px-3 py-2 text-sm",
+          tooltipAlign[placement.align],
+          details ? "w-96" : "min-w-60",
+          "rounded-md bg-gray-900 text-white",
           "opacity-0 shadow-lg transition-opacity duration-200",
           "group-hover:opacity-100 group-has-focus-visible:opacity-100",
-          showBelow ? "top-full mt-2" : "bottom-full mb-2",
+          placement.below ? "top-full mt-2" : "bottom-full mb-2",
         )}
       >
         <div className="space-y-2">
@@ -91,6 +111,17 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
           )}
 
           <div className="leading-relaxed text-gray-300">{tooltipData.tooltip}</div>
+
+          {details && details.length > 0 && (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-t border-gray-700 pt-2 text-xs">
+              {details.map(({ label, value }) => (
+                <Fragment key={label}>
+                  <dt className="text-gray-400">{label}</dt>
+                  <dd className="font-mono break-all text-gray-100">{value}</dd>
+                </Fragment>
+              ))}
+            </dl>
+          )}
 
           {tooltipData.description && tooltipData.description.length > 0 && (
             <div className="border-t border-gray-700 pt-2">
@@ -109,9 +140,10 @@ export function Tooltip({ tooltipId }: { tooltipId: string }) {
         {/* Arrow */}
         <div
           className={clsx(
-            "absolute left-1/2 -translate-x-1/2 transform",
+            "absolute",
+            arrowAlign[placement.align],
             "border-4 border-transparent",
-            showBelow ? "bottom-full border-b-gray-900" : "top-full border-t-gray-900",
+            placement.below ? "bottom-full border-b-gray-900" : "top-full border-t-gray-900",
           )}
         />
       </div>

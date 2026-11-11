@@ -11,6 +11,7 @@ import {
   forEachFrameInWindow,
   GREEN_COLOUR,
   hiddenXAxis,
+  labelAxis,
   PLOT_DATA_SEC,
   RED_COLOUR,
   rollingXScale,
@@ -41,13 +42,7 @@ function createOptions(): uPlot.Options {
     },
     axes: [
       { ...hiddenXAxis, border: axisBorder },
-      {
-        scale: "y",
-        grid: { show: false },
-        ticks: { show: true, size: 6, stroke: "#b2b2b2" },
-        border: axisBorder,
-        size: 40,
-      },
+      { ...labelAxis(), size: 40 },
     ],
     series: [
       {},

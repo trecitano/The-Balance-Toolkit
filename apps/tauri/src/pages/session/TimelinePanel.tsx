@@ -107,15 +107,14 @@ export function TimelinePanel({
   const displayTotalSeconds = hasOngoingSession ? progressInfo.totalSeconds : singleLoopDuration * totalLoops;
 
   return (
-    <div className="relative flex min-h-29 w-full items-center gap-3 rounded-lg bg-gray-100 px-2 text-xs shadow-sm">
+    <div className="relative flex min-h-24 w-full items-center gap-3 rounded-lg bg-gray-100 px-4 text-xs shadow-sm">
       <QueryStatus error={action.error} />
-      <div className="flex flex-col items-center gap-2">
+      {/* The button stays in the middle of the panel whether or not an activity is chosen. */}
+      <div className="flex shrink-0 items-center gap-3">
         <button
           className={clsx(
-            "ml-3 flex size-12 cursor-pointer items-center justify-center rounded-full transition-all duration-100",
-            hasOngoingSession
-              ? "border-2 border-[#e50012] bg-[#e50012] text-white"
-              : "border-2 border-[#e50012] bg-white text-black",
+            "flex size-12 cursor-pointer items-center justify-center rounded-full border-2 border-(--red) transition-all duration-100",
+            hasOngoingSession ? "bg-(--red) text-white" : "bg-white text-black",
             "disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-400 disabled:opacity-50",
           )}
           type="button"
@@ -132,7 +131,7 @@ export function TimelinePanel({
           )}
         </button>
         {activity && (
-          <div className="flex flex-col items-center font-medium text-gray-700 tabular-nums">
+          <div className="flex flex-col font-medium text-gray-700 tabular-nums">
             <p>
               Loop {displayLoop}/{displayTotalLoops}
             </p>
@@ -143,25 +142,29 @@ export function TimelinePanel({
         )}
       </div>
       {activity ? (
-        <div className="mt-3 flex w-full gap-2">
-          <div className="flex h-25 grow">
-            <ActivityTimeline blocks={activity.timelineBlocks} />
-          </div>
-          <div
-            ref={registerPlayhead}
-            className={clsx("absolute top-[-14px] z-10 h-[110%] w-[2px] bg-(--red)", !hasOngoingSession && "hidden")}
-          >
-            <div className="absolute left-1/2 h-4 w-5 -translate-x-1/2 bg-(--red) shadow-(--shadow-light) [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]" />
+        <>
+          {/* The space above the blocks matches ActivityTimeline's durations row below them, so the
+            blocks sit in the middle of the panel too, level with the button. */}
+          <div className="flex w-full pt-6">
+            <div className="flex h-18 grow">
+              <ActivityTimeline blocks={activity.timelineBlocks} />
+            </div>
+            <div
+              ref={registerPlayhead}
+              className={clsx("absolute top-[-14px] z-10 h-[110%] w-[2px] bg-(--red)", !hasOngoingSession && "hidden")}
+            >
+              <div className="absolute left-1/2 h-4 w-5 -translate-x-1/2 bg-(--red) shadow-(--shadow-light) [clip-path:polygon(91.6%_0%,100%_37.5%,50%_100%,0%_37.5%,8.3%_0%)]" />
+            </div>
           </div>
           <button
             type="button"
             aria-label="Open activity in a separate window"
-            className="mb-3 ml-auto size-5"
+            className="size-5 shrink-0"
             onClick={() => action.run(openPopup)}
           >
             <img src={popout} alt="" />
           </button>
-        </div>
+        </>
       ) : (
         <div className="pointer-events-none absolute w-full justify-center text-center">
           <p className="text-xl text-gray-500/80">{placeholderMessage}</p>
