@@ -14,6 +14,7 @@ import { activitiesIcon } from "@/assets/icons";
 import ConnectionCard from "@/pages/home/ConnectionCard.tsx";
 import LastSessionCard from "@/pages/home/LastSessionCard.tsx";
 import { DocumentationCard, HelpSupportCard, OtherResourcesCard } from "@/pages/home/ResourceCards.tsx";
+import ZoomToFill from "@/pages/home/ZoomToFill.tsx";
 
 function Home() {
   const activitiesQuery = useQuery(ActivitiesQuery);
@@ -40,7 +41,7 @@ function Home() {
   return (
     // Fill the page so the cards share the remaining height and the bottom margin matches
     // the other pages instead of leaving a blank band under content-sized rows.
-    <div className="page-fade-in flex h-full flex-col">
+    <ZoomToFill className="page-fade-in flex h-full flex-col">
       {/* Header */}
       <Header />
 
@@ -75,7 +76,7 @@ function Home() {
           <HelpSupportCard />
         </ToolkitContainer>
       </div>
-    </div>
+    </ZoomToFill>
   );
 }
 

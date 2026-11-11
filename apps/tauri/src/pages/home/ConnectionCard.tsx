@@ -150,7 +150,7 @@ export default function ConnectionCard({ devices, selected, isScanning }: Connec
         )}
       </div>
 
-      <div className="relative flex min-h-0 flex-1 items-center justify-center rounded-xl bg-(--bg-light)">
+      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl bg-(--bg-light)">
         <BoardArt state={state} className="h-full w-full max-w-72" />
         <span className="absolute top-3 left-3">
           <StatusPill tone={pillTone} label={pillLabel} />

@@ -8,6 +8,7 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { commands } from "@/utils/requests.ts";
 import { HomeIcon, HomeIconName } from "@/pages/home/HomeIcons.tsx";
 import { tile } from "@/pages/home/tile.ts";
+import { usePageZoom } from "@/pages/home/ZoomToFill.tsx";
 import {
   CITATION_APA,
   CITATION_BIBTEX,
@@ -153,6 +154,8 @@ const CITATION_BLOCKS = [
 ];
 
 function CitationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  // Dialogs are drawn outside the page, so match the page's zoom here.
+  const zoom = usePageZoom();
   const [status, setStatus] = useState("");
   // The save dialog doesn't block this window, so stop a second click from opening another one.
   const [saving, setSaving] = useState(false);
@@ -180,7 +183,7 @@ function CitationModal({ open, onClose }: { open: boolean; onClose: () => void }
     }
   };
   return (
-    <Modal open={open} label="Cite the paper" onClose={close} className="w-2xl text-gray-900">
+    <Modal open={open} label="Cite the paper" onClose={close} className="w-2xl text-gray-900" style={{ zoom }}>
       <h2 className="mb-4 text-lg font-bold">Cite The Balance Toolkit</h2>
       {CITATION_BLOCKS.map(({ label, text, rows }) => (
         <div key={label} className="mb-3">

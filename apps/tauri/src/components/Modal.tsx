@@ -1,17 +1,27 @@
 import clsx from "clsx";
 import { useEffect, useRef } from "react";
-import type { PropsWithChildren } from "react";
+import type { CSSProperties, PropsWithChildren } from "react";
 import { createPortal } from "react-dom";
 
 interface ModalProps extends PropsWithChildren {
   open: boolean;
   onClose: () => void;
   className?: string;
+  /** Applied to the dialog's box, next to `className`. */
+  style?: CSSProperties;
   defaultLayout?: boolean;
   label?: string;
 }
 
-export function Modal({ open, onClose, children, className, defaultLayout = true, label = "Dialog" }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  children,
+  className,
+  style,
+  defaultLayout = true,
+  label = "Dialog",
+}: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -40,6 +50,7 @@ export function Modal({ open, onClose, children, className, defaultLayout = true
           defaultLayout && "rounded-lg bg-white px-20 py-12 text-center shadow-lg",
           className,
         )}
+        style={style}
       >
         {children}
       </div>
