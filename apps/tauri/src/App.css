@@ -11,6 +11,10 @@
   --accent: #e8bd00;
   --red: #e50012;
   --red-dark: #d10010;
+  /* Pale tints of the colours above, for badges, pills and notes. */
+  --primary-light: #e0eafc;
+  --accent-light: #fbf3d5;
+  --red-light: #fde5e7;
   --white: #fff;
   --light: #f5f5f5;
   --light-accent: #ececec;

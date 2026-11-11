@@ -76,4 +76,8 @@ export const commands = {
     updateActivity: (activity: Activity) => backend.activityUpdateActivity(activity),
     resetActivity: (activityId: string) => backend.activityResetActivityToDefault(activityId),
   },
+
+  files: {
+    saveCitation: (fileName: string, contents: string) => backend.filesSaveCitation(fileName, contents),
+  },
 };

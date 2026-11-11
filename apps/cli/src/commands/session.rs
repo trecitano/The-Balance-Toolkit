@@ -558,7 +558,8 @@ impl RecordingWatch {
     ) -> Self {
         let enabled = settings.store_raw_session || settings.store_processed_data;
         let previous = if enabled {
-            ExistingSessionFileSystem::load_latest_session_file(directory).map(|(path, _)| path)
+            ExistingSessionFileSystem::load_latest_session_file(directory)
+                .map(|latest| latest.file_path)
         } else {
             None
         };
@@ -585,7 +586,8 @@ impl RecordingWatch {
     /// The finalised recording of this run, once the file writer has rewritten its settings
     /// file with the session statistics.
     pub fn finalised(&self) -> Option<(String, SessionConfigurationFileFormat)> {
-        let (path, session) = ExistingSessionFileSystem::load_latest_session_file(&self.directory)?;
+        let latest = ExistingSessionFileSystem::load_latest_session_file(&self.directory)?;
+        let (path, session) = (latest.file_path, latest.session);
         let boards: BTreeSet<MacAddress> = session.device_names.keys().copied().collect();
         let done = self.previous.as_deref() != Some(path.as_str())
             && boards == self.boards

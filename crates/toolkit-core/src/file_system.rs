@@ -2,7 +2,7 @@ use crate::actors::state::activities::{Activity, ActivityState};
 use crate::processing::file_writer::SessionConfigurationFileFormat;
 use crate::types::{GeneralSettings, MacAddress, NintendoDevice, User};
 use anyhow::{Context, Result};
-use chrono::NaiveDateTime;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::fs;
@@ -108,11 +108,17 @@ impl ActivitiesFileSystem {
     }
 }
 
+/// The newest recording in a directory.
+pub struct LatestSession {
+    pub file_path: String,
+    /// When recording started, read from the file name (the file writer names files in UTC).
+    pub recorded_at: DateTime<Utc>,
+    pub session: SessionConfigurationFileFormat,
+}
+
 pub struct ExistingSessionFileSystem;
 impl ExistingSessionFileSystem {
-    pub fn load_latest_session_file(
-        directory: &Path,
-    ) -> Option<(String, SessionConfigurationFileFormat)> {
+    pub fn load_latest_session_file(directory: &Path) -> Option<LatestSession> {
         let mut latest: Option<(NaiveDateTime, PathBuf)> = None;
 
         let paths = fs::read_dir(directory)
@@ -145,9 +151,15 @@ impl ExistingSessionFileSystem {
 
         log::debug!("Latest session file: {:?}", latest);
 
-        if let Some((_, file_path)) = latest {
+        if let Some((timestamp, file_path)) = latest {
             match Self::load(&file_path) {
-                Ok(session) => return Some((file_path.to_string_lossy().to_string(), session)),
+                Ok(session) => {
+                    return Some(LatestSession {
+                        file_path: file_path.to_string_lossy().to_string(),
+                        recorded_at: timestamp.and_utc(),
+                        session,
+                    });
+                }
                 Err(e) => {
                     log::warn!("Failed to load session file: {}", e);
                 }

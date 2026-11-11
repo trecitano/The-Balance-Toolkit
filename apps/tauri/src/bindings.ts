@@ -61,6 +61,8 @@ export const commands = {
 	user: User,
 	sessionStats: SessionStats,
 	fileLocation: string,
+	/**  When recording started. */
+	recordedAt: string,
 	activity: Activity | null,
 } | null>("replay_load_last_session_info").then((v) => (v==null?v:({...v,user:({...v.user,height:v.user.height==null?v.user.height:v.user.height,weight:v.user.weight==null?v.user.weight:v.user.weight})}) as typeof v)),
 	activityGetAvailableTimeBlocks: () => __TAURI_INVOKE<TimelineBlock[]>("activity_get_available_time_blocks"),
@@ -68,6 +70,14 @@ export const commands = {
 	activityGetActivity: (activityId: string) => __TAURI_INVOKE<Activity>("activity_get_activity", { activityId }),
 	activityUpdateActivity: (activity: Activity) => __TAURI_INVOKE<null>("activity_update_activity", { activity }),
 	activityResetActivityToDefault: (activityId: string) => __TAURI_INVOKE<Activity>("activity_reset_activity_to_default", { activityId }),
+	/**
+	 *  Asks where to save a citation as an RIS file and writes it there. The path only ever comes
+	 *  from the save dialog, so the frontend chooses what to write but never where. Returns false when
+	 *  the dialog is cancelled.
+	 * 
+	 *  The dialog blocks until it closes. That is fine here: async commands run off the main thread.
+	 */
+	filesSaveCitation: (fileName: string, contents: string) => __TAURI_INVOKE<boolean>("files_save_citation", { fileName, contents }),
 };
 
 /** Events */
@@ -208,6 +218,8 @@ export type LastSessionInformation = {
 	user: User,
 	sessionStats: SessionStats,
 	fileLocation: string,
+	/**  When recording started. */
+	recordedAt: string,
 	activity: Activity | null,
 };
 
