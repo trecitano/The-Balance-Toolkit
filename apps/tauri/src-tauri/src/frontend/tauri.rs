@@ -87,6 +87,7 @@ fn specta_builder() -> Builder<tauri::Wry> {
             activity_get_activity,
             activity_update_activity,
             activity_reset_activity_to_default,
+            files_save_citation,
         ])
         .events(collect_events![
             NewBoard,
@@ -114,6 +115,7 @@ pub fn initialize(manager_tx: Sender<ToolkitCommand>, manager_rx: Receiver<Toolk
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
@@ -804,6 +806,37 @@ async fn activity_reset_activity_to_default(
     })
     .await
     .map(Into::into)
+}
+
+// --- FILES ---
+
+/// Asks where to save a citation as an RIS file and writes it there. The path only ever comes
+/// from the save dialog, so the frontend chooses what to write but never where. Returns false when
+/// the dialog is cancelled.
+///
+/// The dialog blocks until it closes. That is fine here: async commands run off the main thread.
+#[tauri::command]
+#[specta::specta]
+async fn files_save_citation(
+    file_name: String,
+    contents: String,
+    app: AppHandle,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let Some(path) = app
+        .dialog()
+        .file()
+        .set_title("Save citation")
+        .set_file_name(&file_name)
+        .add_filter("RIS citation", &["ris"])
+        .blocking_save_file()
+    else {
+        return Ok(false);
+    };
+    let path = path.into_path().map_err(|e| format!("{e:#}"))?;
+    std::fs::write(&path, contents).map_err(|e| format!("{e:#}"))?;
+    Ok(true)
 }
 
 #[cfg(test)]

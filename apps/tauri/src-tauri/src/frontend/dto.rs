@@ -665,6 +665,8 @@ pub struct LastSessionInformation {
     pub user: User,
     pub session_stats: SessionStats,
     pub file_location: String,
+    /// When recording started.
+    pub recorded_at: DateTime<Utc>,
     pub activity: Option<Activity>,
 }
 
@@ -674,6 +676,7 @@ impl From<core::LastSessionInformation> for LastSessionInformation {
             user: i.user.into(),
             session_stats: i.session_stats.into(),
             file_location: i.file_location,
+            recorded_at: i.recorded_at,
             activity: i.activity.map(Into::into),
         }
     }

@@ -143,7 +143,12 @@ export default function ActivityEdit({ activity, onClose, existingActionImages }
       <QueryStatus error={formError || saveMutation.error || resetMutation.error} />
       {ConfirmDialog}
       <fieldset disabled={busy} className="contents">
-        <div className="h-13 border-b-1 border-(--border) pt-2">
+        {/* The way back sits where people look for it: top left, next to the activity's name. */}
+        <div className="flex h-13 items-center gap-4 border-b-1 border-(--border) pt-2 pb-3">
+          <ToolkitButton type="button" color="white" size="sm" onClick={() => void close()}>
+            ← All activities
+          </ToolkitButton>
+          <span aria-hidden="true" className="h-6 w-px bg-(--border)" />
           <h3 className={"text-xl font-bold"}>{activity.title}</h3>
         </div>
 
@@ -227,7 +232,7 @@ export default function ActivityEdit({ activity, onClose, existingActionImages }
             </ToolkitButton>
 
             <ToolkitButton type="button" onClick={() => void close()} color="grey">
-              Close
+              Cancel
             </ToolkitButton>
 
             <ToolkitButton

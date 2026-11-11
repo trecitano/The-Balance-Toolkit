@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getBlockImage } from "@/utils/activityImages.ts";
+import { getBlockImage, showLogoInstead } from "@/utils/activityImages.ts";
 import { ActivityStateQuery } from "@/queries/toolkit";
 import { QueryStatus } from "@/components/QueryStatus";
 import CarouselIndicators from "@/components/CarouselIndicators.tsx";
@@ -71,7 +71,12 @@ export default function Popup() {
                     : "scale-100 bg-gray-100"
                 }`}
               >
-                <img src={getBlockImage(block.id)} alt={block.title} className="mb-2 rounded-lg" />
+                <img
+                  src={getBlockImage(block.id)}
+                  onError={showLogoInstead}
+                  alt={block.title}
+                  className="mb-2 rounded-lg"
+                />
               </div>
               <span className={`text-center text-sm font-medium text-gray-600`}>{block.title}</span>
             </li>

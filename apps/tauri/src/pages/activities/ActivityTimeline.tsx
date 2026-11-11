@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import "./ActivityTimeline.css";
 import { TimelineBlock } from "@/types.ts";
-import { getBlockImage } from "@/utils/activityImages.ts";
+import { getBlockImage, showLogoInstead } from "@/utils/activityImages.ts";
 import clsx from "clsx";
 
 interface ActivityTimelineProps {
@@ -255,7 +255,12 @@ export default function ActivityTimeline({ blocks, editable = false, onChange, o
                 </div>
 
                 <div className="mt-auto flex h-7/10 items-center justify-center">
-                  <img src={getBlockImage(block.id)} alt={block.title} className="h-full object-cover" />
+                  <img
+                    src={getBlockImage(block.id)}
+                    onError={showLogoInstead}
+                    alt={block.title}
+                    className="h-full object-cover"
+                  />
                 </div>
               </div>
             </div>

@@ -4,6 +4,7 @@ import wbbIcon from "@/assets/wbb-top-white.svg";
 import wbbIconBlue from "@/assets/wbb-top-blue.png";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/utils/macAddress.ts";
+import { formatRelativeDay } from "@/utils/devices.ts";
 import clsx from "clsx";
 
 interface DeviceRowProps {
@@ -21,29 +22,6 @@ interface DeviceRowProps {
   onJoinSession: () => void;
   onLeaveSession: () => void;
   onRemove: () => void;
-}
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-
-/** Relative wording by calendar day, so 23:30 yesterday is "Yesterday" even at 00:30. */
-function formatLastConnected(dateString: string | null | undefined) {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "Invalid Date";
-  const diffDays = Math.round((startOfDay(new Date()) - startOfDay(date)) / DAY_MS);
-  const diffWeeks = Math.floor(diffDays / 7);
-
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
-
-  if (diffDays <= 0) return `Today ${time}`;
-  if (diffDays === 1) return `Yesterday ${time}`;
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffWeeks === 1) return `1 week ago`;
-  if (diffWeeks < 5) return `${diffWeeks} weeks ago`;
-
-  return date.toLocaleDateString();
 }
 
 export default function DeviceRow({
@@ -141,7 +119,7 @@ export default function DeviceRow({
         <div className="text-(--text-lighter)">
           {device.isConnected
             ? `MAC: ${convertNumberToMacAddress(device.macAddress)}`
-            : `Last seen: ${formatLastConnected(device.lastConnected)}`}
+            : `Last seen: ${formatRelativeDay(device.lastConnected)}`}
         </div>
       </div>
 

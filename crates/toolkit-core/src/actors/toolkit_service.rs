@@ -599,12 +599,13 @@ impl ConnectionManager {
                 match ExistingSessionFileSystem::load_latest_session_file(
                     &self.general_settings.store_files_default_directory,
                 ) {
-                    Some((file_path, session)) => {
+                    Some(latest) => {
                         let result = LastSessionInformation {
-                            user: session.user,
-                            session_stats: session.session_stats,
-                            file_location: file_path,
-                            activity: session.activity,
+                            user: latest.session.user,
+                            session_stats: latest.session.session_stats,
+                            file_location: latest.file_path,
+                            recorded_at: latest.recorded_at,
+                            activity: latest.session.activity,
                         };
                         let _ = response.send(Some(result));
                     }

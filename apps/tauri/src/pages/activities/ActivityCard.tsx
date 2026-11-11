@@ -3,7 +3,7 @@ import "./ActivityCard.css";
 import wbbIcon from "@/assets/wbb-top-white.svg";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { Activity } from "@/types.ts";
-import { getBlockImage } from "@/utils/activityImages.ts";
+import { getBlockImage, showLogoInstead } from "@/utils/activityImages.ts";
 import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 
@@ -40,6 +40,7 @@ export default function ActivityCard({ activity, onOpen }: ActivityCardProps) {
       <img
         className="min-h-0 rounded-lg bg-(--bg-light) object-contain shadow-(--shadow-light)"
         src={getBlockImage(shown ?? activity.staticImage)}
+        onError={showLogoInstead}
         alt={`${activity.title} illustration`}
       />
       <div>
