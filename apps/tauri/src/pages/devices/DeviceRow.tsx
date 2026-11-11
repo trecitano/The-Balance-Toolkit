@@ -4,7 +4,7 @@ import wbbIcon from "@/assets/wbb-top-white.svg";
 import wbbIconBlue from "@/assets/wbb-top-blue.png";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { convertNumberToMacAddress } from "@/utils/macAddress.ts";
-import { formatRelativeDay } from "@/utils/devices.ts";
+import { formatRelativeDay } from "@/utils/dates.ts";
 import clsx from "clsx";
 
 interface DeviceRowProps {

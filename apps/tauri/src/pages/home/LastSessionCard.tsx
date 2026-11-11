@@ -6,7 +6,8 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import { LastSessionInformation, User } from "@/types.ts";
 import { getBlockImage, LOGO_IMAGE, showLogoInstead } from "@/utils/activityImages.ts";
-import { formatRelativeDay } from "@/utils/devices.ts";
+import { formatRelativeDay } from "@/utils/dates.ts";
+import { userColor } from "@/utils/userColors.ts";
 
 function formatDuration(totalSeconds: number): string {
   const seconds = Math.round(totalSeconds);
@@ -29,7 +30,7 @@ function UserAvatar({ user }: { user: User }) {
   return (
     <span
       className="flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
-      style={{ backgroundColor: user.color ?? "#999" }}
+      style={{ backgroundColor: userColor(user) }}
       aria-hidden="true"
     >
       {initials}

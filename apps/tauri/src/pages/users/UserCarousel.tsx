@@ -3,6 +3,8 @@ import clsx from "clsx";
 import type { User } from "@/types";
 import PersonIcon from "@/assets/user-icon.svg?react";
 import CarouselIndicators from "@/components/CarouselIndicators";
+import { formatRelativeDay } from "@/utils/dates.ts";
+import { userColor } from "@/utils/userColors.ts";
 
 export default function UserCarousel({
   users,
@@ -119,8 +121,8 @@ export default function UserCarousel({
                 {user.isDefault ? "Default" : "Selected"}
               </span>
               <span
-                className="flex aspect-square h-3/10 shrink-0 items-center justify-center rounded-full"
-                style={{ backgroundColor: user.color ?? "#999" }}
+                className="flex aspect-square h-2/5 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: userColor(user) }}
               >
                 <PersonIcon className="h-6/10 w-6/10 text-white" />
               </span>
@@ -130,7 +132,7 @@ export default function UserCarousel({
               <span className="mt-auto text-xs text-gray-500">
                 Updated
                 <br />
-                {new Date(user.updatedAt).toLocaleDateString()}
+                {formatRelativeDay(user.updatedAt)}
               </span>
             </button>
           </li>

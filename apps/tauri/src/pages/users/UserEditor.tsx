@@ -1,5 +1,6 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { User } from "@/types";
+import PersonIcon from "@/assets/user-icon.svg?react";
 import { InputPrimitive } from "@/components/InputPrimitive";
 import { SelectPrimitive } from "@/components/SelectPrimitive";
 import { ToolkitButton } from "@/components/ToolkitButton";
@@ -8,17 +9,31 @@ import { QueryStatus } from "@/components/QueryStatus";
 import { useSaveUser } from "@/queries/toolkit";
 import WeightMeasureModal from "./WeightMeasureModal";
 import { formatWeight, unitToKg } from "@/utils/weight";
+import { formatRelativeDay } from "@/utils/dates.ts";
+import { USER_COLORS, userColor } from "@/utils/userColors.ts";
 
 const genders = ["Male", "Female", "Non-binary", "Prefer not to say"];
 const genderOptions = [...genders, "Other"].map((value) => ({ value, label: value }));
-const colors = ["#e55d82", "#409edb", "#e8bd00", "#894c2f", "#dd2020", "#2a2a2a", "#989898", "#9bbc0f"];
 const options = (values: string[]) => values.map((value) => ({ value, label: value }));
+
+const fullDate = (value: string) =>
+  new Date(value).toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" });
+
+function Meta({ label, value, title }: { label: string; value: string; title?: string }) {
+  return (
+    <div className="flex gap-1" title={title}>
+      <dt>{label}</dt>
+      <dd className="font-medium text-gray-700">{value}</dd>
+    </div>
+  );
+}
 
 export default function UserEditor({
   user,
   initialEditing,
   onEditingChange,
   onSavingChange,
+  onDraftChange,
   onDelete,
   sessionDevices,
   disabled,
@@ -27,6 +42,8 @@ export default function UserEditor({
   initialEditing: boolean;
   onEditingChange: (editing: boolean) => void;
   onSavingChange: (saving: boolean) => void;
+  /** The edit in progress, or null when not editing, so the page can preview it. */
+  onDraftChange: (draft: User | null) => void;
   onDelete: () => void;
   sessionDevices: Array<{ name: string; macAddress: number }>;
   disabled: boolean;
@@ -42,6 +59,14 @@ export default function UserEditor({
   const [measuring, setMeasuring] = useState(false);
   const save = useSaveUser();
   const displayed = draft ?? user;
+  const color = userColor(displayed);
+  // New users get a random colour from the backend. Show one from outside the palette as its own
+  // swatch, so the picker always shows the user's colour as selected.
+  const swatches = USER_COLORS.includes(color) ? USER_COLORS : [...USER_COLORS, color];
+  useEffect(() => {
+    onDraftChange(draft);
+    return () => onDraftChange(null);
+  }, [draft, onDraftChange]);
   const editing = draft !== null;
   const locked = disabled || save.isPending;
   const update = <K extends keyof User>(key: K, value: User[K]) =>
@@ -82,13 +107,26 @@ export default function UserEditor({
           }
         }}
       >
-        <header className="mb-5 flex items-center justify-between border-b border-gray-300 pb-3">
-          <div>
-            <h2 className="font-bold">{user.name}</h2>
-            <p className="text-sm text-gray-600">
-              Created {new Date(user.createdAt).toLocaleDateString()} · Updated{" "}
-              {new Date(user.updatedAt).toLocaleDateString()}
-            </p>
+        <header className="mb-5 flex items-center justify-between gap-4 border-b border-gray-300 pb-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span
+              className="flex size-11 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: color }}
+            >
+              <PersonIcon className="size-6 text-white" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate text-lg leading-tight font-bold">{displayed.name.trim() || "No name yet"}</h2>
+              <dl className="mt-1 flex flex-wrap gap-x-4 text-xs text-gray-500">
+                <Meta label="ID" value={String(user.id)} />
+                <Meta
+                  label="Created"
+                  value={new Date(user.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                  title={fullDate(user.createdAt)}
+                />
+                <Meta label="Updated" value={formatRelativeDay(user.updatedAt)} title={fullDate(user.updatedAt)} />
+              </dl>
+            </div>
           </div>
           <div className="flex gap-2">
             {editing ? (
@@ -113,8 +151,9 @@ export default function UserEditor({
           </div>
         </header>
         <QueryStatus error={save.error} />
-        <fieldset disabled={!editing || locked} className="grid min-w-0 grid-cols-4 items-start gap-x-6 gap-y-5">
-          <label className="user-editor-field">
+        {/* Twelve columns, so each field gets the width its contents need. */}
+        <fieldset disabled={!editing || locked} className="grid min-w-0 grid-cols-12 items-start gap-x-6 gap-y-5">
+          <label className="user-editor-field col-span-4">
             <span>Name</span>
             <InputPrimitive
               className="w-full min-w-0"
@@ -123,7 +162,7 @@ export default function UserEditor({
               onChange={(e) => update("name", e.target.value)}
             />
           </label>
-          <label className="user-editor-field">
+          <label className="user-editor-field col-span-2">
             <span>Age</span>
             <InputPrimitive
               className="w-full min-w-0"
@@ -135,7 +174,7 @@ export default function UserEditor({
               onChange={(e) => update("age", e.target.value === "" ? null : Number(e.target.value))}
             />
           </label>
-          <div className="user-editor-field">
+          <div className="user-editor-field col-span-3">
             <span id={`${fieldId}-gender`}>Gender</span>
             <SelectPrimitive
               aria-labelledby={`${fieldId}-gender`}
@@ -159,9 +198,20 @@ export default function UserEditor({
               </label>
             )}
           </div>
-          <div className="user-editor-field">
+          <div className="user-editor-field col-span-3">
+            <span id={`${fieldId}-hand`}>Dominant hand</span>
+            <SelectPrimitive
+              aria-labelledby={`${fieldId}-hand`}
+              value={displayed.dominantHand ?? undefined}
+              noneOption="Not specified"
+              options={options(["Right", "Left", "Ambidextrous"])}
+              disabled={!editing || locked}
+              onChange={(value) => update("dominantHand", value ?? null)}
+            />
+          </div>
+          <div className="user-editor-field col-span-3">
             <label htmlFor={`${fieldId}-height`}>Height</label>
-            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_4rem] items-center gap-2">
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_5rem] items-center gap-2">
               <InputPrimitive
                 id={`${fieldId}-height`}
                 className="w-full min-w-0"
@@ -181,9 +231,9 @@ export default function UserEditor({
               />
             </div>
           </div>
-          <div className="user-editor-field">
+          <div className="user-editor-field col-span-4">
             <label htmlFor={`${fieldId}-weight`}>Weight</label>
-            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_4rem_auto] items-center gap-2">
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_5rem_auto] items-center gap-2">
               <InputPrimitive
                 id={`${fieldId}-weight`}
                 className="w-full min-w-0"
@@ -222,29 +272,18 @@ export default function UserEditor({
               </ToolkitButton>
             </div>
           </div>
-          <div className="user-editor-field">
-            <span id={`${fieldId}-hand`}>Dominant hand</span>
-            <SelectPrimitive
-              aria-labelledby={`${fieldId}-hand`}
-              value={displayed.dominantHand ?? undefined}
-              noneOption="Not specified"
-              options={options(["Right", "Left", "Ambidextrous"])}
-              disabled={!editing || locked}
-              onChange={(value) => update("dominantHand", value ?? null)}
-            />
-          </div>
-          <div className="user-editor-field col-span-2">
+          <div className="user-editor-field col-span-5">
             <span>Color</span>
             <div className="flex min-h-8 flex-wrap items-center gap-2" role="group" aria-label="User color">
-              {colors.map((color) => (
+              {swatches.map((swatch) => (
                 <button
                   type="button"
-                  key={color}
-                  aria-label={color}
-                  aria-pressed={displayed.color === color}
-                  onClick={() => update("color", color)}
-                  className="size-6 rounded border border-gray-300 aria-pressed:ring-2 aria-pressed:ring-blue-700 aria-pressed:ring-offset-2"
-                  style={{ backgroundColor: color }}
+                  key={swatch}
+                  aria-label={swatch}
+                  aria-pressed={color === swatch}
+                  onClick={() => update("color", swatch)}
+                  className="size-7 rounded-full border border-black/10 aria-pressed:ring-2 aria-pressed:ring-blue-700 aria-pressed:ring-offset-2"
+                  style={{ backgroundColor: swatch }}
                 />
               ))}
             </div>

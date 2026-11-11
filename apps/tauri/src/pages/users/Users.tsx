@@ -10,8 +10,11 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { useAction } from "@/hooks/useAction";
 import searchIcon from "@/assets/search-icon.svg";
 import PersonIcon from "@/assets/user-icon.svg?react";
+import type { User } from "@/types";
 import UserCarousel from "./UserCarousel";
 import UserEditor from "./UserEditor";
+import ZoomToFill from "@/components/ZoomToFill.tsx";
+import { userColor } from "@/utils/userColors.ts";
 
 export default function Users() {
   const query = useQuery(UsersQuery);
@@ -21,9 +24,12 @@ export default function Users() {
   const [createdId, setCreatedId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  // The edit in progress, shown on the user's card before it is saved (a new colour, say).
+  const [draft, setDraft] = useState<User | null>(null);
   const { confirm, ConfirmDialog } = useConfirm();
   const action = useAction(() => refreshUsers(client));
   const users = query.data?.users ?? [];
+  const shownUsers = draft ? users.map((user) => (user.id === draft.id ? draft : user)) : users;
   const searchQuery = search.trim().toLowerCase();
   const searchResults = users.filter(
     (user) => user.name.toLowerCase().includes(searchQuery) || String(user.id).includes(searchQuery),
@@ -58,7 +64,7 @@ export default function Users() {
   if (query.isPending || (!query.data && query.error))
     return <QueryStatus pending={query.isPending} error={query.error} onRetry={() => void query.refetch()} />;
   return (
-    <div className="flex h-full flex-col gap-5">
+    <ZoomToFill className="flex h-full flex-col gap-5">
       <header className="relative grid grid-cols-7 items-center gap-x-4">
         <PageTitle>Users</PageTitle>
         <ToolkitButton
@@ -127,7 +133,7 @@ export default function Users() {
                       >
                         <span
                           className="flex size-6 shrink-0 items-center justify-center rounded-full"
-                          style={{ backgroundColor: user.color ?? "#999" }}
+                          style={{ backgroundColor: userColor(user) }}
                         >
                           <PersonIcon className="size-4 text-white" />
                         </span>
@@ -150,7 +156,7 @@ export default function Users() {
       {selected ? (
         <>
           <UserCarousel
-            users={users}
+            users={shownUsers}
             selectedId={selected.id}
             disabled={busy}
             editing={editing}
@@ -161,6 +167,7 @@ export default function Users() {
             user={selected}
             initialEditing={createdId === selected.id}
             onSavingChange={setSaving}
+            onDraftChange={setDraft}
             onEditingChange={(next) => {
               setEditing(next);
               if (!next) setCreatedId(null);
@@ -189,6 +196,6 @@ export default function Users() {
         <QueryStatus empty="No users are available. Create a user to begin." />
       )}
       {ConfirmDialog}
-    </div>
+    </ZoomToFill>
   );
 }

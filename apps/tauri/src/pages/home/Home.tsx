@@ -14,7 +14,7 @@ import { activitiesIcon } from "@/assets/icons";
 import ConnectionCard from "@/pages/home/ConnectionCard.tsx";
 import LastSessionCard from "@/pages/home/LastSessionCard.tsx";
 import { DocumentationCard, HelpSupportCard, OtherResourcesCard } from "@/pages/home/ResourceCards.tsx";
-import ZoomToFill from "@/pages/home/ZoomToFill.tsx";
+import ZoomToFill from "@/components/ZoomToFill.tsx";
 
 function Home() {
   const activitiesQuery = useQuery(ActivitiesQuery);
