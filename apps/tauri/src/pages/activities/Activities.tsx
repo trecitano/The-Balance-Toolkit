@@ -49,7 +49,7 @@ export default function Activities() {
           existingActionImages={existingTimeBlocks}
         />
       ) : (
-        <div className="grid min-h-0 grid-cols-3 grid-rows-2 gap-10">
+        <div className="grid min-h-0 flex-1 grid-cols-3 grid-rows-2 gap-6">
           {activities.map((activity) => (
             <ActivityCard key={activity.id} activity={activity} onOpen={() => setMaximizedId(activity.id)} />
           ))}

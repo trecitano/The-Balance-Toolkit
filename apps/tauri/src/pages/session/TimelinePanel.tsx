@@ -2,6 +2,7 @@ import clsx from "clsx";
 import ActivityTimeline from "@/pages/activities/ActivityTimeline";
 import { ProgressTimer } from "@/pages/session/ProgressTimer";
 import { Activity } from "@/types.ts";
+import { roundSeconds } from "@/utils/timeline.ts";
 import { useState, useEffect, useCallback } from "react";
 
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -85,7 +86,7 @@ export function TimelinePanel({
     totalSeconds: 0,
   });
 
-  const singleLoopDuration = activity?.timelineBlocks?.reduce((acc, block) => acc + block.duration, 0) || 0;
+  const singleLoopDuration = activity ? roundSeconds(activity.timelineBlocks) : 0;
   const totalLoops = activity?.loops || 1;
 
   useEffect(() => {
