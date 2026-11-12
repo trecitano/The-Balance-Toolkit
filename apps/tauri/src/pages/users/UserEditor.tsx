@@ -56,8 +56,10 @@ export default function UserEditor({
   const displayed = draft ?? user;
   const color = userColor(displayed);
   // New users get a random colour from the backend. Show one from outside the palette as its own
-  // swatch, so the picker always shows the user's colour as selected.
-  const swatches = USER_COLORS.includes(color) ? USER_COLORS : [...USER_COLORS, color];
+  // swatch, so the picker always shows the user's colour as selected. The saved colour keeps its
+  // swatch while another is picked, so it can be chosen again during the same edit.
+  const savedColor = userColor(user);
+  const swatches = USER_COLORS.includes(savedColor) ? USER_COLORS : [...USER_COLORS, savedColor];
   const editing = draft !== null;
   const locked = disabled || save.isPending;
   const update = <K extends keyof User>(key: K, value: User[K]) =>
