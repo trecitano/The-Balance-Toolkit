@@ -67,7 +67,7 @@ export default function ReplayPage() {
       <DraftNotice show={drafts.hasDrafts} />
       <TimelinePanel
         activity={chosenActivity}
-        playButtonClass="border-l-15 border-r-0 border-t-10 border-b-10 border-l-[#e50012] border-t-transparent border-b-transparent"
+        playButtonClass="border-l-15 border-r-0 border-t-10 border-b-10 border-l-(--red) border-t-transparent border-b-transparent"
         hasOngoingSession={hasOngoingSession}
         placeholderMessage={replayIsSelected ? "No Activity" : ""}
         canStart={selectedBoards.length > 0 && !busy && !drafts.hasDrafts}

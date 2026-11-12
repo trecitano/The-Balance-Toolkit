@@ -21,7 +21,7 @@ export default function DeviceSessionList({ sessionDevices, onLeaveSession }: De
 
         return (
           <ToolkitContainer
-            className="flex min-h-89 flex-1 flex-col justify-between gap-5 p-8"
+            className="flex min-h-0 flex-1 flex-col justify-between gap-5 p-8"
             key={`side-panel-${index}`}
           >
             {device ? (
@@ -29,14 +29,15 @@ export default function DeviceSessionList({ sessionDevices, onLeaveSession }: De
                 <div className="flex items-center gap-2">
                   <img alt="" src={bluetoothIcon} className="size-6" />
                   <div>
-                    <p className="font-medium">{device.name}</p>
+                    <p className="font-medium break-words">{device.name}</p>
                     <p>{convertNumberToMacAddress(device.macAddress)}</p>
                   </div>
                 </div>
 
-                <div className="relative flex min-h-0 flex-1 items-center justify-center">
-                  <img alt="" src={wbbIconBlue} className="absolute z-10 w-4/5" />
-                  <img alt="" src={rippleIcon} className="absolute inset-0 h-full w-full opacity-10" />
+                {/* The board fits the space left by the name and buttons, so a long name can't push it over them. */}
+                <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+                  <img alt="" src={rippleIcon} className="absolute inset-0 h-full w-full object-contain opacity-10" />
+                  <img alt="" src={wbbIconBlue} className="relative max-h-full w-4/5 object-contain" />
                 </div>
 
                 <div className="flex justify-end gap-(--space-sm)">

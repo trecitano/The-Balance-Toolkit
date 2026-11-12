@@ -1,21 +1,24 @@
-import { useRef } from "react";
 import { NintendoDevice } from "@/types";
 import wbbIcon from "@/assets/wbb-top-white.svg";
 import wbbIconBlue from "@/assets/wbb-top-blue.png";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
+import { InputPrimitive } from "@/components/InputPrimitive.tsx";
 import { convertNumberToMacAddress } from "@/utils/macAddress.ts";
-import { formatRelativeDay } from "@/utils/devices.ts";
+import { formatRelativeDay } from "@/utils/dates.ts";
+import { DEFAULT_BOARD_NAME } from "@/utils/devices.ts";
 import clsx from "clsx";
 
 interface DeviceRowProps {
   device: NintendoDevice;
-  isEditing: boolean;
+  /** The name being typed while renaming, or null when not renaming. */
+  typedName: string | null;
   /** Selected for the next session. Distinct from `device.isConnected`, the Bluetooth link. */
   inSession: boolean;
   cannotJoin: boolean;
   busy: boolean;
   onStartRename: () => void;
-  onRename: (name: string) => void;
+  onTypeName: (name: string) => void;
+  onSaveName: (name: string) => void;
   onCancelRename: () => void;
   onIdentify: () => void;
   onCalibrate: () => void;
@@ -26,12 +29,13 @@ interface DeviceRowProps {
 
 export default function DeviceRow({
   device,
-  isEditing,
+  typedName,
   inSession,
   cannotJoin,
   busy,
   onStartRename,
-  onRename,
+  onTypeName,
+  onSaveName,
   onCancelRename,
   onIdentify,
   onCalibrate: _onCalibrate, // Calibration is not available yet; see the commented button below.
@@ -39,14 +43,7 @@ export default function DeviceRow({
   onLeaveSession,
   onRemove,
 }: DeviceRowProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  // Enter commits and then the input loses focus; this stops the blur from committing twice.
-  const committed = useRef(false);
-  const commit = () => {
-    if (committed.current) return;
-    committed.current = true;
-    onRename(inputRef.current?.value.trim() || device.name);
-  };
+  const trimmedName = typedName?.trim() ?? "";
 
   return (
     <div
@@ -68,7 +65,7 @@ export default function DeviceRow({
 
       {/* Fixed width, wide enough for either status label, so the icon is centered in the same place with or without one. */}
       <div className="flex w-22 shrink-0 flex-col items-center">
-        <img src={device.isConnected ? wbbIconBlue : wbbIcon} alt="" className="size-10 object-contain" />
+        <img src={device.isConnected ? wbbIconBlue : wbbIcon} alt="" className="w-18 object-contain" />
 
         {inSession ? (
           <div className="rounded-lg bg-(--secondary) px-2 py-1 text-sm text-white">In session</div>
@@ -77,26 +74,44 @@ export default function DeviceRow({
         )}
       </div>
 
-      <div className="ml-4 flex flex-col justify-center">
-        {isEditing ? (
-          <div className="flex">
-            <input
-              ref={inputRef}
-              type="text"
-              aria-label="Device name"
-              defaultValue={device.name}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") commit();
-                if (e.key === "Escape") {
-                  committed.current = true;
-                  onCancelRename();
-                }
-              }}
-              onBlur={commit}
-              className="px-2 py-1"
-            />
-          </div>
+      <div className="mx-4 flex min-w-0 flex-col justify-center">
+        {typedName !== null ? (
+          // Saved with the Save button or Enter, cancelled with Cancel or Escape. Clicking away
+          // keeps the edit open, so the buttons next to the field can be used.
+          <form
+            className="flex flex-col items-start gap-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (trimmedName) onSaveName(trimmedName);
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <InputPrimitive
+                aria-label="Device name"
+                value={typedName}
+                autoFocus
+                onChange={(e) => onTypeName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") onCancelRename();
+                }}
+                className="w-56"
+              />
+              <ToolkitButton type="submit" color="blue" size="sm" disabled={busy || !trimmedName}>
+                Save
+              </ToolkitButton>
+              <ToolkitButton type="button" color="grey" size="sm" onClick={onCancelRename}>
+                Cancel
+              </ToolkitButton>
+            </div>
+            <button
+              type="button"
+              disabled={typedName === DEFAULT_BOARD_NAME}
+              onClick={() => onTypeName(DEFAULT_BOARD_NAME)}
+              className="cursor-pointer text-xs text-(--primary) hover:underline disabled:cursor-default disabled:text-(--text-lighter) disabled:no-underline"
+            >
+              Use default name ({DEFAULT_BOARD_NAME})
+            </button>
+          </form>
         ) : (
           <div>
             <span className="font-semibold" title={device.name}>
@@ -104,11 +119,8 @@ export default function DeviceRow({
             </span>
             <button
               type="button"
-              className="cursor-pointer text-(--text-light)"
-              onClick={() => {
-                committed.current = false;
-                onStartRename();
-              }}
+              className="ml-2 cursor-pointer text-(--text-light) hover:text-(--primary)"
+              onClick={onStartRename}
               title="Edit name"
               aria-label={`Rename ${device.name}`}
             >
@@ -123,7 +135,7 @@ export default function DeviceRow({
         </div>
       </div>
 
-      <div className="mr-5 ml-auto flex h-10 flex-row gap-5">
+      <div className="mr-5 ml-auto flex h-10 shrink-0 flex-row gap-5 whitespace-nowrap">
         <ToolkitButton
           disabled={!device.isConnected || busy}
           type="button"

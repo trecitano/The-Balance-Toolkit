@@ -121,13 +121,11 @@ export function StabilityBarGauge({
 
   return (
     <div ref={containerRef} className="flex h-full flex-col items-center">
-      <div className={"relative font-semibold"}>
+      {/* The info icon sits in the row beside the title rather than hanging past it, so it stays
+          inside the gauge's column, which is the last thing in the board view. */}
+      <div className="flex items-center gap-1 font-semibold">
         {title}
-        {tooltipId && (
-          <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
-            <Tooltip tooltipId={tooltipId} />
-          </div>
-        )}
+        {tooltipId && <Tooltip tooltipId={tooltipId} />}
       </div>
       <div className="flex flex-1 items-center">
         <canvas ref={canvasRef} />

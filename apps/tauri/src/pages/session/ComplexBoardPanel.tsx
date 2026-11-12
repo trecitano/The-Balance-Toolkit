@@ -1,12 +1,12 @@
 import { UPlot } from "./UPlot.tsx";
 import wbbTopdown from "@/assets/wbb-topdown.svg";
 import { BalanceBoardWithCoPOverlay } from "@/pages/session/BalanceBoardWithCoPOverlay.tsx";
-import { convertNumberToMacAddress } from "@/utils/macAddress.ts";
+import { BoardPanel, PlotCell } from "@/pages/session/BoardPanel.tsx";
 import { SessionStore } from "@/store/sessionDataStore.tsx";
-import ToolkitContainer from "@/components/ToolkitContainer.tsx";
 import { MultiMetricPlot } from "@/pages/session/MultiMetricDsiPlot.tsx";
 import { FFTAmplitudePlot } from "@/pages/session/FFTAmplitudePlot.tsx";
 
+/** One board on its own: the board view and every plot. */
 export function ComplexBoardPanel({
   boardName,
   macAddress,
@@ -17,46 +17,36 @@ export function ComplexBoardPanel({
   store: SessionStore;
 }) {
   return (
-    <ToolkitContainer className="flex h-full min-h-0 flex-col gap-3">
-      <div className="flex gap-2 text-sm">
-        <p className="font-semibold">{boardName}</p>
-        <p>{convertNumberToMacAddress(macAddress)}</p>
-      </div>
-
+    <BoardPanel name={boardName} macAddress={macAddress}>
       <div className="grid min-h-0 flex-1 grid-cols-12 grid-rows-2 gap-3 text-xs">
-        <div className="col-span-6 bg-gray-100 p-2">
+        <PlotCell className="col-span-6">
           <BalanceBoardWithCoPOverlay macAddress={macAddress} src={wbbTopdown} store={store} />
-        </div>
-
-        <div className="col-span-3 bg-gray-100 p-2">
-          <UPlot title="copX" tooltipId="session_cop_x" kind="copX" macAddress={macAddress} store={store} />
-        </div>
-        <div className="col-span-3 bg-gray-100 p-2">
-          <UPlot title="copY" tooltipId="session_cop_y" kind="copY" macAddress={macAddress} store={store} />
-        </div>
-
-        <div className="col-span-3 bg-gray-100 p-2">
+        </PlotCell>
+        <PlotCell className="col-span-3">
+          <UPlot kind="copX" macAddress={macAddress} store={store} />
+        </PlotCell>
+        <PlotCell className="col-span-3">
+          <UPlot kind="copY" macAddress={macAddress} store={store} />
+        </PlotCell>
+        <PlotCell className="col-span-3">
           <FFTAmplitudePlot
             title="FFT Amplitude Spectrum"
             tooltipId="session_amplitude_spectrum"
             macAddress={macAddress}
             store={store}
           />
-        </div>
-
-        <div className="col-span-3 bg-gray-100 p-2">
+        </PlotCell>
+        <PlotCell className="col-span-3">
           <MultiMetricPlot title="DPSI Metrics" tooltipId="session_dpsi" macAddress={macAddress} store={store} />
-        </div>
-
-        <div className="col-span-3 bg-gray-100 p-2">
-          <UPlot title="vCopX" tooltipId="session_mean_velocity_x" kind="vCopX" macAddress={macAddress} store={store} />
-        </div>
-
-        <div className="col-span-3 bg-gray-100 p-2">
-          <UPlot title="vCopY" tooltipId="session_mean_velocity_y" kind="vCopY" macAddress={macAddress} store={store} />
-        </div>
+        </PlotCell>
+        <PlotCell className="col-span-3">
+          <UPlot kind="vCopX" macAddress={macAddress} store={store} />
+        </PlotCell>
+        <PlotCell className="col-span-3">
+          <UPlot kind="vCopY" macAddress={macAddress} store={store} />
+        </PlotCell>
       </div>
-    </ToolkitContainer>
+    </BoardPanel>
   );
 }
 

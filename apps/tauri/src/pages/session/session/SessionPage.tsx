@@ -52,7 +52,7 @@ export default function SessionPage() {
       <DraftNotice show={drafts.hasDrafts} />
       <TimelinePanel
         activity={activities.find((activity) => activity.id === information?.core.activityId)}
-        playButtonClass="size-6 rounded-full bg-[#e50012]"
+        playButtonClass="size-6 rounded-full bg-(--red)"
         placeholderMessage="No activity selected"
         hasOngoingSession={running}
         canStart={boards.length > 0 && !save.isPending && !drafts.hasDrafts}

@@ -35,17 +35,24 @@ export function PlotFrame({
   return (
     <div className="h-full w-full">
       <div className="relative flex h-1/10 items-center justify-center">
-        <div className="relative font-semibold">
-          {title}
-          {tooltipId && (
-            <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
-              <Tooltip tooltipId={tooltipId} />
-            </div>
-          )}
-        </div>
+        <PlotTitle title={title} tooltipId={tooltipId} />
       </div>
       <div ref={hostRef} className="h-78/100 w-full" />
       <div className="mb-2 flex h-1/10 items-center justify-between">{children}</div>
+    </div>
+  );
+}
+
+/** A plot's title, with its info icon hanging off the end so the title itself stays centred. */
+export function PlotTitle({ title, tooltipId }: { title: string; tooltipId?: string }) {
+  return (
+    <div className="relative font-semibold">
+      {title}
+      {tooltipId && (
+        <div className="absolute top-1/2 left-full ml-2.5 -translate-y-1/2">
+          <Tooltip tooltipId={tooltipId} />
+        </div>
+      )}
     </div>
   );
 }

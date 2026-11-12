@@ -6,17 +6,8 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import { LastSessionInformation, User } from "@/types.ts";
 import { getBlockImage, LOGO_IMAGE, showLogoInstead } from "@/utils/activityImages.ts";
-import { formatRelativeDay } from "@/utils/devices.ts";
-
-function formatDuration(totalSeconds: number): string {
-  const seconds = Math.round(totalSeconds);
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const rest = seconds % 60;
-  if (hours > 0) return `${hours} h ${String(minutes).padStart(2, "0")} min`;
-  if (minutes > 0) return `${minutes} min ${String(rest).padStart(2, "0")} s`;
-  return `${rest} s`;
-}
+import { formatDate, formatDateTime, formatDuration, formatRelativeDay } from "@/utils/dates.ts";
+import { userColor } from "@/utils/userColors.ts";
 
 function UserAvatar({ user }: { user: User }) {
   const initials =
@@ -29,7 +20,7 @@ function UserAvatar({ user }: { user: User }) {
   return (
     <span
       className="flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
-      style={{ backgroundColor: user.color ?? "#999" }}
+      style={{ backgroundColor: userColor(user) }}
       aria-hidden="true"
     >
       {initials}
@@ -99,11 +90,7 @@ export default function LastSessionCard({ sessionDetails }: { sessionDetails?: L
       </div>
 
       <dl className="grid grid-cols-3 divide-x divide-gray-200 border-y border-gray-200 py-2.5">
-        <Stat
-          label="Recorded"
-          value={recordedAt.toLocaleDateString(undefined, { dateStyle: "medium" })}
-          title={recordedAt.toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })}
-        />
+        <Stat label="Recorded" value={formatDate(recordedAt)} title={formatDateTime(recordedAt)} />
         <Stat label="Duration" value={formatDuration(sessionStats.duration.secs)} />
         <Stat label="Sampling" value={samplingRate > 0 ? `${Math.round(samplingRate)} Hz` : "Unknown"} />
       </dl>

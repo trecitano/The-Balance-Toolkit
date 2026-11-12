@@ -122,3 +122,8 @@ body {
     opacity: 1;
   }
 }
+
+/* Checkboxes take the app's blue instead of the browser's. */
+input[type="checkbox"] {
+  accent-color: var(--primary);
+}

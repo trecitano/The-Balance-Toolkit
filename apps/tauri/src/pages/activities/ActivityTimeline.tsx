@@ -1,335 +1,45 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import "./ActivityTimeline.css";
 import { TimelineBlock } from "@/types.ts";
 import { getBlockImage, showLogoInstead } from "@/utils/activityImages.ts";
-import clsx from "clsx";
 
-interface ActivityTimelineProps {
-  blocks: TimelineBlock[];
-  editable?: boolean;
-  onChange?: (blocks: TimelineBlock[]) => void;
-  onBlockSelect?: (block: TimelineBlock) => void;
-}
-
-const MIN_DURATION = 1;
-
-type DragState = {
-  type: "drag";
-  blockIdx: number;
-  startX: number;
-  startY: number;
-  currentX: number;
-  currentY: number;
-  dropIdx: number | null;
-};
-
-type ResizeState = {
-  type: "resize";
-  blockIdx: number;
-  direction: "left" | "right";
-  startX: number;
-  startDuration: number;
-};
-
-type InteractionState = DragState | ResizeState | null;
-
-export default function ActivityTimeline({ blocks, editable = false, onChange, onBlockSelect }: ActivityTimelineProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [interaction, setInteraction] = useState<InteractionState>(null);
-  const [editingDurationIdx, setEditingDurationIdx] = useState<number | null>(null);
-  const [durationInputValue, setDurationInputValue] = useState<string>("");
-
-  const totalDuration = useMemo(() => blocks.reduce((sum, b) => sum + b.duration, 0), [blocks]);
-
-  const computeDropIndex = useCallback(
-    (clientX: number) => {
-      const el = containerRef.current;
-      if (!el || totalDuration === 0) return 0;
-
-      const rect = el.getBoundingClientRect();
-      const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
-      const xSeconds = (x / rect.width) * totalDuration;
-
-      const boundaries: number[] = [0];
-      let end = 0;
-      for (const b of blocks) boundaries.push((end += b.duration));
-
-      let idx = 0;
-      let best = Infinity;
-      boundaries.forEach((pos, i) => {
-        const d = Math.abs(xSeconds - pos);
-        if (d < best) {
-          best = d;
-          idx = i;
-        }
-      });
-      return idx;
-    },
-    [blocks, totalDuration],
-  );
-
-  // Mouse Interactions - only active when editable
-  useEffect(() => {
-    if (!interaction || !editable || !onChange) return;
-
-    const handlePointerMove = (e: PointerEvent) => {
-      if (interaction.type === "drag") {
-        const dropIdx = computeDropIndex(e.clientX);
-        setInteraction({
-          ...interaction,
-          currentX: e.clientX,
-          currentY: e.clientY,
-          dropIdx,
-        });
-      } else if (interaction.type === "resize") {
-        const { blockIdx, direction, startX, startDuration } = interaction;
-        const delta = e.clientX - startX;
-        const scale = 2; // px per second
-
-        let newDuration =
-          direction === "right" ? startDuration + Math.round(delta / scale) : startDuration - Math.round(delta / scale);
-        newDuration = Math.max(MIN_DURATION, newDuration);
-
-        const updated = blocks.map((b, idx) => (idx === blockIdx ? { ...b, duration: newDuration } : b));
-        onChange(updated);
-      }
-    };
-
-    const handlePointerUp = () => {
-      if (interaction.type === "drag") {
-        const { blockIdx, dropIdx } = interaction;
-        if (dropIdx != null && blockIdx !== dropIdx && blockIdx + 1 !== dropIdx) {
-          const copy = [...blocks];
-          const [removed] = copy.splice(blockIdx, 1);
-          if (removed) {
-            const insertIdx = blockIdx < dropIdx ? dropIdx - 1 : dropIdx;
-            copy.splice(insertIdx, 0, removed);
-            onChange(copy);
-          }
-        }
-      }
-      setInteraction(null);
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-  }, [interaction, blocks, onChange, computeDropIndex, editable]);
-
-  const handleBlockPointerDown = (idx: number, e: React.PointerEvent) => {
-    if (!editable || interaction || (e.target as HTMLElement).classList.contains("resize-handle")) {
-      return;
-    }
-    e.preventDefault();
-    setInteraction({
-      type: "drag",
-      blockIdx: idx,
-      startX: e.clientX,
-      startY: e.clientY,
-      currentX: e.clientX,
-      currentY: e.clientY,
-      dropIdx: null,
-    });
-  };
-
-  const handleResizeStart = (blockIdx: number, direction: "left" | "right", e: React.PointerEvent) => {
-    if (!editable) return;
-    const block = blocks[blockIdx];
-    if (!block) return;
-    e.stopPropagation();
-    setInteraction({
-      type: "resize",
-      blockIdx,
-      direction,
-      startX: e.clientX,
-      startDuration: block.duration,
-    });
-  };
-
-  const handleDeleteBlock = (blockIdx: number, e: React.MouseEvent) => {
-    if (!editable || !onChange) return;
-
-    e.stopPropagation();
-    onChange(blocks.filter((_, idx) => idx !== blockIdx));
-  };
-
-  const handleDurationEdit = (idx: number) => {
-    const block = blocks[idx];
-    if (!editable || !onChange || !block) return;
-
-    setEditingDurationIdx(idx);
-    setDurationInputValue(block.duration.toString());
-  };
-
-  const handleDurationSave = (idx: number) => {
-    if (!editable || !onChange) return;
-
-    const val = parseInt(durationInputValue, 10);
-    if (!isNaN(val) && val >= MIN_DURATION) {
-      const updated = blocks.map((b, i) => (i === idx ? { ...b, duration: val } : b));
-      onChange(updated);
-    }
-    setEditingDurationIdx(null);
-  };
-
-  const isDragging = interaction?.type === "drag";
-  const draggedIdx = isDragging ? interaction.blockIdx : null;
-  const dragOverIdx = isDragging ? interaction.dropIdx : null;
-  const isResizing = interaction?.type === "resize";
-
-  // Determine cursor based on state
-  const getBlockCursor = (idx: number) => {
-    if (!editable) return "default";
-    if (isResizing) return "default";
-    if (draggedIdx === idx) return "grabbing";
-    return "grab";
-  };
-
+/**
+ * An activity's actions as one bar, each as wide as its share of the time, with its duration
+ * underneath. Read-only: the Activities page edits the bar with TimelineEditor.
+ */
+export default function ActivityTimeline({ blocks }: { blocks: TimelineBlock[] }) {
   return (
-    <div
-      ref={containerRef}
-      className={clsx(
-        "flex flex-col flex-1 min-h-0",
-        !editable && "opacity-75",
-        isDragging && editable && "cursor-grabbing",
-      )}
-    >
-      <div className={clsx("flex flex-1 min-h-0", editable && "gap-1")}>
+    <div className="flex min-h-0 flex-1 flex-col opacity-75">
+      <div className="flex min-h-0 flex-1">
         {blocks.map((block, idx) => (
-          <React.Fragment key={idx}>
-            {editable && dragOverIdx === idx && (
-              <div className="pointer-events-none relative z-10 mx-0.5 h-12 w-0 border-l-2 border-blue-500" />
-            )}
-
-            <div
-              className={clsx(
-                "timeline-block relative select-none flex-1 ",
-                !editable ? "pointer-events-none" : "pointer-events-auto",
-                draggedIdx === idx ? "z-20 opacity-20" : "z-10",
-                editable && "transition-colors hover:bg-gray-50",
-              )}
-              data-block-id={idx}
-              onPointerDown={(e) => handleBlockPointerDown(idx, e)}
-              onClick={() => onBlockSelect?.(block)}
-              onDoubleClick={() => handleDurationEdit(idx)}
-              style={{
-                flex: block.duration,
-                cursor: getBlockCursor(idx),
-              }}
-            >
-              {/* Delete button - only show when editable */}
-              {editable && (
-                <button
-                  className="delete-block-btn absolute h-5 w-5 rounded-full bg-red-500 text-sm text-white"
-                  onClick={(e) => handleDeleteBlock(idx, e)}
-                  title="Delete block"
-                  tabIndex={-1}
-                  aria-label="Delete block"
-                  type="button"
-                >
-                  ×
-                </button>
-              )}
-
-              {/* Resize handles - only show when editable */}
-              {editable && (
-                <>
-                  <div
-                    className="resize-handle left absolute top-0 left-0 h-full w-1 hover:bg-blue-400 hover:opacity-50"
-                    onPointerDown={(e) => handleResizeStart(idx, "left", e)}
-                  />
-                  <div
-                    className="resize-handle right absolute top-0 right-0 h-full w-1 hover:bg-blue-400 hover:opacity-50"
-                    onPointerDown={(e) => handleResizeStart(idx, "right", e)}
-                  />
-                </>
-              )}
-
-              <div className={"flex h-full flex-col"}>
-                <div className="w-full overflow-hidden px-1 text-center font-semibold text-ellipsis whitespace-nowrap text-gray-800">
-                  {block.title}
-                </div>
-
-                <div className="mt-auto flex h-7/10 items-center justify-center">
-                  <img
-                    src={getBlockImage(block.id)}
-                    onError={showLogoInstead}
-                    alt={block.title}
-                    className="h-full object-cover"
-                  />
-                </div>
-              </div>
+          <div
+            key={idx}
+            className="rounded-md border-2 border-(--primary) bg-(--primary-light) select-none"
+            style={{ flex: block.duration }}
+          >
+            {/* The timeline is short, so the picture sits beside the title rather than under it,
+                the two centred together in the block. */}
+            <div className="flex h-full min-w-0 items-center justify-center gap-1.5 px-1">
+              <img
+                src={getBlockImage(block.id)}
+                onError={showLogoInstead}
+                alt=""
+                className="h-4/5 w-auto max-w-10 shrink-0 object-contain"
+              />
+              <span className="min-w-0 truncate font-semibold text-gray-800">{block.title}</span>
             </div>
-          </React.Fragment>
+          </div>
         ))}
-
-        {editable && dragOverIdx === blocks.length && (
-          <div className="pointer-events-none relative z-10 mx-0.5 h-12 w-0 border-l-2 border-blue-500" />
-        )}
-
-        {/* Drag preview */}
-        {editable &&
-          isDragging &&
-          interaction &&
-          (() => {
-            const block = blocks[interaction.blockIdx];
-            if (!block) return null;
-            return (
-              <div
-                className="timeline-block pointer-events-none fixed z-50 flex h-12 w-50 min-w-10 items-center rounded-lg border-2 border-blue-500 bg-blue-100 opacity-85 shadow-lg"
-                style={{
-                  left: interaction.currentX + 8,
-                  top: interaction.currentY + 8,
-                }}
-              >
-                <span className="flex-1 text-center font-medium text-blue-800">{block.title}</span>
-              </div>
-            );
-          })()}
       </div>
 
-      {/* Durations row */}
+      {/* Durations row. TimelinePanel pads above the blocks by this row's height (mt-1 + min-h-5,
+          its pt-6) to centre them on the Session page; keep the two in step. */}
       <div className="mt-1 flex min-h-5 w-full items-start">
         {blocks.map((block, idx) => (
           <div
             key={idx}
-            className={`relative flex items-center justify-center gap-0.5 text-center text-sm font-medium text-blue-800 select-none ${editable ? "cursor-pointer rounded px-1" : "cursor-default"} `}
-            style={{
-              flex: block.duration,
-              minWidth: 40,
-            }}
-            onClick={() => handleDurationEdit(idx)}
+            className="text-center text-xs font-medium text-(--primary-dark) select-none"
+            style={{ flex: block.duration, minWidth: 40 }}
           >
-            {editingDurationIdx === idx && editable ? (
-              <>
-                <input
-                  type="number"
-                  className="w-15 rounded border border-blue-500 text-center text-sm outline-none focus:ring-2 focus:ring-blue-300"
-                  min={MIN_DURATION}
-                  value={durationInputValue}
-                  autoFocus
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (/^\d*$/.test(val)) setDurationInputValue(val);
-                  }}
-                  onBlur={() => handleDurationSave(idx)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleDurationSave(idx);
-                    } else if (e.key === "Escape") {
-                      setEditingDurationIdx(null);
-                    }
-                  }}
-                />
-                <span className="text-sm text-blue-800">s</span>
-              </>
-            ) : (
-              <span className="text-xs text-blue-800">{block.duration} s</span>
-            )}
+            {block.duration} s
           </div>
         ))}
       </div>

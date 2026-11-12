@@ -8,7 +8,8 @@ import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import { NintendoDevice } from "@/types.ts";
 import { convertNumberToMacAddress } from "@/utils/macAddress.ts";
-import { formatRelativeDay, sortDevices } from "@/utils/devices.ts";
+import { formatRelativeDay } from "@/utils/dates.ts";
+import { sortDevices } from "@/utils/devices.ts";
 import { tile } from "@/pages/home/tile.ts";
 
 // The Connection card: the board's state up top, then every known board (connected ones first)

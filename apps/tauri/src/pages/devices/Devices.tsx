@@ -15,17 +15,21 @@ import CalibrationModal from "@/pages/devices/CalibrationModal.tsx";
 import { DevicesQuery, refreshDevices } from "@/queries/toolkit";
 import { useTauriEvent } from "@/hooks/useTauriEvent";
 import { useAction } from "@/hooks/useAction";
+import { useConfirm } from "@/hooks/useConfirm";
 import { QueryStatus } from "@/components/QueryStatus";
 import { sortDevices } from "@/utils/devices.ts";
+import ZoomToFill from "@/components/ZoomToFill.tsx";
 
 export default function Devices() {
   const [foundDevicesCount, setFoundDevicesCount] = useState(0);
-  const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null);
+  // The board being renamed and the name typed so far, shown wherever the board appears.
+  const [rename, setRename] = useState<{ id: string; name: string } | null>(null);
   const [identifying, setIdentifying] = useState<NintendoDevice | null>(null);
   const [calibrating, setCalibrating] = useState<NintendoDevice | null>(null);
   const queryClient = useQueryClient();
   const query = useQuery(DevicesQuery);
   const action = useAction(() => refreshDevices(queryClient));
+  const { confirm, ConfirmDialog } = useConfirm();
 
   useTauriEvent(events.newBoard, () => setFoundDevicesCount((previous) => previous + 1));
 
@@ -52,12 +56,14 @@ export default function Devices() {
 
   const { devices, selectedDevicesMacAddress, isScanning } = query.data;
   const sortedDevices = sortDevices(devices);
-  const sessionDevices = devices.filter((d) => selectedDevicesMacAddress.includes(d.macAddress));
+  const withTypedName = (device: NintendoDevice) =>
+    rename?.id === device.id ? { ...device, name: rename.name.trim() || device.name } : device;
+  const sessionDevices = devices.filter((d) => selectedDevicesMacAddress.includes(d.macAddress)).map(withTypedName);
   const scanDisabled = action.isPending || isScanning;
   const scanLabel = isScanning ? "Scanning..." : "Scan for devices";
 
   return (
-    <div className="flex h-full flex-col">
+    <ZoomToFill className="flex h-full flex-col">
       <QueryStatus error={action.error || query.error} />
       <header className="mb-5 grid grid-cols-7">
         <PageTitle className="flex-shrink-0">Devices</PageTitle>
@@ -85,32 +91,50 @@ export default function Devices() {
                 </ToolkitButton>
               </div>
             )}
-            {sortedDevices.map((device) => (
-              <DeviceRow
-                key={device.id}
-                device={device}
-                isEditing={editingDeviceId === device.id}
-                inSession={selectedDevicesMacAddress.includes(device.macAddress)}
-                cannotJoin={!device.isConnected || sessionDevices.length >= 2}
-                busy={action.isPending}
-                onStartRename={() => setEditingDeviceId(device.id)}
-                onCancelRename={() => setEditingDeviceId(null)}
-                onRename={(name) =>
-                  action.run(async () => {
-                    await commands.devices.updateDeviceName(device.macAddress, name);
-                    setEditingDeviceId(null);
-                  })
-                }
-                onIdentify={() => {
-                  setIdentifying(device);
-                  action.run(() => commands.devices.identifyDevice(device.macAddress));
-                }}
-                onCalibrate={() => setCalibrating(device)}
-                onJoinSession={() => action.run(() => commands.devices.selectDevice(device.macAddress))}
-                onLeaveSession={() => action.run(() => commands.devices.unselectDevice(device.macAddress))}
-                onRemove={() => action.run(() => commands.devices.removeDevice(device.macAddress))}
-              />
-            ))}
+            {sortedDevices.map((device) => {
+              const inSession = selectedDevicesMacAddress.includes(device.macAddress);
+              return (
+                <DeviceRow
+                  key={device.id}
+                  device={device}
+                  typedName={rename?.id === device.id ? rename.name : null}
+                  inSession={inSession}
+                  cannotJoin={!device.isConnected || sessionDevices.length >= 2}
+                  busy={action.isPending}
+                  onStartRename={() => setRename({ id: device.id, name: device.name })}
+                  onTypeName={(name) => setRename({ id: device.id, name })}
+                  onCancelRename={() => setRename(null)}
+                  onSaveName={(name) =>
+                    action.run(async () => {
+                      await commands.devices.updateDeviceName(device.macAddress, name);
+                      setRename(null);
+                    })
+                  }
+                  onIdentify={() => {
+                    setIdentifying(device);
+                    action.run(() => commands.devices.identifyDevice(device.macAddress));
+                  }}
+                  onCalibrate={() => setCalibrating(device)}
+                  onJoinSession={() => action.run(() => commands.devices.selectDevice(device.macAddress))}
+                  onLeaveSession={() => action.run(() => commands.devices.unselectDevice(device.macAddress))}
+                  onRemove={async () => {
+                    const forget = await confirm({
+                      title: "Forget this board?",
+                      message: (
+                        <>
+                          <strong className="font-semibold text-gray-900">{device.name}</strong> will be removed from
+                          this computer{inSession && " and from the session"}. To use it again, you'll need to scan for
+                          it again.
+                        </>
+                      ),
+                      confirmText: "Forget board",
+                      destructive: true,
+                    });
+                    if (forget) action.run(() => commands.devices.removeDevice(device.macAddress));
+                  }}
+                />
+              );
+            })}
           </div>
         </ToolkitContainer>
 
@@ -127,6 +151,7 @@ export default function Devices() {
       />
       <IdentifyDeviceModal device={identifying} onClose={() => setIdentifying(null)} />
       <CalibrationModal device={calibrating} onClose={() => setCalibrating(null)} />
-    </div>
+      {ConfirmDialog}
+    </ZoomToFill>
   );
 }

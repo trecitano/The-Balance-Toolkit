@@ -70,6 +70,7 @@ export function SessionPanel({
             value={boardDisplaySelected}
             onChange={onBoardDisplayChange}
             placeholder="Choose a board to display"
+            link={{ label: "Manage boards", to: "/devices" }}
           />
         </SingleColumn>
 
@@ -90,6 +91,7 @@ export function SessionPanel({
             value={value?.selectedUser ?? 0}
             onChange={(v) => fire(update("selectedUser", v))}
             options={userOptions}
+            link={{ label: "Manage users", to: "/users" }}
           />
         </SingleColumn>
 
@@ -108,6 +110,7 @@ export function SessionPanel({
             onChange={(v) => fire(update("activityId", v || null))}
             options={activityOptions}
             noneOption="None"
+            link={{ label: "Edit activities", to: "/activities" }}
           />
         </SingleColumn>
 

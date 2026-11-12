@@ -90,6 +90,13 @@ export const events = {
 	sessionStarted: makeEvent<SessionStarted>("session-started"),
 };
 
+/* Constants */
+export const LSL_PROCESSED_SUFFIX = "_complex" as const;
+
+export const LSL_RAW_SUFFIX = "_basic" as const;
+
+export const NINTENDO_BOARD_ID = "Nintendo RVL-WBC-01" as const;
+
 /* Types */
 export type Activity = {
 	id: string,

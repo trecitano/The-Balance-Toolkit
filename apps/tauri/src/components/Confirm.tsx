@@ -1,15 +1,23 @@
+import { useRef } from "react";
+import type { ReactNode } from "react";
+import clsx from "clsx";
 import { Modal } from "@/components/Modal.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
+import { Icon } from "@/components/Icons.tsx";
 
 interface ConfirmModalProps {
   open: boolean;
   title?: string;
-  message: string;
+  message: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
   confirmText?: string;
   cancelText?: string;
-  confirmColor?: "blue" | "red" | "grey";
+  /**
+   * For actions that delete or lose something: a red button and a warning sign, and Cancel takes
+   * the focus so Enter can't confirm by accident.
+   */
+  destructive?: boolean;
 }
 
 export function ConfirmModal({
@@ -20,25 +28,32 @@ export function ConfirmModal({
   onCancel,
   confirmText = "OK",
   cancelText = "Cancel",
-  confirmColor = "blue",
+  destructive = false,
 }: ConfirmModalProps) {
-  const handleConfirm = () => {
-    onConfirm();
-  };
-
-  const handleCancel = () => {
-    onCancel();
-  };
-
+  const cancelButton = useRef<HTMLButtonElement>(null);
   return (
-    <Modal label={title ?? "Confirm"} open={open} onClose={handleCancel}>
-      {title && <h4 className="mb-4 text-lg font-bold">{title}</h4>}
-      <p className="mb-6 text-base leading-relaxed text-gray-700">{message}</p>
-      <div className="mt-12 flex justify-center gap-6">
-        <ToolkitButton type="button" color={confirmColor} onClick={handleConfirm}>
+    <Modal
+      label={title ?? "Confirm"}
+      open={open}
+      onClose={onCancel}
+      className="w-lg"
+      initialFocus={destructive ? cancelButton : undefined}
+    >
+      <span
+        className={clsx(
+          "mx-auto mb-4 flex size-12 items-center justify-center rounded-full",
+          destructive ? "bg-(--red-light) text-(--red)" : "bg-(--primary-light) text-(--primary)",
+        )}
+      >
+        <Icon name={destructive ? "warning" : "question"} className="size-6" />
+      </span>
+      {title && <h2 className="mb-2 text-lg font-bold text-gray-900">{title}</h2>}
+      <p className="text-base leading-relaxed text-gray-600">{message}</p>
+      <div className="mt-8 flex justify-center gap-3">
+        <ToolkitButton type="button" color={destructive ? "red" : "blue"} className="min-w-32" onClick={onConfirm}>
           {confirmText}
         </ToolkitButton>
-        <ToolkitButton type="button" color="grey" onClick={handleCancel}>
+        <ToolkitButton ref={cancelButton} type="button" color="grey" className="min-w-32" onClick={onCancel}>
           {cancelText}
         </ToolkitButton>
       </div>

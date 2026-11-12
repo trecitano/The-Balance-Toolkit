@@ -1,8 +1,12 @@
+import { useQuery } from "@tanstack/react-query";
 import { NumberField } from "@/components/NumberField";
 import { SelectPrimitive } from "@/components/SelectPrimitive.tsx";
 import { SingleColumn } from "@/components/SingleColumn.tsx";
 import { Checkbox } from "@/components/Checkbox.tsx";
-import { InterpolationSetting, interpolationOptions, SessionSettings } from "@/types.ts";
+import { GeneralSettings, InterpolationSetting, interpolationOptions, SessionSettings } from "@/types.ts";
+import type { TooltipDetail } from "@/components/Tooltip.tsx";
+import { SettingsQuery } from "@/queries/toolkit";
+import { LSL_PROCESSED_SUFFIX, LSL_RAW_SUFFIX } from "@/bindings";
 
 export type ProcessingValues = Pick<
   SessionSettings,
@@ -59,10 +63,39 @@ export function ProcessingFields({
   );
 }
 
+// What each stream is called, or where it listens, as set in Settings. The LSL suffixes come from
+// the backend, so these are the names the streams really use.
+function lslDetails(settings: GeneralSettings): TooltipDetail[] {
+  const stream = (sending: boolean, kind: string, suffix: string) =>
+    sending
+      ? [
+          { label: `${kind} stream`, value: `${settings.lslStreamName}${suffix}` },
+          { label: `${kind} source ID`, value: `${settings.lslSourceId}${suffix}` },
+        ]
+      : [{ label: `${kind} stream`, value: "Off" }];
+  return [
+    ...stream(settings.lslSendRawData, "Raw", LSL_RAW_SUFFIX),
+    ...stream(settings.lslSendProcessedData, "Processed", LSL_PROCESSED_SUFFIX),
+  ];
+}
+
+function tcpDetails(settings: GeneralSettings): TooltipDetail[] {
+  return [
+    { label: "Raw data", value: settings.tcpSendRawData ? settings.tcpConnectionStringRaw : "Off" },
+    { label: "Processed data", value: settings.tcpSendProcessedData ? settings.tcpConnectionStringProcessed : "Off" },
+  ];
+}
+
 /** The LSL and TCP on/off switches. */
 export function StreamToggles({ value, disabled, onChange }: FieldsProps) {
-  const toggle = (key: "lslEnabled" | "tcpEnabled", label: string, tooltipId: string) => (
-    <SingleColumn label={label} direction="row" tooltipId={tooltipId} className="col-span-4">
+  const settings = useQuery(SettingsQuery).data?.loadedSettings;
+  const toggle = (
+    key: "lslEnabled" | "tcpEnabled",
+    label: string,
+    tooltipId: string,
+    details: TooltipDetail[] | undefined,
+  ) => (
+    <SingleColumn label={label} direction="row" tooltipId={tooltipId} tooltipDetails={details} className="col-span-4">
       <Checkbox
         disabled={disabled}
         className="ml-2"
@@ -74,8 +107,8 @@ export function StreamToggles({ value, disabled, onChange }: FieldsProps) {
   );
   return (
     <>
-      {toggle("lslEnabled", "LSL", "session_lsl_toggle")}
-      {toggle("tcpEnabled", "TCP", "session_tcp_toggle")}
+      {toggle("lslEnabled", "LSL", "session_lsl_toggle", settings && lslDetails(settings))}
+      {toggle("tcpEnabled", "TCP", "session_tcp_toggle", settings && tcpDetails(settings))}
     </>
   );
 }

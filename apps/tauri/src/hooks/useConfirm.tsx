@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import { ConfirmModal } from "@/components/Confirm";
 
 interface ConfirmOptions {
   title?: string;
-  message: string;
+  message: ReactNode;
   confirmText?: string;
   cancelText?: string;
-  confirmColor?: "blue" | "red" | "grey";
+  destructive?: boolean;
 }
 export function useConfirm() {
   const [options, setOptions] = useState<ConfirmOptions | null>(null);

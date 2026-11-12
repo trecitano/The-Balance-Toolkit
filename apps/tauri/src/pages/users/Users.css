@@ -1,9 +1,17 @@
+/* The cards size themselves from the panel's height, so a taller window gives bigger cards
+   rather than empty space around them. */
+.users-list-panel {
+  container-type: size;
+}
+
 .user-carousel-track {
-  --user-card-width: clamp(10rem, 23.75vh, 17.1rem);
+  /* Three quarters of the panel, leaving even space around the cards and the dots under them. */
+  --user-card-height: clamp(11.5rem, 75cqh, 26rem);
+  --user-card-width: calc(var(--user-card-height) * 0.9);
   position: relative;
   display: flex;
   gap: 2rem;
-  height: clamp(11.5rem, 25vh, 18rem);
+  height: var(--user-card-height);
   padding-block: 0.5rem;
   /* Enough space to center the first and last cards as well as the middle ones. */
   padding-inline: calc(50% - var(--user-card-width) / 2);

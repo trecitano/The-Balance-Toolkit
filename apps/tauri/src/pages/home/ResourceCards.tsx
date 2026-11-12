@@ -6,9 +6,8 @@ import { Modal } from "@/components/Modal";
 import PageSubtitle from "@/components/PageSubtitle.tsx";
 import { ToolkitButton } from "@/components/ToolkitButton.tsx";
 import { commands } from "@/utils/requests.ts";
-import { HomeIcon, HomeIconName } from "@/pages/home/HomeIcons.tsx";
+import { Icon, IconName } from "@/components/Icons.tsx";
 import { tile } from "@/pages/home/tile.ts";
-import { usePageZoom } from "@/pages/home/ZoomToFill.tsx";
 import {
   CITATION_APA,
   CITATION_BIBTEX,
@@ -42,17 +41,17 @@ function linkProps(link: Pick<HomeLink, "label" | "url">, onCite?: () => void) {
   };
 }
 
-function Badge({ icon, tone, size }: { icon: HomeIconName; tone: string; size: string }) {
+function Badge({ icon, tone, size }: { icon: IconName; tone: string; size: string }) {
   return (
     <span className={clsx("flex shrink-0 items-center justify-center rounded-lg", size, tone)}>
-      <HomeIcon name={icon} className="size-[55%]" />
+      <Icon name={icon} className="size-[55%]" />
     </span>
   );
 }
 
 function OutArrow({ className }: { className?: string }) {
   return (
-    <HomeIcon
+    <Icon
       name="external"
       className={clsx("size-4 shrink-0 text-gray-300 transition-colors group-hover:text-(--primary)", className)}
     />
@@ -154,8 +153,6 @@ const CITATION_BLOCKS = [
 ];
 
 function CitationModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  // Dialogs are drawn outside the page, so match the page's zoom here.
-  const zoom = usePageZoom();
   const [status, setStatus] = useState("");
   // The save dialog doesn't block this window, so stop a second click from opening another one.
   const [saving, setSaving] = useState(false);
@@ -183,7 +180,7 @@ function CitationModal({ open, onClose }: { open: boolean; onClose: () => void }
     }
   };
   return (
-    <Modal open={open} label="Cite the paper" onClose={close} className="w-2xl text-gray-900" style={{ zoom }}>
+    <Modal open={open} label="Cite the paper" onClose={close} className="w-2xl text-gray-900">
       <h2 className="mb-4 text-lg font-bold">Cite The Balance Toolkit</h2>
       {CITATION_BLOCKS.map(({ label, text, rows }) => (
         <div key={label} className="mb-3">

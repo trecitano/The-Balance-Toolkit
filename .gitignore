@@ -24,3 +24,10 @@ apps/tauri/src-tauri/icons/
 
 # Wrangler build output next to website/wrangler.jsonc
 .wrangler/
+
+# Session recordings the app writes (tbt-<date>T<time>...), wherever its save folder points.
+# Test fixtures that use the same names are kept.
+tbt-*-raw.csv
+tbt-*-processed.csv
+tbt-*.settings.json
+!tests/fixtures/**/tbt-*
