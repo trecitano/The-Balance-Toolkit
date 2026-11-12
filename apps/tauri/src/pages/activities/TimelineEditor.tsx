@@ -232,13 +232,20 @@ export default function TimelineEditor({
     // The bar's whole width, less the gaps up to the resized block's edge.
     const barWidth = (rects[rects.length - 1]?.right ?? 0) - (rects[0]?.left ?? 0);
     const gapWidth = (barWidth - totalWidth) / Math.max(1, blocks.length - 1);
+    // Blocks held at their minimum width are wider than their time, so the scale comes from the
+    // others: they share the rest of the bar in proportion to their durations.
+    const minWidth = parseFloat(getComputedStyle(event.currentTarget.parentElement?.parentElement ?? document.body).minWidth) || 0;
+    const free = blocks.flatMap((b, i) => ((widths[i] ?? 0) > minWidth + 0.5 ? [{ seconds: b.duration, width: widths[i] ?? 0 }] : []));
+    const freeSeconds = free.reduce((sum, b) => sum + b.seconds, 0);
+    const pxPerSecond =
+      freeSeconds > 0 ? free.reduce((sum, b) => sum + b.width, 0) / freeSeconds : totalWidth / roundSeconds(blocks);
     const { clientX: x, clientY: y } = event;
     setResize({
       index,
       startX: x,
       startDuration: block.duration,
       widths,
-      pxPerSecond: totalWidth / roundSeconds(blocks),
+      pxPerSecond,
       room: barWidth - index * gapWidth,
       x,
       y,
